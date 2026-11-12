@@ -2,7 +2,8 @@
 //! between its first and its last write, running the same command again,
 //! without `--force`, completes it.
 //!
-//! Every test makes a write fail with a read-only directory, so the file
+//! The tests make a write fail with a read-only directory or with a file
+//! size limit set by `sh`, or use a Unix terminal or file mode, so the file
 //! is built on Unix only. `tests/cli_interrupted.rs` holds the tests that
 //! run on every platform.
 #![cfg(unix)]
@@ -278,7 +279,9 @@ fn stage_files(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// Runs `cmd` through `sh` with a file size limit of 4096 bytes and the
+/// Runs `cmd` through `sh` with `ulimit -f 8` (8 blocks; the block size
+/// depends on the shell: 512 bytes in a POSIX `sh`, so 4096 bytes, and 1024
+/// bytes in plain bash) and the
 /// signal SIGXFSZ ignored, so that a write beyond the limit fails with an
 /// error instead of stopping the process.
 fn run_with_file_size_limit(cmd: &assert_cmd::Command) -> std::process::Output {

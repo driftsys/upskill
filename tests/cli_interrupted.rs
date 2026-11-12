@@ -186,3 +186,78 @@ fn update_completes_an_interrupted_item() {
     assert!(copilot.is_file());
     assert!(entry(tmp.path()).unwrap().get("pending").is_none());
 }
+
+/// An interrupted item with a file edited by the user is skipped: the
+/// conflict rule wins over the completion of the item.
+#[test]
+fn update_skips_an_interrupted_item_with_an_edited_file() {
+    let (tmp, home) = installed();
+    mark_interrupted(tmp.path());
+    let claude = skill(tmp.path(), ".claude");
+    fs::write(&claude, "my edit\n").unwrap();
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .env("NO_COLOR", "1")
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(stdout.contains("skipped"), "{stdout}");
+    assert!(!stdout.contains("completed"), "{stdout}");
+    assert_eq!(fs::read_to_string(&claude).unwrap(), "my edit\n");
+}
+
+/// Every file of the interrupted item is written (a stop between the last
+/// rename and the final save): `update` still reports the item as
+/// completed and clears `pending`.
+#[test]
+fn update_completes_an_interrupted_item_whose_files_are_all_written() {
+    let (tmp, home) = installed();
+    mark_interrupted(tmp.path());
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .env("NO_COLOR", "1")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(stdout.contains("completed"), "{stdout}");
+    assert!(!stdout.contains("nothing to do"), "{stdout}");
+    assert!(entry(tmp.path()).unwrap().get("pending").is_none());
+}
+
+/// Writes a new body into the source of `tool`.
+fn change_source(root: &Path) {
+    fs::write(
+        root.join("tools").join(NAME).join("SKILL.md"),
+        format!("---\nschema: 1\nname: {NAME}\ndescription: A skill\n---\nChanged.\n"),
+    )
+    .unwrap();
+}
+
+/// An interrupted item whose source also changed is reported as changed,
+/// not as one to complete.
+#[test]
+fn an_interrupted_item_with_a_changed_source_is_reported_as_changed() {
+    let (tmp, home) = installed();
+    mark_interrupted(tmp.path());
+    change_source(tmp.path());
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--dry-run", "--project"])
+        .env("NO_COLOR", "1")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(stdout.contains("would change"), "{stdout}");
+    assert!(!stdout.contains("would complete"), "{stdout}");
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .env("NO_COLOR", "1")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
+    assert!(stdout.contains("updated"), "{stdout}");
+    assert!(!stdout.contains("completed"), "{stdout}");
+}

@@ -87,7 +87,8 @@ struct ItemChanges {
 ///
 /// With `new_entries` (the lockfile entry of each planned item, given by
 /// `install_with_lockfile`), the operation can be completed by a second
-/// run after a failure, and the lockfile is saved twice, in this order:
+/// run after a failure. The lockfile is saved in step 2 when at least one
+/// item gets a `pending` record, and always in step 4:
 ///
 /// 1. The checks below run; nothing is changed on disk yet.
 /// 2. For each item that is written (no conflict, or `overwrite`) and that
@@ -141,9 +142,9 @@ struct ItemChanges {
 /// wrote and that the run that completes the item no longer plans is
 /// deleted when it is unchanged, or kept and recorded when it was modified.
 /// Before writing an item, its stale files that are unchanged (`Owned`) or
-/// absent are deleted, and directories left empty are removed. A stale file that is `Modified`, or that cannot be read, is
-/// kept and stays in the record; with `overwrite` it is deleted when it is
-/// a regular file. A kept stale file that is a planned path, or a directory
+/// absent are deleted, and directories left empty are removed. A stale file
+/// that is `Modified`, or that cannot be read, is kept and stays in the
+/// record; with `overwrite` it is deleted when it is a regular file. A kept stale file that is a planned path, or a directory
 /// on the way to one, is a conflict of the item.
 ///
 /// Before any change on disk it fails when two planned items have the same
@@ -2075,6 +2076,110 @@ mod repeatable_tests {
         assert_eq!(t.pending, vec![owned(t_rel, b"t")]);
     }
 
+    /// Runs `plan` followed by an item `t` whose first write fails, with
+    /// `lock` saved first. Returns the lockfile on disk after the failure,
+    /// or `None` when running as root.
+    #[cfg(unix)]
+    fn run_then_fail_in_t(
+        root: &Path,
+        mut lock: Lockfile,
+        mut plan: Vec<PlannedItem>,
+    ) -> Option<Lockfile> {
+        lock.save(root).unwrap();
+        let _guard = ReadOnly::set(&root.join(".claude/skills/t"))?;
+        let mut t = planned(&[(".claude/skills/t/SKILL.md", b"t")]);
+        t.name = "t".into();
+        plan.push(t);
+        let mut new: Vec<LockedItem> = plan
+            .iter()
+            .map(|item| named(entry(vec![], vec![]), &item.name))
+            .collect();
+        new.dedup_by(|a, b| a.name == b.name);
+        assert!(apply_plan(root, &mut lock, &plan, false, Some(&new)).is_err());
+        Some(Lockfile::load(root).unwrap())
+    }
+
+    /// An item that changes nothing keeps the `pending` record that it
+    /// already has (an interrupted item whose files are all written).
+    #[cfg(unix)]
+    #[test]
+    fn an_item_that_changes_nothing_keeps_its_old_pending_record() {
+        let tmp = tempfile::tempdir().unwrap();
+        put(tmp.path(), A, b"a");
+        let mut lock = Lockfile::new();
+        lock.items
+            .push(entry(vec![owned(A, b"a0")], vec![owned(A, b"a")]));
+        let Some(on_disk) = run_then_fail_in_t(tmp.path(), lock, vec![planned(&[(A, b"a")])])
+        else {
+            return;
+        };
+        let s = on_disk.items.iter().find(|i| i.name == "s").unwrap();
+        assert_eq!(s.pending, vec![owned(A, b"a")]);
+    }
+
+    /// An item whose planned files are unchanged gets `pending` when it
+    /// deletes an existing stale file, and does not get it when its only
+    /// stale file is absent.
+    #[cfg(unix)]
+    #[test]
+    fn an_item_that_only_deletes_a_stale_file_gets_a_pending_record() {
+        let tmp = tempfile::tempdir().unwrap();
+        let u_a = ".claude/skills/u/SKILL.md";
+        put(tmp.path(), A, b"a");
+        put(tmp.path(), B, b"b");
+        put(tmp.path(), u_a, b"u");
+        let mut lock = Lockfile::new();
+        lock.items
+            .push(entry(vec![owned(A, b"a"), owned(B, b"b")], vec![]));
+        // The stale file of `u` is absent on disk.
+        lock.items.push(named(
+            entry(
+                vec![owned(u_a, b"u"), owned(".claude/skills/u/gone.md", b"g")],
+                vec![],
+            ),
+            "u",
+        ));
+        let mut u = planned(&[(u_a, b"u")]);
+        u.name = "u".into();
+        let Some(on_disk) = run_then_fail_in_t(tmp.path(), lock, vec![planned(&[(A, b"a")]), u])
+        else {
+            return;
+        };
+        let s = on_disk.items.iter().find(|i| i.name == "s").unwrap();
+        assert_eq!(s.pending, vec![owned(A, b"a")]);
+        let u = on_disk.items.iter().find(|i| i.name == "u").unwrap();
+        assert!(u.pending.is_empty(), "{u:?}");
+    }
+
+    /// The merged `pending` record is sorted by client and path, and a
+    /// second failed run of the same plan adds no duplicate.
+    #[cfg(unix)]
+    #[test]
+    fn the_merged_pending_record_is_sorted_and_has_no_duplicate() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut lock = Lockfile::new();
+        // A (pending only, absent) sorts before the planned B.
+        lock.items.push(entry(vec![], vec![owned(A, b"a0")]));
+        lock.save(tmp.path()).unwrap();
+        // An unrecorded file keeps the item directory from being removed as
+        // empty after the absent stale path A is handled.
+        put(tmp.path(), ".claude/skills/s/keep.md", b"k");
+        let Some(_guard) = ReadOnly::set(&tmp.path().join(".claude/skills/s")) else {
+            return;
+        };
+        let new = [entry(vec![], vec![])];
+        let plan = [planned(&[(B, b"b")])];
+        for _ in 0..2 {
+            let mut lock = Lockfile::load(tmp.path()).unwrap();
+            assert!(apply_plan(tmp.path(), &mut lock, &plan, false, Some(&new)).is_err());
+            let on_disk = Lockfile::load(tmp.path()).unwrap();
+            assert_eq!(
+                on_disk.items[0].pending,
+                vec![owned(A, b"a0"), owned(B, b"b")]
+            );
+        }
+    }
+
     /// The pending save of a run that fails keeps the old `pending` records
     /// that the new plan does not repeat: R (no longer planned) and the
     /// older hash of A.
@@ -2112,7 +2217,7 @@ mod repeatable_tests {
 
     #[cfg(unix)]
     #[test]
-    fn an_owned_pending_path_survives_a_second_failed_run_and_is_then_deleted() {
+    fn an_owned_pending_path_keeps_its_record_when_a_second_run_fails() {
         let Some((tmp, lock)) = second_failed_run(b"r") else {
             return;
         };
@@ -2233,6 +2338,7 @@ mod repeatable_tests {
         let name = first.file_name().unwrap().to_str().unwrap();
         let digits = name.strip_prefix(".upskill-stage-").unwrap();
         let (pid, n) = digits.split_at(8);
+        assert_eq!(pid, format!("{:08x}", std::process::id()));
         let n = u32::from_str_radix(n, 16).unwrap();
         let mut existing = Vec::new();
         for next in n + 1..n + 65 {
