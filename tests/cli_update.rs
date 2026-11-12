@@ -1017,6 +1017,15 @@ fn update_skips_an_edited_item_when_no_source_changed() {
     assert!(stderr.contains("Use --force to replace."), "{stderr}");
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).to_string();
     assert!(!stdout.contains("nothing to do"), "{stdout}");
+    // The item is reported once, as skipped, and not as up to date.
+    assert!(!stdout.contains("up to date"), "{stdout}");
+    assert_eq!(
+        stdout
+            .matches("skipped — modified or unmanaged files kept")
+            .count(),
+        1,
+        "{stdout}"
+    );
     assert_eq!(fs::read(&dest).unwrap(), b"my edit\n");
     assert_eq!(
         fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
