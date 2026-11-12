@@ -153,10 +153,10 @@ hash of the item equals its recorded hash, the item has an empty `pending`
 record, every such destination is modified (none is unowned), applying the item
 would write or delete no other file, the item has no recorded file that the new
 version no longer produces (present or absent), and its lockfile entry would not
-change in any field other than `files` and `pending` (for example `clients`),
-nothing is withheld: `update` prints `kept modified file: <path>` on stderr for
-each modified destination, and this note does not change the exit code.
-Otherwise the item is reported as skipped with
+change in any field other than `files`, `pending` and `required_by` (for example
+`clients`), nothing is withheld: `update` prints `kept modified file: <path>` on
+stderr for each modified destination, and this note does not change the exit
+code. Otherwise the item is reported as skipped with
 `skipped <kind> <name>: <path> was modified or is not managed by upskill` and
 `Use --force to replace.` on stderr, and makes `update` exit with code 1 after
 the other items are written. Known limit: when a new version of upskill renders

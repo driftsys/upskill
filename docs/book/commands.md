@@ -209,11 +209,11 @@ operation (no `pending` record), every such destination is a recorded file that
 was modified (not a file that upskill does not manage), applying the item would
 write or delete no other file, the item has no recorded file that the new
 version no longer contains (present or absent), and its lockfile entry would not
-change in any field other than its file records (for example `clients`).
-`update` then prints `kept modified file: <path>` on stderr for each modified
-destination; this note does not change the exit code. In every other case (for
-example the source changed, or the flags no longer select a client of the item),
-`update` reports the item as skipped, prints
+change in any field other than its file records and `required_by` (for example
+`clients`). `update` then prints `kept modified file: <path>` on stderr for each
+modified destination; this note does not change the exit code. In every other
+case (for example the source changed, or the flags no longer select a client of
+the item), `update` reports the item as skipped, prints
 `skipped <kind> <name>: <path> was modified or is not managed by upskill` for
 each such file and `Use --force to replace.`, and exits with code 1 after it has
 written the other items. The limit of this rule: when a new version of upskill

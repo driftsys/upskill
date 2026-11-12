@@ -202,9 +202,9 @@ No behaviour change. Every existing test passes unchanged.
   kept stale file); the item has a lockfile entry with an empty `pending`
   record; `new_entries` holds the item and its `hash` equals the entry's `hash`,
   both `Some`; `delete` and `kept` are both empty; the item's entry in
-  `new_entries` equals the lockfile entry in every field except `files` and
-  `pending`; every planned file that is not a conflict path is in `unchanged`.
-  Otherwise the rule of today applies (`Write` or `Skip`).
+  `new_entries` equals the lockfile entry in every field except `files`,
+  `pending` and `required_by`; every planned file that is not a conflict path is
+  in `unchanged`. Otherwise the rule of today applies (`Write` or `Skip`).
 
   `update` sets `keep_unwithheld_edits: true`. `add` leaves it false.
 

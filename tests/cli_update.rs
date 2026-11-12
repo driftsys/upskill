@@ -1003,17 +1003,23 @@ fn update_of_every_source_prints_the_note_of_a_dependency_once() {
     fs::create_dir_all(&home).unwrap();
     let (_agent, sarif) = cross_source_project(tmp.path(), &home);
     fs::write(&sarif, "my edit\n").unwrap();
+    let lock_before = fs::read(tmp.path().join(".upskill-lock.json")).unwrap();
 
-    // The reinstall of `reg-a` keeps the edit with a note. The reinstall of
-    // `reg-b` (the own source of `sarif`) would record `sarif` without
-    // `required_by`, so an update is withheld there: exit code 1.
+    // The reinstall of `reg-a` and the reinstall of `reg-b` (the own source
+    // of `sarif`) both keep the edit; the note is printed once.
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["update", "--yes", "--project"])
         .assert()
-        .code(1);
+        .code(0);
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
     assert_eq!(sarif_notes(&stderr), vec![sarif_rel()], "{stderr}");
+    assert!(!stderr.contains("skipped"), "{stderr}");
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+    assert_eq!(
+        fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
 }
 
 #[test]

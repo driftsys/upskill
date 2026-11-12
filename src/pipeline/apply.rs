@@ -154,7 +154,8 @@ pub(super) fn apply_plan(
 ///   kept stale file);
 /// - the item has a lockfile entry with an empty `pending` record;
 /// - `new_entries` holds the item, its `hash` is `Some`, and its entry
-///   equals the lockfile entry in every field except `files` and `pending`
+///   equals the lockfile entry in every field except `files`, `pending`
+///   and `required_by`
 ///   (the source of the item did not change, and no field of the record,
 ///   for example `clients`, would change);
 /// - the item has no stale file, to delete or to keep;
@@ -589,14 +590,18 @@ pub(super) fn execute_plan(
     Ok(outcome)
 }
 
-/// Whether `a` and `b` are equal in every field except `files` and
-/// `pending`. The comparison clears those two fields on clones and
-/// compares the rest, so a field added to `LockedItem` later is compared
-/// too.
+/// Whether `a` and `b` are equal in every field except `files`, `pending`
+/// and `required_by`. The comparison clears those three fields on clones
+/// and compares the rest, so a field added to `LockedItem` later is
+/// compared too. `required_by` is provenance: the reinstall of a
+/// dependency's own source computes it differently from the reinstall of
+/// the source that requires the dependency, so it does not count as a
+/// change here.
 fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
     let strip = |item: &LockedItem| LockedItem {
         files: Vec::new(),
         pending: Vec::new(),
+        required_by: Vec::new(),
         ..item.clone()
     };
     strip(a) == strip(b)
@@ -2972,6 +2977,13 @@ mod disposition_tests {
                 .all(|c| c.path != Path::new(stale))
         );
         assert_eq!(decision.items[0].disposition, Disposition::Skip);
+    }
+
+    #[test]
+    fn keeps_the_edits_when_the_new_entry_differs_only_in_required_by() {
+        let mut case = case();
+        case.new[0].required_by = vec!["agent:other".to_string()];
+        assert_eq!(decide_default(&case), Disposition::KeepEdits);
     }
 
     #[test]

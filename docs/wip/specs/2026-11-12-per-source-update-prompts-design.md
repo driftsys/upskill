@@ -156,10 +156,10 @@ New rule, without `--force`:
   record, applying the item would write or delete no file other than the
   modified destinations, the item has no stale recorded file (present or
   absent), and its lockfile entry would not change in any field other than
-  `files` and `pending`:** nothing is withheld. The item is not written. Each
-  modified destination is reported as `kept modified file: <path>` in the block
-  of its source. This is a note, not a change: it asks no question and does not
-  affect the exit code. The item has no `skip` line.
+  `files`, `pending` and `required_by`:** nothing is withheld. The item is not
+  written. Each modified destination is reported as `kept modified file: <path>`
+  in the block of its source. This is a note, not a change: it asks no question
+  and does not affect the exit code. The item has no `skip` line.
 - **Any other case** (the source hash changed, the item has a `pending` record,
   or another file of the item would be written or deleted, for example the file
   of a client that the flags no longer select): an update is withheld. The item
