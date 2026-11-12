@@ -150,33 +150,35 @@ covered by passing local paths to `add` / `update`.
 `update` applies the conflict rules of `add` (§2.1). An item with a modified or
 unowned destination is not written and keeps its lockfile entry. When the source
 hash of the item equals its recorded hash, the item has an empty `pending`
-record, every such destination is modified (none is unowned), and applying the
-item would write or delete no other file, nothing is withheld: `update` prints
-`kept modified file: <path>` on stderr for each modified destination, and this
-note does not change the exit code. Otherwise the item is reported as skipped
-with `skipped <kind> <name>: <path> was modified or is not managed by upskill`
-and `Use --force to replace.` on stderr, and makes `update` exit with code 1
-after the other items are written. Known limit: when a new version of upskill
-renders an unchanged source to different bytes in the modified file only, the
-new rendering is not written and only the note is printed, until
-`update --force`; `doctor` lists the modified files. A recorded file that the
-new version of an item no longer produces, for example a file of a client that a
-narrower selection no longer targets, is deleted when it is owned; a modified
-one is kept, stays in the record, and is reported as
-`kept modified file: <path>`. An item that its source no longer contains is
-removed with the rules of `remove` (§2.3). `update --force` replaces modified
-and unowned destinations and deletes modified regular files that are no longer
-produced; it then lists these files after
-`Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In a terminal
-without `--yes`, `update` first runs a dry run. When a source changed, an item
-has an interrupted operation (a non-empty `pending` record, §4), or `--force` is
-given, it shows the plan (an interrupted item is counted on the line
-`complete: <n> item(s)`) and asks for a confirmation; an answer other than `y`
-or `yes` (in any letter case) changes nothing. When no source changed, no item
-is interrupted and `--force` is not given, it prints that there is nothing to do
-and changes nothing: it therefore does not report a modified file, does not
-delete the files of a client that the flags no longer select, and does not adopt
-a `schema: 1` lockfile. A run with `--yes`, or without a terminal, applies
+record, every such destination is modified (none is unowned), applying the item
+would write or delete no other file, the item has no recorded file that the new
+version no longer produces (present or absent), and its lockfile entry would not
+change in any field other than `files` and `pending` (for example `clients`),
+nothing is withheld: `update` prints `kept modified file: <path>` on stderr for
+each modified destination, and this note does not change the exit code.
+Otherwise the item is reported as skipped with
+`skipped <kind> <name>: <path> was modified or is not managed by upskill` and
+`Use --force to replace.` on stderr, and makes `update` exit with code 1 after
+the other items are written. Known limit: when a new version of upskill renders
+an unchanged source to different bytes in the modified file only, the new
+rendering is not written and only the note is printed, until `update --force`;
+`doctor` lists the modified files. A recorded file that the new version of an
+item no longer produces, for example a file of a client that a narrower
+selection no longer targets, is deleted when it is owned; a modified one is
+kept, stays in the record, and is reported as `kept modified file: <path>`. An
+item that its source no longer contains is removed with the rules of `remove`
+(§2.3). `update --force` replaces modified and unowned destinations and deletes
+modified regular files that are no longer produced; it then lists these files
+after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`. In a
+terminal without `--yes`, `update` first runs a dry run. When a source changed,
+an item has an interrupted operation (a non-empty `pending` record, §4), or
+`--force` is given, it shows the plan (an interrupted item is counted on the
+line `complete: <n> item(s)`) and asks for a confirmation; an answer other than
+`y` or `yes` (in any letter case) changes nothing. When no source changed, no
+item is interrupted and `--force` is not given, it prints that there is nothing
+to do and changes nothing: it therefore does not report a modified file, does
+not delete the files of a client that the flags no longer select, and does not
+adopt a `schema: 1` lockfile. A run with `--yes`, or without a terminal, applies
 without a question and does these things. An applied `update` reports a
 completed interrupted item as `completed — interrupted before` and counts it in
 `Updated <n> of <m> item(s)`. When no item was updated, completed or removed,

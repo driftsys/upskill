@@ -153,8 +153,10 @@ changed. With a hand-edited file, every `update` fails until `--force`.
 New rule, without `--force`:
 
 - **The item's source hash equals the recorded hash, the item has no `pending`
-  record, and applying the item would write or delete no file other than the
-  modified destinations:** nothing is withheld. The item is not written. Each
+  record, applying the item would write or delete no file other than the
+  modified destinations, the item has no stale recorded file (present or
+  absent), and its lockfile entry would not change in any field other than
+  `files` and `pending`:** nothing is withheld. The item is not written. Each
   modified destination is reported as `kept modified file: <path>` in the block
   of its source. This is a note, not a change: it asks no question and does not
   affect the exit code. The item has no `skip` line.

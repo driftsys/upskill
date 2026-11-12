@@ -940,6 +940,10 @@ pub fn update(
         !matches!(item.status, UpdateStatus::SkippedModified { .. })
             || seen_skipped.insert((item.kind, item.name.clone()))
     });
+    // A file kept by the reinstall of two sources (a dependency from
+    // another source) is reported once.
+    report.kept_modified.sort();
+    report.kept_modified.dedup();
     if let Err(err) = result {
         return Err(match &report.adopted {
             Some(paths)

@@ -971,12 +971,85 @@ fn update_keeps_an_edited_file_of_a_dependency_from_another_source() {
         .assert()
         .code(0);
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
-    assert!(stderr.contains("kept modified file: "), "{stderr}");
+    assert_eq!(sarif_notes(&stderr), vec![sarif_rel()], "{stderr}");
     assert!(!stderr.contains("skipped"), "{stderr}");
     assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
     assert_eq!(
         fs::read(tmp.path().join(".upskill-lock.json")).unwrap(),
         lock_before
+    );
+}
+
+fn sarif_rel() -> std::path::PathBuf {
+    Path::new(".claude")
+        .join("skills")
+        .join("sarif")
+        .join("SKILL.md")
+}
+
+/// The paths of the `kept modified file` notes in `stderr`.
+fn sarif_notes(stderr: &str) -> Vec<std::path::PathBuf> {
+    stderr
+        .lines()
+        .filter_map(|line| line.strip_prefix("kept modified file: "))
+        .map(std::path::PathBuf::from)
+        .collect()
+}
+
+#[test]
+fn update_of_every_source_prints_the_note_of_a_dependency_once() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let (_agent, sarif) = cross_source_project(tmp.path(), &home);
+    fs::write(&sarif, "my edit\n").unwrap();
+
+    // The reinstall of `reg-a` keeps the edit with a note. The reinstall of
+    // `reg-b` (the own source of `sarif`) would record `sarif` without
+    // `required_by`, so an update is withheld there: exit code 1.
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert_eq!(sarif_notes(&stderr), vec![sarif_rel()], "{stderr}");
+}
+
+#[test]
+fn update_skips_an_edited_item_when_a_deselected_client_file_is_absent() {
+    // The record of the Copilot file would be dropped and `clients` would
+    // change: an update is withheld.
+    let (tmp, home) = copilot_res_project();
+    fs::remove_file(copilot_res_md(tmp.path())).unwrap();
+    fs::write(res_skill_md(tmp.path()), "my edit\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("skipped skill res: "), "{stderr}");
+    assert_eq!(fs::read(res_skill_md(tmp.path())).unwrap(), b"my edit\n");
+}
+
+#[test]
+fn update_skips_an_item_whose_deselected_client_file_is_also_edited() {
+    let (tmp, home) = copilot_res_project();
+    fs::write(res_skill_md(tmp.path()), "my edit\n").unwrap();
+    fs::write(copilot_res_md(tmp.path()), "my copilot edit\n").unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).to_string();
+    assert!(stderr.contains("skipped skill res: "), "{stderr}");
+    assert_eq!(
+        fs::read(copilot_res_md(tmp.path())).unwrap(),
+        b"my copilot edit\n"
     );
 }
 

@@ -197,19 +197,23 @@ recorded selection** — a bare `update` of a `--claude`-only install stays
 Claude-only rather than re-expanding to all clients. Pass a flag (or set
 `clients:`) to change the selection on update. The files that a narrower
 selection no longer writes are deleted when they are unchanged; a modified one
-is kept, stays in the record, and is reported as `kept modified file: <path>`.
+is kept, stays in the record, and is reported as `kept modified file: <path>`
+when the item is written (when the item is skipped, see below, nothing of it
+changes).
 
 `update` protects files in the same way as `add`. An item with a destination
 that was modified, or that upskill does not manage, is not written and keeps its
 lockfile entry. When all of these hold, nothing is withheld from the item: the
 source hash of the item equals its recorded hash, the item has no interrupted
 operation (no `pending` record), every such destination is a recorded file that
-was modified (not a file that upskill does not manage), and applying the item
-would write or delete no other file. `update` then prints
-`kept modified file: <path>` on stderr for each modified destination; this note
-does not change the exit code. In every other case (for example the source
-changed, or a file of a client that the flags no longer select would be
-deleted), `update` reports the item as skipped, prints
+was modified (not a file that upskill does not manage), applying the item would
+write or delete no other file, the item has no recorded file that the new
+version no longer contains (present or absent), and its lockfile entry would not
+change in any field other than its file records (for example `clients`).
+`update` then prints `kept modified file: <path>` on stderr for each modified
+destination; this note does not change the exit code. In every other case (for
+example the source changed, or the flags no longer select a client of the item),
+`update` reports the item as skipped, prints
 `skipped <kind> <name>: <path> was modified or is not managed by upskill` for
 each such file and `Use --force to replace.`, and exits with code 1 after it has
 written the other items. The limit of this rule: when a new version of upskill

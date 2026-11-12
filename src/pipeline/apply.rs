@@ -53,7 +53,8 @@ pub struct FileConflict {
 /// What `apply_plan` did.
 #[derive(Debug, Default)]
 pub(super) struct ApplyOutcome {
-    /// Items that were not written because of a conflict.
+    /// The conflicts of the items that were not written because an update
+    /// is withheld from them ([`Disposition::Skip`]).
     pub skipped: Vec<FileConflict>,
     /// The modified destinations of the items that were not written
     /// because nothing is withheld from them ([`Disposition::KeepEdits`]).
@@ -152,9 +153,11 @@ pub(super) fn apply_plan(
 /// - every conflict is `Modified` and is a planned file of the item (not a
 ///   kept stale file);
 /// - the item has a lockfile entry with an empty `pending` record;
-/// - `new_entries` holds the item, and its `hash` equals the `hash` of the
-///   lockfile entry, both `Some` (the source of the item did not change);
-/// - no stale file to delete exists on disk;
+/// - `new_entries` holds the item, its `hash` is `Some`, and its entry
+///   equals the lockfile entry in every field except `files` and `pending`
+///   (the source of the item did not change, and no field of the record,
+///   for example `clients`, would change);
+/// - the item has no stale file, to delete or to keep;
 /// - every planned file that is not a conflict is `unchanged`.
 ///
 /// An `Owned` destination is `unchanged`: it is not rewritten and is not
@@ -357,13 +360,13 @@ pub(super) fn decide_plan(
                 e.pending.is_empty()
                     && e.hash.is_some()
                     && new_entries.is_some_and(|new| {
-                        new.iter()
-                            .any(|n| n.kind == item.kind && n.name == item.name && n.hash == e.hash)
+                        new.iter().any(|n| {
+                            n.kind == item.kind && n.name == item.name && same_record(n, e)
+                        })
                     })
             })
-            && !delete
-                .iter()
-                .any(|rel| fs::symlink_metadata(target.join(rel)).is_ok())
+            && delete.is_empty()
+            && kept.is_empty()
             && item.files.iter().all(|file| {
                 unchanged.contains(&file.rel) || conflicts.iter().any(|c| c.path == file.rel)
             })
@@ -584,6 +587,19 @@ pub(super) fn execute_plan(
         lock.save(target)?;
     }
     Ok(outcome)
+}
+
+/// Whether `a` and `b` are equal in every field except `files` and
+/// `pending`. The comparison clears those two fields on clones and
+/// compares the rest, so a field added to `LockedItem` later is compared
+/// too.
+fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
+    let strip = |item: &LockedItem| LockedItem {
+        files: Vec::new(),
+        pending: Vec::new(),
+        ..item.clone()
+    };
+    strip(a) == strip(b)
 }
 
 /// Writes `bytes` to a new stage file `.upskill-stage-<16 hex digits>` in
@@ -2923,12 +2939,46 @@ mod disposition_tests {
     }
 
     #[test]
-    fn keeps_the_edits_when_the_stale_file_to_delete_is_absent() {
+    fn skips_when_the_stale_file_to_delete_is_absent() {
         let mut case = case();
         case.lock.items[0]
             .files
             .push(owned(".claude/skills/s/old.md", b"old"));
-        assert_eq!(decide_default(&case), Disposition::KeepEdits);
+        case.new = case.lock.items.clone();
+        assert_eq!(decide_default(&case), Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_with_a_kept_modified_stale_file_that_is_not_a_conflict() {
+        let mut case = case();
+        let stale = ".claude/skills/s/old.md";
+        put(case.tmp.path(), stale, b"my old");
+        case.lock.items[0].files.push(owned(stale, b"old"));
+        case.new = case.lock.items.clone();
+        let decision = decide_plan(
+            case.tmp.path(),
+            &case.lock,
+            &case.plan,
+            false,
+            Some(&case.new),
+            true,
+        )
+        .unwrap();
+        assert_eq!(decision.items[0].kept.len(), 1);
+        assert!(
+            decision.items[0]
+                .conflicts
+                .iter()
+                .all(|c| c.path != Path::new(stale))
+        );
+        assert_eq!(decision.items[0].disposition, Disposition::Skip);
+    }
+
+    #[test]
+    fn skips_when_the_new_entry_differs_only_in_clients() {
+        let mut case = case();
+        case.new[0].clients = vec!["claude".to_string()];
+        assert_eq!(decide_default(&case), Disposition::Skip);
     }
 
     #[test]
