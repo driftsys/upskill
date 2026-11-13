@@ -99,12 +99,12 @@ Inside a git repository, `add` without a scope flag uses the project scope.
 Outside a git repository, `add` without a scope flag writes nothing and stops
 with exit code 2 and a message that asks for `--project` or `--global`. When the
 current directory is the home directory, which is the root of the global scope,
-the project scope is refused, with `--project` or without a flag inside a git
-repository: `add` writes nothing and stops with exit code 2 and a message that
-asks for `--global`. `update`, `remove` and `remove-mcp` do the same.
+the project scope is refused, with `--project` or with no flag, in or outside a
+git repository: `add` writes nothing and stops with exit code 2 and a message
+that asks for `--global`. `update`, `remove` and `remove-mcp` do the same.
 
-`add`, `update` and `remove` print one line to stderr before they change
-anything, `scope: <scope> (<root>)`. `--quiet` hides it.
+`add`, `update`, `remove` and `remove-mcp` print one line to stderr before they
+change anything, `scope: <scope> (<root>)`. `--quiet` hides it.
 
 Before any write, `add` classifies every destination of every item against the
 item's `files` and `pending` records (§4). A destination is a conflict when it
@@ -331,11 +331,12 @@ with exit code 2 and a message that asks for `--global`. When a named item is
 not in the lockfile of that scope but the other scope records it, `remove` fails
 as for any unknown name and prints
 `hint: '<name>' is installed in the <scope> scope (<root>); pass --<scope>` to
-stderr in place of the `upskill doctor` hint; `update <name>` does the same.
-Either name one or more items, or pass `--source <label>` to remove every item
-that came from a single source. Bare `upskill remove` is rejected — be explicit.
-Ancillary files (`CLAUDE.md`, `opencode.json`, `.vscode/settings.json`) are not
-touched.
+stderr, one line for each such name. A name that the current scope also holds
+gets no such line. When no name qualifies, `remove` prints the `upskill doctor`
+hint instead; `update <name>` does the same. Either name one or more items, or
+pass `--source <label>` to remove every item that came from a single source.
+Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
+`opencode.json`, `.vscode/settings.json`) are not touched.
 
 `remove` deletes only files listed in the item's `files` or `pending` record
 (§4). A recorded file is **owned** when it is a regular file with the recorded

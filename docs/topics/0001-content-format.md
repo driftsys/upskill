@@ -875,10 +875,11 @@ current environment, without reading its value.
 **Per-client install behavior:** A bundle's `mcps:` entry is configured for
 every MCP **target** — Claude Code, GitHub Copilot, VS Code, and opencode —
 CLI-first with a config-write fallback per target. VS Code is an MCP target but
-**not** a generation client: it shares `.github/**` rules/skills/agents output
-with Copilot and forks **only** on MCP, so the MCP target set (`claude`,
-`copilot`, `vscode`, `opencode`) is modelled separately from the generation
-`Client` enum (`claude`, `copilot`, `opencode`).
+**not** a generation client: it shares the Copilot rules/skills/agents output
+(`.github/**` in the project scope, `.copilot/**` in the global scope) and forks
+**only** on MCP, so the MCP target set (`claude`, `copilot`, `vscode`,
+`opencode`) is modelled separately from the generation `Client` enum (`claude`,
+`copilot`, `opencode`).
 
 | Target         | Primary (CLI)                                                                                                                                                       | Fallback config file                      | Root key     |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------ |

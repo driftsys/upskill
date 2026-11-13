@@ -61,12 +61,13 @@ Inside a git repository, `add` without a flag uses the project scope. Outside a
 git repository, `add` without a flag installs nothing and stops with exit code 2
 and a message that asks for `--project` or `--global`. When the current
 directory is the home directory, which is the root of the global scope, the
-project scope is refused, with `--project` or without a flag inside a git
+project scope is refused, with `--project` or with no flag, in or outside a git
 repository: `add` installs nothing and stops with exit code 2 and a message that
 asks for `--global`. `update`, `remove` and `remove-mcp` do the same.
 
-`add`, `update` and `remove` print one line to stderr that names the scope and
-its root, for example `scope: global (/home/alice)`. `--quiet` hides it.
+`add`, `update`, `remove` and `remove-mcp` print one line to stderr that names
+the scope and its root, for example `scope: global (/home/alice)`. `--quiet`
+hides it.
 
 **Client selection.** By default `add` emits output for **every** client.
 Restrict it to the clients you actually use with one or more of `--claude`,
@@ -78,9 +79,10 @@ upskill add owner/repo --claude               # only .claude/**
 upskill add owner/repo --copilot --vscode     # only .github/** (+ VS Code MCP)
 ```
 
-`--vscode` writes the shared `.github/**` rules/skills/agents (VS Code reads
-Copilot's tree) plus VS Code's own MCP config; `--copilot --vscode` writes
-`.github/**` once and forks only the MCP config. To persist a selection across
+`--vscode` writes the same Copilot rules/skills/agents as `--copilot` (VS Code
+reads Copilot's tree: `.github/**` in the project scope, `.copilot/**` in the
+global scope) plus VS Code's own MCP config; `--copilot --vscode` writes the
+Copilot tree once and forks only the MCP config. To persist a selection across
 runs, set `clients:` in config (`.upskill/config.yaml` for the project,
 `~/.config/upskill/config.yaml` globally):
 
@@ -448,10 +450,13 @@ Without a scope flag, `remove` uses the project scope inside a git repository
 and the global scope outside one. When the current directory is the home
 directory, the project scope is refused with exit code 2 and a message that asks
 for `--global`. When a named item is not in the lockfile of that scope but the
-other scope records it, `remove` fails with `not in lockfile` and prints
+other scope records it, `remove` fails with `not in lockfile` and prints one
+line for each such name,
 `hint: '<name>' is installed in the <scope> scope (<root>); pass
---<scope>` to
-stderr in place of the `upskill doctor` hint. `update <name>` does the same.
+--<scope>`, to
+stderr. A name that the current scope also holds gets no such line. When no name
+qualifies, `remove` prints the `upskill doctor` hint instead. `update <name>`
+does the same.
 
 `remove` deletes only files listed in the item's `files` or `pending` record in
 the lockfile (see [State files](#state-files)). Each recorded file is in one of
@@ -514,7 +519,10 @@ present, are surfaced as a separate section.
 
 Without a scope flag, `list` reports both scopes: the project scope (the current
 directory, in or outside a git repository), then the global scope (`$HOME`).
-Each scope is a block that starts with `<scope> (<root>)`. `--global` or
+When at least one reported scope has items, each scope is a block that starts
+with `<scope> (<root>)`, and a scope without items shows `No items installed.`
+in its block. When every reported scope is empty, there is no block header: the
+output is `No items installed.` followed by two hint lines. `--global` or
 `--project` limits the report to that scope. When the current directory is the
 home directory, only the global scope is reported, and `--project` is refused
 with exit code 2 and a message that asks for `--global`. When neither `HOME` nor

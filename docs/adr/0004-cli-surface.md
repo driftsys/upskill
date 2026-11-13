@@ -88,12 +88,23 @@ body is not canonical, so the check/fix pair stays symmetric and CI
 "frontmatter only" decision: leaving bodies unchecked let authored source drift
 out of canonical form.)
 
-### Default scope: `--project`, fall back to `--global`
+### Default scope: the project scope, with the global scope by flag
 
-`upskill add` writes into the current repo's `.agents/...` by default
-(`--project`). Falls back to `$HOME/.agents/...` (`--global`) if the current
-directory is not inside a git repo. Users can pass `--global` or `--project`
-explicitly to override.
+Two scopes exist. The project scope has the current directory as its root. The
+global scope has the home directory as its root. Each scope has its own
+`.upskill-lock.json`. The `-p/--project` and `-g/--global` flags choose a scope.
+Without a flag, inside a git repository, every command uses the project scope.
+Outside a git repository, each command behaves as follows:
+
+- `add` refuses with exit code 2 and asks for `--project` or `--global`.
+- `update`, `remove` and `remove-mcp` use the global scope.
+- `list` and `doctor` report both scopes: the project scope first, then the
+  global scope.
+
+The project scope is refused with exit code 2 when the current directory is the
+home directory, because both scopes would then share one lockfile. In that case
+`add` without a flag stops with the same refusal, and `list` and `doctor` report
+the global scope once.
 
 ### Project lock file
 

@@ -304,10 +304,12 @@ fn remove_selected(
 /// Verify installed-state consistency against `.upskill-lock.json`.
 /// The report has these buckets:
 /// - **missing outputs** — file paths the lockfile says should exist
-///   but don't: every recorded path that is absent, or, for an item
-///   with an empty `files` record, each per-client entrypoint that is
-///   absent. A recorded path that `deletable` rejects is skipped without
-///   a report, here and in the modified and unreadable files.
+///   but don't: every recorded path that is absent, except an absent
+///   recorded path at an earlier global path (it is listed under earlier
+///   layout instead), or, for an item with an empty `files` record, each
+///   per-client entrypoint that is absent. A recorded path that `deletable`
+///   rejects is skipped without a report, here and in the modified and
+///   unreadable files.
 ///   Reinstall (`upskill add <source>`) fixes it.
 /// - **modified files** — recorded files whose content does not match the
 ///   recorded hash through `matches_recorded` (as it is, or with every CRLF
