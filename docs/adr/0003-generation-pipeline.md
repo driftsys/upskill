@@ -68,6 +68,18 @@ Per format-spec §7:
 | Skill     | `.claude/skills/<name>/SKILL.md`        | `.github/skills/<name>/SKILL.md`                              | `.agents/skills/<name>/SKILL.md` (canonical-store) |
 | Agent     | `.claude/agents/<name>.md`              | `.github/agents/<name>.agent.md`                              | `.opencode/agents/<name>.md`                       |
 
+In the global scope (root `$HOME`), Copilot content is written to the personal
+directories of Copilot CLI instead:
+`.copilot/instructions/<name>.instructions.md`,
+`.copilot/skills/<name>/SKILL.md` and `.copilot/agents/<name>.agent.md`. The
+Claude Code and opencode paths are the same in both scopes. Sources:
+[Copilot CLI configuration directory](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference)
+and
+[custom instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions).
+`upskill update --global` moves an install from the earlier global paths
+(`.github/...` under `$HOME`) and `upskill doctor` reports it as
+`earlier_layout`.
+
 ### Copy, not symlink
 
 All installation is file copy or generated output. No symlinks anywhere. One

@@ -1309,6 +1309,14 @@ implementing tool and intentionally out of this specification.
 | Skill     | `.github/skills/<name>/SKILL.md`              | `name:`, `description:` pass through. Follows Agent Skills open standard.                                                                                                                                                                   |
 | Agent     | `.github/agents/<name>.agent.md`              | `name:`, `description:`, `model:`, `tools:` (only documented §4 mappings — `bash → shell`, `web-fetch → fetch`, `web-search → web_search` — survive; unmapped capabilities dropped). GitHub Copilot-specific fields from passthrough block. |
 
+In a user's personal scope, Copilot CLI reads skills from
+`~/.copilot/skills/<name>/SKILL.md`, agents from
+`~/.copilot/agents/<name>.agent.md` and instructions from
+`~/.copilot/instructions/<name>.instructions.md`
+([configuration directory](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference),
+[custom instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions)).
+upskill writes these paths in its global scope.
+
 ### 7.3 opencode
 
 | Item kind | Output path                      | Frontmatter mapping                                                                                                                                           |
