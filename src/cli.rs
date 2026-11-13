@@ -181,7 +181,7 @@ pub enum Commands {
         global: bool,
         /// Operate on the current directory. Without a scope flag, the
         /// command uses the project scope inside a git repo and the global
-        /// scope outside one.
+        /// scope outside one; `--check` reports both scopes.
         /// Refused with exit code 2 when the current directory is the home
         /// directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
@@ -262,7 +262,7 @@ pub enum Commands {
     /// scopes is noted and does not change the exit code.
     ///
     /// Doctor never fetches; remote-source drift detection is
-    /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.
+    /// `update --check` (no fetch) and `update --dry-run` (fetches). Exit 0 when clean, 1 when any drift is found.
     #[command(
         display_order = 6,
         after_help = "EXAMPLES:\n  \

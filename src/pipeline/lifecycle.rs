@@ -340,8 +340,8 @@ fn remove_selected(
 ///   bucket is not also reported as a missing output.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
-/// never fetches. Remote-source drift is detected by
-/// `update --dry-run`, which does fetch.
+/// never fetches. Remote-source drift is detected by `update --check`, which
+/// does not fetch, and by `update --dry-run`, which does fetch.
 pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     let target = at.root.as_path();
     let lock = crate::lockfile::Lockfile::load(target)?;

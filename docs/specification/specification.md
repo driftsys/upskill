@@ -159,9 +159,10 @@ upskill update --check [name...] [--global|--project]
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
-and the global scope outside one. `--project` uses the current directory. When
-the current directory is the home directory, the project scope is refused with
-exit code 2 and a message that asks for `--global`.
+and the global scope outside one; `update --check` reports both scopes instead.
+`--project` uses the current directory. When the current directory is the home
+directory, the project scope is refused with exit code 2 and a message that asks
+for `--global`.
 
 Without `--check`, always fetches the latest source before regenerating. Absorbs
 the role of a separate `sync` command — there is no `--offline` flag in v1;
@@ -328,13 +329,14 @@ updates. The rules for one source, tested in this order:
 
 | Condition                                                                         | Status                                                    |
 | --------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Local path source that does not exist                                             | `not reachable` (`path not found`)                        |
+| Local path source that does not exist, or cannot be read                          | `not reachable` (`path not found`, or the read error)     |
 | Local path source: an item directory has another hash than recorded, or is absent | `update available`, those items listed; else `up to date` |
 | The ref is a full commit hash                                                     | `pinned to a commit`, not looked up                       |
 | The time limit (10 seconds for all sources) passed before the lookup              | `not checked`                                             |
 | `git ls-remote` timed out                                                         | `not reachable` (`time limit reached`)                    |
 | `git ls-remote` failed                                                            | `not reachable` (the message of git)                      |
-| The remote has no such ref                                                        | `not reachable` (`ref <ref> not found`)                   |
+| The remote has no such ref, or no HEAD                                            | `not reachable` (`ref <ref> not found`, `HEAD not found`) |
+| The source label cannot be parsed, tested before every other row                  | `not reachable` (the parse error)                         |
 | An item has no recorded commit                                                    | `no recorded commit`                                      |
 | Every recorded commit equals the remote commit, without regard to case            | `up to date`                                              |
 | Otherwise                                                                         | `update available`, every item listed                     |
@@ -350,11 +352,11 @@ Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
 preserving namespace, ref and subfolder. Applying `update` canonicalizes the
 source labels of reinstalled items and bundles, even when their content is
-unchanged. `update --dry-run`, `list` and `doctor` do not rewrite lockfiles or
-generated output. Aliases, recorded selection, bundle membership and unrelated
-item/plugin/MCP records remain intact. The label canonicalization itself does
-not change the schema; the reinstall adopts a `schema: 1` lockfile as described
-in §4 (State files).
+unchanged. `update --dry-run`, `update --check`, `list` and `doctor` do not
+rewrite lockfiles or generated output. Aliases, recorded selection, bundle
+membership and unrelated item/plugin/MCP records remain intact. The label
+canonicalization itself does not change the schema; the reinstall adopts a
+`schema: 1` lockfile as described in §4 (State files).
 
 The supported historical authority grammar and reconciliation limits are defined
 in the
