@@ -46,13 +46,15 @@ failed until `update --force`.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
    when applying the source writes or deletes a file (also a file whose bytes
-   are unchanged and whose mode differs from the mode of its source resource),
-   changes an item record of the lockfile (any field except `pending` and
-   `required_by`), completes an interrupted item, removes an item, or creates or
-   changes a hand-shake file. `y` applies the source. `n` or any other text
-   continues without it. `q`, end of input or a read error stops the run;
-   earlier sources stay applied. Ctrl-C while the question waits exits at once
-   with code 130 and applies none of the changes shown for that source; an
+   are unchanged and whose executable bits differ from the target executable
+   bits: each executable bit of its source resource for which the file has the
+   matching read bit; a difference in the other permission bits is not a
+   change), changes an item record of the lockfile (any field except `pending`
+   and `required_by`), completes an interrupted item, removes an item, or
+   creates or changes a hand-shake file. `y` applies the source. `n` or any
+   other text continues without it. `q`, end of input or a read error stops the
+   run; earlier sources stay applied. Ctrl-C while the question waits exits at
+   once with code 130 and applies none of the changes shown for that source; an
    adoption of a `schema: 1` lockfile that the run already saved stays saved. An
    interrupt during the apply of a source stops the run before the next source
    is shown or applied, with code 130.

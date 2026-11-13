@@ -814,8 +814,8 @@ mod tests {
     }
 
     /// A source that only adds the executable bit to a resource: the
-    /// bytes and the source hash are unchanged, and commit sets the mode,
-    /// so the preview lists the file as a change.
+    /// bytes and the source hash are unchanged, and commit sets the
+    /// executable bits, so the preview lists the file as a change.
     #[cfg(unix)]
     #[test]
     fn a_mode_only_change_is_in_the_preview_and_in_the_commit() {
@@ -858,6 +858,106 @@ mod tests {
             .permissions()
             .mode();
         assert_eq!(mode & 0o777, 0o755);
+    }
+
+    /// The user removed the group and other read bits of an installed
+    /// resource: only the executable bits count, so the preview has no
+    /// change, commit changes nothing, and the mode stays as the user set it.
+    #[cfg(unix)]
+    #[test]
+    fn a_difference_in_the_other_permission_bits_is_not_in_the_preview() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "same");
+        write(&src, "a/notes.md", b"notes\n");
+        let notes = src.join("a/notes.md");
+        fs::set_permissions(&notes, fs::Permissions::from_mode(0o644)).unwrap();
+        let source = InstallSource::LocalPath(src.clone());
+        prepare_install(&source, &target, &[], &AddOptions::default())
+            .unwrap()
+            .commit(&target, PluginScope::Project)
+            .unwrap();
+        let dest = target.join(".claude/skills/a/notes.md");
+        fs::set_permissions(&dest, fs::Permissions::from_mode(0o600)).unwrap();
+
+        let prepared = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
+        let preview = prepared
+            .preview(&target, &Lockfile::load(&target).unwrap())
+            .unwrap();
+        assert!(
+            preview
+                .items
+                .iter()
+                .all(|i| i.write.is_empty() && i.delete.is_empty()),
+            "{:?}",
+            preview.items
+        );
+        let report = prepared.commit(&target, PluginScope::Project).unwrap();
+        assert!(report.changed.is_empty(), "{:?}", report.changed);
+        let mode = fs::metadata(&dest).unwrap().permissions().mode();
+        assert_eq!(mode & 0o7777, 0o600);
+    }
+
+    /// The source adds the executable bits to a resource that the user made
+    /// private: only the owner gets the executable bit, and a second preview
+    /// of the same plan has no change.
+    #[cfg(unix)]
+    #[test]
+    fn executable_bits_limited_by_the_read_bits_are_previewed_once() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "same");
+        write(&src, "a/run.sh", b"echo run\n");
+        let script = src.join("a/run.sh");
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o644)).unwrap();
+        let source = InstallSource::LocalPath(src.clone());
+        prepare_install(&source, &target, &[], &AddOptions::default())
+            .unwrap()
+            .commit(&target, PluginScope::Project)
+            .unwrap();
+        let dest = target.join(".claude/skills/a/run.sh");
+        fs::set_permissions(&dest, fs::Permissions::from_mode(0o600)).unwrap();
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+        let written = |preview: &InstallPreview| -> Vec<PathBuf> {
+            preview
+                .items
+                .iter()
+                .flat_map(|i| i.write.iter().chain(&i.delete).cloned())
+                .collect()
+        };
+
+        let prepared = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
+        let preview = prepared
+            .preview(&target, &Lockfile::load(&target).unwrap())
+            .unwrap();
+        let first = written(&preview);
+        // Each client copy of the resource is listed once. The `.claude` copy
+        // (0o600) gets only the owner executable bit; the `.github` and
+        // `.agents` copies still have the installed mode 0o644, so they get
+        // all three executable bits, and are listed too.
+        assert_eq!(
+            first,
+            vec![
+                PathBuf::from(".claude/skills/a/run.sh"),
+                PathBuf::from(".github/skills/a/run.sh"),
+                PathBuf::from(".agents/skills/a/run.sh"),
+            ]
+        );
+        prepared.commit(&target, PluginScope::Project).unwrap();
+        let mode = fs::metadata(&dest).unwrap().permissions().mode();
+        assert_eq!(mode & 0o7777, 0o700);
+
+        let again = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
+        let preview = again
+            .preview(&target, &Lockfile::load(&target).unwrap())
+            .unwrap();
+        assert!(written(&preview).is_empty(), "{:?}", preview.items);
     }
 
     #[test]

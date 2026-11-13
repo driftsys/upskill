@@ -197,9 +197,12 @@ when applying the source writes or deletes a file, changes the lockfile record
 of an item (any field except `pending` and `required_by`), completes an
 interrupted item (a non-empty `pending` record, §4), removes an item, or creates
 or changes a hand-shake file (§3.4). A write of a file that already holds the
-planned bytes is not a change, unless the file has a different mode than the
-source resource (Unix only): the apply sets that mode, so the file is a change.
-A `skip` item and a `kept modified file` note are not changes.
+planned bytes is not a change, unless the executable bits (`0o111`) of the file
+differ from the target executable bits (Unix only): each executable bit of the
+source resource for which the file has the matching read bit (owner, group,
+other). The apply sets the executable bits to the target, so the file is a
+change. A difference in the other permission bits is not a change. A `skip` item
+and a `kept modified file` note are not changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action
@@ -466,32 +469,34 @@ first deletes the stale recorded files, then writes each file to a new file
 the source resource on it (a generated file gets the default mode of a new
 file), and renames it to the destination; on an error it deletes that stage file
 and stops. An owned file that already holds the planned bytes, or a CRLF variant
-of them as described in §2.1, is not written; only the mode of a resource is set
-on it again. (4) For each written item it sets `files` to the planned files and
-the records of its kept stale files, clears `pending` (older `pending` hashes of
-a planned path are dropped), and saves the lockfile. If the command fails or is
-stopped between (2) and (4), the lockfile keeps the `pending` records: a file
-that holds the bytes of a `pending` or `files` record is owned, so running the
-same command again, without `--force`, completes the operation, also after a
-second command that failed; `doctor` reports the item as interrupted, and
-`remove` deletes the files of both records. `update` completes an interrupted
-item also when its source did not change: the block of its source has a
-`complete` line for it, and in a terminal without `--yes` that source is asked
-about as for any other change (§2.2). A path of a `pending` record that the
-command that completes the operation does not plan is a stale recorded path:
-deleted when it matches its `pending` or `files` hash, kept and still recorded
-when modified. A stage file left by a process that was killed is not deleted by
-upskill. Two upskill processes that change one scope at the same time are not
-supported. `add`, `update` and `remove` (not `update --dry-run`, not `doctor`,
-not a `remove` that fails on an unknown name, not an `add`, or an `update` for
-its first source, that is refused for a source item that overlaps its own output
-paths, for a conflict with another source, for two items with one installed
-name, or for an installed name with a path separator, and not an `update` whose
-first source resolves to no items while the lockfile records items from it)
-adopt a `schema: 1` lockfile: they keep the old bytes as `.upskill-lock.json.v1`
-(an existing `.upskill-lock.json.v1` is kept and not replaced), record each
-existing file at the items' output paths with its current hash, save
-`schema: 2`, and print the adopted paths to stderr.
+of them as described in §2.1, is not written; when its executable bits differ
+from the target executable bits (§2.2), they are set to the target, and the
+other permission bits of the file are left as they are. (4) For each written
+item it sets `files` to the planned files and the records of its kept stale
+files, clears `pending` (older `pending` hashes of a planned path are dropped),
+and saves the lockfile. If the command fails or is stopped between (2) and (4),
+the lockfile keeps the `pending` records: a file that holds the bytes of a
+`pending` or `files` record is owned, so running the same command again, without
+`--force`, completes the operation, also after a second command that failed;
+`doctor` reports the item as interrupted, and `remove` deletes the files of both
+records. `update` completes an interrupted item also when its source did not
+change: the block of its source has a `complete` line for it, and in a terminal
+without `--yes` that source is asked about as for any other change (§2.2). A
+path of a `pending` record that the command that completes the operation does
+not plan is a stale recorded path: deleted when it matches its `pending` or
+`files` hash, kept and still recorded when modified. A stage file left by a
+process that was killed is not deleted by upskill. Two upskill processes that
+change one scope at the same time are not supported. `add`, `update` and
+`remove` (not `update --dry-run`, not `doctor`, not a `remove` that fails on an
+unknown name, not an `add`, or an `update` for its first source, that is refused
+for a source item that overlaps its own output paths, for a conflict with
+another source, for two items with one installed name, or for an installed name
+with a path separator, and not an `update` whose first source resolves to no
+items while the lockfile records items from it) adopt a `schema: 1` lockfile:
+they keep the old bytes as `.upskill-lock.json.v1` (an existing
+`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
+the items' output paths with its current hash, save `schema: 2`, and print the
+adopted paths to stderr.
 
 Two possible locations:
 
