@@ -6,7 +6,7 @@ the branch `feat/per-source-update-prompts`**. Code baseline: `origin/main` at
 
 Related records:
 [MVP epic #283](https://github.com/driftsys/upskill/issues/283),
-[re-steer design](2026-11-11-customization-resteer-design.md),
+[re-steer design](../../wip/specs/2026-11-11-customization-resteer-design.md),
 [#471](https://github.com/driftsys/upskill/issues/471) (not in scope, see
 [Non-goals](#non-goals)), [#497](https://github.com/driftsys/upskill/issues/497)
 (resolved by this work).
