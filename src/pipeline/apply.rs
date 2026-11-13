@@ -126,7 +126,8 @@ pub(super) enum Disposition {
     /// Not written; an update is withheld. Reported in `ApplyOutcome::skipped`.
     Skip,
     /// Not written; nothing is withheld. Its modified destinations are
-    /// reported in `ApplyOutcome::kept_edits`. Its lockfile entry is unchanged.
+    /// reported in `ApplyOutcome::kept_edits`. Its lockfile entry is unchanged, except that
+    /// it receives the commit of the fetched source.
     KeepEdits,
 }
 
@@ -163,7 +164,8 @@ pub(super) fn apply_plan(
 /// any item when `overwrite` is true, is written ([`Disposition::Write`]):
 /// a conflicting regular file is replaced. When `overwrite` is false, an
 /// item with at least one conflict is not written: none of its files is
-/// written or deleted, and its lockfile record is unchanged. It is
+/// written or deleted, and its lockfile record is unchanged (a `KeepEdits` item below receives
+/// the commit of the fetched source). It is
 /// [`Disposition::KeepEdits`] (nothing is withheld from it) when all of
 /// these hold, and [`Disposition::Skip`] otherwise:
 ///

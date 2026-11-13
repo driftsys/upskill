@@ -382,9 +382,10 @@ was updated, completed or removed, but files were written or deleted, it prints
 skipped, no file was kept with a note and no lockfile was adopted.
 
 For a git source, `update` records the commit that it fetched in the lockfile
-entries of the source, also when the source has no changes and is not applied
-(only a changed commit value causes a lockfile write). This write is not a
-change: it does not count in the output above, and `update --dry-run` and a
+entries of the source, also when the source has no changes and is not applied,
+except the entry of an item whose update is skipped, which keeps its recorded
+commit (only a changed commit value causes a lockfile write). This write is not
+a change: it does not count in the output above, and `update --dry-run` and a
 declined source record no commit.
 
 `update --dry-run` prints the blocks, then

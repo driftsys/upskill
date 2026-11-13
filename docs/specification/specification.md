@@ -184,19 +184,19 @@ root and kind directories that remain (for example `$HOME/.github/skills`) are
 kept, as the pruning rule of §2.3 states.
 
 `update` applies the conflict rules of `add` (§2.1). An item with a modified or
-unowned destination is not written and keeps its lockfile entry. When a source
-hash is recorded for the item and equals the source hash of the item (an item
-with no recorded hash is skipped), the item has an empty `pending` record, every
-such destination is modified (none is unowned), applying the item would write or
-delete no other file, the item has no recorded file that the new version no
-longer produces (present or absent), and its lockfile entry would not change in
-any field other than `files`, `pending`, `required_by` and `commit` (for example
-`clients`), nothing is withheld: `update` reports `kept modified file: <path>`
-for each modified destination (in a terminal and with `--dry-run`, in the block
-of its source; with `--yes` or without a terminal, on stderr), and this note
-does not change the exit code. Otherwise the item is reported as skipped (in a
-terminal and with `--dry-run`, as a `skip` line of its block; with `--yes` or
-without a terminal, as
+unowned destination is not written and keeps its lockfile entry (with its
+recorded commit). When a source hash is recorded for the item and equals the
+source hash of the item (an item with no recorded hash is skipped), the item has
+an empty `pending` record, every such destination is modified (none is unowned),
+applying the item would write or delete no other file, the item has no recorded
+file that the new version no longer produces (present or absent), and its
+lockfile entry would not change in any field other than `files`, `pending`,
+`required_by` and `commit` (for example `clients`), nothing is withheld:
+`update` reports `kept modified file: <path>` for each modified destination (in
+a terminal and with `--dry-run`, in the block of its source; with `--yes` or
+without a terminal, on stderr), and this note does not change the exit code.
+Otherwise the item is reported as skipped (in a terminal and with `--dry-run`,
+as a `skip` line of its block; with `--yes` or without a terminal, as
 `skipped <kind> <name>: <path> was modified or is not managed by upskill` on
 stderr). A skipped item of an applied source, or of a source whose preview
 changes nothing, makes `update` print `Use --force to replace.` on stderr and
@@ -286,10 +286,11 @@ item and a `kept modified file` note are not changes.
 - **Recorded commit.** For a git source, `update` sets the fetched commit on the
   lockfile entries of the source: with the item records when the source is
   applied (also on an item that keeps its modified files), and alone when the
-  source has no changes and is not applied; the lockfile is saved only when a
-  value differs. This write is not a change of the source (see the preview
-  above) and does not count in the output. A dry run, a declined source and a
-  stopped run record no commit.
+  source has no changes and is not applied; an entry of an item whose update is
+  skipped keeps its recorded commit. The lockfile is saved only when a value
+  differs. This write is not a change of the source (see the preview above) and
+  does not count in the output. A dry run, a declined source and a stopped run
+  record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and

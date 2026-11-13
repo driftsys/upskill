@@ -445,7 +445,8 @@ pub enum UpdateStatus {
     /// the status of an item of a source that was not applied and that has
     /// no preview item. For a git source that was not applied because it has
     /// no changes, `update` still writes the fetched commit to the lockfile
-    /// entries of the source; that write is not a change of the item.
+    /// entries of the source, except the entry of an item whose update is
+    /// skipped; that write is not a change of the item.
     UpToDate,
     /// The source of the item was applied, and the source hash of the item
     /// differs from the hash recorded in the lockfile entry (or no hash was
@@ -548,7 +549,8 @@ impl SourcePreview {
     /// or its action is `Complete` or `Remove`, or it is `record_only`; or a
     /// hand-shake file would be created or changed. A `Skip` item and a
     /// note in `kept_notes` are not changes. The write of a new source commit
-    /// to the lockfile entries of a source without changes is not a change.
+    /// to the lockfile entries of a source without changes (except the entries of
+    /// skipped items) is not a change.
     pub fn has_changes(&self) -> bool {
         self.items.iter().any(|item| {
             !item.write.is_empty()

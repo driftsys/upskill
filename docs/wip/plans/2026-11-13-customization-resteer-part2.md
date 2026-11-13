@@ -72,9 +72,10 @@ listed for the user to check before the implementation starts.
    `upskill update` once. It is not counted as an update.
 3. **`update` records the commit of every source that it fetches and does not
    decline**: an applied source, and a source that is not applied because it has
-   no changes. A source that the user declines, and a dry run, record nothing.
-   Without this, a remote commit that changes no item would be reported by
-   `update --check` on every run.
+   no changes. An entry whose item is withheld (a skipped item) keeps its
+   recorded commit. A source that the user declines, and a dry run, record
+   nothing. Without this, a remote commit that changes no item would be reported
+   by `update --check` on every run.
 4. **A changed commit lists every item of that git source.** The check does not
    fetch, so it cannot tell which items the new commit changes. `update` then
    reports the unchanged items as up to date.
@@ -295,10 +296,11 @@ fn stderr(out: &std::process::Output) -> String;
 
 - Consumes: `FetchedSource.commit`, `LockedItem.commit` (Task 1).
 - Produces: after `update`, every lockfile entry of a source that was applied,
-  or that was not applied because it has no changes, holds the fetched commit.
-  The lockfile is saved once more for a source without changes only when a
-  commit value differs. `UpdateReport.changed` and `SourcePreview::has_changes`
-  do not count this write.
+  or that was not applied because it has no changes, holds the fetched commit,
+  except an entry whose item is withheld (a skipped item), which keeps its
+  recorded commit. The lockfile is saved once more for a source without changes
+  only when a commit value differs. `UpdateReport.changed` and
+  `SourcePreview::has_changes` do not count this write.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -368,8 +370,9 @@ fn stderr(out: &std::process::Output) -> String;
   `SourceStamp`). When the source is not applied because
   `SourcePreview::has_changes()` is false and the run is not a dry run, set
   `commit` on every lockfile entry whose `source` equals the label of the source
-  and save the lockfile if a value changed. Do nothing for
-  `SourceDecision::Stop`, for a declined source, and for a dry run.
+  and whose item is not withheld (not a `Skip` preview item), and save the
+  lockfile if a value changed. Do nothing for `SourceDecision::Stop`, for a
+  declined source, and for a dry run.
 
 - [ ] **Step 4: Run `cargo test` — all pass. Commit**
 

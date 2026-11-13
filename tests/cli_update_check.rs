@@ -347,3 +347,91 @@ fn a_dry_run_records_no_commit() {
         before
     );
 }
+
+#[test]
+fn update_keeps_the_recorded_commit_of_a_withheld_item() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let old = upstream_head(&e);
+    std::fs::write(
+        e.repo.join(".claude/skills/alpha/SKILL.md"),
+        "edited by the user\n",
+    )
+    .unwrap();
+    write_skill(&e.upstream, "alpha", "Alpha content, changed upstream.");
+    git_in(&e, &["add", "."]);
+    git_in(&e, &["commit", "-m", "change alpha"]);
+    let head = upstream_head(&e);
+    assert_ne!(old, head);
+    let out = run(&e, &e.repo, &["update", "--yes"]);
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    assert!(stderr(&out).contains("skipped"), "{}", stderr(&out));
+    let lock = lock(&e.repo);
+    let commit_of = |name: &str| {
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap()["commit"]
+            .clone()
+    };
+    // `alpha` is withheld and keeps its old commit. The installed content of
+    // `beta` corresponds to the fetched source, so it holds the fetched commit.
+    assert_eq!(commit_of("alpha"), old.as_str());
+    assert_eq!(commit_of("beta"), head.as_str());
+}
+
+#[test]
+fn a_dry_run_without_changes_records_no_commit() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let before = std::fs::read(e.repo.join(".upskill-lock.json")).unwrap();
+    advance(&e, "README.md", "unrelated\n");
+    let out = run(&e, &e.repo, &["update", "--dry-run"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(
+        std::fs::read(e.repo.join(".upskill-lock.json")).unwrap(),
+        before
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_declined_source_records_no_commit() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let before = std::fs::read(e.repo.join(".upskill-lock.json")).unwrap();
+    advance(
+        &e,
+        "skills/alpha/SKILL.md",
+        "---\nschema: 1\nname: alpha\ndescription: changed\n---\nnew\n",
+    );
+    let env_vars = [
+        ("GIT_CONFIG_NOSYSTEM", "1".to_string()),
+        (
+            "GIT_CONFIG_GLOBAL",
+            e.home.join("empty-gitconfig").display().to_string(),
+        ),
+        ("GIT_CONFIG_COUNT", "2".to_string()),
+        (
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", e.upstream.display()),
+        ),
+        ("GIT_CONFIG_VALUE_0", format!("{REMOTE}.git")),
+        ("GIT_CONFIG_KEY_1", "protocol.file.allow".to_string()),
+        ("GIT_CONFIG_VALUE_1", "always".to_string()),
+        ("GIT_ALLOW_PROTOCOL", "file".to_string()),
+        ("GIT_TERMINAL_PROMPT", "0".to_string()),
+    ];
+    let result = common::update_in_terminal_with_env(&e.repo, &e.home, &[], "n\n", &env_vars);
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        result["stderr"].as_str().unwrap().contains("Apply?"),
+        "{result}"
+    );
+    assert_eq!(
+        std::fs::read(e.repo.join(".upskill-lock.json")).unwrap(),
+        before
+    );
+}

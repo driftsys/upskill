@@ -327,18 +327,27 @@ impl PreparedInstall {
     }
 
     /// Sets the fetched commit on every lockfile entry whose source is the
-    /// entry source of this install, and saves the lockfile only when a
-    /// value differs. Writes nothing for a source without a commit (a local
+    /// entry source of this install, except the entries in `withheld` (items
+    /// whose update is skipped: they keep their recorded commit), and saves
+    /// the lockfile only when a value differs. Writes nothing for a source without a commit (a local
     /// path). Used by `update` for a source that is not applied because it
     /// has no changes, so that the new commit alone does not leave the
     /// recorded commit behind.
-    pub fn record_commit(&self, target: &Path) -> Result<()> {
+    pub fn record_commit(
+        &self,
+        target: &Path,
+        withheld: &BTreeSet<(ItemKind, String)>,
+    ) -> Result<()> {
         let Some(commit) = &self.commit else {
             return Ok(());
         };
         let mut lock = Lockfile::load(target)?;
         let mut changed = false;
-        for item in lock.items.iter_mut().filter(|i| i.source == self.label) {
+        for item in lock
+            .items
+            .iter_mut()
+            .filter(|i| i.source == self.label && !withheld.contains(&(i.kind, i.name.clone())))
+        {
             if item.commit.as_ref() != Some(commit) {
                 item.commit = Some(commit.clone());
                 changed = true;
