@@ -93,18 +93,28 @@ out of canonical form.)
 Two scopes exist. The project scope has the current directory as its root. The
 global scope has the home directory as its root. Each scope has its own
 `.upskill-lock.json`. The `-p/--project` and `-g/--global` flags choose a scope.
-Without a flag, inside a git repository, every command uses the project scope.
-Outside a git repository, each command behaves as follows:
+Six commands have a scope: `add`, `update`, `remove`, `remove-mcp`, `list` and
+`doctor`. The other commands (`lint`, `fmt`, `search`, `new`) have none.
 
-- `add` refuses with exit code 2 and asks for `--project` or `--global`.
-- `update`, `remove` and `remove-mcp` use the global scope.
-- `list` and `doctor` report both scopes: the project scope first, then the
+Without a flag:
+
+- `add`, `update`, `remove` and `remove-mcp` use the project scope inside a git
+  repository. Outside a git repository, `add` refuses with exit code 2 and asks
+  for `--project` or `--global`, and `update`, `remove` and `remove-mcp` use the
   global scope.
+- `list` and `doctor` report both scopes, in and outside a git repository: the
+  project scope first, then the global scope.
 
 The project scope is refused with exit code 2 when the current directory is the
-home directory, because both scopes would then share one lockfile. In that case
-`add` without a flag stops with the same refusal, and `list` and `doctor` report
-the global scope once.
+home directory, because both scopes would then share one lockfile. With
+`--project` in the home directory, all six commands are refused. With no flag in
+the home directory:
+
+- When the home directory is a git repository, `add`, `update`, `remove` and
+  `remove-mcp` are refused.
+- When it is not a git repository, `add` is refused with the same message, and
+  `update`, `remove` and `remove-mcp` use the global scope.
+- `list` and `doctor` report the global scope once.
 
 ### Project lock file
 

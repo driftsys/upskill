@@ -61,9 +61,12 @@ Inside a git repository, `add` without a flag uses the project scope. Outside a
 git repository, `add` without a flag installs nothing and stops with exit code 2
 and a message that asks for `--project` or `--global`. When the current
 directory is the home directory, which is the root of the global scope, the
-project scope is refused, with `--project` or with no flag, in or outside a git
-repository: `add` installs nothing and stops with exit code 2 and a message that
-asks for `--global`. `update`, `remove` and `remove-mcp` do the same.
+project scope is refused: `add` installs nothing and stops with exit code 2 and
+a message that asks for `--global`, with `--project` and with no flag, in or
+outside a git repository. `update`, `remove` and `remove-mcp` do the same with
+`--project`, and with no flag in a home directory that is a git repository; with
+no flag in a home directory that is not a git repository, they use the global
+scope.
 
 `add`, `update`, `remove` and `remove-mcp` print one line to stderr that names
 the scope and its root, for example `scope: global (/home/alice)`. `--quiet`
