@@ -11,6 +11,8 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::scope::ScopeRoot;
+
 use super::apply::{check_no_item_symlink_above, deletable, delete_recorded, prune_empty_parents};
 use super::output::released_output_path;
 use super::owned::{FileState, adopt_schema1, adopt_schema1_in_memory, classify};
@@ -19,7 +21,7 @@ use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, InterruptedItem, ItemKind,
     ListReport, ListedBundle, ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry,
     OrphanReason, OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport,
-    RemovedItem, SkippedPlugin, SourceDecision, SourcePreview, SourceResult, StaleHash,
+    RemovedItem, ScopedList, SkippedPlugin, SourceDecision, SourcePreview, SourceResult, StaleHash,
     UnreadableFile, UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
 };
 
@@ -1159,6 +1161,22 @@ pub fn list(target: &Path) -> Result<ListReport> {
     }
     report.bundles.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(report)
+}
+
+/// [`list`] for each given scope root, in the given order. A scope whose
+/// lockfile is absent gives an empty report.
+pub fn list_scopes(roots: &[ScopeRoot]) -> Result<Vec<ScopedList>> {
+    roots
+        .iter()
+        .map(|at| {
+            Ok(ScopedList {
+                scope: at.scope,
+                root: at.root.clone(),
+                report: list(&at.root)
+                    .with_context(|| format!("failed to list the {} scope", at.scope))?,
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]

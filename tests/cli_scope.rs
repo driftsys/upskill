@@ -301,3 +301,108 @@ fn global_update_previews_the_move_in_a_dry_run() {
         assert!(e.home.join(rel).is_file(), "{rel}");
     }
 }
+
+fn install_project_rule_and_global_skill(e: &Env) {
+    let src = e.source.to_str().unwrap();
+    assert!(
+        run(e, &e.repo, &["add", src, "api-conventions"])
+            .status
+            .success()
+    );
+    assert!(
+        run(e, &e.repo, &["add", "--global", src, "create-api-endpoint"])
+            .status
+            .success()
+    );
+}
+
+fn list_json(e: &Env, cwd: &Path, args: &[&str]) -> serde_json::Value {
+    let mut all = vec!["list", "--json"];
+    all.extend_from_slice(args);
+    let text = stdout(&run(e, cwd, &all));
+    serde_json::from_str(&text).unwrap_or_else(|err| panic!("invalid JSON: {err}\n{text}"))
+}
+
+#[test]
+fn list_shows_both_scopes_with_the_scope_of_each_item() {
+    let e = env();
+    install_project_rule_and_global_skill(&e);
+    let text = stdout(&run(&e, &e.repo, &["list"]));
+    let project = text.find("project (").expect(&text);
+    let global = text
+        .find(&format!("global ({})", e.home.display()))
+        .expect(&text);
+    assert!(project < global);
+    let rule = text.find("api-conventions").unwrap();
+    let skill = text.find("create-api-endpoint").unwrap();
+    assert!(project < rule && rule < global && global < skill, "{text}");
+}
+
+#[test]
+fn list_json_holds_one_entry_for_each_scope() {
+    let e = env();
+    install_project_rule_and_global_skill(&e);
+    let v = list_json(&e, &e.repo, &[]);
+    assert_eq!(v["scopes"][0]["scope"], "project", "{v}");
+    assert_eq!(v["scopes"][0]["rules"][0]["name"], "api-conventions", "{v}");
+    assert_eq!(v["scopes"][1]["scope"], "global", "{v}");
+    assert_eq!(
+        v["scopes"][1]["skills"][0]["name"], "create-api-endpoint",
+        "{v}"
+    );
+    assert_eq!(
+        v["scopes"][1]["root"].as_str().unwrap(),
+        e.home.to_str().unwrap(),
+        "{v}"
+    );
+}
+
+#[test]
+fn list_with_a_scope_flag_shows_that_scope_only() {
+    let e = env();
+    install_project_rule_and_global_skill(&e);
+    let text = stdout(&run(&e, &e.repo, &["list", "--global"]));
+    assert!(text.contains("global ("), "{text}");
+    assert!(!text.contains("project ("), "{text}");
+    let v = list_json(&e, &e.repo, &["--project"]);
+    assert_eq!(v["scopes"].as_array().unwrap().len(), 1, "{v}");
+    assert_eq!(v["scopes"][0]["scope"], "project", "{v}");
+}
+
+#[test]
+fn list_names_a_scope_without_items() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    assert!(
+        run(
+            &e,
+            &e.repo,
+            &["add", "--global", src, "create-api-endpoint"]
+        )
+        .status
+        .success()
+    );
+    let text = stdout(&run(&e, &e.repo, &["list"]));
+    let header = text.find("project (").expect(&text);
+    let empty = text.find("  No items installed.").expect(&text);
+    let global = text.find("global (").expect(&text);
+    assert!(header < empty && empty < global, "{text}");
+}
+
+#[test]
+fn list_in_the_home_directory_shows_the_global_scope_once() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    assert!(
+        run(
+            &e,
+            &e.home,
+            &["add", "--global", src, "create-api-endpoint"]
+        )
+        .status
+        .success()
+    );
+    let v = list_json(&e, &e.home, &[]);
+    assert_eq!(v["scopes"].as_array().unwrap().len(), 1, "{v}");
+    assert_eq!(v["scopes"][0]["scope"], "global", "{v}");
+}

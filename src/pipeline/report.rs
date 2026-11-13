@@ -11,6 +11,7 @@ use std::path::PathBuf;
 
 use super::ItemKind;
 use crate::generate::Client;
+use crate::scope::Scope;
 
 #[derive(Debug, Clone)]
 pub struct InstalledItem {
@@ -613,6 +614,16 @@ impl ListReport {
             && self.agents.is_empty()
             && self.bundles.is_empty()
     }
+}
+
+/// The [`ListReport`] of one scope, with the scope and its root directory.
+/// Serialized with the report fields at the same level as `scope` and `root`.
+#[derive(Debug, Clone, Serialize)]
+pub struct ScopedList {
+    pub scope: Scope,
+    pub root: PathBuf,
+    #[serde(flatten)]
+    pub report: ListReport,
 }
 
 #[cfg(test)]

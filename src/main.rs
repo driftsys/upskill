@@ -9,10 +9,10 @@ use upskill::fmt::{FmtReport, fmt};
 use upskill::index;
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
-    DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
-    PluginResult, PreviewAction, RemoveFilter, RemoveReport, SourceDecision, SourcePreview,
-    SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor, install_with_lockfile, list,
-    remove, update,
+    DoctorReport, InstallReport, ItemKind, ListedBundle, ListedItem, OrphanReason, PluginResult,
+    PreviewAction, RemoveFilter, RemoveReport, ScopedList, SourceDecision, SourcePreview,
+    SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor, install_with_lockfile,
+    list_scopes, remove, update,
 };
 use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
@@ -1765,21 +1765,20 @@ fn kind_label(kind: ItemKind) -> &'static str {
 }
 
 fn run_list(global: bool, project: bool, json: bool) -> i32 {
-    let at = match resolve_scope(global, project, NoFlag::Global) {
-        Ok(at) => at,
+    let roots = match report_scopes(global, project) {
+        Ok(roots) => roots,
         Err(err) => {
-            print_error(&err);
-            return err.exit_code();
+            print_error_chain(&err);
+            return EXIT_ERROR;
         }
     };
-    let target = at.root;
 
-    match list(&target) {
-        Ok(report) => {
+    match list_scopes(&roots) {
+        Ok(scoped) => {
             if json {
-                print_list_json(&report);
+                print_list_json(&scoped);
             } else {
-                print_list_report(&report);
+                print_list_report(&scoped);
             }
             EXIT_SUCCESS
         }
@@ -1790,21 +1789,58 @@ fn run_list(global: bool, project: bool, json: bool) -> i32 {
     }
 }
 
-fn print_list_json(report: &ListReport) {
+/// The scopes that `list` and `doctor` report, in the order project, global.
+///
+/// `--global` gives the global scope and `--project` gives the project scope.
+/// Without a flag, both scopes are given, except that the global scope alone
+/// is given when the current directory is the home directory (both scopes
+/// would be the same lockfile), and the project scope alone is given, with a
+/// note on stderr, when the home directory is not known.
+fn report_scopes(global: bool, project: bool) -> anyhow::Result<Vec<ScopeRoot>> {
+    if global {
+        return Ok(vec![scope_root(Scope::Global)?]);
+    }
+    if project {
+        return Ok(vec![scope_root(Scope::Project)?]);
+    }
+    let project_root = scope_root(Scope::Project)?;
+    let Ok(global_root) = scope_root(Scope::Global) else {
+        if !style::is_quiet() {
+            eprintln!("note: the global scope is not shown: HOME is not set");
+        }
+        return Ok(vec![project_root]);
+    };
+    if same_directory(&project_root.root, &global_root.root) {
+        return Ok(vec![global_root]);
+    }
+    Ok(vec![project_root, global_root])
+}
+
+/// True when both paths name the same directory. Compares canonical paths and
+/// compares the given paths when a path cannot be canonicalised.
+fn same_directory(a: &std::path::Path, b: &std::path::Path) -> bool {
+    match (a.canonicalize(), b.canonicalize()) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => a == b,
+    }
+}
+
+fn print_list_json(scoped: &[ScopedList]) {
     if style::is_quiet() {
         return;
     }
     // serde_json::to_string_pretty cannot fail for owned data — every
-    // field on ListReport derives Serialize and contains no maps with
+    // field on ScopedList derives Serialize and contains no maps with
     // non-string keys. unwrap is safe.
-    println!("{}", serde_json::to_string_pretty(report).unwrap());
+    let document = serde_json::json!({ "scopes": scoped });
+    println!("{}", serde_json::to_string_pretty(&document).unwrap());
 }
 
-fn print_list_report(report: &ListReport) {
+fn print_list_report(scoped: &[ScopedList]) {
     if style::is_quiet() {
         return;
     }
-    if report.is_empty() {
+    if scoped.iter().all(|s| s.report.is_empty()) {
         println!("No items installed.");
         println!();
         println!("  Get started: upskill add owner/repo");
@@ -1812,24 +1848,39 @@ fn print_list_report(report: &ListReport) {
         return;
     }
 
-    print_list_section("rules", &report.rules);
-    print_list_section("skills", &report.skills);
-    print_list_section("agents", &report.agents);
-    print_list_bundles(&report.bundles);
+    for (index, entry) in scoped.iter().enumerate() {
+        if index > 0 {
+            println!();
+        }
+        println!(
+            "{} ({})",
+            style::name(&entry.scope.to_string()),
+            entry.root.display()
+        );
+        let report = &entry.report;
+        if report.is_empty() {
+            println!("  No items installed.");
+            continue;
+        }
+        print_list_section("rules", &report.rules);
+        print_list_section("skills", &report.skills);
+        print_list_section("agents", &report.agents);
+        print_list_bundles(&report.bundles);
+    }
 }
 
 fn print_list_section(label: &str, items: &[ListedItem]) {
     if items.is_empty() {
         return;
     }
-    println!("{} ({})", style::name(label), items.len());
+    println!("  {} ({})", style::name(label), items.len());
     for item in items {
         let pinned = match &item.git_ref {
             Some(r) => format!("@{r}"),
             None => String::new(),
         };
         println!(
-            "  {:<32} {}",
+            "    {:<32} {}",
             style::name(&item.name),
             style::dim(&format!("{}{pinned}", item.source))
         );
@@ -1840,14 +1891,14 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
     if bundles.is_empty() {
         return;
     }
-    println!("{} ({})", style::name("bundles"), bundles.len());
+    println!("  {} ({})", style::name("bundles"), bundles.len());
     for bundle in bundles {
         let pinned = match &bundle.git_ref {
             Some(r) => format!("@{r}"),
             None => String::new(),
         };
         println!(
-            "  {:<32} {}",
+            "    {:<32} {}",
             style::name(&bundle.name),
             style::dim(&format!("{}{pinned}", bundle.source))
         );

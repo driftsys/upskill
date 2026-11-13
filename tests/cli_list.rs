@@ -1,9 +1,12 @@
 //! ATDD tests for `upskill list`.
 //!
-//! Reads `.upskill-lock.json` and prints installed items grouped by kind.
-//! Bundles, when present, are surfaced as a separate section. The command
-//! never touches per-client output files or fetches anything — it is a
-//! lockfile dump.
+//! Reads `.upskill-lock.json` of the project scope and of the global scope
+//! and prints the installed items of each scope grouped by kind. Without a
+//! scope flag both scopes are reported; `--project` or `--global` limits the
+//! report to one scope, and the JSON output then holds one entry in
+//! `scopes`. Bundles, when present, are surfaced as a separate section. The
+//! command never touches per-client output files or fetches anything — it is
+//! a lockfile dump.
 
 mod common;
 
@@ -162,14 +165,15 @@ fn list_json_empty_lockfile_emits_empty_buckets() {
     fs::create_dir_all(tmp.path().join(".git")).unwrap();
     let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
-        .args(["list", "--json"])
+        .args(["list", "--json", "--project"])
         .assert()
         .success();
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     let v: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    let scope = &v["scopes"][0];
     for bucket in ["rules", "skills", "agents", "bundles"] {
-        let arr = v[bucket].as_array().unwrap_or_else(|| {
+        let arr = scope[bucket].as_array().unwrap_or_else(|| {
             panic!("expected {bucket} to be an array, got: {v}");
         });
         assert!(arr.is_empty(), "expected empty {bucket}, got: {arr:?}");
@@ -190,19 +194,20 @@ fn list_json_groups_installed_items_by_kind() {
 
     let assert = common::upskill_cmd(&home)
         .current_dir(&target)
-        .args(["list", "--json"])
+        .args(["list", "--json", "--project"])
         .assert()
         .success();
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     let v: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
 
-    assert_eq!(v["rules"].as_array().unwrap().len(), 2);
-    assert_eq!(v["skills"].as_array().unwrap().len(), 1);
-    assert_eq!(v["agents"].as_array().unwrap().len(), 1);
+    let scope = &v["scopes"][0];
+    assert_eq!(scope["rules"].as_array().unwrap().len(), 2);
+    assert_eq!(scope["skills"].as_array().unwrap().len(), 1);
+    assert_eq!(scope["agents"].as_array().unwrap().len(), 1);
 
     // Stable item shape: { name, source, git_ref }.
-    let first_rule = &v["rules"][0];
+    let first_rule = &scope["rules"][0];
     assert!(first_rule["name"].is_string());
     assert!(first_rule["source"].as_str().unwrap().starts_with("local:"));
     assert!(

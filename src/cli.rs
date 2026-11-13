@@ -205,8 +205,11 @@ pub enum Commands {
     },
     /// List installed content recorded in `.upskill-lock.json`.
     ///
-    /// Items are grouped by kind (rules, skills, agents). Bundles, when
-    /// present, are surfaced as a separate section. The command never
+    /// Without a scope flag, both scopes are reported: the project scope
+    /// (current directory), then the global scope (`$HOME`). `--global` or
+    /// `--project` limits the report to that scope. In each scope, items
+    /// are grouped by kind (rules, skills, agents). Bundles, when present,
+    /// are surfaced as a separate section. The command never
     /// fetches and never inspects per-client output files — for that, run
     /// `upskill doctor`.
     #[command(
@@ -216,12 +219,10 @@ pub enum Commands {
             upskill list --global"
     )]
     List {
-        /// Read `$HOME/.upskill-lock.json` instead of the current directory.
+        /// Report only the global scope (`$HOME/.upskill-lock.json`).
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Operate on the current directory. Without a scope flag, the
-        /// command uses the project scope inside a git repo and the global
-        /// scope outside one.
+        /// Report only the project scope (the current directory).
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit a stable JSON document instead of the human-readable

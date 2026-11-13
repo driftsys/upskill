@@ -203,12 +203,12 @@ fn list_global_reads_home_lockfile() {
         .assert()
         .success();
 
-    // `list` without `-g` from project cwd: reports nothing (project lockfile is absent).
+    // `list --project` from project cwd: reports nothing (project lockfile is absent).
     let project_assert = Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
-        .args(["list"])
+        .args(["list", "--project"])
         .assert()
         .success();
     let project_out = String::from_utf8(project_assert.get_output().stdout.clone()).unwrap();

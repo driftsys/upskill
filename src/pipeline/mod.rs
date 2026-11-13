@@ -46,7 +46,7 @@ pub use apply::{ConflictState, FileConflict};
 pub use git::{fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;
-pub use lifecycle::{doctor, list, remove, update};
+pub use lifecycle::{doctor, list, list_scopes, remove, update};
 pub use report::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
