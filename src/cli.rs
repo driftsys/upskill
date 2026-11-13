@@ -151,13 +151,14 @@ pub enum Commands {
     /// `--dry-run`, prints for each source the block of what applying it
     /// would change, computed from the files on disk and the lockfile,
     /// without writing.
-    /// `update` always fetches.
+    /// `update` always fetches; `update --check` never does.
     #[command(
         display_order = 3,
         after_help = "EXAMPLES:\n  \
             upskill update\n  \
             upskill update code-review\n  \
             upskill update --dry-run\n  \
+            upskill update --check\n  \
             upskill update --global"
     )]
     Update {
@@ -166,6 +167,15 @@ pub enum Commands {
         /// Report what would change without writing.
         #[arg(short = 'n', long = "dry-run")]
         dry_run: bool,
+        /// Report the sources that have a newer version, for both scopes,
+        /// without changing a file and without a fetch. A git source is
+        /// compared by the commit that `git ls-remote` reports; a local path
+        /// source is compared by content. The lookups end after 10 seconds.
+        #[arg(
+            long = "check",
+            conflicts_with_all = ["dry_run", "yes", "force", "claude", "copilot", "vscode", "opencode"]
+        )]
+        check: bool,
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,

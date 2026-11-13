@@ -329,10 +329,10 @@ impl PreparedInstall {
     /// Sets the fetched commit on every lockfile entry whose source is the
     /// entry source of this install, except the entries in `withheld` (items
     /// whose update is skipped: they keep their recorded commit), and saves
-    /// the lockfile only when a value differs. Writes nothing for a source without a commit (a local
-    /// path). Used by `update` for a source that is not applied because it
-    /// has no changes, so that the new commit alone does not leave the
-    /// recorded commit behind.
+    /// the lockfile only when a value differs. Writes nothing for a source
+    /// without a commit (a local path). Used by `update` for a source that is
+    /// not applied because it has no changes, so that the new commit alone
+    /// does not leave the recorded commit behind.
     pub fn record_commit(
         &self,
         target: &Path,
@@ -543,7 +543,8 @@ impl PreparedInstall {
         report.forced = outcome.forced;
         report.changed = outcome.changed;
         // A skipped item keeps its lockfile entry unchanged, or gets none. An
-        // item kept for its modified files keeps its lockfile entry unchanged.
+        // item kept for its modified files keeps its lockfile entry unchanged,
+        // except for its commit.
         let skipped: BTreeSet<(ItemKind, String)> = report
             .conflicts
             .iter()

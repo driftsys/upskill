@@ -2,6 +2,7 @@ use anyhow::Context;
 use clap::{Parser, error::ErrorKind};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 use upskill::cli::{Cli, Commands};
 use upskill::config;
@@ -9,10 +10,11 @@ use upskill::fmt::{FmtReport, fmt};
 use upskill::index;
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
-    DoctorReport, DoctorScopes, InstallReport, ItemKind, ListedBundle, ListedItem, OrphanReason,
-    PluginResult, PreviewAction, RemoveFilter, RemoveReport, ScopedList, SourceDecision,
-    SourcePreview, SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor_scopes,
-    install_with_lockfile, installed_names, list_scopes, remove, update,
+    DoctorReport, DoctorScopes, GitRemote, InstallReport, ItemKind, ListedBundle, ListedItem,
+    OrphanReason, PluginResult, PreviewAction, RemoveFilter, RemoveReport, ScopedCheck, ScopedList,
+    SourceDecision, SourcePreview, SourceResult, SourceStatus, UpdateObserver, UpdateReport,
+    UpdateStatus, check_scopes, doctor_scopes, install_with_lockfile, installed_names, list_scopes,
+    remove, update,
 };
 use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
@@ -84,6 +86,7 @@ fn main() {
         Commands::Update {
             names,
             dry_run,
+            check,
             global,
             project,
             yes,
@@ -95,6 +98,7 @@ fn main() {
         } => run_update(UpdateArgs {
             names: &names,
             dry_run,
+            check,
             yes,
             global,
             project,
@@ -917,6 +921,8 @@ fn print_remove_report(report: &RemoveReport) {
 struct UpdateArgs<'a> {
     names: &'a [String],
     dry_run: bool,
+    /// `--check`: report the available updates and change nothing.
+    check: bool,
     yes: bool,
     global: bool,
     project: bool,
@@ -972,12 +978,16 @@ fn run_update(args: UpdateArgs) -> i32 {
     let UpdateArgs {
         names,
         dry_run,
+        check,
         yes,
         global,
         project,
         force,
         flag_clients,
     } = args;
+    if check {
+        return run_update_check(names, global, project);
+    }
     let at = match resolve_scope(global, project, NoFlag::Global) {
         Ok(at) => at,
         Err(err) => {
@@ -1034,6 +1044,118 @@ fn run_update(args: UpdateArgs) -> i32 {
             EXIT_ERROR
         }
     }
+}
+
+/// The time that `update --check` spends on the lookups of all sources.
+const CHECK_TIME_LIMIT: Duration = Duration::from_secs(10);
+
+/// `update --check`: report the sources of the selected scopes that have a
+/// newer version. Changes no file. A source that cannot be checked is
+/// reported and does not change the exit code.
+fn run_update_check(names: &[String], global: bool, project: bool) -> i32 {
+    let roots = match report_scopes(global, project) {
+        Ok(roots) => roots,
+        Err(ScopeError::Other(err)) => {
+            print_error_chain(&err);
+            return EXIT_ERROR;
+        }
+        Err(err) => {
+            print_error(&err);
+            return err.exit_code();
+        }
+    };
+    let deadline = Instant::now() + CHECK_TIME_LIMIT;
+    match check_scopes(&roots, names, deadline, &mut GitRemote) {
+        Ok(checks) => {
+            print_check(&checks);
+            EXIT_SUCCESS
+        }
+        Err(err) => {
+            print_error_chain(&err);
+            EXIT_ERROR
+        }
+    }
+}
+
+/// The width of the status label column of `update --check`.
+const CHECK_LABEL_WIDTH: usize = 16;
+
+/// The first 7 characters of a commit.
+fn short_commit(commit: &str) -> String {
+    commit.chars().take(7).collect()
+}
+
+/// Print the result of `update --check` to stdout, unless `--quiet` is set.
+fn print_check(checks: &[ScopedCheck]) {
+    if style::is_quiet() {
+        return;
+    }
+    for check in checks {
+        println!("{} ({}):", check.scope, check.root.display());
+        if check.sources.is_empty() {
+            println!("  nothing installed");
+            continue;
+        }
+        let mut printed = false;
+        for source in &check.sources {
+            let (label, detail) = match &source.status {
+                SourceStatus::UpToDate => continue,
+                SourceStatus::UpdateAvailable { from, to } => {
+                    let detail = match (from, to) {
+                        (Some(from), Some(to)) => {
+                            format!(
+                                "{}  {} -> {}",
+                                source.source,
+                                short_commit(from),
+                                short_commit(to)
+                            )
+                        }
+                        _ => source.source.clone(),
+                    };
+                    ("update available", detail)
+                }
+                SourceStatus::PinnedToCommit => ("pinned to a commit", source.source.clone()),
+                SourceStatus::NoRecordedCommit => (
+                    "no recorded commit",
+                    format!("{}: run \"upskill update\" once", source.source),
+                ),
+                SourceStatus::NotReachable { reason } => {
+                    ("not reachable", format!("{}: {reason}", source.source))
+                }
+                SourceStatus::NotChecked => ("not checked", source.source.clone()),
+            };
+            printed = true;
+            println!("  {label:<CHECK_LABEL_WIDTH$}  {detail}");
+            for (kind, name) in &source.items {
+                println!("    {kind} {name}");
+            }
+        }
+        if !printed {
+            println!("  up to date");
+        }
+    }
+    let total: usize = checks.iter().map(ScopedCheck::update_count).sum();
+    if total == 0 {
+        println!("No updates available.");
+        return;
+    }
+    let mut commands = Vec::new();
+    for (scope, command) in [
+        (Scope::Project, "upskill update"),
+        (Scope::Global, "upskill update --global"),
+    ] {
+        if checks
+            .iter()
+            .any(|c| c.scope == scope && c.update_count() > 0)
+        {
+            commands.push(format!("\"{command}\""));
+        }
+    }
+    println!(
+        "{total} {} available. Run {}.",
+        if total == 1 { "update" } else { "updates" },
+        commands.join(" and ")
+    );
 }
 
 /// The last line of `update --dry-run`.

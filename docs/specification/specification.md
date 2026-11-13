@@ -155,6 +155,7 @@ items installed from another source; it then lists these files after
 
 ```text
 upskill update [name...] [--global|--project] [--dry-run] [--force]
+upskill update --check [name...] [--global|--project]
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
@@ -162,9 +163,9 @@ and the global scope outside one. `--project` uses the current directory. When
 the current directory is the home directory, the project scope is refused with
 exit code 2 and a message that asks for `--global`.
 
-Always fetches the latest source before regenerating. Absorbs the role of a
-separate `sync` command — there is no `--offline` flag in v1; offline use is
-covered by passing local paths to `add` / `update`.
+Without `--check`, always fetches the latest source before regenerating. Absorbs
+the role of a separate `sync` command — there is no `--offline` flag in v1;
+offline use is covered by passing local paths to `add` / `update`.
 
 `update` covers two distinct behaviours:
 
@@ -311,6 +312,39 @@ preview changes nothing (`doctor` reports it, `update --yes` repairs it). A
 change of only `required_by` in an item record is not shown and does not cause a
 question; it is saved when the source is applied for another reason, or with
 `--yes`.
+
+`update --check` reports, for each selected scope, the sources that have a newer
+version. It changes no file, does not fetch and conflicts with `--dry-run`,
+`--yes`, `--force` and the client flags (exit code 2). Without a scope flag it
+reports both scopes, in the order project, global; the global scope alone when
+the current directory is the home directory. A scope prints one block, headed
+`<scope> (<root>):`, with one line for each source that is not up to date, then
+`up to date` when it has sources and no such line, or `nothing installed` when
+it has no source. A line starts with the status label (`update available`,
+`no recorded commit`, `pinned to a commit`, `not reachable`, `not checked`) and
+names the source label. The last line is `No updates available.` or
+`<n> update(s) available. Run ...` with the command of each scope that has
+updates. The rules for one source, tested in this order:
+
+| Condition                                                                         | Status                                                    |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Local path source that does not exist                                             | `not reachable` (`path not found`)                        |
+| Local path source: an item directory has another hash than recorded, or is absent | `update available`, those items listed; else `up to date` |
+| The ref is a full commit hash                                                     | `pinned to a commit`, not looked up                       |
+| The time limit (10 seconds for all sources) passed before the lookup              | `not checked`                                             |
+| `git ls-remote` timed out                                                         | `not reachable` (`time limit reached`)                    |
+| `git ls-remote` failed                                                            | `not reachable` (the message of git)                      |
+| The remote has no such ref                                                        | `not reachable` (`ref <ref> not found`)                   |
+| An item has no recorded commit                                                    | `no recorded commit`                                      |
+| Every recorded commit equals the remote commit, without regard to case            | `up to date`                                              |
+| Otherwise                                                                         | `update available`, every item listed                     |
+
+A git source is looked up at most once for all scopes, and a source that shares
+a lookup with an earlier source gets its result also after the time limit. A
+newer tag is not looked for. An item that `update` skipped keeps its older
+commit, so its source is `update available` until the item is resolved. Exit
+code 0 when the check ran, also when a source is not reachable; 1 when a
+lockfile cannot be read or parsed. `--quiet` suppresses the output.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -603,6 +637,7 @@ across-repo continuity for global scope.
       "name": "code-review",
       "source": "github:driftsys/skills",
       "ref": "v1.2.0",
+      "commit": "<40 hex digits>",
       "hash": "sha256:..."
     }
   ],

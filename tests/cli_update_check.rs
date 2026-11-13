@@ -16,7 +16,6 @@ struct Env {
     _tmp: tempfile::TempDir,
     home: PathBuf,
     repo: PathBuf,
-    #[allow(dead_code)] // Used by the tests of later tasks (global scope, no repository).
     outside: PathBuf,
     upstream: PathBuf,
 }
@@ -175,7 +174,6 @@ fn tree(root: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
     files
 }
 
-#[allow(dead_code)] // Used by the tests of later tasks.
 fn stdout(out: &std::process::Output) -> String {
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
@@ -491,4 +489,236 @@ fn a_terminal_update_keeps_the_recorded_commit_of_a_withheld_item() {
     };
     assert_eq!(commit_of("alpha"), old.as_str(), "{result}");
     assert_eq!(commit_of("beta"), head.as_str(), "{result}");
+}
+
+fn short(commit: &str) -> &str {
+    &commit[..7]
+}
+
+#[test]
+fn check_reports_no_update_after_an_install() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let out = run(&e, &e.repo, &["update", "--check"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert!(stdout(&out).contains("  up to date\n"), "{}", stdout(&out));
+    assert!(
+        stdout(&out).ends_with("No updates available.\n"),
+        "{}",
+        stdout(&out)
+    );
+}
+
+#[test]
+fn check_lists_the_items_of_a_source_with_a_new_commit_and_changes_no_file() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let old = upstream_head(&e);
+    let new = advance(
+        &e,
+        "skills/alpha/SKILL.md",
+        "---\nname: alpha\ndescription: changed\n---\nnew\n",
+    );
+    let before = (tree(&e.repo), tree(&e.home));
+    let out = run(&e, &e.repo, &["update", "--check"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(
+        text.contains(&format!(
+            "update available  {REMOTE}  {} -> {}",
+            short(&old),
+            short(&new)
+        )),
+        "{text}"
+    );
+    assert!(
+        text.contains("    skill alpha\n") && text.contains("    skill beta\n"),
+        "{text}"
+    );
+    assert!(
+        text.ends_with("2 updates available. Run \"upskill update\".\n"),
+        "{text}"
+    );
+    assert_eq!((tree(&e.repo), tree(&e.home)), before);
+}
+
+#[test]
+fn check_reports_both_scopes_and_a_flag_limits_it() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let out = run(&e, &e.outside, &["add", REMOTE, "--global", "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    advance(&e, "NOTES.md", "new commit\n");
+
+    let out = run(&e, &e.repo, &["update", "--check"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(text.contains("project ("), "{text}");
+    assert!(text.contains("global ("), "{text}");
+    assert!(
+        text.ends_with(
+            "4 updates available. Run \"upskill update\" and \"upskill update --global\".\n"
+        ),
+        "{text}"
+    );
+
+    let out = run(&e, &e.repo, &["update", "--check", "--global"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(!text.contains("project ("), "{text}");
+    assert!(
+        text.ends_with("2 updates available. Run \"upskill update --global\".\n"),
+        "{text}"
+    );
+}
+
+#[test]
+fn check_says_nothing_installed_for_a_scope_without_a_source() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let out = run(&e, &e.repo, &["update", "--check"]);
+    let text = stdout(&out);
+    assert!(text.contains("global ("), "{text}");
+    assert!(text.contains("  nothing installed\n"), "{text}");
+}
+
+#[test]
+fn check_reports_an_unreachable_source_and_exits_with_code_0() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let gone = e.upstream.parent().unwrap().join("upstream-gone");
+    fs::rename(&e.upstream, gone).unwrap();
+    let out = run(&e, &e.repo, &["update", "--check"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(
+        text.lines()
+            .any(|l| l.starts_with("  not reachable     ") && l.contains(REMOTE)),
+        "{text}"
+    );
+    assert!(text.ends_with("No updates available.\n"), "{text}");
+}
+
+#[test]
+fn check_does_not_look_for_newer_tags() {
+    let e = env();
+    git_in(&e, &["tag", "v1"]);
+    run(&e, &e.repo, &["add", &format!("{REMOTE}@v1"), "--claude"]);
+    advance(&e, "NOTES.md", "second\n");
+    git_in(&e, &["tag", "v2"]);
+    let out = run(&e, &e.repo, &["update", "--check"]);
+    assert!(stdout(&out).contains("  up to date\n"), "{}", stdout(&out));
+    git_in(&e, &["tag", "-f", "v1"]);
+    let out = run(&e, &e.repo, &["update", "--check"]);
+    assert!(
+        stdout(&out).contains("  update available  "),
+        "{}",
+        stdout(&out)
+    );
+}
+
+#[test]
+fn check_skips_a_source_pinned_to_a_commit() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let head = upstream_head(&e);
+    let path = e.repo.join(".upskill-lock.json");
+    let mut doc = lock(&e.repo);
+    for item in doc["items"].as_array_mut().unwrap() {
+        item["source"] = format!("{REMOTE}@{head}").into();
+        item["ref"] = head.clone().into();
+    }
+    fs::write(&path, serde_json::to_vec_pretty(&doc).unwrap()).unwrap();
+    advance(&e, "NOTES.md", "second\n");
+    let out = run(&e, &e.repo, &["update", "--check", "--project"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(text.contains("pinned to a commit"), "{text}");
+    assert!(text.ends_with("No updates available.\n"), "{text}");
+}
+
+#[test]
+fn check_of_a_local_path_source_lists_only_the_changed_item() {
+    let e = env();
+    let path = e.upstream.to_str().unwrap().to_string();
+    let out = run(&e, &e.repo, &["add", &path, "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    write_skill(&e.upstream, "alpha", "Alpha content, edited.");
+    let out = run(&e, &e.repo, &["update", "--check", "--project"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(text.contains("    skill alpha\n"), "{text}");
+    assert!(!text.contains("skill beta"), "{text}");
+    assert!(!text.contains("->"), "{text}");
+    assert!(
+        text.ends_with("1 update available. Run \"upskill update\".\n"),
+        "{text}"
+    );
+}
+
+#[test]
+fn check_after_an_update_reports_no_update() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "NOTES.md", "second\n");
+    let out = run(&e, &e.repo, &["update", "--yes"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let out = run(&e, &e.repo, &["update", "--check", "--project"]);
+    assert!(
+        stdout(&out).ends_with("No updates available.\n"),
+        "{}",
+        stdout(&out)
+    );
+}
+
+#[test]
+fn check_of_an_entry_without_a_commit_asks_for_one_update() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let mut doc = lock(&e.repo);
+    for item in doc["items"].as_array_mut().unwrap() {
+        item.as_object_mut().unwrap().remove("commit");
+    }
+    fs::write(
+        e.repo.join(".upskill-lock.json"),
+        serde_json::to_vec_pretty(&doc).unwrap(),
+    )
+    .unwrap();
+    let out = run(&e, &e.repo, &["update", "--check", "--project"]);
+    let text = stdout(&out);
+    assert!(
+        text.contains(&format!(
+            "  no recorded commit  {REMOTE}: run \"upskill update\" once\n"
+        )),
+        "{text}"
+    );
+    assert!(text.ends_with("No updates available.\n"), "{text}");
+}
+
+#[test]
+fn check_prints_nothing_to_stdout_with_quiet() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "NOTES.md", "second\n");
+    let out = run(&e, &e.repo, &["update", "--check", "--quiet"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert_eq!(stdout(&out), "");
+}
+
+#[test]
+fn check_fails_with_code_1_for_an_unreadable_lockfile() {
+    let e = env();
+    fs::write(e.repo.join(".upskill-lock.json"), "not json").unwrap();
+    let out = run(&e, &e.repo, &["update", "--check", "--project"]);
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    assert!(stderr(&out).contains("lockfile"), "{}", stderr(&out));
+}
+
+#[test]
+fn check_refuses_flags_that_apply_changes() {
+    for flag in ["--dry-run", "--yes", "--force", "--claude"] {
+        let e = env();
+        let out = run(&e, &e.repo, &["update", "--check", flag]);
+        assert_eq!(out.status.code(), Some(2), "{flag}");
+    }
 }
