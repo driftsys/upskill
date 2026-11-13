@@ -12,7 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::apply::{check_no_item_symlink_above, deletable, delete_recorded, prune_empty_parents};
-use super::output::output_path;
+use super::output::released_output_path;
 use super::owned::{FileState, adopt_schema1, adopt_schema1_in_memory, classify};
 use super::prepared::prepare_install;
 use super::{
@@ -360,7 +360,7 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                 if !entry.clients.is_empty() && !entry.clients.iter().any(|c| c == client.name()) {
                     continue;
                 }
-                let rel = output_path(kind, client, &entry.name);
+                let rel = released_output_path(kind, client, &entry.name);
                 if !target.join(&rel).exists() {
                     missing.push(rel);
                 }
@@ -685,10 +685,15 @@ fn reselect_from_entries(
 /// [`SourcePreview::kept_notes`] are listed in `kept_modified`, whether or
 /// not the source is applied.
 ///
+/// `at` selects the lockfile and the output paths. The reinstall plans the
+/// paths of `at.scope`, so an item recorded at other paths (a global Copilot
+/// item recorded at its `.github` paths) is written at the new paths and its
+/// unchanged files at the old paths are deleted through the ownership record.
+///
 /// An error after an adoption carries the adopted paths as
 /// [`AdoptedBeforeFailure`]. Sources applied before an error stay applied.
 pub fn update(
-    target: &Path,
+    at: &crate::scope::ScopeRoot,
     names: &[String],
     plugin_scope: crate::plugin::PluginScope,
     selection: &crate::select::ClientSelection,
@@ -696,6 +701,7 @@ pub fn update(
     dry_run: bool,
     observer: &mut dyn UpdateObserver,
 ) -> Result<UpdateReport> {
+    let target = at.root.as_path();
     let lock = crate::lockfile::Lockfile::load(target)?;
 
     let entries: Vec<crate::lockfile::LockedItem> = if names.is_empty() {
@@ -770,6 +776,7 @@ pub fn update(
                 excludes: vec![],
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
+                scope: at.scope,
             };
             // Scope the reinstall to exactly the items this source already
             // contributes to the lockfile (by their in-source name), rather
@@ -1235,7 +1242,10 @@ mod tests {
         observer: &mut dyn UpdateObserver,
     ) -> Result<UpdateReport> {
         update(
-            target,
+            &crate::scope::ScopeRoot {
+                scope: crate::scope::Scope::Project,
+                root: target.to_path_buf(),
+            },
             &[],
             PluginScope::Project,
             &ClientSelection::all(),

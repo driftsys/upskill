@@ -116,6 +116,10 @@ pub struct AddOptions {
     /// [`InstallReport::conflicts`]: its modified destinations are listed in
     /// [`InstallReport::kept_modified`], and its lockfile entry is unchanged.
     pub keep_unwithheld_edits: bool,
+    /// The scope of the install. It selects the output paths: the global
+    /// scope writes Copilot content under `~/.copilot`. The default is the
+    /// project scope.
+    pub scope: crate::scope::Scope,
 }
 
 const ALL_CLIENTS: [Client; 3] = Client::ALL;

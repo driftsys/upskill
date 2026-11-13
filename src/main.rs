@@ -281,6 +281,7 @@ fn run_add(args: AddArgs) -> i32 {
         excludes: excludes.to_vec(),
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
         keep_unwithheld_edits: false,
+        scope: at.scope,
     };
 
     print_scope_line(&at);
@@ -938,7 +939,7 @@ fn run_update(args: UpdateArgs) -> i32 {
         &mut apply_all
     };
     let result = update(
-        &at.root,
+        &at,
         names,
         plugin_scope,
         &selection,

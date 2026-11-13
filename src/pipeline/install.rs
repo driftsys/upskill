@@ -27,6 +27,7 @@ use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, McpResult, Plug
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, RequireRef, Rule, Skill};
 use crate::parse::frontmatter;
+use crate::scope::{Scope, ScopeRoot};
 use crate::select::ClientSelection;
 use crate::source::{InstallSource, parse_install_source};
 
@@ -56,6 +57,7 @@ pub fn install_from_local_path(
         filter,
         &ClientSelection::all(),
         &PlanNames::default(),
+        Scope::Project,
     )?;
     super::apply::apply_plan(
         target,
@@ -77,13 +79,14 @@ pub(super) fn install_from_local_path_selective(
     filter: Option<&crate::bundle::ResolvedItems>,
     selection: &ClientSelection,
     names: &PlanNames,
+    scope: Scope,
 ) -> Result<InstallReport> {
     if is_bundle_file(source) {
-        return install_bundle_file(source, selection, names);
+        return install_bundle_file(source, selection, names, scope);
     }
     let mut report = InstallReport::default();
     for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
-        install_items_of_kind(kind, source, &mut report, filter, selection, names)?;
+        install_items_of_kind(kind, source, &mut report, filter, selection, names, scope)?;
     }
     Ok(report)
 }
@@ -97,7 +100,7 @@ pub(super) fn install_from_local_path_selective(
 /// install for one source.
 pub(super) fn check_sources_outside_outputs(
     source: &Path,
-    target: &Path,
+    at: &ScopeRoot,
     filter: Option<&crate::bundle::ResolvedItems>,
     names: &PlanNames,
 ) -> Result<()> {
@@ -111,9 +114,9 @@ pub(super) fn check_sources_outside_outputs(
             if filter.is_some_and(|items| !items.contains(kind, &name)) {
                 continue;
             }
-            check_source_outside_outputs(target, kind, &name, &dir, source)?;
+            check_source_outside_outputs(at, kind, &name, &dir, source)?;
             if let Some(alias) = names.alias_for(&name) {
-                check_source_outside_outputs(target, kind, alias, &dir, source)?;
+                check_source_outside_outputs(at, kind, alias, &dir, source)?;
             }
         }
     }
@@ -155,6 +158,7 @@ pub(super) fn install_bundle_file(
     bundle_path: &Path,
     selection: &ClientSelection,
     names: &PlanNames,
+    scope: Scope,
 ) -> Result<InstallReport> {
     let (registry_root, resolved) = resolve_bundle_file(bundle_path)?;
 
@@ -170,6 +174,7 @@ pub(super) fn install_bundle_file(
             Some(&resolved.items),
             selection,
             names,
+            scope,
         )?;
     }
     Ok(report)
@@ -181,7 +186,7 @@ pub(super) fn install_bundle_file(
 /// deletion or write.
 pub(super) fn check_name_resolution_outside_outputs(
     local_source: &Path,
-    target: &Path,
+    at: &ScopeRoot,
     names: &[String],
     plan_names: &PlanNames,
 ) -> Result<()> {
@@ -189,12 +194,7 @@ pub(super) fn check_name_resolution_outside_outputs(
     for name in names {
         if let Some(bundle_path) = find_bundle_by_name(local_source, name) {
             let (registry_root, resolved) = resolve_bundle_file(&bundle_path)?;
-            check_sources_outside_outputs(
-                &registry_root,
-                target,
-                Some(&resolved.items),
-                plan_names,
-            )?;
+            check_sources_outside_outputs(&registry_root, at, Some(&resolved.items), plan_names)?;
         } else {
             item_names.push(name.clone());
         }
@@ -204,7 +204,7 @@ pub(super) fn check_name_resolution_outside_outputs(
         skills: item_names.clone(),
         agents: item_names,
     };
-    check_sources_outside_outputs(local_source, target, Some(&filter), plan_names)
+    check_sources_outside_outputs(local_source, at, Some(&filter), plan_names)
 }
 
 /// The name-resolution branch of `prepared::prepare_install`: resolves
@@ -216,6 +216,7 @@ pub(super) fn install_with_name_resolution_from_local(
     names: &[String],
     selection: &ClientSelection,
     plan_names: &PlanNames,
+    scope: Scope,
 ) -> Result<InstallReport> {
     let mut bundle_paths: Vec<std::path::PathBuf> = Vec::new();
     let mut item_names: Vec<String> = Vec::new();
@@ -255,7 +256,7 @@ pub(super) fn install_with_name_resolution_from_local(
     let mut report = InstallReport::default();
 
     for bp in &bundle_paths {
-        let bundle_report = install_bundle_file(bp, selection, plan_names)?;
+        let bundle_report = install_bundle_file(bp, selection, plan_names, scope)?;
         report.items.extend(bundle_report.items);
         report.planned.extend(bundle_report.planned);
         report.bundles.extend(bundle_report.bundles);
@@ -270,8 +271,13 @@ pub(super) fn install_with_name_resolution_from_local(
             skills: item_names.clone(),
             agents: item_names.clone(),
         };
-        let item_report =
-            install_from_local_path_selective(local_source, Some(&filter), selection, plan_names)?;
+        let item_report = install_from_local_path_selective(
+            local_source,
+            Some(&filter),
+            selection,
+            plan_names,
+            scope,
+        )?;
         report.items.extend(item_report.items);
         report.planned.extend(item_report.planned);
         report
@@ -1192,6 +1198,7 @@ fn install_items_of_kind(
     filter: Option<&crate::bundle::ResolvedItems>,
     selection: &ClientSelection,
     names: &PlanNames,
+    scope: Scope,
 ) -> Result<()> {
     let entrypoint = kind.entrypoint_filename();
     for (folder, dir) in iter_item_dirs(source)? {
@@ -1326,14 +1333,14 @@ fn install_items_of_kind(
             } else {
                 rendered.clone()
             };
-            let rel = output_path(kind, *client, &installed);
+            let rel = output_path(scope, kind, *client, &installed);
             files.push(PlannedFile {
                 client: *client,
                 rel: rel.clone(),
                 bytes: body.into_bytes(),
                 mode: None,
             });
-            let base = resource_base_path(kind, *client, &installed);
+            let base = resource_base_path(scope, kind, *client, &installed);
             for (res_rel, bytes, mode) in &resource_bytes {
                 files.push(PlannedFile {
                     client: *client,

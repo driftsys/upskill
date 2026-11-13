@@ -359,7 +359,7 @@ fn global_install_ignores_project_config() {
 
     assert!(home.join(".claude/skills/code-review/SKILL.md").exists());
     assert!(
-        home.join(".github/skills/code-review/SKILL.md").exists(),
+        home.join(".copilot/skills/code-review/SKILL.md").exists(),
         "global install must emit for all clients, ignoring the project's clients: config"
     );
     assert!(home.join(".agents/skills/code-review/SKILL.md").exists());
