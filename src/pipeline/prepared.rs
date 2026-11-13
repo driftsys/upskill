@@ -941,7 +941,7 @@ mod tests {
         assert_eq!(
             first
                 .iter()
-                .filter(|p| **p == PathBuf::from(".claude/skills/a/run.sh"))
+                .filter(|p| *p == Path::new(".claude/skills/a/run.sh"))
                 .count(),
             1,
             "{first:?}"
