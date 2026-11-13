@@ -3,10 +3,10 @@
 //! `update` and `remove` delete only the files in an item's ownership
 //! record.
 //!
-//! The install pipeline plans per-client output files at the paths defined
-//! in format-spec §7 / ADR-0003. The paths of the project scope, and those
-//! of the global scope for Claude Code and OpenCode, come from the frozen
-//! layout in `crate::legacy::layout`. The global scope writes Copilot
+//! The install pipeline plans per-client output files at the paths that
+//! [`output_path`] computes. The project-scope paths are those of format-spec
+//! §7 / ADR-0003, and so are the global-scope paths of Claude Code and
+//! OpenCode; all come from the frozen layout in `crate::legacy::layout`. The global scope writes Copilot
 //! content under `~/.copilot`. Pipeline callers go through [`output_path`],
 //! except where a path that a released version wrote is needed
 //! ([`released_output_path`]).

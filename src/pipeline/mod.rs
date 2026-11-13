@@ -4,7 +4,9 @@
 //! Walks a source directory laid out per format-spec §2.1, parses each
 //! item's frontmatter into the model (§3), renders per-client output via
 //! `crate::generate`, plans the result, and writes the plan to the
-//! per-client paths defined in format-spec §7 / ADR-0003.
+//! per-client paths computed by `output::output_path`. The project-scope
+//! paths are those of format-spec §7 / ADR-0003; the global Copilot paths
+//! differ and are listed in the doc comment of `output_path`.
 //!
 //! Entry points:
 //! - [`install_with_lockfile`] — consumer-facing; install + record state +

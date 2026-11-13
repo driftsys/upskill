@@ -614,8 +614,11 @@ impl PreparedInstall {
 
         // Per ADR-0003: when the install includes any rule, register
         // `.github/instructions` in `.vscode/settings.json`'s
-        // `chat.instructionsFilesLocations` so VS Code Copilot picks up the
-        // generated `<name>.instructions.md` files.
+        // `chat.instructionsFilesLocations`. That directory is the Copilot
+        // rule path of the project scope, where VS Code Copilot picks up the
+        // generated `<name>.instructions.md` files. In the global scope the
+        // rule files are written to `.copilot/instructions`, which this
+        // entry does not point at.
         crate::ancillary::ensure_vscode_instructions_registered(target, has_rules)?;
 
         Ok(report)

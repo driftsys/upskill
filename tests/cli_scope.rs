@@ -257,6 +257,7 @@ fn global_update_keeps_an_edited_file_at_the_old_path() {
     released_global_install(&e);
     fs::write(e.home.join(OLD[1]), "edited by the user\n").unwrap();
     let out = run(&e, &e.outside, &["update", "--global", "--yes"]);
+    assert!(out.status.success(), "{}", stderr(&out));
     assert!(e.home.join(NEW[1]).is_file());
     assert_eq!(
         fs::read_to_string(e.home.join(OLD[1])).unwrap(),
