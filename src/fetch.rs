@@ -103,7 +103,7 @@ pub(crate) fn head_commit(dir: &Path) -> Result<String, String> {
 
 /// Why `run_until` did not return the output of a command.
 #[derive(Debug, PartialEq, Eq)]
-#[allow(dead_code)] // Caller: the update check (plan task 4).
+#[allow(dead_code)] // Caller: the update check (`pipeline::check`).
 pub(crate) enum RunError {
     /// The command had not exited at the deadline; it was killed.
     TimedOut,
@@ -116,13 +116,18 @@ pub(crate) enum RunError {
 /// when it has not exited at `deadline`. `Failed` holds the first line of
 /// stderr, or the spawn error.
 ///
-/// The pipes are read after the child exits. A child that fills a pipe buffer
-/// blocks, does not exit, and is killed at the deadline, so the deadline holds.
-/// The callers print a few lines, below the pipe buffer size.
-#[allow(dead_code)] // Caller: the update check (plan task 4).
+/// Guarantee: the call returns by `deadline` plus a scheduling margin (the
+/// child poll interval is 20 ms). Two reader threads drain stdout and stderr
+/// while the child runs, so a child that writes more than the pipe buffer does
+/// not block. If the child exits but a descendant keeps an inherited pipe open,
+/// the readers cannot finish; the call then returns `TimedOut` at the
+/// deadline and leaves the blocked reader threads detached. Output is
+/// returned only when both pipes reached end of file by the deadline.
+#[allow(dead_code)] // Caller: the update check (`pipeline::check`).
 pub(crate) fn run_until(mut cmd: Command, deadline: Instant) -> Result<String, RunError> {
     use std::io::Read;
     use std::process::Stdio;
+    use std::sync::mpsc;
 
     let mut child = cmd
         .stdin(Stdio::null())
@@ -130,6 +135,26 @@ pub(crate) fn run_until(mut cmd: Command, deadline: Instant) -> Result<String, R
         .stderr(Stdio::piped())
         .spawn()
         .map_err(|err| RunError::Failed(err.to_string()))?;
+
+    // Each reader sends (is_stdout, bytes) once its pipe reaches end of file.
+    let (tx, rx) = mpsc::channel::<(bool, Vec<u8>)>();
+    if let Some(mut pipe) = child.stdout.take() {
+        let tx = tx.clone();
+        std::thread::spawn(move || {
+            let mut bytes = Vec::new();
+            let _ = pipe.read_to_end(&mut bytes);
+            let _ = tx.send((true, bytes));
+        });
+    }
+    if let Some(mut pipe) = child.stderr.take() {
+        let tx = tx.clone();
+        std::thread::spawn(move || {
+            let mut bytes = Vec::new();
+            let _ = pipe.read_to_end(&mut bytes);
+            let _ = tx.send((false, bytes));
+        });
+    }
+    drop(tx);
 
     let status = loop {
         match child.try_wait() {
@@ -149,18 +174,21 @@ pub(crate) fn run_until(mut cmd: Command, deadline: Instant) -> Result<String, R
         std::thread::sleep(Duration::from_millis(20));
     };
 
-    let mut stdout = String::new();
-    if let Some(mut pipe) = child.stdout.take() {
-        let mut bytes = Vec::new();
-        let _ = pipe.read_to_end(&mut bytes);
-        stdout = String::from_utf8_lossy(&bytes).into_owned();
-    }
-    if !status.success() {
-        let mut bytes = Vec::new();
-        if let Some(mut pipe) = child.stderr.take() {
-            let _ = pipe.read_to_end(&mut bytes);
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    // The sender of a reader that ended is dropped, so `recv_timeout` also
+    // ends when both readers are done.
+    for _ in 0..2 {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        match rx.recv_timeout(remaining) {
+            Ok((true, bytes)) => stdout = bytes,
+            Ok((false, bytes)) => stderr = bytes,
+            Err(_) => return Err(RunError::TimedOut),
         }
-        let stderr = String::from_utf8_lossy(&bytes);
+    }
+
+    if !status.success() {
+        let stderr = String::from_utf8_lossy(&stderr);
         let first = stderr.lines().next().unwrap_or("").trim();
         let message = if first.is_empty() {
             format!("command failed: {}", status)
@@ -169,21 +197,21 @@ pub(crate) fn run_until(mut cmd: Command, deadline: Instant) -> Result<String, R
         };
         return Err(RunError::Failed(message));
     }
-    Ok(stdout)
+    Ok(String::from_utf8_lossy(&stdout).into_owned())
 }
 
 /// The commit that `git_ref` (or `HEAD` when `None`) names at `url`, from
 /// `git ls-remote` without a fetch. `Ok(None)` when the remote has no such
 /// ref. A branch wins over a tag of the same name; an annotated tag gives the
 /// tagged commit.
-#[allow(dead_code)] // Caller: the update check (plan task 4).
+#[allow(dead_code)] // Caller: the update check (`pipeline::check`).
 pub(crate) fn ls_remote(
     url: &str,
     git_ref: Option<&str>,
     deadline: Instant,
 ) -> Result<Option<String>, RunError> {
     let mut cmd = Command::new("git");
-    cmd.arg("ls-remote").arg(url);
+    cmd.arg("ls-remote").arg("--").arg(url);
     match git_ref {
         None => {
             cmd.arg("HEAD");
@@ -219,7 +247,7 @@ pub(crate) fn ls_remote(
 }
 
 /// True for 40 lowercase or uppercase hexadecimal characters.
-#[allow(dead_code)] // Caller: the update check (plan task 4).
+#[allow(dead_code)] // Caller: the update check (`pipeline::check`).
 pub(crate) fn is_full_commit_hash(git_ref: &str) -> bool {
     git_ref.len() == 40 && git_ref.bytes().all(|b| b.is_ascii_hexdigit())
 }
@@ -501,9 +529,13 @@ mod tests {
     fn ls_remote_of_a_lightweight_tag_is_its_commit() {
         let tmp = tempfile::tempdir().expect("tempdir");
         let bare = make_test_repo(tmp.path());
+        let first = git_out(&bare, &["rev-parse", "HEAD"]);
         git_out(&bare, &["tag", "light"]);
+        let second = add_commit(&bare);
+        git_out(&bare, &["update-ref", "refs/heads/main", &second]);
         let got = ls_remote(&file_url(&bare), Some("light"), far_deadline()).expect("ls-remote");
-        assert_eq!(got, Some(git_out(&bare, &["rev-parse", "HEAD"])));
+        assert_ne!(first, second);
+        assert_eq!(got, Some(first));
     }
 
     #[test]
@@ -568,6 +600,38 @@ mod tests {
         let result = run_until(cmd, start + Duration::from_millis(200));
         assert_eq!(result, Err(RunError::TimedOut));
         assert!(start.elapsed() < Duration::from_secs(2));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn run_until_returns_output_larger_than_the_pipe_buffer() {
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "head -c 200000 /dev/zero | tr '\\0' 'x'"]);
+        let out = run_until(cmd, Instant::now() + Duration::from_secs(10)).expect("output");
+        assert_eq!(out.len(), 200_000);
+    }
+
+    /// A descendant that keeps the inherited stdout open after the child exits
+    /// makes the output incomplete at the deadline. The result is `TimedOut`,
+    /// returned by the deadline.
+    #[cfg(unix)]
+    #[test]
+    fn run_until_holds_the_deadline_when_a_descendant_keeps_the_pipe_open() {
+        let start = Instant::now();
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "sleep 5 & exit 0"]);
+        let result = run_until(cmd, start + Duration::from_millis(300));
+        assert_eq!(result, Err(RunError::TimedOut));
+        assert!(start.elapsed() < Duration::from_secs(2));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn run_until_returns_the_first_line_of_stderr_on_failure() {
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "echo first >&2; echo second >&2; exit 3"]);
+        let result = run_until(cmd, Instant::now() + Duration::from_secs(10));
+        assert_eq!(result, Err(RunError::Failed("first".to_string())));
     }
 
     #[test]
