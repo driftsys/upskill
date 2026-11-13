@@ -59,7 +59,11 @@ upskill add driftsys/skills code-review secret-scanner
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a flag uses the project scope. Outside a
 git repository, `add` without a flag installs nothing and stops with exit code 2
-and a message that asks for `--project` or `--global`.
+and a message that asks for `--project` or `--global`. When the current
+directory is the home directory, which is the root of the global scope, the
+project scope is refused, with `--project` or without a flag inside a git
+repository: `add` installs nothing and stops with exit code 2 and a message that
+asks for `--global`. `update`, `remove` and `remove-mcp` do the same.
 
 `add`, `update` and `remove` print one line to stderr that names the scope and
 its root, for example `scope: global (/home/alice)`. `--quiet` hides it.
@@ -188,7 +192,9 @@ upskill update --dry-run             # preview changes without applying
 
 Without a scope flag, `update` uses the project scope inside a git repository
 and the global scope outside one. `--project` uses the current directory and
-`--global` uses `$HOME`.
+`--global` uses `$HOME`. When the current directory is the home directory, the
+project scope is refused with exit code 2 and a message that asks for
+`--global`.
 
 `update` always fetches before regenerating; there is no separate `sync`. It
 also re-runs the generation pipeline against the current upskill version, so
@@ -439,9 +445,10 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched.
 
 Without a scope flag, `remove` uses the project scope inside a git repository
-and the global scope outside one. When a named item is not in the lockfile of
-that scope but the other scope records it, `remove` fails with `not in lockfile`
-and prints
+and the global scope outside one. When the current directory is the home
+directory, the project scope is refused with exit code 2 and a message that asks
+for `--global`. When a named item is not in the lockfile of that scope but the
+other scope records it, `remove` fails with `not in lockfile` and prints
 `hint: '<name>' is installed in the <scope> scope (<root>); pass
 --<scope>` to
 stderr in place of the `upskill doctor` hint. `update <name>` does the same.
@@ -497,7 +504,8 @@ unregisters the server from the client (`claude mcp remove
 to deleting the entry from the client config file when the CLI is absent) and
 drops the `LockedMcp` entry from the lockfile. Without a scope flag,
 `remove-mcp` uses the project scope inside a git repository and the global scope
-outside one.
+outside one. When the current directory is the home directory, the project scope
+is refused with exit code 2 and a message that asks for `--global`.
 
 ### `upskill list`
 
@@ -508,7 +516,8 @@ Without a scope flag, `list` reports both scopes: the project scope (the current
 directory, in or outside a git repository), then the global scope (`$HOME`).
 Each scope is a block that starts with `<scope> (<root>)`. `--global` or
 `--project` limits the report to that scope. When the current directory is the
-home directory, only the global scope is reported. When neither `HOME` nor
+home directory, only the global scope is reported, and `--project` is refused
+with exit code 2 and a message that asks for `--global`. When neither `HOME` nor
 `USERPROFILE` is set, only the project scope is reported and stderr gets
 `note: the global scope is not shown: HOME is not set`.
 

@@ -43,7 +43,8 @@ pub enum Commands {
     /// Parses each item from the source, renders per-client output, and
     /// records the install in `.upskill-lock.json`. Default scope is the
     /// current project when `cwd` is inside a git repo. Outside one, pass
-    /// `--project` or `--global`.
+    /// `--project` or `--global`. The project scope is refused when `cwd` is
+    /// the home directory (the root of the global scope): pass `--global`.
     #[command(
         display_order = 1,
         after_help = "EXAMPLES:\n  \
@@ -66,7 +67,8 @@ pub enum Commands {
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
         /// Install into the current directory. Required outside a git repo,
-        /// where `add` does not choose a scope.
+        /// where `add` does not choose a scope. Refused with exit code 2 when
+        /// the current directory is the home directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Replace existing items from a different source without error,
@@ -129,6 +131,8 @@ pub enum Commands {
         /// Operate on the current directory. Without a scope flag, the
         /// command uses the project scope inside a git repo and the global
         /// scope outside one.
+        /// Refused with exit code 2 when the current directory is the home
+        /// directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Skip the confirmation prompt that `--source` shows on a TTY.
@@ -168,6 +172,8 @@ pub enum Commands {
         /// Operate on the current directory. Without a scope flag, the
         /// command uses the project scope inside a git repo and the global
         /// scope outside one.
+        /// Refused with exit code 2 when the current directory is the home
+        /// directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Apply every source without a question. In a terminal without
@@ -222,7 +228,8 @@ pub enum Commands {
         /// Report only the global scope (`$HOME/.upskill-lock.json`).
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Report only the project scope (the current directory).
+        /// Report only the project scope (the current directory). Refused
+        /// with exit code 2 when the current directory is the home directory.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit a stable JSON document instead of the human-readable
@@ -256,7 +263,8 @@ pub enum Commands {
         /// Check only the global scope (`$HOME/.upskill-lock.json`).
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Check only the project scope (the current directory).
+        /// Check only the project scope (the current directory). Refused
+        /// with exit code 2 when the current directory is the home directory.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit every report bucket as a stable JSON document. Exit code is
@@ -364,6 +372,8 @@ pub enum Commands {
         /// Operate on the current directory. Without a scope flag, the
         /// command uses the project scope inside a git repo and the global
         /// scope outside one.
+        /// Refused with exit code 2 when the current directory is the home
+        /// directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
         project: bool,
     },

@@ -416,6 +416,10 @@ enum ScopeError {
     NeedsFlag {
         cwd: PathBuf,
     },
+    /// The project scope was asked for while the current directory is the home
+    /// directory, which is the root of the global scope. Reported as a usage
+    /// error.
+    ProjectIsHome,
     Other(anyhow::Error),
 }
 
@@ -427,6 +431,10 @@ impl std::fmt::Display for ScopeError {
                 "not inside a git repository: pass --project to install into {}, or --global to install for every project of this user",
                 cwd.display()
             ),
+            ScopeError::ProjectIsHome => write!(
+                f,
+                "the current directory is the home directory, which is the root of the global scope: pass --global"
+            ),
             ScopeError::Other(err) => write!(f, "{err}"),
         }
     }
@@ -435,7 +443,7 @@ impl std::fmt::Display for ScopeError {
 impl ScopeError {
     fn exit_code(&self) -> i32 {
         match self {
-            ScopeError::NeedsFlag { .. } => EXIT_USAGE,
+            ScopeError::NeedsFlag { .. } | ScopeError::ProjectIsHome => EXIT_USAGE,
             ScopeError::Other(_) => EXIT_ERROR,
         }
     }
@@ -448,6 +456,10 @@ impl ScopeError {
 /// - `--global` gives `$HOME`.
 /// - Neither gives the current directory inside a git repository. Outside one,
 ///   `no_flag` decides: refuse, or use `$HOME`.
+///
+/// The project scope is refused with [`ScopeError::ProjectIsHome`] when the
+/// current directory is the home directory, because both scopes would then
+/// share one lockfile.
 fn resolve_scope(global: bool, project: bool, no_flag: NoFlag) -> Result<ScopeRoot, ScopeError> {
     let scope = if project {
         Scope::Project
@@ -466,7 +478,22 @@ fn resolve_scope(global: bool, project: bool, no_flag: NoFlag) -> Result<ScopeRo
             }
         }
     };
-    scope_root(scope).map_err(ScopeError::Other)
+    match scope {
+        Scope::Project => project_scope_root(),
+        Scope::Global => scope_root(scope).map_err(ScopeError::Other),
+    }
+}
+
+/// The root of the project scope: the current directory. Fails with
+/// [`ScopeError::ProjectIsHome`] when that directory is the home directory.
+/// When the home directory is not known, there is nothing to compare with and
+/// the current directory is accepted.
+fn project_scope_root() -> Result<ScopeRoot, ScopeError> {
+    let at = scope_root(Scope::Project).map_err(ScopeError::Other)?;
+    if home_dir().is_some_and(|home| same_directory(&at.root, &home)) {
+        return Err(ScopeError::ProjectIsHome);
+    }
+    Ok(at)
 }
 
 /// The root directory of a scope: the current directory or `$HOME`.
@@ -1485,9 +1512,13 @@ fn short(h: &Option<String>) -> String {
 fn run_doctor(global: bool, project: bool, json: bool) -> i32 {
     let roots = match report_scopes(global, project) {
         Ok(roots) => roots,
-        Err(err) => {
+        Err(ScopeError::Other(err)) => {
             print_error_chain(&err);
             return EXIT_ERROR;
+        }
+        Err(err) => {
+            print_error(&err);
+            return err.exit_code();
         }
     };
 
@@ -1836,9 +1867,13 @@ fn kind_label(kind: ItemKind) -> &'static str {
 fn run_list(global: bool, project: bool, json: bool) -> i32 {
     let roots = match report_scopes(global, project) {
         Ok(roots) => roots,
-        Err(err) => {
+        Err(ScopeError::Other(err)) => {
             print_error_chain(&err);
             return EXIT_ERROR;
+        }
+        Err(err) => {
+            print_error(&err);
+            return err.exit_code();
         }
     };
 
@@ -1860,19 +1895,20 @@ fn run_list(global: bool, project: bool, json: bool) -> i32 {
 
 /// The scopes that `list` and `doctor` report, in the order project, global.
 ///
-/// `--global` gives the global scope and `--project` gives the project scope.
-/// Without a flag, both scopes are given, except that the global scope alone
+/// `--global` gives the global scope and `--project` gives the project scope,
+/// which fails with [`ScopeError::ProjectIsHome`] when the current directory is
+/// the home directory. Without a flag, both scopes are given, except that the global scope alone
 /// is given when the current directory is the home directory (both scopes
 /// would be the same lockfile), and the project scope alone is given, with a
 /// note on stderr, when the home directory is not known.
-fn report_scopes(global: bool, project: bool) -> anyhow::Result<Vec<ScopeRoot>> {
+fn report_scopes(global: bool, project: bool) -> Result<Vec<ScopeRoot>, ScopeError> {
     if global {
-        return Ok(vec![scope_root(Scope::Global)?]);
+        return Ok(vec![scope_root(Scope::Global).map_err(ScopeError::Other)?]);
     }
     if project {
-        return Ok(vec![scope_root(Scope::Project)?]);
+        return Ok(vec![project_scope_root()?]);
     }
-    let project_root = scope_root(Scope::Project)?;
+    let project_root = scope_root(Scope::Project).map_err(ScopeError::Other)?;
     let Ok(global_root) = scope_root(Scope::Global) else {
         if !style::is_quiet() {
             eprintln!("note: the global scope is not shown: HOME is not set");

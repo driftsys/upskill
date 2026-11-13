@@ -722,3 +722,81 @@ fn no_hint_for_a_name_that_no_scope_holds() {
         assert!(err.contains("upskill doctor"), "{err}");
     }
 }
+
+const HOME_REFUSAL: &str = "the current directory is the home directory, which is the root of the global scope: pass --global";
+
+#[test]
+fn project_scope_is_refused_in_the_home_directory() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    for args in [
+        vec!["add", "--project", src],
+        vec!["update", "--project", "--yes"],
+        vec!["remove", "--project", "api-conventions"],
+        vec!["remove-mcp", "--project", "x"],
+        vec!["list", "--project"],
+        vec!["doctor", "--project"],
+    ] {
+        let out = run(&e, &e.home, &args);
+        assert_eq!(out.status.code(), Some(2), "{args:?}: {}", stderr(&out));
+        let err = stderr(&out);
+        assert!(
+            err.contains(&format!("error: {HOME_REFUSAL}")),
+            "{args:?}: {err}"
+        );
+        assert!(!e.home.join(".upskill-lock.json").exists(), "{args:?}");
+        assert!(!e.home.join(".github").exists(), "{args:?}");
+    }
+}
+
+#[test]
+fn no_flag_in_a_home_directory_that_is_a_git_repository_is_refused_for_add() {
+    let e = env();
+    fs::create_dir_all(e.home.join(".git")).unwrap();
+    let src = e.source.to_str().unwrap();
+
+    let out = run(&e, &e.home, &["add", src]);
+    assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+    assert!(stderr(&out).contains(HOME_REFUSAL), "{}", stderr(&out));
+    assert!(!e.home.join(".upskill-lock.json").exists());
+
+    let out = run(&e, &e.home, &["add", "--global", src]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert!(
+        e.home
+            .join(".copilot/skills/create-api-endpoint/SKILL.md")
+            .exists()
+    );
+
+    for args in [vec!["update", "--yes"], vec!["remove", "api-conventions"]] {
+        let out = run(&e, &e.home, &args);
+        assert_eq!(out.status.code(), Some(2), "{args:?}: {}", stderr(&out));
+        assert!(stderr(&out).contains(HOME_REFUSAL), "{args:?}");
+    }
+
+    let out = run(&e, &e.home, &["list", "--json"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let json: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    let scopes = json["scopes"].as_array().unwrap();
+    assert_eq!(scopes.len(), 1, "{json}");
+    assert_eq!(scopes[0]["scope"], "global", "{json}");
+
+    let out = run(&e, &e.home, &["doctor"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+}
+
+#[test]
+fn global_flag_in_the_home_directory_still_works() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    for args in [
+        vec!["add", "--global", src],
+        vec!["update", "--global", "--yes"],
+        vec!["list", "--global"],
+        vec!["doctor", "--global"],
+        vec!["remove", "--global", "api-conventions"],
+    ] {
+        let out = run(&e, &e.home, &args);
+        assert!(out.status.success(), "{args:?}: {}", stderr(&out));
+    }
+}

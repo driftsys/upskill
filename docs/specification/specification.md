@@ -97,7 +97,11 @@ install-all-by-default fits bundle curation.
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a scope flag uses the project scope.
 Outside a git repository, `add` without a scope flag writes nothing and stops
-with exit code 2 and a message that asks for `--project` or `--global`.
+with exit code 2 and a message that asks for `--project` or `--global`. When the
+current directory is the home directory, which is the root of the global scope,
+the project scope is refused, with `--project` or without a flag inside a git
+repository: `add` writes nothing and stops with exit code 2 and a message that
+asks for `--global`. `update`, `remove` and `remove-mcp` do the same.
 
 `add`, `update` and `remove` print one line to stderr before they change
 anything, `scope: <scope> (<root>)`. `--quiet` hides it.
@@ -151,7 +155,9 @@ upskill update [name...] [--global|--project] [--dry-run] [--force]
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
-and the global scope outside one. `--project` uses the current directory.
+and the global scope outside one. `--project` uses the current directory. When
+the current directory is the home directory, the project scope is refused with
+exit code 2 and a message that asks for `--global`.
 
 Always fetches the latest source before regenerating. Absorbs the role of a
 separate `sync` command — there is no `--offline` flag in v1; offline use is
@@ -320,8 +326,10 @@ upskill remove [name...] [--source <label>] [--global|--project] [--force]
 
 Removes installed items from the matching scope. Without a scope flag, `remove`
 uses the project scope inside a git repository and the global scope outside one.
-When a named item is not in the lockfile of that scope but the other scope
-records it, `remove` fails as for any unknown name and prints
+When the current directory is the home directory, the project scope is refused
+with exit code 2 and a message that asks for `--global`. When a named item is
+not in the lockfile of that scope but the other scope records it, `remove` fails
+as for any unknown name and prints
 `hint: '<name>' is installed in the <scope> scope (<root>); pass --<scope>` to
 stderr in place of the `upskill doctor` hint; `update <name>` does the same.
 Either name one or more items, or pass `--source <label>` to remove every item
@@ -355,8 +363,9 @@ adoption notice, except when a name is not in the lockfile, which is an error.
   scope (the current directory, in or outside a git repository) first, then the
   global scope (`$HOME`). `--global` or `--project` limits the report to that
   scope. When the current directory is the home directory, only the global scope
-  is reported. When neither `HOME` nor `USERPROFILE` is set, only the project
-  scope is reported and stderr gets
+  is reported, and `--project` is refused with exit code 2 and a message that
+  asks for `--global`. When neither `HOME` nor `USERPROFILE` is set, only the
+  project scope is reported and stderr gets
   `note: the global scope is not shown: HOME is not set`. With `--json`, `list`
   prints `{"scopes": [{"scope", "root", <the buckets>}]}` and `doctor` prints
   `{"scopes": [...], "in_both_scopes": [...]}`; both also when one scope is
