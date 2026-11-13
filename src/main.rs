@@ -455,7 +455,8 @@ impl ScopeError {
 /// - `--project` gives the current directory, regardless of git state.
 /// - `--global` gives `$HOME`.
 /// - Neither gives the current directory inside a git repository. Outside one,
-///   `no_flag` decides: refuse, or use `$HOME`.
+///   `no_flag` decides: refuse, or use `$HOME`. A refusal in the home directory
+///   is [`ScopeError::ProjectIsHome`], because `--project` is refused there.
 ///
 /// The project scope is refused with [`ScopeError::ProjectIsHome`] when the
 /// current directory is the home directory, because both scopes would then
@@ -471,6 +472,8 @@ fn resolve_scope(global: bool, project: bool, no_flag: NoFlag) -> Result<ScopeRo
         match no_flag {
             NoFlag::Global => Scope::Global,
             NoFlag::Refuse => {
+                // `--project` would be refused here, so do not suggest it.
+                project_scope_root()?;
                 let cwd = std::env::current_dir()
                     .context("failed to get current directory")
                     .map_err(ScopeError::Other)?;
@@ -846,8 +849,9 @@ fn run_remove(
 }
 
 /// The hints after a failed `update` or `remove`. When the error is
-/// `not in lockfile` and the other scope holds a named item, prints one line
-/// for each such item. Otherwise prints the `upskill doctor` hint.
+/// `not in lockfile`, prints one line for each named item that the current
+/// scope's lockfile does not hold and the other scope's lockfile holds. When
+/// there is no such item, prints the `upskill doctor` hint.
 fn print_failure_hints(err: &anyhow::Error, at: &ScopeRoot, names: &[String]) {
     let other = at.scope.other();
     let not_in_lockfile = err
@@ -855,7 +859,13 @@ fn print_failure_hints(err: &anyhow::Error, at: &ScopeRoot, names: &[String]) {
         .any(|c| c.to_string().starts_with("not in lockfile:"));
     let found = match scope_root(other) {
         Ok(other_root) if not_in_lockfile && !same_directory(&other_root.root, &at.root) => {
-            let held = installed_names(&other_root.root, names);
+            let here = installed_names(&at.root, names);
+            let unknown: Vec<String> = names
+                .iter()
+                .filter(|n| !here.contains(n))
+                .cloned()
+                .collect();
+            let held = installed_names(&other_root.root, &unknown);
             Some((other_root, held))
         }
         _ => None,
@@ -2319,6 +2329,7 @@ fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
             return err.exit_code();
         }
     };
+    print_scope_line(&at);
     let target = at.root;
 
     let mcp_scope = scope_to_plugin_scope(global, project);

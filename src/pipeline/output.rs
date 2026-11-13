@@ -478,4 +478,15 @@ mod tests {
         fs::create_dir_all(&source).unwrap();
         assert_refused_in(Scope::Global, &target, ItemKind::Skill, "x", &source);
     }
+
+    #[test]
+    fn global_overlap_check_covers_the_released_resource_base_of_a_rule() {
+        // A rule writes `.copilot/instructions/x.instructions.md` and its
+        // resource base `.copilot/instructions/x` in the global scope. Only
+        // the released resource base `.github/instructions/x` overlaps this
+        // source.
+        let (_tmp, target) = target_with_dir(".github/instructions/x");
+        let source = target.join(".github/instructions/x");
+        assert_refused_in(Scope::Global, &target, ItemKind::Rule, "x", &source);
+    }
 }

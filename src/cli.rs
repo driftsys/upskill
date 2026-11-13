@@ -66,8 +66,8 @@ pub enum Commands {
         /// Install into `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Install into the current directory. Required outside a git repo,
-        /// where `add` does not choose a scope. Refused with exit code 2 when
+        /// Install into the current directory. Outside a git repo, `add` does
+        /// not choose a scope: pass either `--project` or `--global`. Refused with exit code 2 when
         /// the current directory is the home directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
         project: bool,

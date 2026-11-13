@@ -132,8 +132,40 @@ fn add_update_and_remove_state_the_scope_and_its_root() {
 #[test]
 fn quiet_hides_the_scope_line() {
     let e = env();
-    let out = run(&e, &e.repo, &["--quiet", "add", e.source.to_str().unwrap()]);
-    assert!(!stderr(&out).contains("scope:"));
+    let src = e.source.to_str().unwrap();
+    // Each command with its expected exit code: `remove-mcp` fails because no
+    // such MCP entry exists.
+    for (args, code) in [
+        (vec!["--quiet", "add", src], 0),
+        (vec!["--quiet", "update", "--yes"], 0),
+        (vec!["--quiet", "remove", "api-conventions"], 0),
+        (vec!["--quiet", "remove-mcp", "x"], 1),
+    ] {
+        let out = run(&e, &e.repo, &args);
+        assert_eq!(out.status.code(), Some(code), "{args:?}: {}", stderr(&out));
+        assert!(
+            !stderr(&out).contains("scope:"),
+            "{args:?}: {}",
+            stderr(&out)
+        );
+    }
+}
+
+#[test]
+fn remove_mcp_states_the_scope_and_its_root() {
+    let e = env();
+    let out = run(&e, &e.repo, &["remove-mcp", "x"]);
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    let project = format!(
+        "scope: project ({})",
+        e.repo.canonicalize().unwrap().display()
+    );
+    assert!(stderr(&out).contains(&project), "{}", stderr(&out));
+    // Outside a git repository, `remove-mcp` uses the global scope.
+    let out = run(&e, &e.outside, &["remove-mcp", "x"]);
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    let global = format!("scope: global ({})", e.home.display());
+    assert!(stderr(&out).contains(&global), "{}", stderr(&out));
 }
 
 const OLD: [&str; 3] = [
@@ -412,6 +444,33 @@ fn list_in_the_home_directory_shows_the_global_scope_once() {
     assert_eq!(v["scopes"][0]["scope"], "global", "{v}");
 }
 
+#[test]
+fn list_without_a_flag_outside_a_git_repository_includes_the_project_scope() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    let out = run(
+        &e,
+        &e.outside,
+        &["add", "--project", src, "api-conventions"],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    let out = run(
+        &e,
+        &e.outside,
+        &["add", "--global", src, "create-api-endpoint"],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    let v = list_json(&e, &e.outside, &[]);
+    assert_eq!(v["scopes"].as_array().unwrap().len(), 2, "{v}");
+    assert_eq!(v["scopes"][0]["scope"], "project", "{v}");
+    assert_eq!(
+        v["scopes"][0]["root"].as_str().unwrap(),
+        e.outside.canonicalize().unwrap().to_str().unwrap(),
+        "{v}"
+    );
+    assert_eq!(v["scopes"][1]["scope"], "global", "{v}");
+}
+
 fn doctor_json(e: &Env, cwd: &Path, args: &[&str]) -> (Option<i32>, serde_json::Value) {
     let mut all = vec!["doctor", "--json"];
     all.extend_from_slice(args);
@@ -503,6 +562,54 @@ fn doctor_notes_an_item_installed_in_both_scopes() {
     );
     let (_, v) = doctor_json(&e, &e.repo, &["--global"]);
     assert!(v["in_both_scopes"].as_array().unwrap().is_empty(), "{v}");
+}
+
+#[test]
+fn doctor_without_a_flag_outside_a_git_repository_includes_the_project_scope() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    let out = run(
+        &e,
+        &e.outside,
+        &["add", "--project", src, "api-conventions"],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    let out = run(
+        &e,
+        &e.outside,
+        &["add", "--global", src, "create-api-endpoint"],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    let (code, v) = doctor_json(&e, &e.outside, &[]);
+    assert_eq!(code, Some(0), "{v}");
+    assert_eq!(v["scopes"].as_array().unwrap().len(), 2, "{v}");
+    assert_eq!(v["scopes"][0]["scope"], "project", "{v}");
+    assert_eq!(
+        v["scopes"][0]["root"].as_str().unwrap(),
+        e.outside.canonicalize().unwrap().to_str().unwrap(),
+        "{v}"
+    );
+    assert_eq!(v["scopes"][1]["scope"], "global", "{v}");
+}
+
+#[test]
+fn doctor_lists_an_absent_recorded_file_at_an_earlier_path_as_earlier_layout() {
+    let e = env();
+    released_global_install(&e);
+    fs::remove_file(e.home.join(OLD[0])).unwrap();
+    let (code, v) = doctor_json(&e, &e.outside, &["--global"]);
+    assert_eq!(code, Some(1), "{v}");
+    assert!(
+        earlier_layout_files(&v, 0).iter().any(|f| f == OLD[0]),
+        "{v}"
+    );
+    let missing = v["scopes"][0]["missing_outputs"].as_array().unwrap();
+    assert!(
+        missing
+            .iter()
+            .all(|m| !m["missing_files"].to_string().contains(OLD[0])),
+        "{v}"
+    );
 }
 
 #[test]
@@ -723,6 +830,79 @@ fn no_hint_for_a_name_that_no_scope_holds() {
     }
 }
 
+/// Install `api-conventions` in the project scope (`e.repo`) and
+/// `create-api-endpoint` in the global scope, or both in both scopes.
+fn install_in_scopes(e: &Env, project: &[&str], global: &[&str]) {
+    let src = e.source.to_str().unwrap();
+    for name in project {
+        let out = run(e, &e.repo, &["add", src, name]);
+        assert!(out.status.success(), "{}", stderr(&out));
+    }
+    for name in global {
+        let out = run(e, &e.repo, &["add", "--global", src, name]);
+        assert!(out.status.success(), "{}", stderr(&out));
+    }
+}
+
+#[test]
+fn no_other_scope_hint_when_the_held_name_is_also_in_the_current_scope() {
+    let e = env();
+    install_in_scopes(&e, &["api-conventions"], &["api-conventions"]);
+    for cmd in ["update", "remove"] {
+        let out = run(&e, &e.repo, &[cmd, "api-conventions", "nothing-here"]);
+        assert_eq!(out.status.code(), Some(1), "{cmd}");
+        let err = stderr(&out);
+        assert!(err.contains("not in lockfile: nothing-here"), "{err}");
+        assert!(!err.contains("is installed in"), "{cmd}: {err}");
+        assert!(err.contains("upskill doctor"), "{cmd}: {err}");
+    }
+}
+
+#[test]
+fn the_other_scope_hint_names_only_the_names_that_the_current_scope_lacks() {
+    let e = env();
+    install_in_scopes(&e, &["api-conventions"], &["create-api-endpoint"]);
+    for cmd in ["update", "remove"] {
+        let out = run(
+            &e,
+            &e.repo,
+            &[
+                cmd,
+                "api-conventions",
+                "create-api-endpoint",
+                "nothing-here",
+            ],
+        );
+        assert_eq!(out.status.code(), Some(1), "{cmd}");
+        let err = stderr(&out);
+        let hints: Vec<&str> = err
+            .lines()
+            .filter(|l| l.contains("is installed in"))
+            .collect();
+        assert_eq!(hints.len(), 1, "{cmd}: {err}");
+        assert!(hints[0].contains("'create-api-endpoint'"), "{cmd}: {err}");
+        assert!(
+            !err.contains("'api-conventions' is installed"),
+            "{cmd}: {err}"
+        );
+        assert!(!err.contains("'nothing-here' is installed"), "{cmd}: {err}");
+    }
+}
+
+#[test]
+fn no_other_scope_hint_when_the_command_fails_for_another_reason() {
+    let e = env();
+    install_in_scopes(&e, &[], &["api-conventions"]);
+    fs::write(e.repo.join(".upskill-lock.json"), "not json").unwrap();
+    for cmd in ["update", "remove"] {
+        let out = run(&e, &e.repo, &[cmd, "api-conventions"]);
+        assert_eq!(out.status.code(), Some(1), "{cmd}");
+        let err = stderr(&out);
+        assert!(!err.contains("not in lockfile"), "{cmd}: {err}");
+        assert!(!err.contains("is installed in"), "{cmd}: {err}");
+    }
+}
+
 const HOME_REFUSAL: &str = "the current directory is the home directory, which is the root of the global scope: pass --global";
 
 #[test]
@@ -747,6 +927,17 @@ fn project_scope_is_refused_in_the_home_directory() {
         assert!(!e.home.join(".upskill-lock.json").exists(), "{args:?}");
         assert!(!e.home.join(".github").exists(), "{args:?}");
     }
+}
+
+#[test]
+fn no_flag_in_a_home_directory_that_is_not_a_git_repository_is_refused_for_add() {
+    let e = env();
+    let out = run(&e, &e.home, &["add", e.source.to_str().unwrap()]);
+    assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+    let err = stderr(&out);
+    assert!(err.contains(&format!("error: {HOME_REFUSAL}")), "{err}");
+    assert!(!err.contains("not inside a git repository"), "{err}");
+    assert!(!e.home.join(".upskill-lock.json").exists());
 }
 
 #[test]
