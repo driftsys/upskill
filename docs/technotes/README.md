@@ -211,8 +211,9 @@ change. Technical notes and evidence assets are outside the published book.
 On 2026-11-13 the raw evidence of 28 trials was removed from `main`. The notes
 in this directory remain and are the written results of those trials. The raw
 evidence is preserved unchanged on the branch `archive/lifecycle-2026-11`, in
-the same paths under `docs/technotes/evidence/`; links in the notes point to
-that branch.
+the same paths under `docs/technotes/evidence/`; links into the removed folders
+point to that branch, and links into the thirteen remaining folders stay
+relative.
 
 Thirteen evidence folders remain in `docs/technotes/evidence/`:
 

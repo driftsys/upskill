@@ -713,9 +713,12 @@ bytes, license whitespace, and continued formatting of neighboring research
 prose; all three evidence examples failed before the correction.
 
 The [compatibility inventory](../compatibility.json) records 223 historical
-repository anchors and 235 captured asset hashes from the parent revision.
-Documentation regression checks reject unreferenced anchor removal and changed
-license or provenance bytes; the inventory is enforced by `just docs-check`.
+repository anchors and 235 captured asset hashes from the parent revision. On
+2026-11-13 the 196 hashes of the removed M1 evidence were removed with that
+evidence; 39 asset hashes remain, and the removed evidence is on the branch
+`archive/lifecycle-2026-11`. Documentation regression checks reject unreferenced
+anchor removal and changed license or provenance bytes; the inventory is
+enforced by `just docs-check`.
 
 ## Read-only lifecycle inspection
 
