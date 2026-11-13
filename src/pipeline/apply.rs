@@ -68,7 +68,8 @@ pub(super) struct ApplyOutcome {
     /// and the modified stale files that were deleted.
     pub forced: Vec<PathBuf>,
     /// Every file that was written with new content (it was absent or held
-    /// other bytes), that got a different planned mode, or that was deleted;
+    /// other bytes), whose executable bits were set to those of its planned
+    /// mode (other permission bits do not count), or that was deleted;
     /// see [`changes_file`].
     pub changed: Vec<PathBuf>,
 }
@@ -575,10 +576,11 @@ pub(super) fn execute_plan(
                 outcome.changed.push(file.rel.clone());
             }
             // An `Owned` destination that already holds the planned bytes, or
-            // a CRLF variant of them, is left as it is.
+            // a CRLF variant of them, is not rewritten. Only its executable
+            // bits are set to the planned ones, and only when they differ.
             if unchanged.contains(&file.rel) {
-                if let Some(mode) = file.mode {
-                    set_mode(&full, mode)?;
+                if let Some(mode) = file.mode.filter(|&mode| mode_differs(&full, mode)) {
+                    set_executable_bits(&full, mode)?;
                 }
                 continue;
             }
@@ -624,7 +626,9 @@ pub(super) fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
 /// Whether [`execute_plan`] changes `file`, so that it counts the file in
 /// `ApplyOutcome::changed`: the file is not in `unchanged` and is absent or
 /// its bytes differ from the planned bytes, or the file has a planned mode
-/// and its current mode differs from it (Unix only). For an item with
+/// and its current executable bits (`0o111`) differ from the executable
+/// bits of that mode (Unix only). A difference in the other permission bits
+/// is not a change. For an item with
 /// [`Disposition::Write`] only. The preview of an update uses the same
 /// predicate, so that it lists exactly the files that the commit changes.
 pub(super) fn changes_file(
@@ -638,11 +642,13 @@ pub(super) fn changes_file(
     new_content || file.mode.is_some_and(|mode| mode_differs(&full, mode))
 }
 
-/// Whether the file at `path` exists and its mode differs from `mode`.
+/// Whether the file at `path` exists and its executable bits (`0o111`)
+/// differ from the executable bits of `mode`. The other permission bits are
+/// not compared.
 #[cfg(unix)]
 fn mode_differs(path: &Path, mode: u32) -> bool {
     use std::os::unix::fs::PermissionsExt;
-    fs::metadata(path).is_ok_and(|meta| meta.permissions().mode() & 0o7777 != mode & 0o7777)
+    fs::metadata(path).is_ok_and(|meta| meta.permissions().mode() & 0o111 != mode & 0o111)
 }
 
 #[cfg(not(unix))]
@@ -1035,6 +1041,24 @@ fn set_mode(path: &Path, mode: u32) -> Result<()> {
 
 #[cfg(not(unix))]
 fn set_mode(_path: &Path, _mode: u32) -> Result<()> {
+    Ok(())
+}
+
+/// Sets the executable bits (`0o111`) of the file at `path` to those of
+/// `mode` and keeps its other permission bits.
+#[cfg(unix)]
+fn set_executable_bits(path: &Path, mode: u32) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let current = fs::metadata(path)
+        .with_context(|| format!("read permissions of {}", path.display()))?
+        .permissions()
+        .mode()
+        & 0o7777;
+    set_mode(path, (current & !0o111) | (mode & 0o111))
+}
+
+#[cfg(not(unix))]
+fn set_executable_bits(_path: &Path, _mode: u32) -> Result<()> {
     Ok(())
 }
 
@@ -2597,21 +2621,55 @@ mod repeatable_tests {
 
     #[cfg(unix)]
     #[test]
-    fn an_unchanged_file_gets_its_planned_mode_again_and_is_counted() {
+    fn an_unchanged_file_gets_its_planned_executable_bits_again_and_is_counted() {
+        // The executable bits differ, so the file is counted as changed.
+        let (changed, mode) = apply_unchanged_with_modes(0o644, 0o755);
+        assert_eq!(changed, vec![PathBuf::from(A)]);
+        assert_eq!(mode, 0o755);
+    }
+
+    /// Writes `A` with mode `on_disk`, records it as owned, and applies a
+    /// plan with the same bytes and the planned mode `planned_mode`. Returns
+    /// `ApplyOutcome::changed` and the mode of `A` after the apply.
+    #[cfg(unix)]
+    fn apply_unchanged_with_modes(on_disk: u32, planned_mode: u32) -> (Vec<PathBuf>, u32) {
         use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();
         put(tmp.path(), A, b"a");
         let full = tmp.path().join(A);
-        fs::set_permissions(&full, fs::Permissions::from_mode(0o644)).unwrap();
+        fs::set_permissions(&full, fs::Permissions::from_mode(on_disk)).unwrap();
         let mut lock = Lockfile::new();
         lock.items.push(entry(vec![owned(A, b"a")], vec![]));
         let mut item = planned(&[(A, b"a")]);
-        item.files[0].mode = Some(0o755);
+        item.files[0].mode = Some(planned_mode);
         let outcome = apply_plan(tmp.path(), &mut lock, &[item], false, None, false).unwrap();
-        // The mode changed, so the file is counted as changed.
-        assert_eq!(outcome.changed, vec![PathBuf::from(A)]);
-        let mode = fs::metadata(&full).unwrap().permissions().mode();
-        assert_eq!(mode & 0o777, 0o755);
+        let mode = fs::metadata(&full).unwrap().permissions().mode() & 0o7777;
+        (outcome.changed, mode)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_difference_in_the_other_permission_bits_is_not_a_change() {
+        let (changed, mode) = apply_unchanged_with_modes(0o600, 0o644);
+        assert!(changed.is_empty(), "{changed:?}");
+        assert_eq!(mode, 0o600);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn added_executable_bits_keep_the_other_permission_bits() {
+        let (changed, mode) = apply_unchanged_with_modes(0o600, 0o755);
+        assert_eq!(changed, vec![PathBuf::from(A)]);
+        // (0o600 & !0o111) | (0o755 & 0o111)
+        assert_eq!(mode, 0o711);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn removed_executable_bits_keep_the_other_permission_bits() {
+        let (changed, mode) = apply_unchanged_with_modes(0o755, 0o644);
+        assert_eq!(changed, vec![PathBuf::from(A)]);
+        assert_eq!(mode, 0o644);
     }
 
     #[cfg(unix)]

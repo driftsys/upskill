@@ -1900,3 +1900,32 @@ fn update_fails_a_source_before_its_install_when_a_removal_is_refused() {
     // the lockfile.
     assert_eq!(files_under(&target), before);
 }
+
+/// A user tightens the mode of an installed resource file that is not
+/// executable. `update` does not count that as a change and keeps the mode.
+#[cfg(unix)]
+#[test]
+fn update_keeps_a_non_executable_mode_set_by_the_user() {
+    use std::os::unix::fs::PermissionsExt;
+    let (tmp, home) = res_project(|skill| {
+        let notes = skill.join("notes.md");
+        fs::write(&notes, "notes\n").unwrap();
+        fs::set_permissions(&notes, fs::Permissions::from_mode(0o644)).unwrap();
+    });
+    let dest = tmp.path().join(".claude/skills/res/notes.md");
+    fs::set_permissions(&dest, fs::Permissions::from_mode(0o600)).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .code(0);
+    let all = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.get_output().stdout),
+        String::from_utf8_lossy(&out.get_output().stderr)
+    );
+    assert!(!all.contains("notes.md"), "{all}");
+    let mode = fs::metadata(&dest).unwrap().permissions().mode();
+    assert_eq!(mode & 0o7777, 0o600);
+}

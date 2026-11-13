@@ -860,6 +860,47 @@ mod tests {
         assert_eq!(mode & 0o777, 0o755);
     }
 
+    /// The user removed the group and other read bits of an installed
+    /// resource: only the executable bits count, so the preview has no
+    /// change, commit changes nothing, and the mode stays as the user set it.
+    #[cfg(unix)]
+    #[test]
+    fn a_difference_in_the_other_permission_bits_is_not_in_the_preview() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&src, "a", "same");
+        write(&src, "a/notes.md", b"notes\n");
+        let notes = src.join("a/notes.md");
+        fs::set_permissions(&notes, fs::Permissions::from_mode(0o644)).unwrap();
+        let source = InstallSource::LocalPath(src.clone());
+        prepare_install(&source, &target, &[], &AddOptions::default())
+            .unwrap()
+            .commit(&target, PluginScope::Project)
+            .unwrap();
+        let dest = target.join(".claude/skills/a/notes.md");
+        fs::set_permissions(&dest, fs::Permissions::from_mode(0o600)).unwrap();
+
+        let prepared = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
+        let preview = prepared
+            .preview(&target, &Lockfile::load(&target).unwrap())
+            .unwrap();
+        assert!(
+            preview
+                .items
+                .iter()
+                .all(|i| i.write.is_empty() && i.delete.is_empty()),
+            "{:?}",
+            preview.items
+        );
+        let report = prepared.commit(&target, PluginScope::Project).unwrap();
+        assert!(report.changed.is_empty(), "{:?}", report.changed);
+        let mode = fs::metadata(&dest).unwrap().permissions().mode();
+        assert_eq!(mode & 0o7777, 0o600);
+    }
+
     #[test]
     fn prepare_and_preview_write_nothing() {
         let (tmp, target, source) = installed_then_changed();
