@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, Instant};
 
 use crate::source::GithubRepo;
 
@@ -98,6 +99,129 @@ pub(crate) fn head_commit(dir: &Path) -> Result<String, String> {
         return Err(format!("git rev-parse HEAD failed: {}", stderr.trim()));
     }
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+/// Why `run_until` did not return the output of a command.
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)] // Caller: the update check (plan task 4).
+pub(crate) enum RunError {
+    /// The command had not exited at the deadline; it was killed.
+    TimedOut,
+    /// The command could not start or exited with a failure. Holds the first
+    /// line of stderr, or the spawn error.
+    Failed(String),
+}
+
+/// Run `cmd` and return its stdout. Kills the child and returns `TimedOut`
+/// when it has not exited at `deadline`. `Failed` holds the first line of
+/// stderr, or the spawn error.
+///
+/// The pipes are read after the child exits. A child that fills a pipe buffer
+/// blocks, does not exit, and is killed at the deadline, so the deadline holds.
+/// The callers print a few lines, below the pipe buffer size.
+#[allow(dead_code)] // Caller: the update check (plan task 4).
+pub(crate) fn run_until(mut cmd: Command, deadline: Instant) -> Result<String, RunError> {
+    use std::io::Read;
+    use std::process::Stdio;
+
+    let mut child = cmd
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|err| RunError::Failed(err.to_string()))?;
+
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) => {}
+            Err(err) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(RunError::Failed(err.to_string()));
+            }
+        }
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(RunError::TimedOut);
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    };
+
+    let mut stdout = String::new();
+    if let Some(mut pipe) = child.stdout.take() {
+        let mut bytes = Vec::new();
+        let _ = pipe.read_to_end(&mut bytes);
+        stdout = String::from_utf8_lossy(&bytes).into_owned();
+    }
+    if !status.success() {
+        let mut bytes = Vec::new();
+        if let Some(mut pipe) = child.stderr.take() {
+            let _ = pipe.read_to_end(&mut bytes);
+        }
+        let stderr = String::from_utf8_lossy(&bytes);
+        let first = stderr.lines().next().unwrap_or("").trim();
+        let message = if first.is_empty() {
+            format!("command failed: {}", status)
+        } else {
+            first.to_string()
+        };
+        return Err(RunError::Failed(message));
+    }
+    Ok(stdout)
+}
+
+/// The commit that `git_ref` (or `HEAD` when `None`) names at `url`, from
+/// `git ls-remote` without a fetch. `Ok(None)` when the remote has no such
+/// ref. A branch wins over a tag of the same name; an annotated tag gives the
+/// tagged commit.
+#[allow(dead_code)] // Caller: the update check (plan task 4).
+pub(crate) fn ls_remote(
+    url: &str,
+    git_ref: Option<&str>,
+    deadline: Instant,
+) -> Result<Option<String>, RunError> {
+    let mut cmd = Command::new("git");
+    cmd.arg("ls-remote").arg(url);
+    match git_ref {
+        None => {
+            cmd.arg("HEAD");
+        }
+        Some(r) => {
+            cmd.arg(format!("refs/heads/{r}"))
+                .arg(format!("refs/tags/{r}"))
+                .arg(format!("refs/tags/{r}^{{}}"));
+        }
+    }
+    cmd.env("GIT_TERMINAL_PROMPT", "0")
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE");
+    let output = run_until(cmd, deadline)?;
+
+    let lines: Vec<(&str, &str)> = output
+        .lines()
+        .filter_map(|line| line.split_once('\t'))
+        .collect();
+    let find = |name: &str| {
+        lines
+            .iter()
+            .find(|(_, n)| *n == name)
+            .map(|(hash, _)| hash.to_string())
+    };
+    Ok(match git_ref {
+        None => find("HEAD"),
+        Some(r) => find(&format!("refs/heads/{r}"))
+            .or_else(|| find(&format!("refs/tags/{r}^{{}}")))
+            .or_else(|| find(&format!("refs/tags/{r}"))),
+    })
+}
+
+/// True for 40 lowercase or uppercase hexadecimal characters.
+#[allow(dead_code)] // Caller: the update check (plan task 4).
+pub(crate) fn is_full_commit_hash(git_ref: &str) -> bool {
+    git_ref.len() == 40 && git_ref.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
 /// Attempt a sparse clone: `--depth 1 --filter=blob:none --sparse` followed
@@ -326,6 +450,136 @@ mod tests {
             String::from_utf8_lossy(&out.stderr)
         );
         String::from_utf8_lossy(&out.stdout).trim().to_string()
+    }
+
+    fn far_deadline() -> Instant {
+        Instant::now() + Duration::from_secs(30)
+    }
+
+    fn file_url(bare: &Path) -> String {
+        format!("file://{}", bare.display())
+    }
+
+    /// Create a commit on top of `HEAD` in `bare` without a work tree.
+    fn add_commit(bare: &Path) -> String {
+        git_out(
+            bare,
+            &[
+                "-c",
+                "user.name=test",
+                "-c",
+                "user.email=test@test.com",
+                "commit-tree",
+                "HEAD^{tree}",
+                "-p",
+                "HEAD",
+                "-m",
+                "second",
+            ],
+        )
+    }
+
+    #[test]
+    fn ls_remote_without_a_ref_is_the_head_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let got = ls_remote(&file_url(&bare), None, far_deadline()).expect("ls-remote");
+        assert_eq!(got, Some(git_out(&bare, &["rev-parse", "HEAD"])));
+    }
+
+    #[test]
+    fn ls_remote_of_a_branch_is_its_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let second = add_commit(&bare);
+        git_out(&bare, &["branch", "dev", &second]);
+        let got = ls_remote(&file_url(&bare), Some("dev"), far_deadline()).expect("ls-remote");
+        assert_eq!(got, Some(second));
+    }
+
+    #[test]
+    fn ls_remote_of_a_lightweight_tag_is_its_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        git_out(&bare, &["tag", "light"]);
+        let got = ls_remote(&file_url(&bare), Some("light"), far_deadline()).expect("ls-remote");
+        assert_eq!(got, Some(git_out(&bare, &["rev-parse", "HEAD"])));
+    }
+
+    #[test]
+    fn ls_remote_of_an_annotated_tag_is_the_tagged_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        git_out(
+            &bare,
+            &[
+                "-c",
+                "user.name=test",
+                "-c",
+                "user.email=test@test.com",
+                "tag",
+                "-a",
+                "v1",
+                "-m",
+                "v1",
+            ],
+        );
+        let got = ls_remote(&file_url(&bare), Some("v1"), far_deadline()).expect("ls-remote");
+        let commit = git_out(&bare, &["rev-parse", "v1^{commit}"]);
+        assert_ne!(commit, git_out(&bare, &["rev-parse", "v1"]));
+        assert_eq!(got, Some(commit));
+    }
+
+    #[test]
+    fn ls_remote_of_a_branch_named_like_a_tag_is_the_branch() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let second = add_commit(&bare);
+        git_out(&bare, &["tag", "v2"]);
+        git_out(&bare, &["branch", "v2", &second]);
+        let got = ls_remote(&file_url(&bare), Some("v2"), far_deadline()).expect("ls-remote");
+        assert_eq!(got, Some(second));
+    }
+
+    #[test]
+    fn ls_remote_of_an_unknown_ref_is_none() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let got = ls_remote(&file_url(&bare), Some("nope"), far_deadline()).expect("ls-remote");
+        assert_eq!(got, None);
+    }
+
+    #[test]
+    fn ls_remote_of_a_missing_repository_fails() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let url = file_url(&tmp.path().join("absent"));
+        match ls_remote(&url, None, far_deadline()) {
+            Err(RunError::Failed(message)) => assert!(!message.is_empty()),
+            other => panic!("expected Failed, got {:?}", other),
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn run_until_kills_a_command_that_passes_the_deadline() {
+        let start = Instant::now();
+        let mut cmd = Command::new("sleep");
+        cmd.arg("5");
+        let result = run_until(cmd, start + Duration::from_millis(200));
+        assert_eq!(result, Err(RunError::TimedOut));
+        assert!(start.elapsed() < Duration::from_secs(2));
+    }
+
+    #[test]
+    fn is_full_commit_hash_accepts_forty_hex_characters_only() {
+        assert!(is_full_commit_hash(&"a".repeat(40)));
+        assert!(is_full_commit_hash(
+            "0123456789abcdefABCDEF0123456789abcdef01"
+        ));
+        assert!(!is_full_commit_hash(&"a".repeat(39)));
+        assert!(!is_full_commit_hash(&"a".repeat(41)));
+        assert!(!is_full_commit_hash("main"));
+        assert!(!is_full_commit_hash(&format!("{}g", "a".repeat(39))));
     }
 
     #[test]
