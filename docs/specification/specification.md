@@ -283,6 +283,13 @@ item and a `kept modified file` note are not changes.
   `Changed <n> file(s) written or deleted`. It prints
   `everything is up to date — nothing to do` when nothing changed, no item was
   skipped, no file was kept with a note and no lockfile was adopted.
+- **Recorded commit.** For a git source, `update` sets the fetched commit on the
+  lockfile entries of the source: with the item records when the source is
+  applied (also on an item that keeps its modified files), and alone when the
+  source has no changes and is not applied; the lockfile is saved only when a
+  value differs. This write is not a change of the source (see the preview
+  above) and does not count in the output. A dry run, a declined source and a
+  stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and

@@ -139,7 +139,6 @@ fn upstream_head(e: &Env) -> String {
 }
 
 /// Writes `body` to `path` in the upstream, commits it and returns the new HEAD.
-#[allow(dead_code)] // Used by the tests of later tasks.
 fn advance(e: &Env, path: &str, body: &str) -> String {
     let file = e.upstream.join(path);
     fs::create_dir_all(file.parent().unwrap()).unwrap();
@@ -154,7 +153,6 @@ fn lock(root: &Path) -> serde_json::Value {
 }
 
 /// Every file under `root` except `.git`, with its bytes.
-#[allow(dead_code)] // Used by the tests of later tasks.
 fn tree(root: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
     fn walk(root: &Path, dir: &Path, files: &mut BTreeMap<PathBuf, Vec<u8>>) {
         for entry in fs::read_dir(dir).unwrap() {
@@ -258,4 +256,94 @@ fn add_records_the_commit_of_each_source_of_a_cross_source_dependency() {
     };
     assert_eq!(commit_of("alpha"), head.as_str());
     assert_eq!(commit_of("gamma"), other_head.as_str());
+}
+
+#[test]
+fn update_records_a_new_commit_that_changes_no_item() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let head = advance(&e, "README.md", "unrelated\n");
+    let before = tree(&e.repo.join(".claude"));
+    let out = run(&e, &e.repo, &["update", "--yes"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(tree(&e.repo.join(".claude")), before);
+    let lock = lock(&e.repo);
+    let items = lock["items"].as_array().unwrap();
+    assert!(!items.is_empty());
+    for item in items {
+        assert_eq!(item["commit"], head.as_str());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn a_terminal_update_without_changes_records_the_commit_and_asks_nothing() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let head = advance(&e, "README.md", "unrelated\n");
+    let env_vars = [
+        ("GIT_CONFIG_NOSYSTEM", "1".to_string()),
+        (
+            "GIT_CONFIG_GLOBAL",
+            e.home.join("empty-gitconfig").display().to_string(),
+        ),
+        ("GIT_CONFIG_COUNT", "2".to_string()),
+        (
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", e.upstream.display()),
+        ),
+        ("GIT_CONFIG_VALUE_0", format!("{REMOTE}.git")),
+        ("GIT_CONFIG_KEY_1", "protocol.file.allow".to_string()),
+        ("GIT_CONFIG_VALUE_1", "always".to_string()),
+        ("GIT_ALLOW_PROTOCOL", "file".to_string()),
+        ("GIT_TERMINAL_PROMPT", "0".to_string()),
+    ];
+    let result = common::update_in_terminal_with_env(&e.repo, &e.home, &[], "", &env_vars);
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        !result["stdout"].as_str().unwrap().contains("Apply?"),
+        "{result}"
+    );
+    let lock = lock(&e.repo);
+    let items = lock["items"].as_array().unwrap();
+    assert!(!items.is_empty());
+    for item in items {
+        assert_eq!(item["commit"], head.as_str());
+    }
+}
+
+#[test]
+fn update_keeps_an_edited_file_when_only_the_commit_changed() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let edited = e.repo.join(".claude/skills/alpha/SKILL.md");
+    std::fs::write(&edited, "edited by the user\n").unwrap();
+    let head = advance(&e, "README.md", "unrelated\n");
+    let out = run(&e, &e.repo, &["update", "--yes"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert_eq!(
+        std::fs::read_to_string(&edited).unwrap(),
+        "edited by the user\n"
+    );
+    assert!(!stderr(&out).contains("skipped"), "{}", stderr(&out));
+    for item in lock(&e.repo)["items"].as_array().unwrap() {
+        assert_eq!(item["commit"], head.as_str());
+    }
+}
+
+#[test]
+fn a_dry_run_records_no_commit() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let before = std::fs::read(e.repo.join(".upskill-lock.json")).unwrap();
+    advance(
+        &e,
+        "skills/alpha/SKILL.md",
+        "---\nschema: 1\nname: alpha\ndescription: changed\n---\nnew\n",
+    );
+    run(&e, &e.repo, &["update", "--dry-run"]);
+    assert_eq!(
+        std::fs::read(e.repo.join(".upskill-lock.json")).unwrap(),
+        before
+    );
 }

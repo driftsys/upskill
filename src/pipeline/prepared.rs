@@ -326,6 +326,30 @@ impl PreparedInstall {
             .collect()
     }
 
+    /// Sets the fetched commit on every lockfile entry whose source is the
+    /// entry source of this install, and saves the lockfile only when a
+    /// value differs. Writes nothing for a source without a commit (a local
+    /// path). Used by `update` for a source that is not applied because it
+    /// has no changes, so that the new commit alone does not leave the
+    /// recorded commit behind.
+    pub fn record_commit(&self, target: &Path) -> Result<()> {
+        let Some(commit) = &self.commit else {
+            return Ok(());
+        };
+        let mut lock = Lockfile::load(target)?;
+        let mut changed = false;
+        for item in lock.items.iter_mut().filter(|i| i.source == self.label) {
+            if item.commit.as_ref() != Some(commit) {
+                item.commit = Some(commit.clone());
+                changed = true;
+            }
+        }
+        if changed {
+            lock.save(target)?;
+        }
+        Ok(())
+    }
+
     /// Whether the install includes a rule: the `has_rules` argument of the
     /// hand-shake steps.
     fn has_rules(&self) -> bool {
@@ -535,7 +559,24 @@ impl PreparedInstall {
         report.mcp_results =
             install_mcps_from_bundles(&report.bundles, plugin_scope, target, &options.selection);
 
+        // An item that keeps its modified files has an equal record
+        // (`apply::same_record`), so only its commit is brought up to date.
+        let kept_edits: BTreeSet<(ItemKind, String)> = outcome
+            .kept_edits
+            .iter()
+            .map(|c| (c.kind, c.name.clone()))
+            .collect();
         for mut item in new_items {
+            if kept_edits.contains(&(item.kind, item.name.clone())) {
+                if let Some(entry) = lock
+                    .items
+                    .iter_mut()
+                    .find(|i| i.kind == item.kind && i.name == item.name)
+                {
+                    entry.commit = item.commit.take();
+                }
+                continue;
+            }
             if skipped.contains(&(item.kind, item.name.clone())) {
                 continue;
             }

@@ -762,6 +762,16 @@ fn reselect_from_entries(
 /// as [`UpdateStatus::CompletedInterrupted`], never as
 /// [`UpdateStatus::UpToDate`].
 ///
+/// After the decision, a git source without changes
+/// ([`SourcePreview::has_changes`] is false) that is not applied, in a run
+/// that is not a dry run and not stopped, gets the fetched commit in every
+/// lockfile entry of the source (`PreparedInstall::record_commit`), and the
+/// lockfile is saved only when a commit value differs. This write is not in
+/// [`UpdateReport::changed`] and does not make the source a source with
+/// changes. A declined source and a dry run write no commit. In an applied
+/// source, an item whose modified destinations are kept
+/// (`kept_modified`, see above) also gets the fetched commit.
+///
 /// In a source that is not applied, an entry without a preview item is
 /// [`UpdateStatus::UpToDate`], and an entry with a preview item is
 /// [`UpdateStatus::NotApplied`], except a [`PreviewAction::Skip`] item of a
@@ -993,6 +1003,13 @@ pub fn update(
                             }
                         },
                     });
+                }
+                // A source without changes still gets the fetched commit in
+                // its lockfile entries. This write is not a change of the
+                // source: it is neither in `report.changed` nor counted by
+                // `has_changes`.
+                if !dry_run && !preview.has_changes() && decision != SourceDecision::Stop {
+                    prepared.record_commit(target)?;
                 }
                 if !dry_run && decision == SourceDecision::Stop {
                     report.stopped = true;

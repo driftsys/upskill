@@ -381,6 +381,12 @@ was updated, completed or removed, but files were written or deleted, it prints
 `everything is up to date — nothing to do` when nothing changed, no item was
 skipped, no file was kept with a note and no lockfile was adopted.
 
+For a git source, `update` records the commit that it fetched in the lockfile
+entries of the source, also when the source has no changes and is not applied
+(only a changed commit value causes a lockfile write). This write is not a
+change: it does not count in the output above, and `update --dry-run` and a
+declined source record no commit.
+
 `update --dry-run` prints the blocks, then
 `Dry-run: would update <n> of <m> item(s)` and the line
 `Each block is computed for the current state; a later block does not include the effect of an earlier one.`
