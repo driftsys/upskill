@@ -1078,7 +1078,7 @@ fn run_update_check(names: &[String], global: bool, project: bool) -> i32 {
 }
 
 /// The width of the status label column of `update --check`.
-const CHECK_LABEL_WIDTH: usize = 16;
+const CHECK_LABEL_WIDTH: usize = 18;
 
 /// The first 7 characters of a commit.
 fn short_commit(commit: &str) -> String {

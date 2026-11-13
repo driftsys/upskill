@@ -525,7 +525,7 @@ fn check_lists_the_items_of_a_source_with_a_new_commit_and_changes_no_file() {
     let text = stdout(&out);
     assert!(
         text.contains(&format!(
-            "update available  {REMOTE}  {} -> {}",
+            "update available    {REMOTE}  {} -> {}",
             short(&old),
             short(&new)
         )),
@@ -593,7 +593,7 @@ fn check_reports_an_unreachable_source_and_exits_with_code_0() {
     let text = stdout(&out);
     assert!(
         text.lines()
-            .any(|l| l.starts_with("  not reachable     ") && l.contains(REMOTE)),
+            .any(|l| l.starts_with("  not reachable       ") && l.contains(REMOTE)),
         "{text}"
     );
     assert!(text.ends_with("No updates available.\n"), "{text}");
@@ -611,7 +611,7 @@ fn check_does_not_look_for_newer_tags() {
     git_in(&e, &["tag", "-f", "v1"]);
     let out = run(&e, &e.repo, &["update", "--check"]);
     assert!(
-        stdout(&out).contains("  update available  "),
+        stdout(&out).contains("  update available    "),
         "{}",
         stdout(&out)
     );
@@ -721,4 +721,35 @@ fn check_refuses_flags_that_apply_changes() {
         let out = run(&e, &e.repo, &["update", "--check", flag]);
         assert_eq!(out.status.code(), Some(2), "{flag}");
     }
+}
+
+#[test]
+fn check_aligns_the_source_column_across_statuses() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let other = e.upstream.parent().unwrap().join("other");
+    fs::create_dir_all(&other).unwrap();
+    git_in_dir(&e, &other, &["init", "--initial-branch=main"]);
+    write_skill(&other, "gamma", "Gamma content.");
+    git_in_dir(&e, &other, &["add", "."]);
+    git_in_dir(&e, &other, &["commit", "-m", "other"]);
+    let out = run_with_other(&e, &other, &["add", OTHER_REMOTE, "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    advance(&e, "NOTES.md", "second\n");
+    // The second source is not reachable: its repository is gone.
+    fs::rename(&other, other.with_file_name("other-gone")).unwrap();
+    let out = run_with_other(&e, &other, &["update", "--check", "--project"]);
+    let text = stdout(&out);
+    let offset = |label: &str, source: &str| {
+        let line = text
+            .lines()
+            .find(|l| l.trim_start().starts_with(label))
+            .unwrap_or_else(|| panic!("no {label} line: {text}"));
+        line.find(source).unwrap()
+    };
+    assert_eq!(
+        offset("update available", REMOTE),
+        offset("not reachable", OTHER_REMOTE),
+        "{text}"
+    );
 }

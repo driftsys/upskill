@@ -458,10 +458,10 @@ only the sources of the items with those names. Output goes to stdout, and
 
 ```text
 project (/path/to/repo):
-  update available  https://example.invalid/team/skills  1a2b3c4 -> 5d6e7f8
+  update available    https://example.invalid/team/skills  1a2b3c4 -> 5d6e7f8
     skill alpha
     skill beta
-  not reachable     owner/other: <reason>
+  not reachable       owner/other: <reason>
 global (/home/user):
   up to date
 2 updates available. Run "upskill update".

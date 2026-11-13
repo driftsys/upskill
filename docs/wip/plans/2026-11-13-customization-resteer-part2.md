@@ -597,10 +597,10 @@ fn stderr(out: &std::process::Output) -> String;
 
   ```text
   project (/path/to/repo):
-    update available  https://example.invalid/team/skills  1a2b3c4 -> 5d6e7f8
+    update available    https://example.invalid/team/skills  1a2b3c4 -> 5d6e7f8
       skill alpha
       skill beta
-    not reachable     owner/other: <reason>
+    not reachable       owner/other: <reason>
   global (/home/user):
     up to date
   2 updates available. Run "upskill update".
@@ -639,7 +639,7 @@ fn stderr(out: &std::process::Output) -> String;
       let out = run(&e, &e.repo, &["update", "--check"]);
       assert_eq!(out.status.code(), Some(0));
       let text = stdout(&out);
-      assert!(text.contains(&format!("update available  {REMOTE}  {} -> {}", &old[..7], &new[..7])), "{text}");
+      assert!(text.contains(&format!("update available    {REMOTE}  {} -> {}", &old[..7], &new[..7])), "{text}");
       assert!(text.contains("    skill alpha\n") && text.contains("    skill beta\n"), "{text}");
       assert!(text.ends_with("2 updates available. Run \"upskill update\".\n"), "{text}");
       assert_eq!((tree(&e.repo), tree(&e.home)), before);
