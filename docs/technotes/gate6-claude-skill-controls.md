@@ -16,7 +16,8 @@ sessions, and resolved model `claude-sonnet-5-5`. The retained events do not
 independently identify the underlying account provider route; this is not a
 provider-range claim.
 
-The [receipt summary](evidence/2026-10-22-gate6-claude-skills/summary.json)
+The
+[receipt summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-claude-skills/summary.json)
 contains nine distinct completed sessions and five successful native `Skill`
 invocations. Every session exited 0 and emitted a native success result with
 `is_error: false` and no permission denials. Positive calls have matching native
@@ -65,7 +66,7 @@ The first three sessions have helper-reported team-file equality only. The later
 development pair retains before/after fixture contents, modes and hashes. The
 installed sequence retains before/after snapshots and each native command's
 project settings. The
-[preservation record](evidence/2026-10-22-gate6-claude-skills/preservation.json)
+[preservation record](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-claude-skills/preservation.json)
 shows unchanged manual `CLAUDE.md` and shared skill source bytes/modes, and an
 unchanged unrelated manual environment setting and settings-file mode `0640`
 through native operations. The package manifest and skill are also captured.
@@ -83,7 +84,7 @@ skill and final-result events. Full requests, thinking, usage and unrelated
 metadata are omitted. Paths are normalized to `$PROFILE`, `$PROJECT_A`,
 `$PROJECT_B` and packet aliases. Complete private stdout/stderr hashes differ
 from hashes of sanitized retained files. The
-[hash manifest](evidence/2026-10-22-gate6-claude-skills/receipt-hashes.json)
+[hash manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-claude-skills/receipt-hashes.json)
 covers 18 receipt/metadata files. Nine distinct native session IDs are retained.
 
 Private source packets:

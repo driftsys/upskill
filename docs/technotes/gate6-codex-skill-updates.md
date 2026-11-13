@@ -34,9 +34,9 @@ discovery entries remain unchanged.
 The installed catalog contains one exact `plugin:skill` identity. Its aliased
 skill path resolves to the client's native cache, and the cached entry initially
 matches the managed source bytes. The
-[catalog selection](evidence/2026-10-24-codex-skill-updates/native-catalog-selection.json)
+[catalog selection](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-skill-updates/native-catalog-selection.json)
 and
-[registration receipt](evidence/2026-10-24-codex-skill-updates/registration.json)
+[registration receipt](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-skill-updates/registration.json)
 retain identity, load path and scope evidence. These observations do not qualify
 arbitrary user delivery or unrelated-project non-activation.
 
@@ -61,12 +61,14 @@ writes the native cache. The refresh uses the native remove/re-add alternative
 permitted by Q8, and disables the newly recreated user binding again so the
 owned project activation remains the intended route.
 
-The [summary](evidence/2026-10-24-codex-skill-updates/summary.json) classifies
-this result as `edits_require_refresh`. Native expansion records retain the
-exact namespaced identity and cache path. Tool call IDs bind each resource read
-to its returned procedure text. Three expansions and three resource reads are
-observed; callback counts or responses do not establish provider-effective input
-uniqueness. This resource edit does not qualify every form of package update.
+The
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-skill-updates/summary.json)
+classifies this result as `edits_require_refresh`. Native expansion records
+retain the exact namespaced identity and cache path. Tool call IDs bind each
+resource read to its returned procedure text. Three expansions and three
+resource reads are observed; callback counts or responses do not establish
+provider-effective input uniqueness. This resource edit does not qualify every
+form of package update.
 
 The
 [official plugin packaging reference](https://developers.openai.com/plugins/build/plugins)
@@ -83,7 +85,7 @@ project config, restoring its original absence. Credentials and original
 configuration contents are never exported to the packet.
 
 The
-[restoration receipt](evidence/2026-10-24-codex-skill-updates/profile-restoration.json)
+[restoration receipt](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-skill-updates/profile-restoration.json)
 records exact return to this control's starting baseline. The later Q7 notice
 counter correction separately restores the earlier pre-Q7 configuration; it is
 not presented as part of Q8's own cleanup. Native session logs, cache parent
@@ -93,7 +95,7 @@ recorded; the helper does not reclaim cache files directly.
 
 Raw transcripts, native prompt inputs, private test model selection and source
 stay outside the repository. The
-[source index](evidence/2026-10-24-codex-skill-updates/private-source-index.json)
+[source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-skill-updates/private-source-index.json)
 and receipt hashes bind them. Public event selections retain skill expansions,
 resource call/results, version metadata and exact responses while omitting
 unrelated catalog content and test model identifiers.
@@ -125,5 +127,5 @@ rejection checks; guide presence is mocked. Git identity checks also use the
 stripped fixture environment. Other main harness nodes are unchanged. These
 offline changes do not repeat the native control, and original capture source
 remains separate from integration source
-([integration audit](evidence/2026-10-24-codex-skill-updates/main-integration-audit.json),
-[validation](evidence/2026-10-24-codex-skill-updates/validation.json)).
+([integration audit](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-skill-updates/main-integration-audit.json),
+[validation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-skill-updates/validation.json)).

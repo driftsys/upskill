@@ -5,13 +5,13 @@ Task [#409](https://github.com/driftsys/upskill/issues/409), Q10 of the
 retains a successful user-first retry on 2026-10-25. Claude Code 2.1.308 showed
 one visible target catalog entry and one activation with both scopes registered
 in the same workspace, then after either scope was removed. The
-[summary](evidence/2026-10-25-claude-scope-overlap/summary.json) records this
-bounded PASS. Production remains schema 1; broader qualification and Q11 remain
-separate gates.
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/summary.json)
+records this bounded PASS. Production remains schema 1; broader qualification
+and Q11 remain separate gates.
 
 The earlier failed positive and its project-first protocol deviation remain in
 the
-[initial summary](evidence/2026-10-25-claude-scope-overlap/initial-attempt-summary.json).
+[initial summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/initial-attempt-summary.json).
 The retry does not change that attempt's result or reorder its receipts.
 
 ## Pins and authentication
@@ -22,7 +22,7 @@ arm64. Only Claude ran a control. The other commands queried versions;
 [Q5 remains deferred](https://github.com/driftsys/upskill/issues/391).
 
 The
-[authentication record](evidence/2026-10-25-claude-scope-overlap/auth-recovery.json)
+[authentication record](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/auth-recovery.json)
 retains the recovery prerequisites. The old token was revoked. Initial renewed
 login could not be saved because the isolated home had no default macOS Keychain
 reference. Native `security default-keychain` selected the existing login
@@ -45,9 +45,9 @@ client discovery roots. No team guidance files or symlinks are created. The
 reused builder's second project remains unused and supplies no Q10 observation.
 
 The
-[native steps](evidence/2026-10-25-claude-scope-overlap/retry-native-steps.json)
+[native steps](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-native-steps.json)
 and
-[sequence assessment](evidence/2026-10-25-claude-scope-overlap/retry-sequence-assessment.json)
+[sequence assessment](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-sequence-assessment.json)
 retain this order, using the same package identity and workspace:
 
 1. Install at user scope and capture the first user-only positive before any
@@ -70,7 +70,7 @@ tested.
 ## Native observations
 
 The
-[selected observations](evidence/2026-10-25-claude-scope-overlap/retry-observations.json)
+[selected observations](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-observations.json)
 retain both scope bindings, exact namespace, native session/tool identities,
 correlated results, full visible skill expansion and resource-only response.
 Each row has one target entry in each of the `skills` and `slash_commands`
@@ -88,9 +88,9 @@ catalogs, one `Skill` call, one visible body expansion and one `Read` call:
 All six native session identities are distinct. Every invocation exits 0 with
 `is_error: false`, no permission denial and the exact resource marker. No
 duplicate target exposure or visible activation was observed. The
-[capture-time replay](evidence/2026-10-25-claude-scope-overlap/retry-offline-replay.json)
+[capture-time replay](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-offline-replay.json)
 and
-[separate raw-count audit](evidence/2026-10-25-claude-scope-overlap/retry-independent-audit.json)
+[separate raw-count audit](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-independent-audit.json)
 check the six phases and user-first order. The central five-phase classifier
 also returns `observed_single_entry_and_activation`; the extra first-user
 calibration is checked through its phase inspector and the sequence audit.
@@ -104,7 +104,7 @@ separate; no production route or durable record changes with this packet.
 ## Preservation and residue
 
 The
-[retry preservation record](evidence/2026-10-25-claude-scope-overlap/retry-preservation.json)
+[retry preservation record](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-preservation.json)
 compares settings presence, bytes and modes, both native registration metadata
 files and package source files. User and project settings each retained only
 added empty `enabledPlugins` and `extraKnownMarketplaces` objects after native
@@ -114,15 +114,15 @@ survived. Both registration metadata files and all measured package source files
 matched their original hashes and modes.
 
 Two redundant final cleanup attempts exited 1: the
-[user uninstall](evidence/2026-10-25-claude-scope-overlap/retry-35-final-uninstall-user.stderr)
+[user uninstall](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-35-final-uninstall-user.stderr)
 found the already removed registration, and
-[project marketplace removal](evidence/2026-10-25-claude-scope-overlap/retry-36-final-market-remove-project.stderr)
+[project marketplace removal](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-36-final-market-remove-project.stderr)
 found the declaration already removed after calibration. Required earlier
 removals succeeded, and the measured final metadata equality confirms
 restoration. These command failures remain visible in the receipts.
 
 The
-[retry cache observation](evidence/2026-10-25-claude-scope-overlap/retry-cache-after.json)
+[retry cache observation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-cache-after.json)
 records that native `0.0.0` cache storage remains a regular directory after
 uninstall. No direct cache writes or cleanup were performed. Measured
 preservation passed; whole-profile equality is not claimed. Authentication, the
@@ -132,8 +132,9 @@ effects remain outside that equality claim.
 ## Initial failed attempt
 
 The
-[original observation](evidence/2026-10-25-claude-scope-overlap/project-positive-observation.json)
-and [original steps](evidence/2026-10-25-claude-scope-overlap/native-steps.json)
+[original observation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/project-positive-observation.json)
+and
+[original steps](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/native-steps.json)
 retain the first project-only calibration. Native installation and its catalog
 succeeded, but the invocation exited 1 with HTTP 401 OAuth token rejection and
 `is_error: true`, despite subtype `success`. No skill call, body expansion or
@@ -154,23 +155,23 @@ review later found a missing stream-completeness guard; 20 regression examples
 failed before that fix. The inspector now requires explicit complete stream
 evidence. Missing, malformed and non-Boolean completeness evidence cannot
 establish activation. The separate
-[review verification](evidence/2026-10-25-claude-scope-overlap/review-verification.json)
+[review verification](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/review-verification.json)
 records 218 suite tests, 21 focused tests and 16 rejected author mutations. The
-[earlier verification](evidence/2026-10-25-claude-scope-overlap/verification.json)
+[earlier verification](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/verification.json)
 describes its own source epoch. The
-[retry pre-native lint](evidence/2026-10-25-claude-scope-overlap/retry-q10-retry-pre-native-lint.log)
+[retry pre-native lint](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-q10-retry-pre-native-lint.log)
 again passed all 218 tests before the native retry. Full post-retry
-[repository verification](evidence/2026-10-25-claude-scope-overlap/retry-verification.json)
+[repository verification](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-verification.json)
 also passed. No public harness or test code changed for this retry.
 
 The
-[private source index](evidence/2026-10-25-claude-scope-overlap/private-source-index.json)
+[private source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/private-source-index.json)
 locates raw transcripts, fixture sources, capture-time harness/tests and helper
 hashes outside the repository. Earlier epochs remain unchanged. The
-[retry manifest](evidence/2026-10-25-claude-scope-overlap/retry-private-manifest.json)
+[retry manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-private-manifest.json)
 indexes the new source epoch, excluding generated Python bytecode and the
 manifest itself. The
-[receipt hashes](evidence/2026-10-25-claude-scope-overlap/receipt-hashes.json)
+[receipt hashes](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/receipt-hashes.json)
 cover retained files. Public paths use `$PACKET_D` and `$PROFILE` for the retry;
 earlier epochs retain their aliases. Selected events omit model identifiers,
 usage, thinking, unrelated catalogs and assistant prose. Complete raw output

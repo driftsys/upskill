@@ -47,7 +47,8 @@ default discovery or absence of configured/ancestor/compatibility readers.
 | Entrypoint temporarily absent         | Actual `skill` call fails with `Unable to load skill`; no resource read        | Exact unavailable-skill fallback |
 | Shared entry and resource restored    | One completed `skill` and one completed shared-resource `read`                 | Exact resource marker again      |
 
-The [summary](evidence/2026-10-22-gate6-opencode-shared-resources/summary.json)
+The
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-shared-resources/summary.json)
 accounts for five distinct successful native sessions and nine tool calls: seven
 completed calls and the two expected native errors above. Each session reaches
 idle outcome `succeeded`; expected tool errors remain errors. Every response
@@ -65,7 +66,7 @@ controls remain separate evidence.
 ## Preservation, receipts and remaining limits
 
 The
-[fixture assessment](evidence/2026-10-22-gate6-opencode-shared-resources/fixture-and-assessment.json)
+[fixture assessment](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-shared-resources/fixture-and-assessment.json)
 records exact entry/resource content and mode equality after restoration, plus
 unchanged manual team guidance and project configuration bytes/modes. The final
 entry location is intentionally the shared candidate; it is not a claim of
@@ -74,13 +75,13 @@ owned fixture files were moved temporarily. Unrelated global discovery and
 configuration were not rewritten to force a result.
 
 The
-[private source index](evidence/2026-10-22-gate6-opencode-shared-resources/private-source-index.json)
+[private source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-shared-resources/private-source-index.json)
 retains the exact packet reference and original manifest/helper hashes. Selected
 native CLI JSONL, session identities/models/idle outcomes, declarations and
 snapshots are retained. Provider state, accounting and export message bodies are
 omitted. Raw, selected and normalized hashes differ intentionally. All original
 hashes and the separate
-[retained manifest](evidence/2026-10-22-gate6-opencode-shared-resources/receipt-hashes.json)
+[retained manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-shared-resources/receipt-hashes.json)
 were checked; private capture/retention helpers are not shipped or tested
 qualification runners. The packet is informative data, not product input.
 

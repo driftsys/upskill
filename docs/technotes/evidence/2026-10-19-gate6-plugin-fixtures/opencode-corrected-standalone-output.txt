@@ -1,1 +1,0 @@
-{"type":"error","timestamp":1792445521901,"sessionID":"ses_ea9ebe103ffeY8JceVLaJjuqBg","error":{"type":"provider.no-route","message":"Model unavailable: openai/gpt-6.1-sol"}}

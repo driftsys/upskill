@@ -38,7 +38,7 @@ Fresh receipts pin Claude 2.1.308, Codex 0.164.0, Copilot 1.0.103 and OpenCode
 2.1.4 on macOS arm64 before the user-first Q10 retry. Only Claude runs the
 control; the other commands query versions. The initial failed attempt remains
 separate. Model selection remains private
-([receipts](evidence/2026-10-25-claude-scope-overlap/retry-campaign-pins.json),
+([receipts](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/retry-campaign-pins.json),
 [task #409](https://github.com/driftsys/upskill/issues/409)).
 
 ## Slice-2 entry campaign revision: 2026-10-25, Q10 scope overlap
@@ -47,7 +47,7 @@ Fresh four-client receipts precede the Q10 Claude overlap control. Installed
 releases remain Claude 2.1.308, Codex 0.164.0, Copilot 1.0.103 and OpenCode
 2.1.4 on macOS arm64. Q10 runs only Claude; the other clients have version
 receipts, not new native controls. Model selection remains private
-([receipts](evidence/2026-10-25-claude-scope-overlap/campaign-pins.json),
+([receipts](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-claude-scope-overlap/campaign-pins.json),
 [task #409](https://github.com/driftsys/upskill/issues/409)).
 
 ## Slice 1 campaign revision: 2026-10-25, resume attribution
@@ -71,7 +71,7 @@ Codex 0.164.0, Copilot 1.0.103 and OpenCode 2.1.4 on macOS arm64
 The Q5 explicit-path retry under
 [#391](https://github.com/driftsys/upskill/issues/391) opens a new dated
 campaign on macOS arm64. The date uses Europe/Paris; each
-[version receipt](evidence/2026-10-25-opencode-explicit-paths/campaign-pins.json)
+[version receipt](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-opencode-explicit-paths/campaign-pins.json)
 records its UTC start and finish. All four version probes completed before any
 model control in this campaign. These are installed-version observations,
 without native route qualification.

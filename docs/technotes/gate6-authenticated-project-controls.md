@@ -17,7 +17,7 @@ Source fields identified the two plugins. Display-label debt is
 [#346](https://github.com/driftsys/upskill/issues/346). Current definitions were
 left unchanged to preserve the reviewed trust decisions.
 
-[Receipt metadata](evidence/2026-10-20-gate6-authenticated-project/summary.json)
+[Receipt metadata](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-20-gate6-authenticated-project/summary.json)
 retains commands, executable fingerprints, per-session callback records, team
 snapshots, paired assessments and raw/retained receipt hashes. Codex is pinned
 to 0.163.0 and OpenCode to 2.0.32. Controls explicitly select `gpt-6.1-sol` in

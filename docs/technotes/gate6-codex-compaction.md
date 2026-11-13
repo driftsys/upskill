@@ -19,7 +19,7 @@ operating system or architecture. No credentials, authentication files or trust
 configuration were read or changed during retention.
 
 The selected
-[session records](evidence/2026-10-22-gate6-codex-compaction/session-selected.jsonl)
+[session records](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-compaction/session-selected.jsonl)
 retain timestamps and original zero-based line indices. They show:
 
 1. An initial completed response containing the team marker and both rule
@@ -41,7 +41,7 @@ state and provider/accounting data are omitted.
 ## Callback and preservation observations
 
 The same session's
-[callback selection](evidence/2026-10-22-gate6-codex-compaction/callback-events.json)
+[callback selection](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-compaction/callback-events.json)
 contains one `startup` and one `compact` event for each of rules A and B. These
 callback records contain no timestamps. The post-compaction placement of the
 rule messages is established by native session order, not a callback wall-clock
@@ -51,7 +51,7 @@ records are separate observations; they do not qualify every compaction mode or
 activation-count boundary.
 
 The
-[fixture assessment](evidence/2026-10-22-gate6-codex-compaction/fixture-assessment.json)
+[fixture assessment](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-compaction/fixture-assessment.json)
 compares the initial prepared team snapshot with the file at retention time.
 Both SHA-256 and mode `0640` agree. These are not immediate before/after
 compaction snapshots and do not establish uninterrupted preservation,
@@ -61,13 +61,13 @@ no changes to the fixture, plugins or normally provisioned profile.
 ## Provenance and remaining acceptance
 
 The
-[private source index](evidence/2026-10-22-gate6-codex-compaction/private-source-index.json)
+[private source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-compaction/private-source-index.json)
 records exact source paths and original hashes, including the preserved session
 hash recorded by the earlier assessment. It also fingerprints the private
 retention helper. The full activation trace remains private because it contains
 other sessions; only the selected session's four events are retained here. The
 separate
-[retained manifest](evidence/2026-10-22-gate6-codex-compaction/receipt-hashes.json)
+[retained manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-compaction/receipt-hashes.json)
 binds the five selected files. All original and retained hashes were checked.
 This is informative data, not an executable qualification runner or product
 input.

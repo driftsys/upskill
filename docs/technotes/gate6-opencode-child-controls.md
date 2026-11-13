@@ -17,7 +17,8 @@ normally provisioned isolated OpenCode profile and explicit model
 authentication; no credentials or authentication-store contents were copied or
 retained. An isolated authentication root does not qualify user-scope delivery.
 
-The [summary](evidence/2026-10-22-gate6-opencode-child-controls/summary.json)
+The
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-child-controls/summary.json)
 accounts for six native parents and six actual children, with distinct session
 identities and matching parent/child links. Each parent made one completed
 `subagent` call and returned its declared exact response. Each child reached a
@@ -44,7 +45,7 @@ read/patch, read only, read/patch and read/patch calls.
 The last pair has an explicit policy mismatch. The independent narrow positive
 supports allowed sentinel editing, but does not repair that pair
 retrospectively. The
-[path-policy audit](evidence/2026-10-22-gate6-opencode-child-controls/path-policy-audit.json)
+[path-policy audit](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-child-controls/path-policy-audit.json)
 retains both actual agent snapshots and the limitation. No single-policy scope
 qualification follows from these observations.
 
@@ -61,7 +62,7 @@ further-delegation limits or rule scoping inside child sessions.
 ## Resource identity, preservation and restoration
 
 Native sanitized child exports redact tool inputs. Separate
-[patch identity receipts](evidence/2026-10-22-gate6-opencode-child-controls/patch-resource-identities.json)
+[patch identity receipts](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-child-controls/patch-resource-identities.json)
 bind three patch call IDs to the actual owned fixture resources: narrow allow
 and broader path positive target the sentinel; the rejected patch targets the
 protected other file. The capture inspected only patch headers from exports in
@@ -84,20 +85,20 @@ The first export-summary helper assumed legacy `messages[].info/parts` and
 produced empty agent/model/tool arrays. Native v2 exports instead put
 `agent/model/content` directly on assistant messages and `outcome` on an idle
 message. The
-[correction](evidence/2026-10-22-gate6-opencode-child-controls/export-parser-correction.json)
+[correction](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-child-controls/export-parser-correction.json)
 records this boundary. Those earlier empty arrays never establish absent agents
 or tools. Actual child exports and terminal outcomes supply the retained facts.
 Original private receipts and manifests remain unchanged.
 
 The
-[source index](evidence/2026-10-22-gate6-opencode-child-controls/private-source-index.json)
+[source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-child-controls/private-source-index.json)
 maps aliases to exact private disposable packet paths, original manifest hashes
 and capture-helper hashes for independent local inspection. The packet retains
 selected parent JSONL events, child identities/model/content/idle outcomes,
 declarations and before/after snapshots. Provider state, accounting, snapshots
 and child tool output bodies are omitted. Raw and selected/sanitized receipt
 hashes differ intentionally. A separate
-[retained manifest](evidence/2026-10-22-gate6-opencode-child-controls/receipt-hashes.json)
+[retained manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-child-controls/receipt-hashes.json)
 covers the repository evidence files. Private capture and retention helpers are
 not shipped or tested qualification runners; this packet is informative data,
 not executable product input.

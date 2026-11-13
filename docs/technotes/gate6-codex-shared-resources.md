@@ -42,7 +42,8 @@ sources and other readers were not inventoried or suppressed to force a result.
 | Shared entry/resource restored      | Native skill expansion; relative resource command exits 0                                                   | Final answer matches; whole-message sequence fails because of commentary |
 | Same package relocated to project B | Native expansion identifies B; actual absolute command reads B's relative resource                          | Final answer and whole-message sequence match                            |
 
-The [summary](evidence/2026-10-22-gate6-codex-shared-resources/summary.json)
+The
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-shared-resources/summary.json)
 retains five completed turns, four native skill expansions and four resource
 commands: three successful reads and one missing-file failure. Each successful
 read returns the exact procedure bytes. Native session records retain the
@@ -65,7 +66,7 @@ One matching fixture metadata item is not a global catalog/activation count.
 ## Preservation, receipts and remaining limits
 
 The
-[fixture assessment](evidence/2026-10-22-gate6-codex-shared-resources/fixture-and-assessment.json)
+[fixture assessment](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-shared-resources/fixture-and-assessment.json)
 retains before/after manual team files and isolated profile configuration
 hashes/modes, all exactly equal. Logical entry/resource bytes and modes also
 match. The final package intentionally remains in project B; this is not
@@ -74,9 +75,9 @@ Temporary missing files were restored in guarded cleanup. The model's four
 commands only read the expected fixture resource paths.
 
 Selected
-[CLI traces](evidence/2026-10-22-gate6-codex-shared-resources/shared-positive.jsonl)
+[CLI traces](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-shared-resources/shared-positive.jsonl)
 and
-[native session projections](evidence/2026-10-22-gate6-codex-shared-resources/native-session-selections.json)
+[native session projections](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-shared-resources/native-session-selections.json)
 bind thread/turn identities, metadata, expansions, actual commands, responses
 and completion. Native source paths resolve the `/var` and `/private/var`
 aliases to the same fixture. Projections omit account identifiers, unrelated
@@ -85,9 +86,9 @@ Original owned sessions remain at their native profile paths; full exports were
 not copied into these receipts.
 
 The
-[private source index](evidence/2026-10-22-gate6-codex-shared-resources/private-source-index.json)
+[private source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-shared-resources/private-source-index.json)
 and
-[retained manifest](evidence/2026-10-22-gate6-codex-shared-resources/receipt-hashes.json)
+[retained manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-codex-shared-resources/receipt-hashes.json)
 retain distinct original/selected hashes and helper fingerprints. All seventeen
 original manifest entries, five owned session hashes and nine selected file
 hashes were checked. Private helpers are not shipped or qualified runners; this

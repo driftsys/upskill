@@ -53,7 +53,7 @@ Three compiled fault controls each produced a targeted assertion failure:
 The original source bytes were restored after each control and their hashes
 compared. All four focused internal examples passed on restored source. Logs and
 source hashes are retained in the
-[evidence manifest](evidence/2026-10-17-m1-guarded-backup/manifest.json).
+[evidence manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-17-m1-guarded-backup/manifest.json).
 
 An independent whole-change reviewer reported no Critical, Important or Minor
 findings. The reviewer did not run duplicate broad tests. Lifecycle validation,

@@ -9,7 +9,7 @@ The review fixes add fifteen examples, giving 31 in
 [the contract suite](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/lifecycle_contracts.rs).
 Captured reports and control recipes are retained as compressed files alongside
 a
-[content-addressed manifest](evidence/2026-10-16-m1-owner-contracts/manifest.json).
+[content-addressed manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-16-m1-owner-contracts/manifest.json).
 It identifies the parent commit and exact production/test source hashes. The
 later snapshot includes uncommitted review fixes at capture time. These are
 dispatcher-captured reports, not independently authenticated execution.
@@ -44,7 +44,9 @@ qualification.
 
 ## Reading the retained evidence
 
-Files use gzip compression. For example, from the repository root:
+The raw evidence files were removed from `main` on 2026-11-13 and remain on the
+branch `archive/lifecycle-2026-11`. Files use gzip compression. For example,
+from the repository root of a checkout of that branch:
 
 ```bash
 gzip -dc docs/technotes/evidence/2026-10-16-m1-owner-contracts/verify-final.log.gz

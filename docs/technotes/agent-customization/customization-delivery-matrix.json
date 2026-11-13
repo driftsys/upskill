@@ -3999,7 +3999,7 @@
       "route": "codex.rules",
       "status": "blocked",
       "qualified": false,
-      "evidence": "../evidence/2026-10-20-gate6-authenticated-project/summary.json",
+      "evidence": "https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-20-gate6-authenticated-project/summary.json",
       "observation": "Authenticated fresh and resume responses preserve team guidance with one event per rule; native registration-selection controls observed. Codex removal/reinstall also observed. Profile remains blocked on missing lifecycle/reader/duplicate/authority cases."
     },
     {
@@ -4036,7 +4036,7 @@
       "route": "codex.plugins",
       "status": "blocked",
       "qualified": false,
-      "evidence": "../evidence/2026-10-20-gate6-authenticated-project/summary.json",
+      "evidence": "https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-20-gate6-authenticated-project/summary.json",
       "observation": "Authenticated fresh and resume responses preserve team guidance with one event per rule; native registration-selection controls observed. Codex removal/reinstall also observed. Profile remains blocked on missing lifecycle/reader/duplicate/authority cases."
     },
     {
@@ -4283,7 +4283,7 @@
       "route": "opencode.rules",
       "status": "blocked",
       "qualified": false,
-      "evidence": "../evidence/2026-10-20-gate6-authenticated-project/summary.json",
+      "evidence": "https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-20-gate6-authenticated-project/summary.json",
       "observation": "Authenticated fresh and resume responses preserve team guidance with one event per rule; native registration-selection controls observed. Codex removal/reinstall also observed. Profile remains blocked on missing lifecycle/reader/duplicate/authority cases."
     },
     {
@@ -4320,7 +4320,7 @@
       "route": "opencode.plugins",
       "status": "blocked",
       "qualified": false,
-      "evidence": "../evidence/2026-10-20-gate6-authenticated-project/summary.json",
+      "evidence": "https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-20-gate6-authenticated-project/summary.json",
       "observation": "Authenticated fresh and resume responses preserve team guidance with one event per rule; native registration-selection controls observed. Codex removal/reinstall also observed. Profile remains blocked on missing lifecycle/reader/duplicate/authority cases."
     },
     {

@@ -600,7 +600,7 @@ bounded inactive contract boundary; the parent implementation commit is
 The archived [spec](specs/2026-10-16-m1-owner-contracts.md) retains its original
 bytes. The [plan](plans/2026-10-16-m1-owner-contracts.md) corrects its umbrella
 reference after relocation. Its
-[original raw bytes](../technotes/evidence/2026-10-16-m1-owner-contracts/original-archived-plan.md.gz)
+[original raw bytes](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-16-m1-owner-contracts/original-archived-plan.md.gz)
 remain available as compressed provenance; the evidence manifest records their
 uncompressed digest. Other active and future WIP retains its existing
 disposition.
@@ -627,7 +627,7 @@ The contracted producer starts at `c9f453042c954ab2698942c4cbe4e2ee4878ba13`;
 shared planning and acceptance examples were reconciled from the stable working
 implementation supplied by the dispatcher. The dispatcher reports 1,242 passing
 Rust tests, thirty-six focused examples, Rust 1.85 and sanity exit 0; see the
-[execution evidence](../technotes/evidence/2026-10-17-m1-shared-reconciliation/manifest.json).
+[execution evidence](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-17-m1-shared-reconciliation/manifest.json).
 This is local completion evidence, not a claim of merge or hosted qualification.
 
 Durable successors:
@@ -649,7 +649,7 @@ Source paths: `docs/wip/specs/2026-10-17-m1-guarded-backup.md` and
 `docs/wip/plans/2026-10-17-m1-guarded-backup.md`. The
 [spec reading copy](specs/2026-10-17-m1-guarded-backup.md) uses canonical
 Markdown formatting. Its exact original bytes are retained as
-[compressed evidence](../technotes/evidence/2026-10-17-m1-guarded-backup/original-archived-spec.md.gz),
+[compressed evidence](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-17-m1-guarded-backup/original-archived-spec.md.gz),
 with hashes in the evidence manifest. The
 [plan](plans/2026-10-17-m1-guarded-backup.md) retains its original bytes. Both
 retain historical relative WIP references and unchecked delivery tasks. The

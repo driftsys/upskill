@@ -35,14 +35,14 @@ counts cannot produce `observed`. Duplicate checks require independent native
 event counts; equal model responses cannot prove one activation. `observed`
 describes one pair only and never means campaign qualification. These tests use
 synthetic observations and do not establish native discovery.
-[Mutation controls](evidence/2026-10-19-gate6-plugin-fixtures/offline-mutations.json)
+[Mutation controls](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-gate6-plugin-fixtures/offline-mutations.json)
 show that the original 14 deliberately broken variants are rejected, including
 team/payload contamination, failed control validation, wrong rule identities,
 constant snapshots, inherited credentials and weakened hook filters.
-[Review corrections](evidence/2026-10-19-gate6-plugin-fixtures/review-validation.json)
+[Review corrections](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-gate6-plugin-fixtures/review-validation.json)
 retain all POSIX permission bits and pin the Codex response event plus native
 package registration/version declarations. The current 21 offline tests reject
-[18 mutation controls](evidence/2026-10-19-gate6-plugin-fixtures/review-mutations.json),
+[18 mutation controls](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-gate6-plugin-fixtures/review-mutations.json),
 including the four review regressions. Callback execution and fresh-marker test
 follow-ups remain [#340](https://github.com/driftsys/upskill/issues/340) and
 [#342](https://github.com/driftsys/upskill/issues/342).
@@ -59,7 +59,7 @@ project; the SDK declaration belongs only to the disposable native package.
 ## Initial native observations and blockers (2026-10-19)
 
 Sanitized
-[Codex installation receipts](evidence/2026-10-19-gate6-plugin-fixtures/codex-installation.json)
+[Codex installation receipts](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-gate6-plugin-fixtures/codex-installation.json)
 record macOS arm64 project observations at 0.163.0. With only the disposable
 environment active, `plugin marketplace add`, both `plugin add` commands and
 `plugin list` succeeded. The installed copies were reported beneath
@@ -76,12 +76,12 @@ model pair was run. The trust-bypass flag is not used to manufacture a pass.
 
 The pinned Claude 2.1.303 and OpenCode 2.0.32 binaries were fetched into
 temporary storage and verified against the campaign's digest/integrity values.
-[All four CLI pins](evidence/2026-10-19-gate6-plugin-fixtures/pinned-interfaces.json)
+[All four CLI pins](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-gate6-plugin-fixtures/pinned-interfaces.json)
 reported their expected versions in separate credential-free temporary homes.
 This is executable availability only. Existing personal binaries and
 configuration were not replaced.
 
-[OpenCode prerequisite receipts](evidence/2026-10-19-gate6-plugin-fixtures/opencode-prerequisites.json)
+[OpenCode prerequisite receipts](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-gate6-plugin-fixtures/opencode-prerequisites.json)
 record two unsuccessful 2.0.32 observations. Managed `plugin list` could not
 start because its default service port was occupied. The existing listener was
 left untouched. A private `run --standalone --format json` with deny-all fixture
@@ -93,7 +93,7 @@ directory placeholder `$OPENCODE_CONFIG_ROOT` to distinguish these mechanisms.
 The regression failed before the fix and passed afterward. Neither original
 failure qualifies a negative.
 
-[Corrected native observations](evidence/2026-10-19-gate6-plugin-fixtures/opencode-corrected.json)
+[Corrected native observations](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-gate6-plugin-fixtures/opencode-corrected.json)
 first reached routing but found the selected OpenAI model unavailable. The
 native catalog listed anonymous free routes. A listed route exposed a second
 fixture error: pinned `SessionInfo` stores the directory under
@@ -136,7 +136,7 @@ needs its own timeout/interruption acceptance cases.
 None of these rows is an activation pass. A network-disabled Debian 12 x86_64
 container on the Linux arm64 Docker host ran all four pinned binaries with
 `--version`;
-[receipts](evidence/2026-10-19-gate6-plugin-fixtures/linux-pinned-interfaces.json)
+[receipts](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-gate6-plugin-fixtures/linux-pinned-interfaces.json)
 record the exact image digest, emulation, artifact hashes, output and container
 removal. These are executable checks under emulation only. The authenticated
 Linux campaign and remaining platform/client/scope controls remain

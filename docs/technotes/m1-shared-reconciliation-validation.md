@@ -53,7 +53,7 @@ raw roots/scopes assertion-failed. Source edits were restored.
 
 Execution logs, assertion controls and restored source hashes are retained in
 the
-[evidence manifest](evidence/2026-10-17-m1-shared-reconciliation/manifest.json).
+[evidence manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-17-m1-shared-reconciliation/manifest.json).
 The gzip artifacts can be inspected with `gzip -dc <file>`. The manifest hashes
 identify captured bytes; they do not authenticate an independent execution.
 

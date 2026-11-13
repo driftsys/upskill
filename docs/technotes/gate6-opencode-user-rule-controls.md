@@ -20,7 +20,7 @@ port setting. No model request or local-package loading test occurs in this
 phase.
 
 The
-[interface receipts](evidence/2026-10-23-gate6-opencode-user-rules/interface-observations.json)
+[interface receipts](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-23-gate6-opencode-user-rules/interface-observations.json)
 retain both failures and cleanup. The initial default-port orchestration was an
 inline snippet without a pre-frozen helper; its native arguments and outputs are
 retained, not a qualified runner.
@@ -78,7 +78,8 @@ sequential; this is not simultaneous-session or exhaustive duplicate activation
 qualification. The two configured packets are fresh contexts, not an
 unchanged-policy or single-variable causal pair.
 
-The [summary](evidence/2026-10-23-gate6-opencode-user-rules/summary.json)
+The
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-23-gate6-opencode-user-rules/summary.json)
 records these outcomes separately from the failed service/package interface
 attempts. A rejected local directory is not evidence that the configured local
 route is unsupported. Entry removal tests fixture context delivery; it does not
@@ -86,9 +87,9 @@ test native package uninstall or a production upskill lifecycle.
 
 ## Native evidence and preservation limits
 
-[Selected CLI receipts](evidence/2026-10-23-gate6-opencode-user-rules/receipt-hashes.json)
+[Selected CLI receipts](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-23-gate6-opencode-user-rules/receipt-hashes.json)
 retain the exact response text and native session identity.
-[Native export selections](evidence/2026-10-23-gate6-opencode-user-rules/native-session-selections.json)
+[Native export selections](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-23-gate6-opencode-user-rules/native-session-selections.json)
 retain the same session, model, assistant agent and successful idle outcome. The
 native sanitizer redacts directory identity and user/assistant text. Export
 placeholders remain placeholders: response equality is checked against CLI text,
@@ -98,7 +99,7 @@ dump. Injection observations bind callback source, actual module path and
 unpredictable response markers instead.
 
 The
-[fixture assessment](evidence/2026-10-23-gate6-opencode-user-rules/fixture-and-assessment.json)
+[fixture assessment](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-23-gate6-opencode-user-rules/fixture-and-assessment.json)
 retains declared inputs, source bodies, native commands, manual preservation and
 cleanup. Both packets restore global-file absence and preserve the old project
 activation trace. The manual-baseline packet also restores its intermediate
@@ -108,7 +109,7 @@ configuration preservation is qualified. Dependency/cache files, parent
 directories and complete native side-effect recovery are outside these checks.
 
 The
-[source index](evidence/2026-10-23-gate6-opencode-user-rules/private-source-index.json)
+[source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-23-gate6-opencode-user-rules/private-source-index.json)
 binds 154 original manifest entries, fourteen native session exports and the
 frozen preparation/control helpers. Original and selected hashes were checked.
 Opaque provider state, account identifiers, reasoning and accounting are omitted

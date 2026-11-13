@@ -48,7 +48,7 @@ terminal size before admission.
 | Final pre-UI user configuration | Codex 0.164.0 | PASS after correction: exact original hash and mode; initial restoration failure retained                                    |
 
 The
-[boundary evidence](evidence/2026-10-24-codex-agent-registration/child-boundary-evidence.json)
+[boundary evidence](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-agent-registration/child-boundary-evidence.json)
 correlates the child session's native parent ID and role with the parent
 request. Native child tool-call IDs bind the resource read and denied command to
 their results. The child transcript includes inherited history; the assessment
@@ -68,7 +68,7 @@ Native `debug prompt-input` exposes the `spawn_agent` schema without inference.
 With explicit registration, its `agent_type` description lists the exact custom
 role. With only the installed plugin, the spawn API remains present but the
 custom-role argument is absent. The
-[catalog assessment](evidence/2026-10-24-codex-agent-registration/catalog-role-assessment.json)
+[catalog assessment](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-agent-registration/catalog-role-assessment.json)
 retains those separate calibrated observations. Mere absence of the role name
 from arbitrary prompt text is not the classification method.
 
@@ -88,7 +88,7 @@ inform the fixture; the pinned native run establishes this bounded result.
 ## Initial preservation failure and final correction
 
 The
-[plugin preservation receipt](evidence/2026-10-24-codex-agent-registration/retry-plugin-preservation.json)
+[plugin preservation receipt](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-agent-registration/retry-plugin-preservation.json)
 shows native plugin management restoring the immediate post-admission user
 configuration baseline exactly. Its own project config also returns to its
 original bytes and mode.
@@ -99,7 +99,7 @@ removes the two exact newly granted fixture trust entries after all controls.
 Attempts to reconstruct the original bytes do not match the starting hash, so no
 guessed replacement is written. Remaining native configuration bytes are
 preserved; their difference is not explained or dismissed as formatting. The
-[restoration record](evidence/2026-10-24-codex-agent-registration/trust-restoration.json)
+[restoration record](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-agent-registration/trust-restoration.json)
 keeps both the failed exact-restoration result and the owned-entry cleanup.
 
 The initial restoration is a failure, independent of the passed child/sandbox
@@ -108,7 +108,7 @@ counter advancing from 3 to 4. Restoring its earlier value and original trailing
 whitespace reconstructs bytes matching the complete pre-UI hash. Only that
 matching candidate is written, after the subsequent control releases the
 profile. The
-[final correction](evidence/2026-10-24-codex-agent-registration/final-notice-restoration.json)
+[final correction](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-agent-registration/final-notice-restoration.json)
 records exact original hash and mode restoration; the initial failed receipt is
 unchanged. Its retained helper is explicitly an equivalent guarded source saved
 after the original inline execution.
@@ -135,7 +135,7 @@ They never invoke a client or qualify native execution.
 
 Raw transcripts, private test model selection, native prompt inputs and source
 remain outside the repository. The
-[source index](evidence/2026-10-24-codex-agent-registration/private-source-index.json)
+[source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-agent-registration/private-source-index.json)
 and hashes bind the selected receipts and private sources. Public role/schema
 assessments omit test model identifiers and unrelated catalog content.
 
@@ -156,5 +156,5 @@ rejection checks; guide presence is mocked. Git identity checks also use the
 stripped fixture environment. Other main harness nodes are unchanged. These
 offline changes do not repeat the native control, and original capture source
 remains separate from integration source
-([integration audit](evidence/2026-10-24-codex-agent-registration/main-integration-audit.json),
-[validation](evidence/2026-10-24-codex-agent-registration/validation.json)).
+([integration audit](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-agent-registration/main-integration-audit.json),
+[validation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-codex-agent-registration/validation.json)).

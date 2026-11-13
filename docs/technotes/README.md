@@ -83,7 +83,7 @@ snapshot; a stable name does not imply that external research remains current.
   Copilot 1.0.103; plain rule read, paths variant fallback in a tool-free
   request.
 
-- [Customization delivery choice evidence](evidence/2026-10-23-delivery-choice/assessment.md):
+- [Customization delivery choice evidence](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-23-delivery-choice/assessment.md):
   current skill experiments, verified retained native records and focused
   ownership checks; supports a proposal without claiming production
   qualification.
@@ -189,9 +189,9 @@ library code and tests that the filesystem, execution, CodeQL extraction and M1
 lifecycle and Gate 5 validation records describe were removed from `main` by
 [AD-0042](../adr/0042-resteer-customization-delivery.md); each of those records
 links to the branch `archive/lifecycle-2026-11`. Keep schema bytes, licenses and
-provenance manifests together. Preserve captured evidence and its hashes; update
-research explicitly when upstream contracts change. Technical notes and evidence
-assets are outside the published book.
+provenance manifests together. Preserve the captured evidence that remains on
+`main` and its hashes; update research explicitly when upstream contracts
+change. Technical notes and evidence assets are outside the published book.
 
 - [Gate 6 independent plugin fixture preparation](gate6-plugin-rule-probes.md) —
   Offline controls, bounded native installation observations and activation
@@ -205,3 +205,29 @@ assets are outside the published book.
 - [Codex resume-only attribution](gate6-codex-resume-attribution.md): Codex
   0.164.0 adds one body per rule on resume, before compaction; recorded history
   only.
+
+## Removed trial evidence
+
+On 2026-11-13 the raw evidence of 28 trials was removed from `main`. The notes
+in this directory remain and are the written results of those trials. The raw
+evidence is preserved unchanged on the branch `archive/lifecycle-2026-11`, in
+the same paths under `docs/technotes/evidence/`; links in the notes point to
+that branch.
+
+Thirteen evidence folders remain in `docs/technotes/evidence/`:
+
+- Codex trial results: `2026-10-23-gate6-codex-user-rules`,
+  `2026-10-23-gate6-codex-user-sessions`, `2026-10-24-codex-rule-lifecycle` and
+  `2026-10-25-codex-resume-attribution`.
+- Evidence that the accepted records AD-0040 and AD-0041 rely on through their
+  notes: `2026-10-25-opencode-explicit-paths-retry`,
+  `2026-10-24-copilot-claude-rules-reader`,
+  `2026-10-24-copilot-claude-agents-reader`, `2026-10-24-claude-rule-hooks`,
+  `2026-10-24-codex-rule-lifecycle`, `2026-10-25-codex-resume-attribution` and
+  `2026-10-21-gate6-shared-skill`.
+- Packets that tests in `scripts/tests` read by path:
+  `2026-10-24-codex-rule-lifecycle`, `2026-10-24-copilot-claude-rules-reader`,
+  `2026-10-24-copilot-claude-agents-reader`, `2026-10-24-claude-rule-hooks`,
+  `2026-10-25-cross-client-package-isolation`,
+  `2026-10-30-q11b-registration-isolation` and `2026-10-30-q11b-native-name`.
+- The CodeQL baseline: `2026-11-04-codeql-rust-extraction`.
