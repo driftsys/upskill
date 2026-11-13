@@ -486,8 +486,8 @@ fn print_scope_line(at: &ScopeRoot) {
 }
 
 /// Walk up from `cwd` looking for a `.git` entry (file or directory). Returns
-/// `false` on any I/O error so the caller falls back to global scope rather
-/// than crashing — that matches user expectation when `cwd` is unreadable.
+/// `false` on any I/O error, so an unreadable `cwd` counts as outside a git
+/// repository instead of stopping the command.
 fn is_inside_git_repo() -> bool {
     let mut dir = match std::env::current_dir() {
         Ok(d) => d,

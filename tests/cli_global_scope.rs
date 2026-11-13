@@ -1,8 +1,9 @@
-//! ATDD tests for global vs project scope and the auto-fallback rule.
+//! ATDD tests for global vs project scope.
 //!
-//! Spec §1.2 / §2.1: project (`<cwd>/`) is the default; global (`$HOME/`)
-//! kicks in when `-g/--global` is passed OR when `cwd` is not inside a git
-//! repo. `-p/--project` forces project regardless. `-g` and `-p` are
+//! Without a scope flag, the project (`<cwd>/`) is used inside a git repo.
+//! Outside one, `update`, `remove`, `list` and `doctor` use the global scope
+//! (`$HOME/`), and `add` refuses. `-g/--global` selects global and
+//! `-p/--project` selects project regardless of git state. `-g` and `-p` are
 //! mutually exclusive at the clap layer.
 //!
 //! upskill-allow-raw-cargo-bin: this suite tests global scope itself — each
@@ -140,9 +141,9 @@ fn update_outside_a_git_repository_uses_global() {
 }
 
 #[test]
-fn project_flag_overrides_auto_fallback() {
-    // `cwd` is NOT in a git repo, so auto-fallback would pick global.
-    // `-p/--project` forces project anyway.
+fn project_flag_installs_into_cwd_outside_a_git_repository() {
+    // `cwd` is NOT in a git repo, so `add` without a flag would refuse.
+    // `-p/--project` installs into `cwd` anyway.
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
     let home = tmp.path().join("fakehome");

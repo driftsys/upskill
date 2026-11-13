@@ -126,8 +126,9 @@ pub enum Commands {
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Operate on the current directory. Without a scope flag, the
+        /// command uses the project scope inside a git repo and the global
+        /// scope outside one.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Skip the confirmation prompt that `--source` shows on a TTY.
@@ -164,8 +165,9 @@ pub enum Commands {
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Operate on the current directory. Without a scope flag, the
+        /// command uses the project scope inside a git repo and the global
+        /// scope outside one.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Apply every source without a question. In a terminal without
@@ -217,8 +219,9 @@ pub enum Commands {
         /// Read `$HOME/.upskill-lock.json` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Operate on the current directory. Without a scope flag, the
+        /// command uses the project scope inside a git repo and the global
+        /// scope outside one.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit a stable JSON document instead of the human-readable
@@ -246,8 +249,9 @@ pub enum Commands {
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Operate on the current directory. Without a scope flag, the
+        /// command uses the project scope inside a git repo and the global
+        /// scope outside one.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit every report bucket as a stable JSON document. Exit code is
@@ -352,8 +356,9 @@ pub enum Commands {
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Operate on the current directory. Without a scope flag, the
+        /// command uses the project scope inside a git repo and the global
+        /// scope outside one.
         #[arg(short = 'p', long = "project")]
         project: bool,
     },
