@@ -79,6 +79,15 @@ fn install_from_git(
     )
 }
 
+/// The URL that a clone of `source` uses; `None` for a local path source.
+pub(super) fn clone_url(source: &InstallSource) -> Option<String> {
+    match source {
+        InstallSource::LocalPath(_) => None,
+        InstallSource::Github(repo) => Some(github_clone_url(repo)),
+        InstallSource::Git(repo) => Some(git_clone_url(repo)),
+    }
+}
+
 fn github_clone_url(repo: &GithubRepo) -> String {
     format!("https://github.com/{}/{}.git", repo.owner, repo.name)
 }

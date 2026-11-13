@@ -14,6 +14,8 @@
 //! - [`install_from_source`] / [`install_from_local_path`] /
 //!   [`install_from_git_url`] — library-only variants without lockfile or
 //!   ancillary handling.
+//! - [`check_scopes`] — reports the sources of the lockfiles that have a
+//!   newer version, without a fetch and without changing a file.
 //!
 //! Authentication: clones use the bare URL and rely on git's own
 //! configuration (credential helpers, `insteadOf` rewrites, SSH);
@@ -30,6 +32,7 @@ use crate::generate::Client;
 use crate::source::InstallSource;
 
 mod apply;
+mod check;
 mod discovery;
 mod git;
 mod hash;
@@ -43,6 +46,9 @@ mod prepared;
 mod report;
 
 pub use apply::{ConflictState, FileConflict};
+pub use check::{
+    CheckedSource, GitRemote, LookupError, RemoteLookup, ScopedCheck, SourceStatus, check_scopes,
+};
 pub use git::{FetchedSource, fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;

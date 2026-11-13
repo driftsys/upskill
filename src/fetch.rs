@@ -103,7 +103,6 @@ pub(crate) fn head_commit(dir: &Path) -> Result<String, String> {
 
 /// Why `run_until` did not return the output of a command.
 #[derive(Debug, PartialEq, Eq)]
-#[allow(dead_code)] // Caller: the update check (`pipeline::check`).
 pub(crate) enum RunError {
     /// The command had not exited at the deadline; it was killed.
     TimedOut,
@@ -123,7 +122,6 @@ pub(crate) enum RunError {
 /// the readers cannot finish; the call then returns `TimedOut` at the
 /// deadline and leaves the blocked reader threads detached. Output is
 /// returned only when both pipes reached end of file by the deadline.
-#[allow(dead_code)] // Caller: the update check (`pipeline::check`).
 pub(crate) fn run_until(mut cmd: Command, deadline: Instant) -> Result<String, RunError> {
     use std::io::Read;
     use std::process::Stdio;
@@ -204,7 +202,6 @@ pub(crate) fn run_until(mut cmd: Command, deadline: Instant) -> Result<String, R
 /// `git ls-remote` without a fetch. `Ok(None)` when the remote has no such
 /// ref. A branch wins over a tag of the same name; an annotated tag gives the
 /// tagged commit.
-#[allow(dead_code)] // Caller: the update check (`pipeline::check`).
 pub(crate) fn ls_remote(
     url: &str,
     git_ref: Option<&str>,
@@ -247,7 +244,6 @@ pub(crate) fn ls_remote(
 }
 
 /// True for 40 lowercase or uppercase hexadecimal characters.
-#[allow(dead_code)] // Caller: the update check (`pipeline::check`).
 pub(crate) fn is_full_commit_hash(git_ref: &str) -> bool {
     git_ref.len() == 40 && git_ref.bytes().all(|b| b.is_ascii_hexdigit())
 }

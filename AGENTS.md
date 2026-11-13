@@ -78,7 +78,8 @@ src/
 │
 ├── pipeline/            Local + git → per-client install pipeline,
 │                        git-config clone URLs, SSOT hashing,
-│                        list / remove / update / doctor over the lockfile
+│                        list / remove / update / doctor over the lockfile,
+│                        update check (`check.rs`: `git ls-remote`, no fetch)
 ├── legacy/              Frozen historical output layout
 ├── bundle.rs            Bundle dependency resolution
 ├── lint.rs              Author command — validate SSOT against the format spec
