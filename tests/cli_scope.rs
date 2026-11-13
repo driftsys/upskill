@@ -72,6 +72,18 @@ fn stdout(out: &std::process::Output) -> String {
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
 
+/// The project root as a command started in `dir` reports it: the value of
+/// `std::env::current_dir()` in that process. On Unix that value has its
+/// symbolic links resolved. On Windows it is the path that the process was
+/// started with, and `canonicalize` gives a different `\\?\` form.
+fn reported_root(dir: &Path) -> PathBuf {
+    if cfg!(windows) {
+        dir.to_path_buf()
+    } else {
+        dir.canonicalize().unwrap()
+    }
+}
+
 #[test]
 fn add_outside_a_git_repository_without_a_flag_asks_for_one() {
     let e = env();
@@ -99,10 +111,7 @@ fn add_with_an_invalid_source_outside_a_git_repository_reports_the_source() {
 fn add_update_and_remove_state_the_scope_and_its_root() {
     let e = env();
     let src = e.source.to_str().unwrap();
-    let project = format!(
-        "scope: project ({})",
-        e.repo.canonicalize().unwrap().display()
-    );
+    let project = format!("scope: project ({})", reported_root(&e.repo).display());
     for args in [
         vec!["add", src],
         vec!["update", "--yes"],
@@ -156,10 +165,7 @@ fn remove_mcp_states_the_scope_and_its_root() {
     let e = env();
     let out = run(&e, &e.repo, &["remove-mcp", "x"]);
     assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
-    let project = format!(
-        "scope: project ({})",
-        e.repo.canonicalize().unwrap().display()
-    );
+    let project = format!("scope: project ({})", reported_root(&e.repo).display());
     assert!(stderr(&out).contains(&project), "{}", stderr(&out));
     // Outside a git repository, `remove-mcp` uses the global scope.
     let out = run(&e, &e.outside, &["remove-mcp", "x"]);
@@ -465,7 +471,7 @@ fn list_without_a_flag_outside_a_git_repository_includes_the_project_scope() {
     assert_eq!(v["scopes"][0]["scope"], "project", "{v}");
     assert_eq!(
         v["scopes"][0]["root"].as_str().unwrap(),
-        e.outside.canonicalize().unwrap().to_str().unwrap(),
+        reported_root(&e.outside).to_str().unwrap(),
         "{v}"
     );
     assert_eq!(v["scopes"][1]["scope"], "global", "{v}");
@@ -586,7 +592,7 @@ fn doctor_without_a_flag_outside_a_git_repository_includes_the_project_scope() {
     assert_eq!(v["scopes"][0]["scope"], "project", "{v}");
     assert_eq!(
         v["scopes"][0]["root"].as_str().unwrap(),
-        e.outside.canonicalize().unwrap().to_str().unwrap(),
+        reported_root(&e.outside).to_str().unwrap(),
         "{v}"
     );
     assert_eq!(v["scopes"][1]["scope"], "global", "{v}");
