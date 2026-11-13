@@ -435,3 +435,60 @@ fn a_declined_source_records_no_commit() {
         before
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn a_terminal_update_keeps_the_recorded_commit_of_a_withheld_item() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let old = upstream_head(&e);
+    let edited = e.repo.join(".claude/skills/alpha/SKILL.md");
+    std::fs::write(&edited, "edited by the user\n").unwrap();
+    write_skill(&e.upstream, "alpha", "Alpha content, changed upstream.");
+    git_in(&e, &["add", "."]);
+    git_in(&e, &["commit", "-m", "change alpha"]);
+    let head = upstream_head(&e);
+    assert_ne!(old, head);
+    let env_vars = [
+        ("GIT_CONFIG_NOSYSTEM", "1".to_string()),
+        (
+            "GIT_CONFIG_GLOBAL",
+            e.home.join("empty-gitconfig").display().to_string(),
+        ),
+        ("GIT_CONFIG_COUNT", "2".to_string()),
+        (
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", e.upstream.display()),
+        ),
+        ("GIT_CONFIG_VALUE_0", format!("{REMOTE}.git")),
+        ("GIT_CONFIG_KEY_1", "protocol.file.allow".to_string()),
+        ("GIT_CONFIG_VALUE_1", "always".to_string()),
+        ("GIT_ALLOW_PROTOCOL", "file".to_string()),
+        ("GIT_TERMINAL_PROMPT", "0".to_string()),
+    ];
+    let result = common::update_in_terminal_with_env(&e.repo, &e.home, &[], "", &env_vars);
+    assert!(
+        !result["stdout"].as_str().unwrap().contains("Apply?"),
+        "{result}"
+    );
+    assert!(
+        !result["stderr"].as_str().unwrap().contains("Apply?"),
+        "{result}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&edited).unwrap(),
+        "edited by the user\n"
+    );
+    let lock = lock(&e.repo);
+    let commit_of = |name: &str| {
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap()["commit"]
+            .clone()
+    };
+    assert_eq!(commit_of("alpha"), old.as_str(), "{result}");
+    assert_eq!(commit_of("beta"), head.as_str(), "{result}");
+}
