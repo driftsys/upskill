@@ -15,7 +15,7 @@ unchanged.
 ## Native observation
 
 The fresh
-[campaign pins](evidence/2026-10-29-q11b-native-calibration/campaign-pins.json)
+[campaign pins](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/campaign-pins.json)
 remain Claude 2.1.308, Copilot 1.0.103, Codex 0.164.0 and OpenCode 2.1.4. Only
 Copilot executes a model request. Codex and OpenCode execute version probes
 only. This is a new evidence attempt; no client version changed.
@@ -27,7 +27,7 @@ execution are disabled; the native skill tool is the only available tool. The
 process exits 0, without a timeout or malformed JSON stream.
 
 The
-[selected records](evidence/2026-10-29-q11b-native-calibration/native-selection.json)
+[selected records](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/native-selection.json)
 show the full namespace in `session.skills_loaded`, with the expected entrypoint
 path. The model calls `skill` once using the **bare skill name**. Its correlated
 completion succeeds. There is **no namespaced tool attempt** in this attempt.
@@ -37,30 +37,30 @@ therefore fail. Successful bare-name loading does not pass the approved profile.
 No slash transformation, prompt change or retry was performed.
 
 The
-[observation](evidence/2026-10-29-q11b-native-calibration/copilot-positive-observation.json)
+[observation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/copilot-positive-observation.json)
 is replayed through the existing `inspect_cross_client_positive` function. It
 records zero namespaced activations, one content activation, an unexpected
 bare-name tool call and a nonexact response. The
-[summary](evidence/2026-10-29-q11b-native-calibration/summary.json) retains
-`blocked_positive`, `qualified: false` and all dependent controls as `not_run`.
-This failed positive is neither an isolation PASS nor an unintended-activation
-FAIL: no foreign registration was exposed to the observer.
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/summary.json)
+retains `blocked_positive`, `qualified: false` and all dependent controls as
+`not_run`. This failed positive is neither an isolation PASS nor an
+unintended-activation FAIL: no foreign registration was exposed to the observer.
 
 ## Inventory, correlation and preservation
 
 Both existing authenticated isolated profiles were locked exclusively before
 native commands. Their configuration was inspected in memory. The
-[inventory](evidence/2026-10-29-q11b-native-calibration/inventory.json) records
-effective roots, configuration discovery facts and 162 protected paths. Existing
-synchronized Claude content was fingerprinted; no team instructions, discovery
-preferences, credentials or native registries were authored. The project's
-unrelated sentinel settings file starts at mode 0640 with the exact approved
-bytes. The matching owner and observer portable trees were prepared with
-identical skill/resource bytes and modes. Their package envelopes differ by the
-intended native manifest format. The unused marketplace fixture was prepared
+[inventory](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/inventory.json)
+records effective roots, configuration discovery facts and 162 protected paths.
+Existing synchronized Claude content was fingerprinted; no team instructions,
+discovery preferences, credentials or native registries were authored. The
+project's unrelated sentinel settings file starts at mode 0640 with the exact
+approved bytes. The matching owner and observer portable trees were prepared
+with identical skill/resource bytes and modes. Their package envelopes differ by
+the intended native manifest format. The unused marketplace fixture was prepared
 outside the project; its native route was not exercised.
 
-[Session correlation](evidence/2026-10-29-q11b-native-calibration/session-correlation.json)
+[Session correlation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/session-correlation.json)
 binds the process's terminal session ID to the persisted native `session.start`,
 client version, project cwd, event IDs, parent links and tool-call identity.
 Every selected user, assistant and tool record has a corresponding native
@@ -70,8 +70,9 @@ through the single process receipt and its native session-start parent ID; it is
 not duplicated in persisted history. No broader session qualification is
 inferred from this failed control.
 
-[Before](evidence/2026-10-29-q11b-native-calibration/preservation-before.json)
-and [after](evidence/2026-10-29-q11b-native-calibration/preservation-after.json)
+[Before](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/preservation-before.json)
+and
+[after](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/preservation-after.json)
 receipts match for all 162 declared protected paths. Package envelopes and
 portable trees also match their initial fingerprints. Copilot's native
 session/log/cache/usage bookkeeping remains native-managed and outside this
@@ -84,7 +85,7 @@ restored or deleted.
 
 Raw streams, model identifiers, native session history and capture helpers stay
 in the private packet. The
-[private-source index](evidence/2026-10-29-q11b-native-calibration/private-source-index.json)
+[private-source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/private-source-index.json)
 retains their SHA-256 receipts without exporting auth-bearing configuration.
 Public selected records replace markers with explicit symbolic values and paths
 with root placeholders. Response whitespace is preserved through that
@@ -94,7 +95,7 @@ the paired owner/native and observer/native paths, manifests, intended clients
 and fingerprints. The original private capture remains untouched; replay of the
 actual native invocation and result is unchanged
 ([#435](https://github.com/driftsys/upskill/issues/435)).
-[Receipt hashes](evidence/2026-10-29-q11b-native-calibration/receipt-hashes.json)
+[Receipt hashes](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-29-q11b-native-calibration/receipt-hashes.json)
 cover the public packet. The offline classifier and production code are
 unchanged.
 

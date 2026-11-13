@@ -26,7 +26,7 @@ identifies model `claude-sonnet-5-5`; the selected init does not report its
 provider identifier.
 
 The
-[version receipt](evidence/2026-10-22-gate6-four-client-coexistence/native-version-verification.json)
+[version receipt](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-four-client-coexistence/native-version-verification.json)
 retains independent post-run `--version` output. Its binary fingerprints match
 both capture boundaries in both packets. Original capture asserted version
 output without retaining that stdout; the later receipt is labeled separately.
@@ -72,7 +72,8 @@ resource marker, and `A` means the declared unavailable-skill fallback.
 | Shared entry restored; Claude plugin disabled | A      | R       | R     | R        |
 | Claude plugin re-enabled                      | R      | —       | —     | —        |
 
-The [summary](evidence/2026-10-22-gate6-four-client-coexistence/summary.json)
+The
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-four-client-coexistence/summary.json)
 retains all 24 completed turns across both packets: 22 exact responses and the
 two preliminary failures. There are 33 native tool calls, including 17 resource
 read attempts: 16 successful reads and the preliminary permission denial. Four
@@ -97,9 +98,9 @@ activation per positive turn is not a global duplicate-activation proof.
 ## Preservation and receipts
 
 The
-[packet A assessment](evidence/2026-10-22-gate6-four-client-coexistence/a-fixture-and-assessment.json)
+[packet A assessment](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-four-client-coexistence/a-fixture-and-assessment.json)
 and
-[packet B assessment](evidence/2026-10-22-gate6-four-client-coexistence/b-fixture-and-assessment.json)
+[packet B assessment](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-four-client-coexistence/b-fixture-and-assessment.json)
 retain exact before/after manual team/configuration and source/package
 bytes/modes. The whole shared entry is restored in guarded cleanup. Selected
 profile configuration candidates also agree; absent candidate paths are shown as
@@ -113,14 +114,14 @@ native-registration preservation and cache/cloud side-effect recovery are not
 established. Fixtures and private packets remain preserved.
 
 Selected per-turn CLI receipts and
-[native session projections](evidence/2026-10-22-gate6-four-client-coexistence/native-session-projections.json)
+[native session projections](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-four-client-coexistence/native-session-projections.json)
 bind successful completion, model/session identities, skill expansions and
 actual tool/read paths. The
-[source index](evidence/2026-10-22-gate6-four-client-coexistence/private-source-index.json)
+[source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-four-client-coexistence/private-source-index.json)
 fingerprints both original manifests, each frozen executed helper, six owned
 Codex sessions, the version check and the retention helper. All original hashes
 and the
-[selected manifest](evidence/2026-10-22-gate6-four-client-coexistence/receipt-hashes.json)
+[selected manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-four-client-coexistence/receipt-hashes.json)
 were checked. Provider state, account identifiers, unrelated metadata,
 accounting and world state are omitted from selected receipts. Negative Copilot
 error-result text is omitted with its digest while native failure status and

@@ -205,7 +205,7 @@ or declared cap. It cannot verify real approval, remaining account quota, native
 cap enforcement or billed usage.
 
 The pinned CLI's
-[limits help receipt](evidence/2026-10-31-copilot-overlay-offline-planning/limits-help-receipt.json)
+[limits help receipt](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-31-copilot-overlay-offline-planning/limits-help-receipt.json)
 reports a minimum session limit of 30 AI credits and post-response soft-cap
 accounting. A positive planner amount is not necessarily a usable native limit.
 Small amounts in tests are synthetic schema/round-trip inputs, not an approved
@@ -234,7 +234,7 @@ working scope and execution ceremony. Existing Q11/Q11b classifiers are
 unchanged.
 
 The
-[offline validation record](evidence/2026-10-31-copilot-overlay-offline-planning/validation.json)
+[offline validation record](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-31-copilot-overlay-offline-planning/validation.json)
 retains historical RED-log hashes/summaries, current source hashes, suite
 results and reproducible mutation definitions/results. Intermediate RED source
 snapshots were not retained; the record does not invent them or establish native
@@ -334,7 +334,7 @@ remain unchanged.
 
 [comparison-pr]: https://github.com/driftsys/upskill/pull/444
 [q11b]: gate6-project-registration-isolation.md
-[receipts]: evidence/2026-10-31-copilot-plugin-overlay-reference/help-receipts.json
+[receipts]: https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-31-copilot-plugin-overlay-reference/help-receipts.json
 [owner-receipts]: evidence/2026-10-30-q11b-registration-isolation/owner-install-receipts.json
 [preservation]: ../wip/specs/2026-10-25-customization-preservation-contract.md
 [q11-issue]: https://github.com/driftsys/upskill/issues/410

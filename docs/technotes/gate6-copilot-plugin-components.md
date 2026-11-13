@@ -70,7 +70,7 @@ successful custom-child control. Further calls were paused.
 Two subsequent ACP catalog checks made no model requests. The candidate was
 present at both projects under the direct user-enabled registration. The first
 parser incorrectly searched selection values for the friendly name. The
-[parser correction](evidence/2026-10-24-copilot-plugin-components/catalog-parser-correction.json)
+[parser correction](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-copilot-plugin-components/catalog-parser-correction.json)
 retains the original raw result and identifies the native `plugin:probe` value.
 The candidate's friendly name and selection value are distinct.
 
@@ -103,7 +103,7 @@ retained. No saved trust setting or existing discovery preference is changed.
 | Reinstalled rules           | Copilot 1.0.103 | FAIL: empty rules array                                                | FAIL: empty rules array                                                        |
 
 The
-[retry audit](evidence/2026-10-24-copilot-plugin-components/guarded-retry-audit.json)
+[retry audit](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-copilot-plugin-components/guarded-retry-audit.json)
 records 16 parent sessions, one custom child, explicit model override and zero
 alternate delegate selections. The native task and child `view` are correlated
 in the private session transcript. The retained final response includes its
@@ -120,14 +120,14 @@ hash and mode exactly match the original. Interrupted attempts also record the
 removal of their new project-only settings entry after native uninstall.
 
 The
-[preservation record](evidence/2026-10-24-copilot-plugin-components/preservation.json)
+[preservation record](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-copilot-plugin-components/preservation.json)
 and
-[retry restoration](evidence/2026-10-24-copilot-plugin-components/guarded-retry-preservation.json)
+[retry restoration](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-copilot-plugin-components/guarded-retry-preservation.json)
 retain measured results. Session, log, native cache and trust bookkeeping are
 not whole-profile equality. No team guide or client cache is directly rewritten.
 
 The
-[source index](evidence/2026-10-24-copilot-plugin-components/private-source-index.json)
+[source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-copilot-plugin-components/private-source-index.json)
 binds six private roots, including inventory variants and failed attempts.
 Transcripts, model identifiers and private guard source stay outside the
 repository. Public event selections omit thinking and auth-bearing values and
@@ -162,13 +162,13 @@ IDE/hosted surfaces, complete preservation and integrated ownership remain
 unqualified. Durable adoption waits for step 7.
 
 After integration with merged Q1 and Q2, the
-[main integration audit](evidence/2026-10-24-copilot-plugin-components/main-integration-audit.json)
+[main integration audit](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-copilot-plugin-components/main-integration-audit.json)
 records unchanged Q3 function syntax trees and exact syntax-tree equality with
 main for the rest of the harness. Full verification passes all 79 offline tests
-([validation](evidence/2026-10-24-copilot-plugin-components/validation.json)).
+([validation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-copilot-plugin-components/validation.json)).
 Native observations were not rerun or widened.
 
 Integration with merged Q6 also preserves both harnesses, as recorded in the
-[latest main audit](evidence/2026-10-24-copilot-plugin-components/latest-main-integration-audit.json).
+[latest main audit](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-copilot-plugin-components/latest-main-integration-audit.json).
 The subsequent full verification passes 93 offline tests
-([validation](evidence/2026-10-24-copilot-plugin-components/validation.json)).
+([validation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-copilot-plugin-components/validation.json)).

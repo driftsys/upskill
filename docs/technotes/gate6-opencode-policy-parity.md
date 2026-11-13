@@ -32,7 +32,8 @@ identical apart from their target filenames.
 | Matching `sentinel.txt` | One parent delegation; child read call completes and the sentinel patch succeeds                            | Exact declared marker bytes, mode 0640; inspected before guarded restoration |
 | Nonmatching `other.txt` | Fresh parent/child; read succeeds, then one patch receives `permission.rejected`, `Permission denied: edit` | Protected file and restored sentinel retain original bytes and modes         |
 
-The [summary](evidence/2026-10-22-gate6-opencode-policy-parity/summary.json)
+The
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-policy-parity/summary.json)
 records four distinct native sessions, two exact parent responses and six tool
 calls: two completed delegations, three completed child calls and one rejected
 child patch. Both children reach native idle outcome `succeeded`: the second
@@ -49,7 +50,7 @@ resolve to exactly the declared sentinel or protected file within the fixture.
 ## Preservation and evidence limits
 
 The
-[fixture snapshots and assessment](evidence/2026-10-22-gate6-opencode-policy-parity/fixture-and-assessment.json)
+[fixture snapshots and assessment](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-policy-parity/fixture-and-assessment.json)
 retain the predeclared policy, commands, agent, parent configuration, manual
 team guidance, sentinel and protected resource. The successful marker was
 verified before restoring only the owned sentinel; final snapshots match the
@@ -57,12 +58,12 @@ original bytes and modes. This establishes bounded fixture preservation, not
 installed upskill lifecycle, unknown native profile effects or crash recovery.
 
 The
-[source index](evidence/2026-10-22-gate6-opencode-policy-parity/private-source-index.json)
+[source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-policy-parity/private-source-index.json)
 identifies the original private packet and manifest/helper hashes. Selected
 parent JSONL and child exports omit provider state, accounting, snapshots and
 child tool output bodies. Original and retained hashes intentionally differ; all
 original manifest entries were verified before retention. A separate
-[retained manifest](evidence/2026-10-22-gate6-opencode-policy-parity/receipt-hashes.json)
+[retained manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-opencode-policy-parity/receipt-hashes.json)
 covers the seven other evidence files. Private capture/retention helpers are not
 shipped or tested qualification runners, and this evidence is not product input.
 

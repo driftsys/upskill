@@ -29,5 +29,7 @@ customization management afterward. Planned scope remains separate from
 implemented contracts.
 
 The [compatibility inventory](compatibility.json) preserves historical section
-anchors and evidence hashes from the consolidation baseline. Documentation
-checks enforce it alongside rendered links and schema manifests.
+anchors and schema file hashes from the consolidation baseline. Documentation
+checks enforce it alongside rendered links and schema manifests. The raw
+evidence of 28 obsolete trials, and its hashes, were removed from `main` on
+2026-11-13; that evidence is on the branch `archive/lifecycle-2026-11`.

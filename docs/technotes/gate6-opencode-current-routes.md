@@ -42,7 +42,7 @@ select the configured route. Native session exports record the selected catalog
 entry; retained Boolean audits compare it with the declared private selection.
 No alternate model is substituted. A later normal-profile catalog lookup also
 omits the exact requested reference and matching model-name suffix. That
-[later preflight](evidence/2026-10-24-opencode-current-routes/later-normal-catalog.json)
+[later preflight](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-opencode-current-routes/later-normal-catalog.json)
 makes no model request; its version is observed afterward. It does not establish
 availability across every provider configuration, and normal-profile byte
 equality is not measured. A catalog entry and selected session metadata do not
@@ -56,8 +56,9 @@ prove backend inference succeeded.
 | Explicit package skill and resource | OpenCode 2.1.4 | NOT RUN after failed positives                                                  |
 | Local-directory `plugin add`        | OpenCode 2.1.4 | Rejected in both fixtures: target must be npm registry or Git package specifier |
 
-The [summary](evidence/2026-10-24-opencode-current-routes/summary.json) and
-selected native error events retain both failures. The local install verb's
+The
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-opencode-current-routes/summary.json)
+and selected native error events retain both failures. The local install verb's
 rejection is independent of backend execution. It does not establish whether
 local directories registered through the `plugins` array load successfully.
 Failed positives never become negative reader results or unsupported component
@@ -74,7 +75,7 @@ Custom-model context/output limit fallbacks and performance are not qualified.
 Later root assertions cover resolved native user homes and unchanged filesystems
 after rejection. The earlier full verification passed 67 offline tests. Current
 full verification passes 154 offline tests, as the
-[validation record](evidence/2026-10-24-opencode-current-routes/validation.json)
+[validation record](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-opencode-current-routes/validation.json)
 and its bound log show. The retained native failures remain unchanged.
 
 Project configuration and the isolated profile's two user configuration
@@ -86,7 +87,7 @@ copied nor exported.
 
 Raw transcripts, private model declarations and capture source remain outside
 the repository. The
-[source index](evidence/2026-10-24-opencode-current-routes/private-source-index.json)
+[source index](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-opencode-current-routes/private-source-index.json)
 and manifests bind both attempts. Public receipts redact the test identifier and
 retain native errors, completion outcomes and configuration hashes.
 
@@ -113,7 +114,7 @@ fixture tests bind each generated hook to the existing injection template and
 require every marker to differ across independent fixtures. Shared root checks
 reject configured client locations and ancestor guidance before writes; tests
 simulate guide presence without creating guide files
-([validation](evidence/2026-10-24-opencode-current-routes/validation.json)).
+([validation](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-24-opencode-current-routes/validation.json)).
 
 These are offline regressions. They do not change either retained failed
 positive, run a candidate control or qualify OpenCode 2.1.4. The current

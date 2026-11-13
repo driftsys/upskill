@@ -81,13 +81,13 @@ applicable native requirements remain intact.
 ## Review and local validation
 
 The
-[isolated architecture/builder review receipt](evidence/2026-10-19-customization-architecture/architecture-review.md)
+[isolated architecture/builder review receipt](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-customization-architecture/architecture-review.md)
 records no substantive gaps in the corrected architecture and acceptance plan.
 `just fmt`, `just verify`, `just sanity`, `just docs-check` and `just book`
 passed locally. Full verification ran 1418 Rust tests with 2 ignored across 89
 result groups, lint/offline checks, documentation validation and the final
 build. The
-[receipt manifest](evidence/2026-10-19-customization-architecture/manifest.json)
+[receipt manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-19-customization-architecture/manifest.json)
 links compressed outputs and hashes. Hosted checks and native plugin
 qualification remain separate. Active WIP intentionally remains active because
 the user requested revised plans for unfinished implementation and

@@ -19,14 +19,15 @@ authentication/configuration root. Claude Code 2.1.303 resolved
 through native provider `copilot`. The retained Claude events do not
 independently identify the account provider route.
 
-The [summary](evidence/2026-10-22-gate6-skill-coexistence/summary.json) accounts
-for 18 distinct native sessions: 17 completed without native error and one
-blocked by a revoked Claude OAuth token before any skill call. The user renewed
-normal login before the subsequent successful Claude controls. Fifteen completed
-sessions matched their declared response exactly; two did not. Sixteen native
-skill calls have matching start/result identities: 14 successful calls and two
-unsuccessful unavailable-skill calls. Native tool success is distinct from
-matching the control's expected response.
+The
+[summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-skill-coexistence/summary.json)
+accounts for 18 distinct native sessions: 17 completed without native error and
+one blocked by a revoked Claude OAuth token before any skill call. The user
+renewed normal login before the subsequent successful Claude controls. Fifteen
+completed sessions matched their declared response exactly; two did not. Sixteen
+native skill calls have matching start/result identities: 14 successful calls
+and two unsuccessful unavailable-skill calls. Native tool success is distinct
+from matching the control's expected response.
 
 Only native skill tools were exposed. Model runs used fresh sessions, empty
 strict MCP configuration for Claude and disabled built-in MCP servers for
@@ -102,7 +103,7 @@ after native controls and snapshots. Its completion reported preservation false.
 An independent audit verified unchanged bytes/hashes and restored only those
 three owned fixture modes to `0640`; it also verified unchanged isolated user
 settings.
-[The final audit](evidence/2026-10-22-gate6-skill-coexistence/duplicate-helper-final-audit.json)
+[The final audit](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-skill-coexistence/duplicate-helper-final-audit.json)
 retains the error, guarded repair and declared/observed catalog counts. This is
 not uninterrupted preservation or native lifecycle recovery evidence. No
 personal file was affected and no native client is blamed for the helper error.
@@ -113,7 +114,7 @@ loaded-skill and final-result evidence is retained; requests, thinking, usage,
 authentication stores and unrelated metadata are omitted. Paths are normalized
 to project, packet and client-profile aliases. Complete private stream hashes
 remain separate from retained-file hashes. The
-[hash manifest](evidence/2026-10-22-gate6-skill-coexistence/receipt-hashes.json)
+[hash manifest](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-22-gate6-skill-coexistence/receipt-hashes.json)
 covers retained receipts and metadata; private manifest hashes are recorded
 separately. The private packets are identified in the summary and metadata.
 
