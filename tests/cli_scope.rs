@@ -197,7 +197,12 @@ fn released_global_install(e: &Env) {
     assert!(out.status.success(), "{}", stderr(&out));
     let lock_path = e.home.join(".upskill-lock.json");
     let mut lock = fs::read_to_string(&lock_path).unwrap();
-    for (old, new) in OLD.iter().zip(NEW.iter()) {
+    // A released version also wrote the fourth fixture rule at the old path.
+    let fourth = (
+        ".github/instructions/license-awareness.instructions.md",
+        ".copilot/instructions/license-awareness.instructions.md",
+    );
+    for (old, new) in OLD.iter().zip(NEW.iter()).chain([(&fourth.0, &fourth.1)]) {
         let from = e.home.join(new);
         let to = e.home.join(old);
         fs::create_dir_all(to.parent().unwrap()).unwrap();
@@ -234,7 +239,7 @@ fn global_update_moves_a_released_install_without_force() {
     // change; the moved files are reported by this line.
     let text = stdout(&out);
     assert!(
-        text.contains("Changed 7 file(s) written or deleted"),
+        text.contains("Changed 8 file(s) written or deleted"),
         "{text}"
     );
 }
@@ -537,10 +542,7 @@ fn doctor_reports_files_at_the_earlier_global_paths_of_a_schema_1_install() {
         item.as_object_mut().unwrap().remove("files");
     }
     fs::write(&lock_path, serde_json::to_string_pretty(&json).unwrap()).unwrap();
-    // `released_global_install` moves the three items of `OLD` only. A released
-    // version also wrote the fourth fixture rule at the old path.
     let fourth = ".github/instructions/license-awareness.instructions.md";
-    fs::write(e.home.join(fourth), "written by a released version\n").unwrap();
     let before = fs::read(&lock_path).unwrap();
     let (code, v) = doctor_json(&e, &e.outside, &["--global"]);
     assert_eq!(code, Some(1), "{v}");
@@ -566,4 +568,97 @@ fn doctor_in_the_home_directory_reports_no_item_in_both_scopes() {
     assert_eq!(code, Some(0), "{v}");
     assert_eq!(v["scopes"].as_array().unwrap().len(), 1, "{v}");
     assert!(v["in_both_scopes"].as_array().unwrap().is_empty(), "{v}");
+}
+
+const ITEMS: [&str; 3] = [
+    "create-api-endpoint",
+    "api-conventions",
+    "security-reviewer",
+];
+
+#[test]
+fn global_remove_deletes_the_personal_copilot_files() {
+    let e = env();
+    let out = run(
+        &e,
+        &e.outside,
+        &["add", "--global", e.source.to_str().unwrap()],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    let mut args = vec!["remove", "--global"];
+    args.extend_from_slice(&ITEMS);
+    let out = run(&e, &e.outside, &args);
+    assert!(out.status.success(), "{}", stderr(&out));
+    for rel in NEW {
+        assert!(!e.home.join(rel).exists(), "{rel}");
+    }
+    assert!(!e.home.join(".copilot/skills/create-api-endpoint").exists());
+    for rel in [
+        ".claude/skills/create-api-endpoint/SKILL.md",
+        ".claude/rules/api-conventions.md",
+        ".claude/agents/security-reviewer.md",
+    ] {
+        assert!(!e.home.join(rel).exists(), "{rel}");
+    }
+    let lock = fs::read_to_string(e.home.join(".upskill-lock.json")).unwrap();
+    for name in ITEMS {
+        assert!(!lock.contains(&format!("\"{name}\"")), "{name}: {lock}");
+    }
+}
+
+#[test]
+fn global_update_deletes_a_copilot_file_that_the_source_no_longer_holds() {
+    let e = env();
+    let script = e.source.join("create-api-endpoint/scripts/run.sh");
+    fs::create_dir_all(script.parent().unwrap()).unwrap();
+    fs::write(&script, "#!/bin/sh\necho hi\n").unwrap();
+    let out = run(
+        &e,
+        &e.outside,
+        &["add", "--global", e.source.to_str().unwrap()],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    let skill_dir = e.home.join(".copilot/skills/create-api-endpoint");
+    assert!(skill_dir.join("scripts/run.sh").is_file());
+    fs::remove_file(&script).unwrap();
+    let out = run(&e, &e.outside, &["update", "--global", "--yes"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert!(!skill_dir.join("scripts/run.sh").exists());
+    assert!(skill_dir.join("SKILL.md").is_file());
+}
+
+#[test]
+fn doctor_reports_a_missing_personal_copilot_file() {
+    let e = env();
+    run(
+        &e,
+        &e.outside,
+        &["add", "--global", e.source.to_str().unwrap()],
+    );
+    fs::remove_file(e.home.join(NEW[0])).unwrap();
+    let (code, v) = doctor_json(&e, &e.outside, &["--global"]);
+    assert_eq!(code, Some(1), "{v}");
+    let missing = &v["scopes"][0]["missing_outputs"];
+    assert_eq!(missing[0]["name"], "create-api-endpoint", "{v}");
+    assert_eq!(
+        missing[0]["missing_files"],
+        serde_json::json!([NEW[0]]),
+        "{v}"
+    );
+}
+
+#[test]
+fn doctor_reports_a_modified_personal_copilot_file() {
+    let e = env();
+    run(
+        &e,
+        &e.outside,
+        &["add", "--global", e.source.to_str().unwrap()],
+    );
+    fs::write(e.home.join(NEW[1]), "edited by the user\n").unwrap();
+    let (code, v) = doctor_json(&e, &e.outside, &["--global"]);
+    assert_eq!(code, Some(1), "{v}");
+    let modified = &v["scopes"][0]["modified_files"];
+    assert_eq!(modified[0]["name"], "api-conventions", "{v}");
+    assert_eq!(modified[0]["files"], serde_json::json!([NEW[1]]), "{v}");
 }
