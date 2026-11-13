@@ -474,7 +474,8 @@ fn doctor_json_lists_an_interrupted_item() {
         .args(["doctor", "--json", "--project"])
         .assert()
         .code(1);
-    let v: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let document: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let v = &document["scopes"][0];
     assert_eq!(
         v["interrupted"],
         serde_json::json!([{ "kind": "skill", "name": NAME }]),
@@ -681,7 +682,8 @@ fn only_the_item_being_changed_is_interrupted() {
         .args(["doctor", "--json", "--project"])
         .assert()
         .code(1);
-    let v: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let document: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let v = &document["scopes"][0];
     assert_eq!(
         v["interrupted"],
         serde_json::json!([{ "kind": "skill", "name": NAME }]),
@@ -702,7 +704,8 @@ fn doctor_reports_an_interrupted_update() {
         .args(["doctor", "--json", "--project"])
         .assert()
         .code(1);
-    let v: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let document: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let v = &document["scopes"][0];
     assert_eq!(
         v["interrupted"],
         serde_json::json!([{ "kind": "skill", "name": NAME }]),

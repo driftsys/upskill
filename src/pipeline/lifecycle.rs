@@ -11,18 +11,19 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::scope::ScopeRoot;
+use crate::scope::{Scope, ScopeRoot};
 
 use super::apply::{check_no_item_symlink_above, deletable, delete_recorded, prune_empty_parents};
-use super::output::released_output_path;
+use super::output::{output_path, released_output_path};
 use super::owned::{FileState, adopt_schema1, adopt_schema1_in_memory, classify};
 use super::prepared::prepare_install;
 use super::{
-    ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, DoctorReport, InterruptedItem, ItemKind,
-    ListReport, ListedBundle, ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry,
-    OrphanReason, OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport,
-    RemovedItem, ScopedList, SkippedPlugin, SourceDecision, SourcePreview, SourceResult, StaleHash,
-    UnreadableFile, UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
+    ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, BothScopesItem, DoctorReport, DoctorScopes,
+    EarlierLayoutFile, InterruptedItem, ItemKind, ListReport, ListedBundle, ListedItem,
+    MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry, OrphanReason, OrphanedDependency,
+    PreviewAction, PreviewItem, RemoveFilter, RemoveReport, RemovedItem, ScopedDoctor, ScopedList,
+    SkippedPlugin, SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile,
+    UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -329,11 +330,18 @@ fn remove_selected(
 /// - **interrupted** — items with a non-empty `pending` record: an `add` or
 ///   `update` failed or was stopped between its first and its last write.
 ///   Running the same command again completes it.
+/// - **earlier layout** — for the global scope only: files at the Copilot
+///   paths that a released version wrote, where the current version writes
+///   to the personal Copilot directories. A path is reported when the
+///   item's record names it, or, for an item without a record, when a file
+///   exists at it. `upskill update --global` moves them. A path in this
+///   bucket is not also reported as a missing output.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by
 /// `update --dry-run`, which does fetch.
-pub fn doctor(target: &Path) -> Result<DoctorReport> {
+pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
+    let target = at.root.as_path();
     let lock = crate::lockfile::Lockfile::load(target)?;
     let mut report = DoctorReport::default();
 
@@ -349,6 +357,7 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
         let mut missing = Vec::new();
         let mut modified = Vec::new();
         let mut unreadable = Vec::new();
+        let mut earlier = Vec::new();
         if entry.files.is_empty() {
             // No record (a `schema: 1` lockfile, which `doctor` does not
             // adopt, or an empty record): check the entrypoint of each
@@ -362,16 +371,25 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                 if !entry.clients.is_empty() && !entry.clients.iter().any(|c| c == client.name()) {
                     continue;
                 }
-                let rel = released_output_path(kind, client, &entry.name);
-                if !target.join(&rel).exists() {
-                    missing.push(rel);
+                let released = released_output_path(kind, client, &entry.name);
+                let current = output_path(at.scope, kind, client, &entry.name);
+                // A released version wrote the released path. A file there
+                // is at an earlier path when the current path differs.
+                if released != current && target.join(&released).exists() {
+                    earlier.push(released);
+                } else if !target.join(&current).exists() {
+                    missing.push(current);
                 }
             }
         } else {
+            let earlier_paths = earlier_layout_paths(at.scope, kind, &entry.name);
             for file in &entry.files {
                 let Some(rel) = deletable(&file.path) else {
                     continue;
                 };
+                if earlier_paths.contains(&rel) {
+                    earlier.push(rel.clone());
+                }
                 let recorded: Vec<&str> = entry
                     .files
                     .iter()
@@ -380,6 +398,7 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
                     .map(|f| f.sha256.as_str())
                     .collect();
                 match classify(target, &file.path, &recorded) {
+                    Ok(FileState::Absent) if earlier_paths.contains(&rel) => {}
                     Ok(FileState::Absent) => missing.push(rel),
                     Ok(FileState::Modified) => modified.push(rel),
                     Ok(FileState::Owned | FileState::Unowned) => {}
@@ -392,6 +411,15 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
             missing.dedup();
             modified.sort();
             modified.dedup();
+        }
+        earlier.sort();
+        earlier.dedup();
+        if !earlier.is_empty() {
+            report.earlier_layout.push(EarlierLayoutFile {
+                kind,
+                name: entry.name.clone(),
+                files: earlier,
+            });
         }
         if !missing.is_empty() {
             report.missing_outputs.push(MissingOutput {
@@ -595,6 +623,59 @@ pub fn doctor(target: &Path) -> Result<DoctorReport> {
     }
 
     Ok(report)
+}
+
+/// The entrypoint paths of `(kind, name)` that a released version wrote and
+/// that the current version writes elsewhere in `scope`. Empty for the project
+/// scope.
+fn earlier_layout_paths(scope: Scope, kind: ItemKind, name: &str) -> Vec<PathBuf> {
+    ALL_CLIENTS
+        .into_iter()
+        .map(|client| {
+            (
+                released_output_path(kind, client, name),
+                output_path(scope, kind, client, name),
+            )
+        })
+        .filter(|(released, current)| released != current)
+        .map(|(released, _)| released)
+        .collect()
+}
+
+/// [`doctor`] for each given scope root, in the given order, and the items
+/// that the lockfiles of two of the roots both record.
+pub fn doctor_scopes(roots: &[ScopeRoot]) -> Result<DoctorScopes> {
+    let mut scopes = Vec::with_capacity(roots.len());
+    let mut seen_in: std::collections::BTreeMap<(ItemKind, String), usize> =
+        std::collections::BTreeMap::new();
+    for at in roots {
+        let report =
+            doctor(at).with_context(|| format!("failed to check the {} scope", at.scope))?;
+        let lock = crate::lockfile::Lockfile::load(&at.root)
+            .with_context(|| format!("failed to check the {} scope", at.scope))?;
+        let keys: std::collections::BTreeSet<(ItemKind, String)> = lock
+            .items
+            .iter()
+            .map(|i| (i.kind, i.name.clone()))
+            .collect();
+        for key in keys {
+            *seen_in.entry(key).or_insert(0) += 1;
+        }
+        scopes.push(ScopedDoctor {
+            scope: at.scope,
+            root: at.root.clone(),
+            report,
+        });
+    }
+    let in_both_scopes = seen_in
+        .into_iter()
+        .filter(|(_, count)| *count > 1)
+        .map(|((kind, name), _)| BothScopesItem { kind, name })
+        .collect();
+    Ok(DoctorScopes {
+        scopes,
+        in_both_scopes,
+    })
 }
 
 /// Rebuild the client selection a bare `update` should reuse for one source:

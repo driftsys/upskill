@@ -9,10 +9,10 @@ use upskill::fmt::{FmtReport, fmt};
 use upskill::index;
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
-    DoctorReport, InstallReport, ItemKind, ListedBundle, ListedItem, OrphanReason, PluginResult,
-    PreviewAction, RemoveFilter, RemoveReport, ScopedList, SourceDecision, SourcePreview,
-    SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor, install_with_lockfile,
-    list_scopes, remove, update,
+    DoctorReport, DoctorScopes, InstallReport, ItemKind, ListedBundle, ListedItem, OrphanReason,
+    PluginResult, PreviewAction, RemoveFilter, RemoveReport, ScopedList, SourceDecision,
+    SourcePreview, SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor_scopes,
+    install_with_lockfile, list_scopes, remove, update,
 };
 use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
@@ -1456,21 +1456,20 @@ fn short(h: &Option<String>) -> String {
 }
 
 fn run_doctor(global: bool, project: bool, json: bool) -> i32 {
-    let at = match resolve_scope(global, project, NoFlag::Global) {
-        Ok(at) => at,
+    let roots = match report_scopes(global, project) {
+        Ok(roots) => roots,
         Err(err) => {
-            print_error(&err);
-            return err.exit_code();
+            print_error_chain(&err);
+            return EXIT_ERROR;
         }
     };
-    let target = at.root;
 
-    match doctor(&target) {
+    match doctor_scopes(&roots) {
         Ok(report) => {
             if json {
                 print_doctor_json(&report);
             } else {
-                print_doctor_report(&report);
+                print_doctor_scopes(&report);
             }
             if report.is_clean() {
                 EXIT_SUCCESS
@@ -1485,20 +1484,45 @@ fn run_doctor(global: bool, project: bool, json: bool) -> i32 {
     }
 }
 
-fn print_doctor_json(report: &DoctorReport) {
+fn print_doctor_json(report: &DoctorScopes) {
     if style::is_quiet() {
         return;
     }
     // serde_json::to_string_pretty cannot fail for owned data — every
-    // field on DoctorReport derives Serialize and contains no maps with
+    // field on DoctorScopes derives Serialize and contains no maps with
     // non-string keys. unwrap is safe.
     println!("{}", serde_json::to_string_pretty(report).unwrap());
 }
 
-fn print_doctor_report(report: &DoctorReport) {
+fn print_doctor_scopes(report: &DoctorScopes) {
     if style::is_quiet() {
         return;
     }
+    for (index, entry) in report.scopes.iter().enumerate() {
+        if index > 0 {
+            println!();
+        }
+        println!(
+            "{} ({})",
+            style::name(&entry.scope.to_string()),
+            entry.root.display()
+        );
+        print_doctor_report(&entry.report);
+    }
+    if !report.in_both_scopes.is_empty() {
+        println!();
+        for item in &report.in_both_scopes {
+            println!(
+                "{} {} {} is installed in both scopes",
+                style::dim("note:"),
+                item.kind,
+                style::name(&item.name)
+            );
+        }
+    }
+}
+
+fn print_doctor_report(report: &DoctorReport) {
     if report.is_clean() {
         println!("{} clean", style::success("doctor:"));
         // Fall through: still print skipped_plugins warnings if any.
@@ -1517,6 +1541,24 @@ fn print_doctor_report(report: &DoctorReport) {
                 style::name(&m.name)
             );
             for path in &m.missing_files {
+                println!("    - {}", style::dim(&path.display().to_string()));
+            }
+        }
+    }
+
+    if !report.earlier_layout.is_empty() {
+        println!(
+            "{} files at earlier global paths ({} item(s)) — run 'upskill update --global' to move them",
+            style::error_label("doctor:"),
+            report.earlier_layout.len()
+        );
+        for e in &report.earlier_layout {
+            println!(
+                "  {} {}",
+                style::dim(kind_label(e.kind)),
+                style::name(&e.name)
+            );
+            for path in &e.files {
                 println!("    - {}", style::dim(&path.display().to_string()));
             }
         }

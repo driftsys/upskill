@@ -406,3 +406,164 @@ fn list_in_the_home_directory_shows_the_global_scope_once() {
     assert_eq!(v["scopes"].as_array().unwrap().len(), 1, "{v}");
     assert_eq!(v["scopes"][0]["scope"], "global", "{v}");
 }
+
+fn doctor_json(e: &Env, cwd: &Path, args: &[&str]) -> (Option<i32>, serde_json::Value) {
+    let mut all = vec!["doctor", "--json"];
+    all.extend_from_slice(args);
+    let out = run(e, cwd, &all);
+    let text = stdout(&out);
+    let v = serde_json::from_str(&text)
+        .unwrap_or_else(|err| panic!("invalid JSON: {err}\n{text}\n{}", stderr(&out)));
+    (out.status.code(), v)
+}
+
+fn earlier_layout_files(v: &serde_json::Value, scope_index: usize) -> Vec<String> {
+    v["scopes"][scope_index]["earlier_layout"]
+        .as_array()
+        .unwrap_or_else(|| panic!("no earlier_layout in {v}"))
+        .iter()
+        .flat_map(|item| item["files"].as_array().unwrap().clone())
+        .map(|f| f.as_str().unwrap().to_string())
+        .collect()
+}
+
+#[test]
+fn doctor_reports_each_scope_and_fails_when_one_is_not_clean() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    run(&e, &e.repo, &["add", src, "api-conventions"]);
+    run(
+        &e,
+        &e.repo,
+        &["add", "--global", src, "create-api-endpoint"],
+    );
+    fs::remove_file(e.home.join(".claude/skills/create-api-endpoint/SKILL.md")).unwrap();
+    let out = run(&e, &e.repo, &["doctor", "--json"]);
+    assert_eq!(out.status.code(), Some(1));
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["scopes"][0]["scope"], "project");
+    assert_eq!(
+        v["scopes"][0]["missing_outputs"].as_array().unwrap().len(),
+        0
+    );
+    assert_eq!(v["scopes"][1]["scope"], "global");
+    assert_eq!(
+        v["scopes"][1]["missing_outputs"][0]["name"],
+        "create-api-endpoint"
+    );
+    // The project scope alone is clean.
+    assert_eq!(
+        run(&e, &e.repo, &["doctor", "--project"]).status.code(),
+        Some(0)
+    );
+}
+
+#[test]
+fn doctor_text_names_each_scope() {
+    let e = env();
+    install_project_rule_and_global_skill(&e);
+    let out = run(&e, &e.repo, &["doctor"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    let project = text.find("project (").expect(&text);
+    let global = text
+        .find(&format!("global ({})", e.home.display()))
+        .expect(&text);
+    assert!(project < global, "{text}");
+    let first_clean = text.find("doctor: clean").expect(&text);
+    let last_clean = text.rfind("doctor: clean").unwrap();
+    assert!(
+        project < first_clean && global < last_clean && first_clean < global,
+        "{text}"
+    );
+}
+
+#[test]
+fn doctor_notes_an_item_installed_in_both_scopes() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    run(&e, &e.repo, &["add", src, "api-conventions"]);
+    run(&e, &e.repo, &["add", "--global", src, "api-conventions"]);
+    let (code, v) = doctor_json(&e, &e.repo, &[]);
+    assert_eq!(code, Some(0), "{v}");
+    assert_eq!(
+        v["in_both_scopes"],
+        serde_json::json!([{"kind": "rule", "name": "api-conventions"}]),
+        "{v}"
+    );
+    let text = stdout(&run(&e, &e.repo, &["doctor"]));
+    assert!(
+        text.contains("note: rule api-conventions is installed in both scopes"),
+        "{text}"
+    );
+    let (_, v) = doctor_json(&e, &e.repo, &["--global"]);
+    assert!(v["in_both_scopes"].as_array().unwrap().is_empty(), "{v}");
+}
+
+#[test]
+fn doctor_reports_recorded_files_at_the_earlier_global_paths() {
+    let e = env();
+    released_global_install(&e);
+    let (code, v) = doctor_json(&e, &e.outside, &["--global"]);
+    assert_eq!(code, Some(1), "{v}");
+    let files = earlier_layout_files(&v, 0);
+    for rel in OLD {
+        assert!(files.iter().any(|f| f == rel), "{rel}: {v}");
+    }
+    assert_eq!(
+        v["scopes"][0]["missing_outputs"].as_array().unwrap().len(),
+        0,
+        "{v}"
+    );
+    let text = stdout(&run(&e, &e.outside, &["doctor", "--global"]));
+    assert!(text.contains("upskill update --global"), "{text}");
+    // After the update, the global scope is clean.
+    run(&e, &e.outside, &["update", "--global", "--yes"]);
+    assert_eq!(
+        run(&e, &e.outside, &["doctor", "--global"]).status.code(),
+        Some(0)
+    );
+}
+
+#[test]
+fn doctor_reports_files_at_the_earlier_global_paths_of_a_schema_1_install() {
+    let e = env();
+    released_global_install(&e);
+    let lock_path = e.home.join(".upskill-lock.json");
+    let mut json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&lock_path).unwrap()).unwrap();
+    json["schema"] = serde_json::json!(1);
+    for item in json["items"].as_array_mut().unwrap() {
+        item.as_object_mut().unwrap().remove("files");
+    }
+    fs::write(&lock_path, serde_json::to_string_pretty(&json).unwrap()).unwrap();
+    // `released_global_install` moves the three items of `OLD` only. A released
+    // version also wrote the fourth fixture rule at the old path.
+    let fourth = ".github/instructions/license-awareness.instructions.md";
+    fs::write(e.home.join(fourth), "written by a released version\n").unwrap();
+    let before = fs::read(&lock_path).unwrap();
+    let (code, v) = doctor_json(&e, &e.outside, &["--global"]);
+    assert_eq!(code, Some(1), "{v}");
+    let files = earlier_layout_files(&v, 0);
+    for rel in OLD.iter().chain(&[fourth]) {
+        assert!(files.iter().any(|f| f == rel), "{rel}: {v}");
+    }
+    assert_eq!(files.len(), OLD.len() + 1, "{v}");
+    assert_eq!(
+        v["scopes"][0]["missing_outputs"].as_array().unwrap().len(),
+        0,
+        "{v}"
+    );
+    assert_eq!(fs::read(&lock_path).unwrap(), before);
+}
+
+#[test]
+fn doctor_in_the_home_directory_reports_no_item_in_both_scopes() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    run(&e, &e.home, &["add", "--global", src, "api-conventions"]);
+    let (code, v) = doctor_json(&e, &e.home, &[]);
+    assert_eq!(code, Some(0), "{v}");
+    assert_eq!(v["scopes"].as_array().unwrap().len(), 1, "{v}");
+    assert!(v["in_both_scopes"].as_array().unwrap().is_empty(), "{v}");
+}

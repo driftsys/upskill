@@ -235,8 +235,14 @@ pub enum Commands {
     /// Reports missing and modified recorded files, recorded files that
     /// cannot be inspected, SSOT hash drift on `local:` sources, lockfile
     /// entries with no recoverable source, orphaned dependencies, missing
-    /// and skipped plugins, MCP server state, and items whose last `add` or
-    /// `update` did not complete.
+    /// and skipped plugins, MCP server state, items whose last `add` or
+    /// `update` did not complete, and, for the global scope, files at the
+    /// earlier Copilot paths that `update --global` moves.
+    ///
+    /// Without a scope flag, both scopes are checked: the project scope
+    /// (current directory), then the global scope (`$HOME`). `--global` or
+    /// `--project` limits the check to that scope. An item installed in both
+    /// scopes is noted and does not change the exit code.
     ///
     /// Doctor never fetches; remote-source drift detection is
     /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.
@@ -247,12 +253,10 @@ pub enum Commands {
             upskill doctor --global"
     )]
     Doctor {
-        /// Operate on `$HOME` instead of the current directory.
+        /// Check only the global scope (`$HOME/.upskill-lock.json`).
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Operate on the current directory. Without a scope flag, the
-        /// command uses the project scope inside a git repo and the global
-        /// scope outside one.
+        /// Check only the project scope (the current directory).
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit every report bucket as a stable JSON document. Exit code is

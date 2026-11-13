@@ -22,8 +22,9 @@ use crate::scope::{Scope, ScopeRoot};
 
 /// The path that released versions wrote in both scopes, relative to the
 /// scope root and as defined in format-spec §7. Used to adopt a `schema: 1`
-/// lockfile and by `doctor` for an item that has no ownership record, because
-/// a released version wrote those paths in both scopes.
+/// lockfile and by `doctor` for an item that has no ownership record, and to
+/// find the files of a global install at an earlier path, because a released
+/// version wrote those paths in both scopes.
 pub(super) fn released_output_path(kind: ItemKind, client: Client, name: &str) -> PathBuf {
     crate::legacy::layout::output_path(kind, client.into(), name)
 }

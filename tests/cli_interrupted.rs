@@ -95,7 +95,8 @@ fn doctor_exits_1_for_an_interrupted_item_when_nothing_else_is_wrong() {
         .args(["doctor", "--json", "--project"])
         .assert()
         .code(1);
-    let v: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let document: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let v = &document["scopes"][0];
     assert_eq!(
         v["interrupted"],
         serde_json::json!([{ "kind": "skill", "name": NAME }]),

@@ -1,8 +1,8 @@
 //! ATDD tests for global vs project scope.
 //!
 //! Without a scope flag, the project (`<cwd>/`) is used inside a git repo.
-//! Outside one, `update`, `remove`, `list` and `doctor` use the global scope
-//! (`$HOME/`), and `add` refuses. `-g/--global` selects global and
+//! Outside one, `update` and `remove` use the global scope (`$HOME/`), and
+//! `add` refuses. `list` and `doctor` without a flag report both scopes. `-g/--global` selects global and
 //! `-p/--project` selects project regardless of git state. `-g` and `-p` are
 //! mutually exclusive at the clap layer.
 //!
@@ -287,4 +287,31 @@ fn add_global_errors_clearly_when_neither_home_nor_userprofile_set() {
         stderr.contains("USERPROFILE"),
         "error mentions USERPROFILE: {stderr}"
     );
+}
+
+#[test]
+fn list_and_doctor_report_the_project_scope_only_when_home_is_not_set() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cwd = tmp.path().join("cwd");
+    fs::create_dir_all(cwd.join(".git")).unwrap();
+    for args in [["list", "--json"], ["doctor", "--json"]] {
+        let assert = Command::cargo_bin("upskill")
+            .unwrap()
+            .current_dir(&cwd)
+            .env_remove("HOME")
+            .env_remove("USERPROFILE")
+            .args(args)
+            .assert()
+            .success();
+        let out = assert.get_output();
+        let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+        let scopes = v["scopes"].as_array().unwrap();
+        assert_eq!(scopes.len(), 1, "{args:?}: {v}");
+        assert_eq!(scopes[0]["scope"], "project", "{args:?}: {v}");
+        let stderr = String::from_utf8(out.stderr.clone()).unwrap();
+        assert!(
+            stderr.contains("note: the global scope is not shown: HOME is not set"),
+            "{args:?}: {stderr}"
+        );
+    }
 }
