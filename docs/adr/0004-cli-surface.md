@@ -94,7 +94,7 @@ Two scopes exist. The project scope has the current directory as its root. The
 global scope has the home directory as its root. Each scope has its own
 `.upskill-lock.json`. The `-p/--project` and `-g/--global` flags choose a scope.
 Six commands have a scope: `add`, `update`, `remove`, `remove-mcp`, `list` and
-`doctor`. The other commands (`lint`, `fmt`, `search`, `new`) have none.
+`doctor`. The other commands have none.
 
 Without a flag:
 
