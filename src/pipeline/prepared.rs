@@ -937,18 +937,17 @@ mod tests {
             .preview(&target, &Lockfile::load(&target).unwrap())
             .unwrap();
         let first = written(&preview);
-        // Every client copy of the resource is listed once.
+        // Each client copy of the resource is listed once. The `.claude` copy
+        // (0o600) gets only the owner executable bit; the `.github` and
+        // `.agents` copies still have the installed mode 0o644, so they get
+        // all three executable bits, and are listed too.
         assert_eq!(
-            first
-                .iter()
-                .filter(|p| *p == Path::new(".claude/skills/a/run.sh"))
-                .count(),
-            1,
-            "{first:?}"
-        );
-        assert!(
-            first.iter().all(|p| p.ends_with("skills/a/run.sh")),
-            "{first:?}"
+            first,
+            vec![
+                PathBuf::from(".claude/skills/a/run.sh"),
+                PathBuf::from(".github/skills/a/run.sh"),
+                PathBuf::from(".agents/skills/a/run.sh"),
+            ]
         );
         prepared.commit(&target, PluginScope::Project).unwrap();
         let mode = fs::metadata(&dest).unwrap().permissions().mode();

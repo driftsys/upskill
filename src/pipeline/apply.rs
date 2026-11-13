@@ -2723,17 +2723,21 @@ mod repeatable_tests {
         assert_eq!(target_executable_bits(0o200, 0o755), 0);
     }
 
-    /// The target executable bits are the planned ones where the file on
-    /// disk has the matching read bit: 0o755 & 0o111 & (0o711 & 0o444) >> 2
-    /// is 0o100. By that rule the group and other executable bits of 0o711
-    /// are removed.
-    /// Setuid, setgid and sticky bits are kept.
+    /// Adding executable bits keeps the setuid, setgid and sticky bits of
+    /// the file, each one alone and all three together.
     #[cfg(unix)]
     #[test]
     fn special_bits_are_kept_when_executable_bits_are_added() {
-        let (changed, mode) = apply_unchanged_with_modes(0o4644, 0o755);
-        assert_eq!(changed, vec![PathBuf::from(A)]);
-        assert_eq!(mode, 0o4755);
+        for (on_disk, after) in [
+            (0o4644, 0o4755),
+            (0o2644, 0o2755),
+            (0o1644, 0o1755),
+            (0o7644, 0o7755),
+        ] {
+            let (changed, mode) = apply_unchanged_with_modes(on_disk, 0o755);
+            assert_eq!(changed, vec![PathBuf::from(A)], "{on_disk:o}");
+            assert_eq!(mode, after, "{on_disk:o}");
+        }
     }
 
     #[cfg(unix)]
@@ -2752,6 +2756,10 @@ mod repeatable_tests {
         assert_eq!(mode, 0o555);
     }
 
+    /// The target executable bits are the planned ones where the file on
+    /// disk has the matching read bit: 0o755 & 0o111 & (0o711 & 0o444) >> 2
+    /// is 0o100. By that rule the group and other executable bits of 0o711
+    /// are removed.
     #[cfg(unix)]
     #[test]
     fn executable_bits_without_a_matching_read_bit_are_removed() {
