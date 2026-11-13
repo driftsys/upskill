@@ -362,10 +362,11 @@ pub struct SourceStamp {
 ///
 /// `source_for` is a per-item lookup: it maps each `(kind, name)` to a
 /// [`SourceStamp`], the `Display` form of the [`InstallSource`] it came from,
-/// that source's pinned ref and the commit that the fetch resolved. This lets cross-source dependency-pulled items
-/// record their own source rather than the entry source's. `hash` is looked
-/// up by the caller (the pipeline) per item; threading these through here
-/// keeps the lockfile module free of filesystem and source concerns.
+/// that source's pinned ref and the commit that the fetch resolved. This lets
+/// cross-source dependency-pulled items record their own source rather than
+/// the entry source's. `hash` is looked up by the caller (the pipeline) per
+/// item; threading these through here keeps the lockfile module free of
+/// filesystem and source concerns.
 pub fn items_from_report(
     report: &InstallReport,
     source_for: impl Fn(ItemKind, &str) -> SourceStamp,

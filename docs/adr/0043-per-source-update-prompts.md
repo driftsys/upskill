@@ -63,11 +63,11 @@ failed until `update --force`.
    source hash of the item equals the recorded hash, the item has no `pending`
    record, applying the item would write or delete no other file, the item has
    no stale recorded file, and its lockfile entry would not change in any field
-   other than `files`, `pending` and `required_by`. The file is kept and
-   reported as `kept modified file: <path>`. The note is not a change and does
-   not affect the exit code. In every other case, and for a file that upskill
-   does not manage, the item is skipped. The rule applies in every mode. A
-   skipped item of an applied source, or of a source whose preview changes
+   other than `files`, `pending`, `required_by` and `commit`. The file is kept
+   and reported as `kept modified file: <path>`. The note is not a change and
+   does not affect the exit code. In every other case, and for a file that
+   upskill does not manage, the item is skipped. The rule applies in every mode.
+   A skipped item of an applied source, or of a source whose preview changes
    nothing, makes the run exit with code 1; a skipped item of `--dry-run`, or of
    a source that the user declined, does not.
 4. **Hand-shake files are previewed; plugin and MCP steps are not.** A

@@ -326,7 +326,7 @@ pub(super) struct SourceInstall {
 }
 
 /// A fetched-and-indexed source, cached by canonical label during DFS.
-struct FetchedSource {
+struct FetchedItemSource {
     root: PathBuf,
     git_ref: Option<String>,
     commit: Option<String>,
@@ -381,7 +381,7 @@ fn read_item_requires(
 /// keyed for cross-source cycle and conflict detection.
 struct Resolver {
     /// Canonical label -> fetched-and-indexed source.
-    sources: BTreeMap<String, FetchedSource>,
+    sources: BTreeMap<String, FetchedItemSource>,
     /// Tempdir guards for cross-source clones (drained into the closure).
     guards: Vec<tempfile::TempDir>,
     /// Fully-resolved identities (dedup).
@@ -413,7 +413,7 @@ impl Resolver {
             }
             self.sources.insert(
                 label.clone(),
-                FetchedSource {
+                FetchedItemSource {
                     root: fetched.root,
                     git_ref: source_git_ref(&install_source),
                     commit: fetched.commit,
@@ -532,7 +532,7 @@ pub(super) fn resolve_requires_closure(
     };
     resolver.sources.insert(
         entry_label.to_string(),
-        FetchedSource {
+        FetchedItemSource {
             root: entry_root.to_path_buf(),
             git_ref: entry_git_ref.map(str::to_string),
             commit: entry_commit.map(str::to_string),

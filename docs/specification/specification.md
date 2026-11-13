@@ -190,7 +190,7 @@ with no recorded hash is skipped), the item has an empty `pending` record, every
 such destination is modified (none is unowned), applying the item would write or
 delete no other file, the item has no recorded file that the new version no
 longer produces (present or absent), and its lockfile entry would not change in
-any field other than `files`, `pending` and `required_by` (for example
+any field other than `files`, `pending`, `required_by` and `commit` (for example
 `clients`), nothing is withheld: `update` reports `kept modified file: <path>`
 for each modified destination (in a terminal and with `--dry-run`, in the block
 of its source; with `--yes` or without a terminal, on stderr), and this note
@@ -224,15 +224,15 @@ fetched again when the source that requires it is reinstalled), runs the checks
 of §2.1, and computes a preview from the fetched content, the files on disk and
 the lockfile, just before the source is applied. A preview **changes something**
 when applying the source writes or deletes a file, changes the lockfile record
-of an item (any field except `pending` and `required_by`), completes an
-interrupted item (a non-empty `pending` record, §4), removes an item, or creates
-or changes a hand-shake file (§3.4). A write of a file that already holds the
-planned bytes is not a change, unless the executable bits (`0o111`) of the file
-differ from the target executable bits (Unix only): each executable bit of the
-source resource for which the file has the matching read bit (owner, group,
-other). The apply sets the executable bits to the target, so the file is a
-change. A difference in the other permission bits is not a change. A `skip` item
-and a `kept modified file` note are not changes.
+of an item (any field except `pending`, `required_by` and `commit`), completes
+an interrupted item (a non-empty `pending` record, §4), removes an item, or
+creates or changes a hand-shake file (§3.4). A write of a file that already
+holds the planned bytes is not a change, unless the executable bits (`0o111`) of
+the file differ from the target executable bits (Unix only): each executable bit
+of the source resource for which the file has the matching read bit (owner,
+group, other). The apply sets the executable bits to the target, so the file is
+a change. A difference in the other permission bits is not a change. A `skip`
+item and a `kept modified file` note are not changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action

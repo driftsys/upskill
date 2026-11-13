@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const REMOTE: &str = "https://example.invalid/team/skills";
+const OTHER_REMOTE: &str = "https://example.invalid/team/other";
 
 /// `home`, `repo` (holds `.git`, the project scope), `outside` (not in a git
 /// repository) and `upstream` (the local repository behind `REMOTE`).
@@ -40,7 +41,11 @@ fn git_cmd(e_home: &Path, dir: &Path) -> Command {
 }
 
 fn git_in(e: &Env, args: &[&str]) -> String {
-    let output = git_cmd(&e.home, &e.upstream).args(args).output().unwrap();
+    git_in_dir(e, &e.upstream, args)
+}
+
+fn git_in_dir(e: &Env, dir: &Path, args: &[&str]) -> String {
+    let output = git_cmd(&e.home, dir).args(args).output().unwrap();
     assert!(
         output.status.success(),
         "git {args:?}: {}",
@@ -90,6 +95,15 @@ fn env() -> Env {
 
 /// Runs `upskill` in `cwd` with `REMOTE` mapped to the local upstream.
 fn run(e: &Env, cwd: &Path, args: &[&str]) -> std::process::Output {
+    run_mapped(e, cwd, args, None)
+}
+
+/// As [`run`], with `OTHER_REMOTE` mapped to the repository `other`.
+fn run_with_other(e: &Env, other: &Path, args: &[&str]) -> std::process::Output {
+    run_mapped(e, &e.repo, args, Some(other))
+}
+
+fn run_mapped(e: &Env, cwd: &Path, args: &[&str], other: Option<&Path>) -> std::process::Output {
     let mut cmd = common::upskill_cmd(&e.home);
     for (key, _) in std::env::vars_os() {
         if key.to_string_lossy().starts_with("GIT_") {
@@ -99,7 +113,7 @@ fn run(e: &Env, cwd: &Path, args: &[&str]) -> std::process::Output {
     cmd.current_dir(cwd)
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_CONFIG_GLOBAL", e.home.join("empty-gitconfig"))
-        .env("GIT_CONFIG_COUNT", "2")
+        .env("GIT_CONFIG_COUNT", if other.is_some() { "3" } else { "2" })
         .env(
             "GIT_CONFIG_KEY_0",
             format!("url.file://{}.insteadOf", e.upstream.display()),
@@ -110,6 +124,13 @@ fn run(e: &Env, cwd: &Path, args: &[&str]) -> std::process::Output {
         // A regression that bypasses the rewrite fails locally, before any network use.
         .env("GIT_ALLOW_PROTOCOL", "file")
         .env("GIT_TERMINAL_PROMPT", "0");
+    if let Some(other) = other {
+        cmd.env(
+            "GIT_CONFIG_KEY_2",
+            format!("url.file://{}.insteadOf", other.display()),
+        )
+        .env("GIT_CONFIG_VALUE_2", format!("{OTHER_REMOTE}.git"));
+    }
     cmd.args(args).output().unwrap()
 }
 
@@ -194,4 +215,47 @@ fn add_records_no_commit_for_a_local_path_source() {
     for item in items {
         assert!(item.get("commit").is_none(), "{item}");
     }
+}
+
+#[test]
+fn add_records_the_commit_of_each_source_of_a_cross_source_dependency() {
+    let e = env();
+    // A second upstream behind a second remote URL, holding the skill `gamma`.
+    let other = e.upstream.parent().unwrap().join("other");
+    fs::create_dir_all(&other).unwrap();
+    git_in_dir(&e, &other, &["init", "--initial-branch=main"]);
+    write_skill(&other, "gamma", "Gamma content.");
+    git_in_dir(&e, &other, &["add", "."]);
+    git_in_dir(&e, &other, &["commit", "-m", "other"]);
+    // The commit differs from the first upstream's, which holds other content.
+    advance(&e, "NOTES.md", "second commit in the first upstream\n");
+    // `alpha` requires `gamma` from the second source.
+    let alpha = e.upstream.join("skills/alpha/SKILL.md");
+    fs::write(
+        &alpha,
+        format!(
+            "---\nschema: 1\nname: alpha\ndescription: Use for testing the update check\nrequires:\n  skills: [{{ name: gamma, source: {OTHER_REMOTE} }}]\n---\n\nAlpha content.\n"
+        ),
+    )
+    .unwrap();
+    git_in(&e, &["add", "."]);
+    git_in(&e, &["commit", "-m", "require gamma"]);
+
+    let out = run_with_other(&e, &other, &["add", REMOTE, "alpha", "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+
+    let head = upstream_head(&e);
+    let other_head = git_in_dir(&e, &other, &["rev-parse", "HEAD"]);
+    assert_ne!(head, other_head);
+    let lock = lock(&e.repo);
+    let items = lock["items"].as_array().unwrap();
+    let commit_of = |name: &str| {
+        items
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap_or_else(|| panic!("{name} not installed: {lock}"))["commit"]
+            .clone()
+    };
+    assert_eq!(commit_of("alpha"), head.as_str());
+    assert_eq!(commit_of("gamma"), other_head.as_str());
 }

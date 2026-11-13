@@ -748,8 +748,8 @@ fn reselect_from_entries(
 /// its source hash equals it, it has no `pending` record, every such file
 /// is modified (none is unowned), nothing else of the item would be
 /// written or deleted, no stale file of the item would be deleted or kept,
-/// and no field of its lockfile record other than `files`, `pending` and
-/// `required_by` would change (`apply::same_record`), the modified
+/// and no field of its lockfile record other than `files`, `pending`,
+/// `required_by` and `commit` would change (`apply::same_record`), the modified
 /// files are listed in `kept_modified` and the item is reported as
 /// [`UpdateStatus::UpToDate`]; otherwise it is reported as
 /// [`UpdateStatus::SkippedModified`]. A modified file that the new version

@@ -656,7 +656,8 @@ impl PreparedInstall {
 ///   otherwise. `record_only` is true when nothing is written or deleted,
 ///   `new_items` holds an entry for the item, and the lockfile record of
 ///   the item would change: the lockfile has no entry for the item yet, a
-///   field other than `files`, `pending` and `required_by` differs (see
+///   field other than `files`, `pending`, `required_by` and `commit`
+///   differs (see
 ///   [`apply::same_record`]), or the `files` record that `execute_plan`
 ///   would save ([`apply::ItemChanges::recorded_files`]: the planned files
 ///   and the records of the kept stale files) differs from the `files`
