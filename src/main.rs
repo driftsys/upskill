@@ -16,6 +16,7 @@ use upskill::pipeline::{
 };
 use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
+use upskill::scope::{Scope, ScopeRoot};
 use upskill::search;
 use upskill::select::{ClientSelection, SelectedClient};
 use upskill::source::{InstallSource, home_dir, parse_install_source};
@@ -261,17 +262,17 @@ fn run_add(args: AddArgs) -> i32 {
         }
     };
 
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Refuse) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
 
     let plugin_scope = scope_to_plugin_scope(global, project);
 
-    let is_global = global || (!project && !is_inside_git_repo());
+    let is_global = at.scope == Scope::Global;
 
     let options = upskill::pipeline::AddOptions {
         force,
@@ -282,13 +283,10 @@ fn run_add(args: AddArgs) -> i32 {
         keep_unwithheld_edits: false,
     };
 
-    let scope_label = if is_global { "global" } else { "project" };
-    if !style::is_quiet() {
-        eprintln!("scope: {} ({})", scope_label, target.display());
-    }
+    print_scope_line(&at);
 
     print_install_progress(&parsed);
-    match install_with_lockfile(&parsed, &target, items, plugin_scope, &options) {
+    match install_with_lockfile(&parsed, &at.root, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
             print_adoption_notice(report.adopted.as_deref());
@@ -404,14 +402,52 @@ fn print_install_progress(source: &InstallSource) {
     }
 }
 
-/// Resolve the install target from the `-g/--global` and `-p/--project` flags.
+/// What a command does outside a git repository when no scope flag is passed.
+enum NoFlag {
+    Refuse,
+    Global,
+}
+
+/// Why a scope could not be resolved.
+enum ScopeError {
+    /// Outside a git repository, with no flag, for a command that refuses to
+    /// choose. Reported as a usage error.
+    NeedsFlag {
+        cwd: PathBuf,
+    },
+    Other(anyhow::Error),
+}
+
+impl std::fmt::Display for ScopeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScopeError::NeedsFlag { cwd } => write!(
+                f,
+                "not inside a git repository: pass --project to install into {}, or --global to install for every project of this user",
+                cwd.display()
+            ),
+            ScopeError::Other(err) => write!(f, "{err}"),
+        }
+    }
+}
+
+impl ScopeError {
+    fn exit_code(&self) -> i32 {
+        match self {
+            ScopeError::NeedsFlag { .. } => EXIT_USAGE,
+            ScopeError::Other(_) => EXIT_ERROR,
+        }
+    }
+}
+
+/// Resolve the scope and its root from the `-g/--global` and `-p/--project`
+/// flags. The two flags are mutually exclusive at the clap layer.
 ///
-/// Precedence:
-/// - `--project` (explicit) → cwd, regardless of git-repo state.
-/// - `--global` (explicit) → `$HOME`.
-/// - Neither → cwd if inside a git repo, else `$HOME` (per spec §2.1
-///   auto-fallback). The two flags are mutually exclusive at the clap layer.
-fn install_target(global: bool, project: bool) -> anyhow::Result<PathBuf> {
+/// - `--project` gives the current directory, regardless of git state.
+/// - `--global` gives `$HOME`.
+/// - Neither gives the current directory inside a git repository. Outside one,
+///   `no_flag` decides: refuse, or use `$HOME`.
+fn resolve_scope(global: bool, project: bool, no_flag: NoFlag) -> Result<ScopeRoot, ScopeError> {
     let scope = if project {
         Scope::Project
     } else if global {
@@ -419,21 +455,34 @@ fn install_target(global: bool, project: bool) -> anyhow::Result<PathBuf> {
     } else if is_inside_git_repo() {
         Scope::Project
     } else {
-        Scope::Global
-    };
-
-    match scope {
-        Scope::Project => std::env::current_dir().context("failed to get current directory"),
-        Scope::Global => {
-            home_dir().ok_or_else(|| anyhow::anyhow!("HOME (or USERPROFILE on Windows) is not set"))
+        match no_flag {
+            NoFlag::Global => Scope::Global,
+            NoFlag::Refuse => {
+                let cwd = std::env::current_dir()
+                    .context("failed to get current directory")
+                    .map_err(ScopeError::Other)?;
+                return Err(ScopeError::NeedsFlag { cwd });
+            }
         }
-    }
+    };
+    scope_root(scope).map_err(ScopeError::Other)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Scope {
-    Project,
-    Global,
+/// The root directory of a scope: the current directory or `$HOME`.
+fn scope_root(scope: Scope) -> anyhow::Result<ScopeRoot> {
+    let root = match scope {
+        Scope::Project => std::env::current_dir().context("failed to get current directory")?,
+        Scope::Global => home_dir()
+            .ok_or_else(|| anyhow::anyhow!("HOME (or USERPROFILE on Windows) is not set"))?,
+    };
+    Ok(ScopeRoot { scope, root })
+}
+
+/// Print `scope: <scope> (<root>)` to stderr, unless `--quiet` is set.
+fn print_scope_line(at: &ScopeRoot) {
+    if !style::is_quiet() {
+        eprintln!("scope: {} ({})", at.scope, at.root.display());
+    }
 }
 
 /// Walk up from `cwd` looking for a `.git` entry (file or directory). Returns
@@ -741,15 +790,16 @@ fn run_remove(
         }
     }
 
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Global) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
 
-    match remove(&target, filter, force) {
+    print_scope_line(&at);
+    match remove(&at.root, filter, force) {
         Ok(report) => {
             print_adoption_notice(report.adopted.as_deref());
             print_remove_report(&report);
@@ -862,17 +912,19 @@ fn run_update(args: UpdateArgs) -> i32 {
         force,
         flag_clients,
     } = args;
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Global) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
 
     let plugin_scope = scope_to_plugin_scope(global, project);
-    let is_global = global || (!project && !is_inside_git_repo());
+    let is_global = at.scope == Scope::Global;
     let selection = resolve_selection(&flag_clients, project_config_root(is_global));
+
+    print_scope_line(&at);
 
     let terminal = !dry_run && !yes && std::io::IsTerminal::is_terminal(&std::io::stdin());
     let mut apply_all = ApplyAll;
@@ -886,7 +938,7 @@ fn run_update(args: UpdateArgs) -> i32 {
         &mut apply_all
     };
     let result = update(
-        &target,
+        &at.root,
         names,
         plugin_scope,
         &selection,
@@ -1403,13 +1455,14 @@ fn short(h: &Option<String>) -> String {
 }
 
 fn run_doctor(global: bool, project: bool, json: bool) -> i32 {
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Global) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
+    let target = at.root;
 
     match doctor(&target) {
         Ok(report) => {
@@ -1711,13 +1764,14 @@ fn kind_label(kind: ItemKind) -> &'static str {
 }
 
 fn run_list(global: bool, project: bool, json: bool) -> i32 {
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Global) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
+    let target = at.root;
 
     match list(&target) {
         Ok(report) => {
@@ -2101,13 +2155,14 @@ fn unconfigure_mcp(
 }
 
 fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Global) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
+    let target = at.root;
 
     let mcp_scope = scope_to_plugin_scope(global, project);
 

@@ -101,8 +101,8 @@ fn add_short_g_flag_works_too() {
 }
 
 #[test]
-fn auto_fallback_when_not_in_git_repo_uses_global() {
-    // No `.git` anywhere up the tree — auto-fallback to global.
+fn update_outside_a_git_repository_uses_global() {
+    // No `.git` anywhere up the tree: `update` without a flag uses global.
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
     let home = tmp.path().join("fakehome");
@@ -110,23 +110,32 @@ fn auto_fallback_when_not_in_git_repo_uses_global() {
     stage_source(&source);
     fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(&cwd).unwrap();
-    // No `.git` marker — cwd is NOT a project.
+    // No `.git` marker: cwd is NOT a project.
 
     Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
-        .args(["add", source.to_str().unwrap()])
+        .args(["add", "--global", source.to_str().unwrap()])
         .assert()
         .success();
 
+    let out = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&cwd)
+        .env("HOME", &home)
+        .args(["update", "--yes"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let err = String::from_utf8_lossy(&out.stderr);
     assert!(
-        home.join(".upskill-lock.json").exists(),
-        "auto-fallback wrote to HOME"
+        err.contains(&format!("scope: global ({})", home.display())),
+        "{err}"
     );
     assert!(
         !cwd.join(".upskill-lock.json").exists(),
-        "auto-fallback did NOT write to cwd"
+        "update did NOT write to cwd"
     );
 }
 

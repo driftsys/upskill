@@ -25,6 +25,7 @@ pub mod parse;
 pub mod pipeline;
 pub mod plugin;
 pub mod scaffold;
+pub mod scope;
 pub mod search;
 pub mod select;
 pub mod source;

@@ -42,8 +42,8 @@ pub enum Commands {
     ///
     /// Parses each item from the source, renders per-client output, and
     /// records the install in `.upskill-lock.json`. Default scope is the
-    /// current project; falls back to global (`$HOME`) when `cwd` is not
-    /// inside a git repo.
+    /// current project when `cwd` is inside a git repo. Outside one, pass
+    /// `--project` or `--global`.
     #[command(
         display_order = 1,
         after_help = "EXAMPLES:\n  \
@@ -65,8 +65,8 @@ pub enum Commands {
         /// Install into `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Install into the current directory. Required outside a git repo,
+        /// where `add` does not choose a scope.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Replace existing items from a different source without error,
