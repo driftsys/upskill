@@ -319,6 +319,9 @@ pub(super) struct DependencyClosure {
 pub(super) struct SourceInstall {
     pub root: PathBuf,
     pub git_ref: Option<String>,
+    /// The commit that the fetch of this source resolved; `None` for a local
+    /// path source.
+    pub commit: Option<String>,
     pub items: crate::bundle::ResolvedItems,
 }
 
@@ -326,6 +329,7 @@ pub(super) struct SourceInstall {
 struct FetchedSource {
     root: PathBuf,
     git_ref: Option<String>,
+    commit: Option<String>,
     index: BTreeMap<(ItemKind, String), PathBuf>,
 }
 
@@ -401,17 +405,18 @@ impl Resolver {
             .map_err(|e| anyhow::anyhow!("parse requires source `{src_dsl}`: {e}"))?;
         let label = install_source.to_string();
         if !self.sources.contains_key(&label) {
-            let (root, guard) = super::git::fetch_ssot(&install_source)
+            let fetched = super::git::fetch_ssot(&install_source)
                 .with_context(|| format!("fetch requires source `{label}`"))?;
-            let index = index_source(&root)?;
-            if let Some(g) = guard {
+            let index = index_source(&fetched.root)?;
+            if let Some(g) = fetched.guard {
                 self.guards.push(g);
             }
             self.sources.insert(
                 label.clone(),
                 FetchedSource {
-                    root,
+                    root: fetched.root,
                     git_ref: source_git_ref(&install_source),
+                    commit: fetched.commit,
                     index,
                 },
             );
@@ -504,7 +509,8 @@ fn source_git_ref(s: &InstallSource) -> Option<String> {
 ///
 /// `entry_label` is the entry source's canonical label, `entry_root` its
 /// already-fetched root (seeded into the fetch cache so it is not re-fetched),
-/// `entry_git_ref` its pinned ref. Cross-source `{ name, source }` entries
+/// `entry_git_ref` its pinned ref and `entry_commit` the commit that its
+/// fetch resolved. Cross-source `{ name, source }` entries
 /// are fetched via [`fetch_ssot`], cached by canonical label. Cycles
 /// (keyed `(label, kind, name)`) and same-`(kind,name)`-different-source
 /// clashes are errors; a required item missing from its source is an error.
@@ -512,6 +518,7 @@ pub(super) fn resolve_requires_closure(
     entry_label: &str,
     entry_root: &Path,
     entry_git_ref: Option<&str>,
+    entry_commit: Option<&str>,
     initial: &[(ItemKind, String)],
 ) -> Result<DependencyClosure> {
     let mut resolver = Resolver {
@@ -528,6 +535,7 @@ pub(super) fn resolve_requires_closure(
         FetchedSource {
             root: entry_root.to_path_buf(),
             git_ref: entry_git_ref.map(str::to_string),
+            commit: entry_commit.map(str::to_string),
             index: index_source(entry_root)?,
         },
     );
@@ -549,6 +557,7 @@ pub(super) fn resolve_requires_closure(
             SourceInstall {
                 root: fs.root.clone(),
                 git_ref: fs.git_ref.clone(),
+                commit: fs.commit.clone(),
                 items: crate::bundle::ResolvedItems::default(),
             }
         });
@@ -586,6 +595,7 @@ pub(super) struct ResolvedBundle {
 struct FetchedBundleSource {
     root: PathBuf,
     git_ref: Option<String>,
+    commit: Option<String>,
     bundles: BTreeMap<String, crate::model::Bundle>,
 }
 
@@ -656,17 +666,18 @@ impl BundleResolver {
             .map_err(|e| anyhow::anyhow!("parse requires source `{src_dsl}`: {e}"))?;
         let label = install_source.to_string();
         if !self.sources.contains_key(&label) {
-            let (root, guard) = super::git::fetch_ssot(&install_source)
+            let fetched = super::git::fetch_ssot(&install_source)
                 .with_context(|| format!("fetch requires source `{label}`"))?;
-            if let Some(g) = guard {
+            if let Some(g) = fetched.guard {
                 self.guards.push(g);
             }
-            let bundles = discover_bundles(&root)?;
+            let bundles = discover_bundles(&fetched.root)?;
             self.sources.insert(
                 label.clone(),
                 FetchedBundleSource {
-                    root,
+                    root: fetched.root,
                     git_ref: source_git_ref(&install_source),
+                    commit: fetched.commit,
                     bundles,
                 },
             );
@@ -760,6 +771,7 @@ pub(super) fn resolve_bundle_closure(
     entry_label: &str,
     entry_root: &Path,
     entry_git_ref: Option<&str>,
+    entry_commit: Option<&str>,
     entry_bundles: &[String],
 ) -> Result<(DependencyClosure, Vec<ResolvedBundle>)> {
     let mut resolver = BundleResolver {
@@ -778,6 +790,7 @@ pub(super) fn resolve_bundle_closure(
         FetchedBundleSource {
             root: entry_root.to_path_buf(),
             git_ref: entry_git_ref.map(str::to_string),
+            commit: entry_commit.map(str::to_string),
             bundles: discover_bundles(entry_root)?,
         },
     );
@@ -794,6 +807,7 @@ pub(super) fn resolve_bundle_closure(
             SourceInstall {
                 root: fs.root.clone(),
                 git_ref: fs.git_ref.clone(),
+                commit: fs.commit.clone(),
                 items: items.clone(),
             },
         );
@@ -818,6 +832,7 @@ pub(super) fn resolve_bundle_request(
     label: &str,
     local_source: &Path,
     git_ref: Option<&str>,
+    commit: Option<&str>,
     names: &[String],
 ) -> Result<Option<(DependencyClosure, Vec<ResolvedBundle>)>> {
     if is_bundle_file(local_source) {
@@ -827,6 +842,7 @@ pub(super) fn resolve_bundle_request(
             label,
             &registry_root,
             git_ref,
+            commit,
             std::slice::from_ref(&entry.name),
         )
         .map(Some);
@@ -841,7 +857,7 @@ pub(super) fn resolve_bundle_request(
     if !all_bundles || any_item {
         return Ok(None);
     }
-    resolve_bundle_closure(label, local_source, git_ref, names).map(Some)
+    resolve_bundle_closure(label, local_source, git_ref, commit, names).map(Some)
 }
 
 // ---------------------------------------------------------------------------
@@ -1443,6 +1459,7 @@ mod tests {
             "local:test",
             src,
             None,
+            None,
             &[(ItemKind::Agent, "code-review".to_string())],
         )
         .expect("closure");
@@ -1488,6 +1505,7 @@ mod tests {
             &a_label,
             &src_a,
             None,
+            None,
             &[(ItemKind::Agent, "code-review".to_string())],
         )
         .expect("closure");
@@ -1528,6 +1546,7 @@ mod tests {
             "local:test",
             src,
             None,
+            None,
             &[(ItemKind::Rule, "a".to_string())],
         )
         .expect_err("cycle");
@@ -1554,6 +1573,7 @@ mod tests {
         let err = resolve_requires_closure(
             &format!("local:{}", src_a.display()),
             &src_a,
+            None,
             None,
             &[(ItemKind::Rule, "a".to_string())],
         )
@@ -1590,6 +1610,7 @@ mod tests {
         let err = resolve_requires_closure(
             &format!("local:{}", src_a.display()),
             &src_a,
+            None,
             None,
             &[(ItemKind::Rule, "alpha".to_string())],
         )
@@ -1631,6 +1652,7 @@ mod tests {
             &format!("local:{}", entry.display()),
             &entry,
             None,
+            None,
             &[
                 (ItemKind::Rule, "wants-b".to_string()),
                 (ItemKind::Rule, "wants-c".to_string()),
@@ -1655,6 +1677,7 @@ mod tests {
         let closure = resolve_requires_closure(
             "local:test",
             src,
+            None,
             None,
             &[(ItemKind::Agent, "code-review".to_string())],
         )
@@ -1686,6 +1709,7 @@ mod tests {
         let closure = resolve_requires_closure(
             "local:test",
             src,
+            None,
             None,
             &[(ItemKind::Agent, "reviewer".to_string())],
         )

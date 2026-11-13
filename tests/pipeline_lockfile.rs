@@ -151,6 +151,7 @@ fn install_preserves_unrelated_existing_entries() {
         name: "from-other-source".into(),
         source: "github:other/repo@v1.0".into(),
         git_ref: Some("v1.0".into()),
+        commit: None,
         hash: Some("a".repeat(64)),
         source_name: None,
         required_by: vec![],

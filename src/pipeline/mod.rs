@@ -43,7 +43,7 @@ mod prepared;
 mod report;
 
 pub use apply::{ConflictState, FileConflict};
-pub use git::{fetch_ssot, install_from_git_url, install_from_source};
+pub use git::{FetchedSource, fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;
 pub use lifecycle::{doctor, doctor_scopes, installed_names, list, list_scopes, remove, update};

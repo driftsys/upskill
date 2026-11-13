@@ -303,6 +303,7 @@ mod tests {
             name: name.to_string(),
             source: "./src".to_string(),
             git_ref: None,
+            commit: None,
             hash: None,
             source_name: None,
             required_by: vec![],

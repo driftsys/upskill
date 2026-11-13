@@ -22,7 +22,7 @@ use super::{
     AddOptions, AdoptedBeforeFailure, InstallReport, ItemKind, PreviewAction, PreviewItem,
     bundle_item_names, fetch_ssot, owned,
 };
-use crate::lockfile::{LockedItem, Lockfile};
+use crate::lockfile::{LockedItem, Lockfile, SourceStamp};
 use crate::plugin::PluginScope;
 use crate::source::InstallSource;
 
@@ -33,6 +33,9 @@ pub(super) struct PreparedInstall {
     label: String,
     /// The pinned ref of the entry source; `None` for a local path.
     git_ref: Option<String>,
+    /// The commit that the fetch of the entry source resolved; `None` for a
+    /// local path.
+    commit: Option<String>,
     options: AddOptions,
     /// The plan, after `plan::merge_duplicates`.
     report: InstallReport,
@@ -68,7 +71,10 @@ pub(super) fn prepare_install(
     let label = source.to_string();
 
     // -- Pre-flight: fetch SSOT and scan for items before writing anything --
-    let (local_source, tmp_guard) = fetch_ssot(source)?;
+    let fetched = fetch_ssot(source)?;
+    let local_source = fetched.root;
+    let tmp_guard = fetched.guard;
+    let commit = fetched.commit;
     let scanned_items = scan_source_items(&local_source);
 
     // -- Validate bare --as with multi-item source --
@@ -126,7 +132,8 @@ pub(super) fn prepare_install(
     // item-level path uses, so the install + item-lockfile machinery is shared;
     // `resolved_bundles` carries each bundle's own source for the bundle
     // lockfile recording and plugin/MCP install.
-    let bundle_resolution = resolve_bundle_request(&label, &local_source, git_ref, items)?;
+    let bundle_resolution =
+        resolve_bundle_request(&label, &local_source, git_ref, commit.as_deref(), items)?;
     let (closure, resolved_bundles): (Option<DependencyClosure>, Vec<ResolvedBundle>) =
         if let Some((c, bundles)) = bundle_resolution {
             (Some(c), bundles)
@@ -138,6 +145,7 @@ pub(super) fn prepare_install(
                     &label,
                     &local_source,
                     git_ref,
+                    commit.as_deref(),
                     &requested,
                 )?),
                 Vec::new(),
@@ -299,6 +307,7 @@ pub(super) fn prepare_install(
     Ok(PreparedInstall {
         label,
         git_ref: git_ref.map(str::to_string),
+        commit,
         options: options.clone(),
         report,
         closure,
@@ -376,17 +385,22 @@ impl PreparedInstall {
             } else {
                 BTreeMap::new()
             };
-        let item_source_lookup = |kind: ItemKind, name: &str| -> (String, Option<String>) {
+        let item_source_lookup = |kind: ItemKind, name: &str| -> SourceStamp {
             if let Some(closure) = &self.closure {
                 if let Some(src_label) = closure.item_source.get(&(kind, name.to_string())) {
-                    let gr = closure
-                        .by_source
-                        .get(src_label)
-                        .and_then(|si| si.git_ref.clone());
-                    return (src_label.clone(), gr);
+                    let source = closure.by_source.get(src_label);
+                    return SourceStamp {
+                        label: src_label.clone(),
+                        git_ref: source.and_then(|si| si.git_ref.clone()),
+                        commit: source.and_then(|si| si.commit.clone()),
+                    };
                 }
             }
-            (self.label.clone(), self.git_ref.clone())
+            SourceStamp {
+                label: self.label.clone(),
+                git_ref: self.git_ref.clone(),
+                commit: self.commit.clone(),
+            }
         };
         let mut new_items = crate::lockfile::items_from_report(
             &self.report,
@@ -463,6 +477,7 @@ impl PreparedInstall {
         let PreparedInstall {
             label,
             git_ref,
+            commit: _,
             options,
             mut report,
             closure: _closure,
@@ -1042,6 +1057,7 @@ mod tests {
             name: "s".to_string(),
             source: "./src".to_string(),
             git_ref: None,
+            commit: None,
             hash: Some("h".to_string()),
             source_name: None,
             required_by: vec![],

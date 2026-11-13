@@ -94,13 +94,21 @@ fn repo_display_parts(url: &str) -> (&str, &str) {
     url.rsplit_once('/').unwrap_or(("", url))
 }
 
-/// Resolve the SSOT root for a source, fetching when remote.
-///
-/// Returns `(path, guard)`:
-/// - `path` is the on-disk SSOT root that callers walk for `skills/`,
-///   `rules/`, `agents/` subdirectories.
-/// - `guard` is `Some(TempDir)` for git sources (drop cleans up the
-///   clone) and `None` for local-path sources.
+/// The result of [`fetch_ssot`].
+pub struct FetchedSource {
+    /// The on-disk SSOT root that callers walk for `skills/`, `rules/`,
+    /// `agents/` subdirectories.
+    pub root: PathBuf,
+    /// `Some(TempDir)` for git sources (drop cleans up the clone) and `None`
+    /// for local-path sources.
+    pub guard: Option<tempfile::TempDir>,
+    /// The commit that the clone resolved to (`git rev-parse HEAD`); `None`
+    /// for a local path source.
+    pub commit: Option<String>,
+}
+
+/// Resolve the SSOT root for a source, fetching when remote. See
+/// [`FetchedSource`] for the returned fields.
 ///
 /// Used by `prepare_install`, which fetches the source of every `add`
 /// and of every source of `update`, and by the dependency resolvers of
@@ -109,9 +117,13 @@ fn repo_display_parts(url: &str) -> (&str, &str) {
 /// dependency. The library entry point
 /// `install_from_git_url` fetches through its own path, so that it stays
 /// one tempdir-scoped pass.
-pub fn fetch_ssot(source: &InstallSource) -> Result<(PathBuf, Option<tempfile::TempDir>)> {
+pub fn fetch_ssot(source: &InstallSource) -> Result<FetchedSource> {
     match source {
-        InstallSource::LocalPath(p) => Ok((p.clone(), None)),
+        InstallSource::LocalPath(p) => Ok(FetchedSource {
+            root: p.clone(),
+            guard: None,
+            commit: None,
+        }),
         InstallSource::Github(repo) => clone_to_tempdir(
             &github_clone_url(repo),
             repo.git_ref.as_deref(),
@@ -138,13 +150,19 @@ fn clone_to_tempdir(
     subfolder: Option<&str>,
     owner: &str,
     name: &str,
-) -> Result<(PathBuf, Option<tempfile::TempDir>)> {
+) -> Result<FetchedSource> {
     let tmp = tempfile::tempdir().context("create temp dir for clone")?;
     fetch::shallow_clone(url, git_ref, "clone", tmp.path(), subfolder)
         .map_err(|e| anyhow!("git clone {}: {}", url, e))?;
-    let source = fetch::resolve_subfolder(&tmp.path().join("clone"), subfolder, owner, name)
-        .map_err(|e| anyhow!("{}", e))?;
-    Ok((source, Some(tmp)))
+    let clone = tmp.path().join("clone");
+    let commit = fetch::head_commit(&clone).map_err(|e| anyhow!("git clone {}: {}", url, e))?;
+    let root =
+        fetch::resolve_subfolder(&clone, subfolder, owner, name).map_err(|e| anyhow!("{}", e))?;
+    Ok(FetchedSource {
+        root,
+        guard: Some(tmp),
+        commit: Some(commit),
+    })
 }
 
 /// Shallow-clone `url` into a tempdir, resolve `subfolder` inside the clone,

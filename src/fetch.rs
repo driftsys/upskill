@@ -82,6 +82,24 @@ pub(crate) fn shallow_clone(
     Ok(())
 }
 
+/// `git rev-parse HEAD` in `dir` (the clone or a directory inside it). For a
+/// clone of an annotated tag, `HEAD` is the tagged commit.
+pub(crate) fn head_commit(dir: &Path) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(dir)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .output()
+        .map_err(|err| format!("failed to run git rev-parse: {}", err))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("git rev-parse HEAD failed: {}", stderr.trim()));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
 /// Attempt a sparse clone: `--depth 1 --filter=blob:none --sparse` followed
 /// by `git sparse-checkout set <subfolder>`. Returns `Ok(())` on success or
 /// an error if any step fails (caller should fall back to regular clone).
@@ -289,6 +307,68 @@ mod tests {
         git(&["push", "-u", "origin", "main"], Some(&work));
 
         repo
+    }
+
+    /// `git <args>` in `dir`, returning trimmed stdout.
+    fn git_out(dir: &Path, args: &[&str]) -> String {
+        let out = Cmd::new("git")
+            .args(args)
+            .current_dir(dir)
+            .env_remove("GIT_DIR")
+            .env_remove("GIT_WORK_TREE")
+            .env_remove("GIT_INDEX_FILE")
+            .output()
+            .expect("git command");
+        assert!(
+            out.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8_lossy(&out.stdout).trim().to_string()
+    }
+
+    #[test]
+    fn head_commit_of_a_clone_is_the_commit_of_the_source() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(&dest).unwrap();
+
+        let url = format!("file://{}", bare.display());
+        shallow_clone(&url, None, "cloned", &dest, None).expect("clone must succeed");
+
+        let commit = head_commit(&dest.join("cloned")).expect("head commit");
+        assert_eq!(commit, git_out(&bare, &["rev-parse", "HEAD"]));
+        assert_eq!(commit.len(), 40);
+    }
+
+    #[test]
+    fn head_commit_of_an_annotated_tag_clone_is_the_tagged_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        git_out(
+            &bare,
+            &[
+                "-c",
+                "user.name=test",
+                "-c",
+                "user.email=test@test.com",
+                "tag",
+                "-a",
+                "v1",
+                "-m",
+                "v1",
+            ],
+        );
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(&dest).unwrap();
+
+        let url = format!("file://{}", bare.display());
+        shallow_clone(&url, Some("v1"), "cloned", &dest, None).expect("clone must succeed");
+
+        let commit = head_commit(&dest.join("cloned")).expect("head commit");
+        assert_eq!(commit, git_out(&bare, &["rev-parse", "v1^{commit}"]));
     }
 
     #[test]
