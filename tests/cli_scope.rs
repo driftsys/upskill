@@ -230,6 +230,13 @@ fn global_update_moves_a_released_install_without_force() {
     let out = run(&e, &e.outside, &["update", "--global", "--yes"]);
     assert!(out.status.success(), "{}", stderr(&out));
     assert_moved(&e);
+    // The items are reported as up to date because their source did not
+    // change; the moved files are reported by this line.
+    let text = stdout(&out);
+    assert!(
+        text.contains("Changed 7 file(s) written or deleted"),
+        "{text}"
+    );
 }
 
 #[test]
