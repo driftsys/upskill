@@ -1926,6 +1926,11 @@ fn update_keeps_a_non_executable_mode_set_by_the_user() {
         String::from_utf8_lossy(&out.get_output().stderr)
     );
     assert!(!all.contains("notes.md"), "{all}");
+    assert!(!all.contains("Changed"), "{all}");
+    assert!(
+        all.contains("everything is up to date — nothing to do"),
+        "{all}"
+    );
     let mode = fs::metadata(&dest).unwrap().permissions().mode();
     assert_eq!(mode & 0o7777, 0o600);
 }

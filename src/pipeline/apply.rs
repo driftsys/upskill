@@ -183,10 +183,13 @@ pub(super) fn apply_plan(
 /// they are a CRLF variant of the planned bytes (see [`matches_recorded`]) and the hash of the planned
 /// bytes was already recorded for the file in its `files` record (a
 /// `pending` hash does not count here). Its record is the hash of the
-/// planned bytes. In that case a file with a planned mode has the mode set
-/// again, and is counted in `changed` only when its mode differed from the
-/// planned mode; a file without one keeps its current mode and is not
-/// counted.
+/// planned bytes. In that case a file with a planned mode is counted in
+/// `changed`, and gets its executable bits set to the target executable
+/// bits, only when its executable bits differ from that target (Unix only):
+/// each executable bit of the planned mode for which the file has the
+/// matching read bit, see [`target_executable_bits`]. Its other permission
+/// bits are kept. A file without a planned mode keeps its current mode and
+/// is not counted.
 ///
 /// Stale files: the files of an item's previous `files` or `pending` record
 /// that no planned item of this run writes. So a file that a failed run
@@ -577,7 +580,9 @@ pub(super) fn execute_plan(
             }
             // An `Owned` destination that already holds the planned bytes, or
             // a CRLF variant of them, is not rewritten. Only its executable
-            // bits are set to the planned ones, and only when they differ.
+            // bits are set to the target executable bits (the planned
+            // executable bits for which the file has the matching read bit),
+            // and only when they differ from that target.
             if unchanged.contains(&file.rel) {
                 if let Some(mode) = file.mode.filter(|&mode| mode_differs(&full, mode)) {
                     set_executable_bits(&full, mode)?;
@@ -2718,21 +2723,35 @@ mod repeatable_tests {
         assert_eq!(target_executable_bits(0o200, 0o755), 0);
     }
 
-    /// The rule itself is pinned by `target_executable_bits_follow_the_read_bits`;
-    /// here the owner cannot read the file either, so apply does not treat
-    /// it as unchanged and must not change its mode.
-    #[cfg(unix)]
-    #[test]
-    fn a_file_without_read_bits_gets_no_executable_bits() {
-        let (changed, mode) = apply_unchanged_with_modes(0o200, 0o755);
-        assert!(changed.is_empty(), "{changed:?}");
-        assert_eq!(mode, 0o200);
-    }
-
     /// The target executable bits are the planned ones where the file on
     /// disk has the matching read bit: 0o755 & 0o111 & (0o711 & 0o444) >> 2
     /// is 0o100. By that rule the group and other executable bits of 0o711
     /// are removed.
+    /// Setuid, setgid and sticky bits are kept.
+    #[cfg(unix)]
+    #[test]
+    fn special_bits_are_kept_when_executable_bits_are_added() {
+        let (changed, mode) = apply_unchanged_with_modes(0o4644, 0o755);
+        assert_eq!(changed, vec![PathBuf::from(A)]);
+        assert_eq!(mode, 0o4755);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn removing_executable_bits_keeps_the_other_permission_bits() {
+        let (changed, mode) = apply_unchanged_with_modes(0o750, 0o644);
+        assert_eq!(changed, vec![PathBuf::from(A)]);
+        assert_eq!(mode, 0o640);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_read_only_file_gets_its_executable_bits() {
+        let (changed, mode) = apply_unchanged_with_modes(0o444, 0o755);
+        assert_eq!(changed, vec![PathBuf::from(A)]);
+        assert_eq!(mode, 0o555);
+    }
+
     #[cfg(unix)]
     #[test]
     fn executable_bits_without_a_matching_read_bit_are_removed() {
