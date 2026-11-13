@@ -12,7 +12,7 @@ use upskill::pipeline::{
     DoctorReport, DoctorScopes, InstallReport, ItemKind, ListedBundle, ListedItem, OrphanReason,
     PluginResult, PreviewAction, RemoveFilter, RemoveReport, ScopedList, SourceDecision,
     SourcePreview, SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor_scopes,
-    install_with_lockfile, list_scopes, remove, update,
+    install_with_lockfile, installed_names, list_scopes, remove, update,
 };
 use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
@@ -812,10 +812,38 @@ fn run_remove(
         Err(err) => {
             print_adoption_after_error(&err);
             print_error_chain(&err);
-            eprintln!();
-            eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
+            print_failure_hints(&err, &at, names);
             EXIT_ERROR
         }
+    }
+}
+
+/// The hints after a failed `update` or `remove`. When the error is
+/// `not in lockfile` and the other scope holds a named item, prints one line
+/// for each such item. Otherwise prints the `upskill doctor` hint.
+fn print_failure_hints(err: &anyhow::Error, at: &ScopeRoot, names: &[String]) {
+    let other = at.scope.other();
+    let not_in_lockfile = err
+        .chain()
+        .any(|c| c.to_string().starts_with("not in lockfile:"));
+    let found = match scope_root(other) {
+        Ok(other_root) if not_in_lockfile && !same_directory(&other_root.root, &at.root) => {
+            let held = installed_names(&other_root.root, names);
+            Some((other_root, held))
+        }
+        _ => None,
+    };
+    eprintln!();
+    match found {
+        Some((other_root, held)) if !held.is_empty() => {
+            for name in held {
+                eprintln!(
+                    "  hint: '{name}' is installed in the {other} scope ({}); pass --{other}",
+                    other_root.root.display()
+                );
+            }
+        }
+        _ => eprintln!("  hint: run 'upskill doctor' to check for inconsistencies"),
     }
 }
 
@@ -965,8 +993,7 @@ fn run_update(args: UpdateArgs) -> i32 {
                 print_adoption_after_error(&err);
             }
             print_error_chain(&err);
-            eprintln!();
-            eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
+            print_failure_hints(&err, &at, names);
             EXIT_ERROR
         }
     }

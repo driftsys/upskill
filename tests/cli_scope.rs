@@ -662,3 +662,63 @@ fn doctor_reports_a_modified_personal_copilot_file() {
     assert_eq!(modified[0]["name"], "api-conventions", "{v}");
     assert_eq!(modified[0]["files"], serde_json::json!([NEW[1]]), "{v}");
 }
+
+#[test]
+fn update_and_remove_say_when_the_item_is_in_the_other_scope() {
+    let e = env();
+    run(
+        &e,
+        &e.repo,
+        &[
+            "add",
+            "--global",
+            e.source.to_str().unwrap(),
+            "api-conventions",
+        ],
+    );
+    for cmd in ["update", "remove"] {
+        let out = run(&e, &e.repo, &[cmd, "api-conventions"]);
+        assert_eq!(out.status.code(), Some(1), "{cmd}");
+        let err = stderr(&out);
+        assert!(err.contains("not in lockfile: api-conventions"), "{err}");
+        assert!(
+            err.contains(&format!(
+                "'api-conventions' is installed in the global scope ({}); pass --global",
+                e.home.display()
+            )),
+            "{err}"
+        );
+        assert!(!err.contains("upskill doctor"), "{err}");
+    }
+    assert!(e.home.join(".claude/rules/api-conventions.md").is_file());
+}
+
+#[test]
+fn the_hint_names_the_project_scope_for_a_global_command() {
+    let e = env();
+    let add = run(
+        &e,
+        &e.repo,
+        &["add", e.source.to_str().unwrap(), "api-conventions"],
+    );
+    assert!(add.status.success(), "{}", stderr(&add));
+    for cmd in ["update", "remove"] {
+        let out = run(&e, &e.repo, &[cmd, "--global", "api-conventions"]);
+        assert_eq!(out.status.code(), Some(1), "{cmd}");
+        let err = stderr(&out);
+        assert!(err.contains("is installed in the project scope ("), "{err}");
+        assert!(err.contains("pass --project"), "{err}");
+    }
+}
+
+#[test]
+fn no_hint_for_a_name_that_no_scope_holds() {
+    let e = env();
+    for cmd in ["update", "remove"] {
+        let out = run(&e, &e.repo, &[cmd, "nothing-here"]);
+        let err = stderr(&out);
+        assert!(err.contains("not in lockfile"), "{err}");
+        assert!(!err.contains("is installed in"), "{err}");
+        assert!(err.contains("upskill doctor"), "{err}");
+    }
+}

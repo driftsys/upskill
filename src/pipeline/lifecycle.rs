@@ -1244,6 +1244,19 @@ pub fn list(target: &Path) -> Result<ListReport> {
     Ok(report)
 }
 
+/// The names of `names` that the lockfile under `root` holds as an item.
+/// Empty when the lockfile is missing or cannot be read.
+pub fn installed_names(root: &Path, names: &[String]) -> Vec<String> {
+    let Ok(lock) = crate::lockfile::Lockfile::load(root) else {
+        return Vec::new();
+    };
+    names
+        .iter()
+        .filter(|n| lock.items.iter().any(|i| &i.name == *n))
+        .cloned()
+        .collect()
+}
+
 /// [`list`] for each given scope root, in the given order. A scope whose
 /// lockfile is absent gives an empty report.
 pub fn list_scopes(roots: &[ScopeRoot]) -> Result<Vec<ScopedList>> {
