@@ -603,11 +603,11 @@ fn doctor_lists_an_absent_recorded_file_at_an_earlier_path_as_earlier_layout() {
         earlier_layout_files(&v, 0).iter().any(|f| f == OLD[0]),
         "{v}"
     );
-    let missing = v["scopes"][0]["missing_outputs"].as_array().unwrap();
     assert!(
-        missing
-            .iter()
-            .all(|m| !m["missing_files"].to_string().contains(OLD[0])),
+        v["scopes"][0]["missing_outputs"]
+            .as_array()
+            .unwrap()
+            .is_empty(),
         "{v}"
     );
 }
@@ -830,8 +830,8 @@ fn no_hint_for_a_name_that_no_scope_holds() {
     }
 }
 
-/// Install `api-conventions` in the project scope (`e.repo`) and
-/// `create-api-endpoint` in the global scope, or both in both scopes.
+/// Install each named item of the fixture source in the project scope (cwd
+/// `e.repo`), then each named item in the global scope.
 fn install_in_scopes(e: &Env, project: &[&str], global: &[&str]) {
     let src = e.source.to_str().unwrap();
     for name in project {
@@ -861,7 +861,16 @@ fn no_other_scope_hint_when_the_held_name_is_also_in_the_current_scope() {
 #[test]
 fn the_other_scope_hint_names_only_the_names_that_the_current_scope_lacks() {
     let e = env();
-    install_in_scopes(&e, &["api-conventions"], &["create-api-endpoint"]);
+    // `api-conventions` is in both scopes; the other two are global only.
+    install_in_scopes(
+        &e,
+        &["api-conventions"],
+        &[
+            "api-conventions",
+            "create-api-endpoint",
+            "security-reviewer",
+        ],
+    );
     for cmd in ["update", "remove"] {
         let out = run(
             &e,
@@ -870,6 +879,7 @@ fn the_other_scope_hint_names_only_the_names_that_the_current_scope_lacks() {
                 cmd,
                 "api-conventions",
                 "create-api-endpoint",
+                "security-reviewer",
                 "nothing-here",
             ],
         );
@@ -879,13 +889,10 @@ fn the_other_scope_hint_names_only_the_names_that_the_current_scope_lacks() {
             .lines()
             .filter(|l| l.contains("is installed in"))
             .collect();
-        assert_eq!(hints.len(), 1, "{cmd}: {err}");
+        assert_eq!(hints.len(), 2, "{cmd}: {err}");
         assert!(hints[0].contains("'create-api-endpoint'"), "{cmd}: {err}");
-        assert!(
-            !err.contains("'api-conventions' is installed"),
-            "{cmd}: {err}"
-        );
-        assert!(!err.contains("'nothing-here' is installed"), "{cmd}: {err}");
+        assert!(hints[1].contains("'security-reviewer'"), "{cmd}: {err}");
+        assert!(!err.contains("upskill doctor"), "{cmd}: {err}");
     }
 }
 
@@ -959,7 +966,11 @@ fn no_flag_in_a_home_directory_that_is_a_git_repository_is_refused_for_add() {
             .exists()
     );
 
-    for args in [vec!["update", "--yes"], vec!["remove", "api-conventions"]] {
+    for args in [
+        vec!["update", "--yes"],
+        vec!["remove", "api-conventions"],
+        vec!["remove-mcp", "x"],
+    ] {
         let out = run(&e, &e.home, &args);
         assert_eq!(out.status.code(), Some(2), "{args:?}: {}", stderr(&out));
         assert!(stderr(&out).contains(HOME_REFUSAL), "{args:?}");
@@ -974,6 +985,35 @@ fn no_flag_in_a_home_directory_that_is_a_git_repository_is_refused_for_add() {
 
     let out = run(&e, &e.home, &["doctor"]);
     assert!(out.status.success(), "{}", stderr(&out));
+}
+
+#[test]
+fn no_flag_in_a_home_directory_that_is_not_a_git_repository_uses_global_for_the_other_commands() {
+    let e = env();
+    let src = e.source.to_str().unwrap();
+    let out = run(&e, &e.home, &["add", "--global", src]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let global = format!("scope: global ({})", e.home.display());
+    for (args, code) in [
+        (vec!["update", "--yes"], 0),
+        (vec!["remove", "api-conventions"], 0),
+        (vec!["remove-mcp", "x"], 1),
+    ] {
+        let out = run(&e, &e.home, &args);
+        assert_eq!(out.status.code(), Some(code), "{args:?}: {}", stderr(&out));
+        assert!(stderr(&out).contains(&global), "{args:?}: {}", stderr(&out));
+    }
+}
+
+#[test]
+fn list_without_items_in_any_scope_prints_no_scope_header() {
+    let e = env();
+    let out = run(&e, &e.repo, &["list"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(text.contains("No items installed."), "{text}");
+    assert!(!text.contains("project ("), "{text}");
+    assert!(!text.contains("global ("), "{text}");
 }
 
 #[test]
