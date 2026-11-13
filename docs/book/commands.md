@@ -239,17 +239,18 @@ operation (no `pending` record), every such destination is a recorded file that
 was modified (not a file that upskill does not manage), applying the item would
 write or delete no other file, the item has no recorded file that the new
 version no longer contains (present or absent), and its lockfile entry would not
-change in any field other than its file records and `required_by` (for example
-`clients`). `update` then reports `kept modified file: <path>` for each modified
-destination: in a terminal and with `--dry-run`, in the block of its source (see
-below); with `--yes` or without a terminal, on stderr. This note does not change
-the exit code. In every other case (for example the source changed, or the flags
-no longer select a client of the item), `update` reports the item as skipped. In
-a terminal and with `--dry-run`, the block of the source has a `skip` line for
-the item that names each such file. With `--yes` or without a terminal, `update`
-prints `skipped <kind> <name>: <path> was modified or is not managed by upskill`
-on stderr for each such file. A skipped item of a source that is applied, or of
-a source whose preview changes nothing, makes `update` print
+change in any field other than its file records, `required_by` and the recorded
+source commit (for example `clients`). `update` then reports
+`kept modified file: <path>` for each modified destination: in a terminal and
+with `--dry-run`, in the block of its source (see below); with `--yes` or
+without a terminal, on stderr. This note does not change the exit code. In every
+other case (for example the source changed, or the flags no longer select a
+client of the item), `update` reports the item as skipped. In a terminal and
+with `--dry-run`, the block of the source has a `skip` line for the item that
+names each such file. With `--yes` or without a terminal, `update` prints
+`skipped <kind> <name>: <path> was modified or is not managed by upskill` on
+stderr for each such file. A skipped item of a source that is applied, or of a
+source whose preview changes nothing, makes `update` print
 `Use --force to replace.` on stderr and exit with code 1 after it has written
 the other items. A `skip` line of `--dry-run`, or of a source that the user
 declined, does neither. The limit of this rule: when a new version of upskill
