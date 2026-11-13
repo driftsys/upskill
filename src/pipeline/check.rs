@@ -123,8 +123,10 @@ type Lookups = HashMap<(String, Option<String>), Result<Option<String>, LookupEr
 /// Check every source of the lockfile of each root, in lockfile order.
 /// `names` limits the check to the items with those names; empty means all.
 /// A git source is looked up at most once for all roots (the key is the clone
-/// URL and the ref). A lockfile that cannot be read is an error. Changes no
-/// file.
+/// URL and the ref). A source that shares its lookup with an earlier source
+/// gets the result of that lookup, also after the time limit has passed; a
+/// source that needs a new lookup after the time limit is `NotChecked`. A
+/// lockfile that cannot be read is an error. Changes no file.
 pub fn check_scopes(
     roots: &[ScopeRoot],
     names: &[String],
@@ -176,14 +178,10 @@ fn check_source(
         Ok(source) => source,
         Err(e) => return unreachable(label, one_line(&e.to_string())),
     };
-    if let InstallSource::LocalPath(path) = &source {
-        return check_local(label, path, entries);
-    }
-
-    let (git_ref, url) = match &source {
-        InstallSource::Github(repo) => (repo.git_ref.clone(), clone_url(&source)),
-        InstallSource::Git(repo) => (repo.git_ref.clone(), clone_url(&source)),
-        InstallSource::LocalPath(_) => unreachable!("handled above"),
+    let git_ref = match &source {
+        InstallSource::LocalPath(path) => return check_local(label, path, entries),
+        InstallSource::Github(repo) => repo.git_ref.clone(),
+        InstallSource::Git(repo) => repo.git_ref.clone(),
     };
     let done =
         |label: String, status: SourceStatus, items: Vec<(ItemKind, String)>| CheckedSource {
@@ -194,7 +192,7 @@ fn check_source(
     if git_ref.as_deref().is_some_and(fetch::is_full_commit_hash) {
         return done(label, SourceStatus::PinnedToCommit, Vec::new());
     }
-    let key = (url.unwrap_or_default(), git_ref.clone());
+    let key = (clone_url(&source).unwrap_or_default(), git_ref.clone());
     let result = match lookups.get(&key) {
         Some(cached) => cached.clone(),
         None => {
@@ -261,7 +259,18 @@ fn check_local(label: String, path: &Path, entries: &[&LockedItem]) -> CheckedSo
     } else {
         path.to_path_buf()
     };
-    let dirs = iter_item_dirs(&root).unwrap_or_default();
+    let dirs = match iter_item_dirs(&root) {
+        Ok(dirs) => dirs,
+        Err(e) => {
+            return CheckedSource {
+                source: label,
+                status: SourceStatus::NotReachable {
+                    reason: one_line(&format!("{e:#}")),
+                },
+                items: Vec::new(),
+            };
+        }
+    };
     let changed: Vec<&LockedItem> = entries
         .iter()
         .copied()
@@ -324,6 +333,7 @@ mod tests {
 
     const COMMIT_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const COMMIT_B: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const COMMIT_C: &str = "cccccccccccccccccccccccccccccccccccccccc";
     const SOURCE: &str = "github:acme/tools";
 
     /// Answers by source label and counts the calls.
@@ -411,19 +421,21 @@ mod tests {
         save(
             &at.root,
             vec![
-                entry(ItemKind::Skill, "zeta", SOURCE, Some(COMMIT_A)),
-                entry(ItemKind::Rule, "beta", SOURCE, Some(COMMIT_B)),
+                entry(ItemKind::Skill, "zeta", SOURCE, Some(COMMIT_B)),
+                entry(ItemKind::Rule, "beta", SOURCE, Some(COMMIT_A)),
                 entry(ItemKind::Skill, "alpha", SOURCE, Some(COMMIT_B)),
             ],
         );
-        let mut remote = FakeRemote::with(SOURCE, Ok(Some(COMMIT_B.to_string())));
+        let mut remote = FakeRemote::with(SOURCE, Ok(Some(COMMIT_C.to_string())));
         let checks = check_scopes(&[at], &[], far(), &mut remote).unwrap();
-        // `from` is the first differing commit in lockfile order.
+        // The lockfile keeps its entries sorted by kind, then name, so the
+        // first entry is the rule `beta`. `from` is the recorded commit of the
+        // first entry that differs from the remote commit; all three differ.
         assert_eq!(
             status_of(&checks),
             &SourceStatus::UpdateAvailable {
                 from: Some(COMMIT_A.to_string()),
-                to: Some(COMMIT_B.to_string()),
+                to: Some(COMMIT_C.to_string()),
             }
         );
         assert_eq!(
@@ -713,5 +725,170 @@ mod tests {
         assert_eq!(fs::read(&path).unwrap(), before);
         let names: Vec<_> = fs::read_dir(&at.root).unwrap().flatten().collect();
         assert_eq!(names.len(), 1);
+    }
+
+    #[test]
+    fn a_schema_1_lockfile_is_not_adopted_or_saved() {
+        let tmp = tempfile::tempdir().unwrap();
+        let at = root(&tmp.path().join("p"), Scope::Project);
+        let path = at.root.join(".upskill-lock.json");
+        let raw = format!(
+            r#"{{"schema":1,"items":[{{"kind":"skill","name":"a","source":"{SOURCE}","commit":"{COMMIT_A}"}}]}}"#
+        );
+        fs::write(&path, &raw).unwrap();
+        let mut remote = FakeRemote::with(SOURCE, Ok(Some(COMMIT_B.to_string())));
+        let checks = check_scopes(std::slice::from_ref(&at), &[], far(), &mut remote).unwrap();
+        assert!(matches!(
+            status_of(&checks),
+            SourceStatus::UpdateAvailable { .. }
+        ));
+        assert_eq!(fs::read_to_string(&path).unwrap(), raw);
+        assert!(!at.root.join(crate::lockfile::SCHEMA1_BACKUP_NAME).exists());
+    }
+
+    #[test]
+    fn a_cached_lookup_is_used_after_the_deadline() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = root(&tmp.path().join("p"), Scope::Project);
+        let global = root(&tmp.path().join("g"), Scope::Global);
+        for at in [&project, &global] {
+            save(
+                &at.root,
+                vec![entry(ItemKind::Skill, "a", SOURCE, Some(COMMIT_A))],
+            );
+        }
+        // The first lookup runs before the deadline; the deadline passes
+        // while it runs.
+        struct SlowRemote(Instant, usize);
+        impl RemoteLookup for SlowRemote {
+            fn resolve(
+                &mut self,
+                _source: &InstallSource,
+                _deadline: Instant,
+            ) -> Result<Option<String>, LookupError> {
+                self.1 += 1;
+                while Instant::now() < self.0 {
+                    std::thread::sleep(Duration::from_millis(5));
+                }
+                Ok(Some(COMMIT_A.to_string()))
+            }
+        }
+        let deadline = Instant::now() + Duration::from_millis(50);
+        let mut remote = SlowRemote(deadline, 0);
+        let checks = check_scopes(&[project, global], &[], deadline, &mut remote).unwrap();
+        assert_eq!(remote.1, 1);
+        assert_eq!(checks[0].sources[0].status, SourceStatus::UpToDate);
+        assert_eq!(checks[1].sources[0].status, SourceStatus::UpToDate);
+    }
+
+    #[test]
+    fn a_names_value_that_matches_nothing_gives_no_sources() {
+        let tmp = tempfile::tempdir().unwrap();
+        let at = root(&tmp.path().join("p"), Scope::Project);
+        save(
+            &at.root,
+            vec![entry(ItemKind::Skill, "a", SOURCE, Some(COMMIT_A))],
+        );
+        let mut remote = FakeRemote::default();
+        let checks = check_scopes(&[at], &["zzz".to_string()], far(), &mut remote).unwrap();
+        assert!(checks[0].sources.is_empty());
+        assert_eq!(remote.calls, 0);
+    }
+
+    #[test]
+    fn an_unreadable_lockfile_is_an_error_and_writes_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let at = root(&tmp.path().join("p"), Scope::Project);
+        let path = at.root.join(".upskill-lock.json");
+        fs::write(&path, "{ not json").unwrap();
+        let mut remote = FakeRemote::default();
+        assert!(check_scopes(std::slice::from_ref(&at), &[], far(), &mut remote).is_err());
+        assert_eq!(fs::read_to_string(&path).unwrap(), "{ not json");
+        assert_eq!(fs::read_dir(&at.root).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn a_remote_without_head_gives_the_head_reason() {
+        let tmp = tempfile::tempdir().unwrap();
+        let at = root(&tmp.path().join("p"), Scope::Project);
+        save(
+            &at.root,
+            vec![entry(ItemKind::Skill, "a", SOURCE, Some(COMMIT_A))],
+        );
+        let mut remote = FakeRemote::with(SOURCE, Ok(None));
+        let checks = check_scopes(&[at], &[], far(), &mut remote).unwrap();
+        assert_eq!(
+            status_of(&checks),
+            &SourceStatus::NotReachable {
+                reason: "HEAD not found".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn an_aliased_local_item_is_up_to_date_when_unchanged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let source = tmp.path().join("src");
+        let dir = source.join("one");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("SKILL.md"),
+            "---\nschema: 1\nname: one\ndescription: test one\n---\n# one\n",
+        )
+        .unwrap();
+        let at = root(&tmp.path().join("project"), Scope::Project);
+        let options = AddOptions {
+            aliases: vec![("".to_string(), "uno".to_string())],
+            ..AddOptions::default()
+        };
+        install_with_lockfile(
+            &InstallSource::LocalPath(source.clone()),
+            &at.root,
+            &[],
+            PluginScope::Project,
+            &options,
+        )
+        .unwrap();
+        let lock = Lockfile::load(&at.root).unwrap();
+        assert_eq!(lock.items[0].name, "uno");
+        assert_eq!(lock.items[0].source_name.as_deref(), Some("one"));
+        let mut remote = FakeRemote::default();
+        let checks = check_scopes(std::slice::from_ref(&at), &[], far(), &mut remote).unwrap();
+        assert_eq!(status_of(&checks), &SourceStatus::UpToDate);
+        fs::write(
+            dir.join("SKILL.md"),
+            "---\nschema: 1\nname: one\ndescription: changed\n---\n# one\n",
+        )
+        .unwrap();
+        let checks = check_scopes(&[at], &[], far(), &mut remote).unwrap();
+        assert_eq!(
+            checks[0].sources[0].items,
+            vec![(ItemKind::Skill, "uno".to_string())]
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_local_source_is_not_reachable() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let (source, at) = install_local(tmp.path());
+        fs::set_permissions(&source, fs::Permissions::from_mode(0o000)).unwrap();
+        let readable = fs::read_dir(&source).is_ok();
+        let mut remote = FakeRemote::default();
+        let checks = check_scopes(&[at], &[], far(), &mut remote).unwrap();
+        fs::set_permissions(&source, fs::Permissions::from_mode(0o755)).unwrap();
+        if readable {
+            // Running as a user that ignores permissions (root).
+            return;
+        }
+        match status_of(&checks) {
+            SourceStatus::NotReachable { reason } => {
+                assert!(!reason.is_empty());
+                assert_eq!(reason.lines().count(), 1);
+            }
+            other => panic!("expected NotReachable, got {other:?}"),
+        }
+        assert!(checks[0].sources[0].items.is_empty());
     }
 }
