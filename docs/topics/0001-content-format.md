@@ -875,10 +875,11 @@ current environment, without reading its value.
 **Per-client install behavior:** A bundle's `mcps:` entry is configured for
 every MCP **target** — Claude Code, GitHub Copilot, VS Code, and opencode —
 CLI-first with a config-write fallback per target. VS Code is an MCP target but
-**not** a generation client: it shares `.github/**` rules/skills/agents output
-with Copilot and forks **only** on MCP, so the MCP target set (`claude`,
-`copilot`, `vscode`, `opencode`) is modelled separately from the generation
-`Client` enum (`claude`, `copilot`, `opencode`).
+**not** a generation client: it shares the Copilot rules/skills/agents output
+(`.github/**` in the project scope, `.copilot/**` in the global scope) and forks
+**only** on MCP, so the MCP target set (`claude`, `copilot`, `vscode`,
+`opencode`) is modelled separately from the generation `Client` enum (`claude`,
+`copilot`, `opencode`).
 
 | Target         | Primary (CLI)                                                                                                                                                       | Fallback config file                      | Root key     |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------ |
@@ -1308,6 +1309,14 @@ implementing tool and intentionally out of this specification.
 | Rule      | `.github/instructions/<name>.instructions.md` | `applyTo:` (comma-joined from `scope.paths`, default `"**"`), `name:`, `description:`. `copilot.excludeAgent` if present.                                                                                                                   |
 | Skill     | `.github/skills/<name>/SKILL.md`              | `name:`, `description:` pass through. Follows Agent Skills open standard.                                                                                                                                                                   |
 | Agent     | `.github/agents/<name>.agent.md`              | `name:`, `description:`, `model:`, `tools:` (only documented §4 mappings — `bash → shell`, `web-fetch → fetch`, `web-search → web_search` — survive; unmapped capabilities dropped). GitHub Copilot-specific fields from passthrough block. |
+
+In a user's personal scope, Copilot CLI reads skills from
+`~/.copilot/skills/<name>/SKILL.md`, agents from
+`~/.copilot/agents/<name>.agent.md` and instructions from
+`~/.copilot/instructions/<name>.instructions.md`
+([configuration directory](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference),
+[custom instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions)).
+upskill writes these paths in its global scope.
 
 ### 7.3 opencode
 

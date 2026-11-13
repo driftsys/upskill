@@ -1137,7 +1137,8 @@ fn doctor_does_not_report_a_crlf_checkout_as_modified() {
         .args(["doctor", "--json", "--project"])
         .assert()
         .success();
-    let v: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let document: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let v = &document["scopes"][0];
     assert!(v["modified_files"].as_array().unwrap().is_empty(), "{v}");
 }
 

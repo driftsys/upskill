@@ -10,9 +10,18 @@ use std::path::Path;
 use upskill::lockfile::{CURRENT_SCHEMA, LockedPlugin, Lockfile, PluginInstallStatus};
 use upskill::pipeline::{doctor, install_with_lockfile};
 use upskill::plugin::PluginScope;
+use upskill::scope::{Scope, ScopeRoot};
 use upskill::source::InstallSource;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
+
+/// The project scope rooted at `root`.
+fn project_scope(root: &Path) -> ScopeRoot {
+    ScopeRoot {
+        scope: Scope::Project,
+        root: root.to_path_buf(),
+    }
+}
 
 fn stage_source(source: &Path) {
     let from = format!("{FIXTURES}/items");
@@ -632,7 +641,7 @@ fn doctor_reports_skipped_plugin_from_lockfile() {
     });
     lock.save(tmp.path()).expect("save");
 
-    let report = doctor(tmp.path()).expect("doctor");
+    let report = doctor(&project_scope(tmp.path())).expect("doctor");
 
     assert_eq!(
         report.skipped_plugins.len(),
@@ -660,7 +669,7 @@ fn doctor_skipped_plugins_do_not_cause_is_clean_false() {
     });
     lock.save(tmp.path()).expect("save");
 
-    let report = doctor(tmp.path()).expect("doctor");
+    let report = doctor(&project_scope(tmp.path())).expect("doctor");
 
     assert!(!report.skipped_plugins.is_empty());
     assert!(
@@ -690,7 +699,7 @@ fn doctor_installed_plugin_cli_not_found_is_not_reported_as_missing() {
     });
     lock.save(tmp.path()).expect("save");
 
-    let report = doctor(tmp.path()).expect("doctor");
+    let report = doctor(&project_scope(tmp.path())).expect("doctor");
     assert!(report.missing_plugins.is_empty());
 }
 
@@ -716,7 +725,7 @@ fn doctor_reports_multiple_skipped_plugins() {
     });
     lock.save(tmp.path()).expect("save");
 
-    let report = doctor(tmp.path()).expect("doctor");
+    let report = doctor(&project_scope(tmp.path())).expect("doctor");
 
     assert_eq!(report.skipped_plugins.len(), 2);
     let names: Vec<&str> = report

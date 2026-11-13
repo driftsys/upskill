@@ -11,6 +11,10 @@
 //! - installed plugins missing from the client surfaced as drift (exit 1)
 //!
 //! Doctor never fetches; remote-source drift detection is `update --dry-run`.
+//!
+//! The JSON tests pass `--project` and read `scopes[0]`: without a scope flag
+//! `doctor` reports both scopes. `tests/cli_scope.rs` covers the both-scope
+//! report.
 
 mod common;
 
@@ -227,12 +231,13 @@ fn doctor_json_clean_install_emits_empty_buckets() {
 
     let assert = common::upskill_cmd(&home)
         .current_dir(&target)
-        .args(["doctor", "--json"])
+        .args(["doctor", "--json", "--project"])
         .assert()
         .success();
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    let v: serde_json::Value = serde_json::from_str(&stdout)
+    let document: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    let v = &document["scopes"][0];
     for bucket in [
         "missing_outputs",
         "modified_files",
@@ -262,13 +267,14 @@ fn doctor_json_orphan_entry_has_kebab_case_reason() {
 
     let assert = common::upskill_cmd(&home)
         .current_dir(&target)
-        .args(["doctor", "--json"])
+        .args(["doctor", "--json", "--project"])
         .assert()
         .failure()
         .code(1);
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    let v: serde_json::Value = serde_json::from_str(&stdout)
+    let document: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    let v = &document["scopes"][0];
     let orphans = v["orphan_entries"].as_array().unwrap();
     assert!(!orphans.is_empty(), "expected at least one orphan entry");
     for o in orphans {
@@ -296,13 +302,14 @@ fn doctor_json_missing_output_lists_files() {
 
     let assert = common::upskill_cmd(&home)
         .current_dir(&target)
-        .args(["doctor", "--json"])
+        .args(["doctor", "--json", "--project"])
         .assert()
         .failure()
         .code(1);
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    let v: serde_json::Value = serde_json::from_str(&stdout)
+    let document: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    let v = &document["scopes"][0];
     let missing = v["missing_outputs"].as_array().unwrap();
     assert_eq!(missing.len(), 1);
     let entry = &missing[0];
@@ -529,12 +536,13 @@ fn doctor_json_includes_skipped_plugins_bucket() {
 
     let assert = common::upskill_cmd(&home)
         .current_dir(&target)
-        .args(["doctor", "--json"])
+        .args(["doctor", "--json", "--project"])
         .assert()
         .success();
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    let v: serde_json::Value = serde_json::from_str(&stdout)
+    let document: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    let v = &document["scopes"][0];
     // New plugin buckets must always appear in JSON output.
     assert!(
         v.get("skipped_plugins").is_some(),
@@ -564,12 +572,13 @@ fn doctor_reports_modified_files() {
 
     let assert = common::upskill_cmd(&home)
         .current_dir(&target)
-        .args(["doctor", "--json"])
+        .args(["doctor", "--json", "--project"])
         .assert()
         .failure()
         .code(1);
     let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    let v: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    let document: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    let v = &document["scopes"][0];
     let modified = v["modified_files"].as_array().unwrap();
     assert_eq!(modified.len(), 1, "{stdout}");
     assert_eq!(modified[0]["name"], "create-api-endpoint");
@@ -598,14 +607,14 @@ fn installed() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
 fn doctor_json(target: &Path, home: &Path) -> (Option<i32>, serde_json::Value) {
     let out = common::upskill_cmd(home)
         .current_dir(target)
-        .args(["doctor", "--json"])
+        .args(["doctor", "--json", "--project"])
         .output()
         .unwrap();
     let stdout = String::from_utf8(out.stdout).unwrap();
     let stderr = String::from_utf8(out.stderr).unwrap();
-    let v = serde_json::from_str(&stdout)
+    let document: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout: {stdout}\nstderr: {stderr}"));
-    (out.status.code(), v)
+    (out.status.code(), document["scopes"][0].clone())
 }
 
 fn bucket_paths(v: &serde_json::Value, bucket: &str, field: &str, name: &str) -> Vec<String> {

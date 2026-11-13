@@ -280,11 +280,12 @@ fn run_doctor_json(home: &Path, project: &Path, path_val: &str) -> serde_json::V
     let assert = common::upskill_cmd(home)
         .current_dir(project)
         .env("PATH", path_val)
-        .args(["doctor", "--json"])
+        .args(["doctor", "--json", "--project"])
         .assert();
     let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
-    serde_json::from_str(&stdout)
-        .unwrap_or_else(|e| panic!("doctor --json not JSON: {e}\n{stdout}"))
+    let document: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("doctor --json not JSON: {e}\n{stdout}"));
+    document["scopes"][0].clone()
 }
 
 #[test]

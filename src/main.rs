@@ -9,13 +9,14 @@ use upskill::fmt::{FmtReport, fmt};
 use upskill::index;
 use upskill::lint::{LintReport, lint};
 use upskill::pipeline::{
-    DoctorReport, InstallReport, ItemKind, ListReport, ListedBundle, ListedItem, OrphanReason,
-    PluginResult, PreviewAction, RemoveFilter, RemoveReport, SourceDecision, SourcePreview,
-    SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor, install_with_lockfile, list,
-    remove, update,
+    DoctorReport, DoctorScopes, InstallReport, ItemKind, ListedBundle, ListedItem, OrphanReason,
+    PluginResult, PreviewAction, RemoveFilter, RemoveReport, ScopedList, SourceDecision,
+    SourcePreview, SourceResult, UpdateObserver, UpdateReport, UpdateStatus, doctor_scopes,
+    install_with_lockfile, installed_names, list_scopes, remove, update,
 };
 use upskill::plugin::PluginScope;
 use upskill::scaffold::{NewKind, ScaffoldReport, scaffold};
+use upskill::scope::{Scope, ScopeRoot};
 use upskill::search;
 use upskill::select::{ClientSelection, SelectedClient};
 use upskill::source::{InstallSource, home_dir, parse_install_source};
@@ -261,17 +262,17 @@ fn run_add(args: AddArgs) -> i32 {
         }
     };
 
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Refuse) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
 
     let plugin_scope = scope_to_plugin_scope(global, project);
 
-    let is_global = global || (!project && !is_inside_git_repo());
+    let is_global = at.scope == Scope::Global;
 
     let options = upskill::pipeline::AddOptions {
         force,
@@ -280,15 +281,13 @@ fn run_add(args: AddArgs) -> i32 {
         excludes: excludes.to_vec(),
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
         keep_unwithheld_edits: false,
+        scope: at.scope,
     };
 
-    let scope_label = if is_global { "global" } else { "project" };
-    if !style::is_quiet() {
-        eprintln!("scope: {} ({})", scope_label, target.display());
-    }
+    print_scope_line(&at);
 
     print_install_progress(&parsed);
-    match install_with_lockfile(&parsed, &target, items, plugin_scope, &options) {
+    match install_with_lockfile(&parsed, &at.root, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
             print_adoption_notice(report.adopted.as_deref());
@@ -404,14 +403,65 @@ fn print_install_progress(source: &InstallSource) {
     }
 }
 
-/// Resolve the install target from the `-g/--global` and `-p/--project` flags.
+/// What a command does outside a git repository when no scope flag is passed.
+enum NoFlag {
+    Refuse,
+    Global,
+}
+
+/// Why a scope could not be resolved.
+enum ScopeError {
+    /// Outside a git repository, with no flag, for a command that refuses to
+    /// choose. Reported as a usage error.
+    NeedsFlag {
+        cwd: PathBuf,
+    },
+    /// The project scope was asked for while the current directory is the home
+    /// directory, which is the root of the global scope. Reported as a usage
+    /// error.
+    ProjectIsHome,
+    Other(anyhow::Error),
+}
+
+impl std::fmt::Display for ScopeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScopeError::NeedsFlag { cwd } => write!(
+                f,
+                "not inside a git repository: pass --project to install into {}, or --global to install for every project of this user",
+                cwd.display()
+            ),
+            ScopeError::ProjectIsHome => write!(
+                f,
+                "the current directory is the home directory, which is the root of the global scope: pass --global"
+            ),
+            ScopeError::Other(err) => write!(f, "{err}"),
+        }
+    }
+}
+
+impl ScopeError {
+    fn exit_code(&self) -> i32 {
+        match self {
+            ScopeError::NeedsFlag { .. } | ScopeError::ProjectIsHome => EXIT_USAGE,
+            ScopeError::Other(_) => EXIT_ERROR,
+        }
+    }
+}
+
+/// Resolve the scope and its root from the `-g/--global` and `-p/--project`
+/// flags. The two flags are mutually exclusive at the clap layer.
 ///
-/// Precedence:
-/// - `--project` (explicit) → cwd, regardless of git-repo state.
-/// - `--global` (explicit) → `$HOME`.
-/// - Neither → cwd if inside a git repo, else `$HOME` (per spec §2.1
-///   auto-fallback). The two flags are mutually exclusive at the clap layer.
-fn install_target(global: bool, project: bool) -> anyhow::Result<PathBuf> {
+/// - `--project` gives the current directory, regardless of git state.
+/// - `--global` gives `$HOME`.
+/// - Neither gives the current directory inside a git repository. Outside one,
+///   `no_flag` decides: refuse, or use `$HOME`. A refusal in the home directory
+///   is [`ScopeError::ProjectIsHome`], because `--project` is refused there.
+///
+/// The project scope is refused with [`ScopeError::ProjectIsHome`] when the
+/// current directory is the home directory, because both scopes would then
+/// share one lockfile.
+fn resolve_scope(global: bool, project: bool, no_flag: NoFlag) -> Result<ScopeRoot, ScopeError> {
     let scope = if project {
         Scope::Project
     } else if global {
@@ -419,26 +469,56 @@ fn install_target(global: bool, project: bool) -> anyhow::Result<PathBuf> {
     } else if is_inside_git_repo() {
         Scope::Project
     } else {
-        Scope::Global
-    };
-
-    match scope {
-        Scope::Project => std::env::current_dir().context("failed to get current directory"),
-        Scope::Global => {
-            home_dir().ok_or_else(|| anyhow::anyhow!("HOME (or USERPROFILE on Windows) is not set"))
+        match no_flag {
+            NoFlag::Global => Scope::Global,
+            NoFlag::Refuse => {
+                // `--project` would be refused here, so do not suggest it.
+                project_scope_root()?;
+                let cwd = std::env::current_dir()
+                    .context("failed to get current directory")
+                    .map_err(ScopeError::Other)?;
+                return Err(ScopeError::NeedsFlag { cwd });
+            }
         }
+    };
+    match scope {
+        Scope::Project => project_scope_root(),
+        Scope::Global => scope_root(scope).map_err(ScopeError::Other),
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Scope {
-    Project,
-    Global,
+/// The root of the project scope: the current directory. Fails with
+/// [`ScopeError::ProjectIsHome`] when that directory is the home directory.
+/// When the home directory is not known, there is nothing to compare with and
+/// the current directory is accepted.
+fn project_scope_root() -> Result<ScopeRoot, ScopeError> {
+    let at = scope_root(Scope::Project).map_err(ScopeError::Other)?;
+    if home_dir().is_some_and(|home| same_directory(&at.root, &home)) {
+        return Err(ScopeError::ProjectIsHome);
+    }
+    Ok(at)
+}
+
+/// The root directory of a scope: the current directory or `$HOME`.
+fn scope_root(scope: Scope) -> anyhow::Result<ScopeRoot> {
+    let root = match scope {
+        Scope::Project => std::env::current_dir().context("failed to get current directory")?,
+        Scope::Global => home_dir()
+            .ok_or_else(|| anyhow::anyhow!("HOME (or USERPROFILE on Windows) is not set"))?,
+    };
+    Ok(ScopeRoot { scope, root })
+}
+
+/// Print `scope: <scope> (<root>)` to stderr, unless `--quiet` is set.
+fn print_scope_line(at: &ScopeRoot) {
+    if !style::is_quiet() {
+        eprintln!("scope: {} ({})", at.scope, at.root.display());
+    }
 }
 
 /// Walk up from `cwd` looking for a `.git` entry (file or directory). Returns
-/// `false` on any I/O error so the caller falls back to global scope rather
-/// than crashing — that matches user expectation when `cwd` is unreadable.
+/// `false` on any I/O error, so an unreadable `cwd` counts as outside a git
+/// repository instead of stopping the command.
 fn is_inside_git_repo() -> bool {
     let mut dir = match std::env::current_dir() {
         Ok(d) => d,
@@ -741,15 +821,16 @@ fn run_remove(
         }
     }
 
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Global) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
 
-    match remove(&target, filter, force) {
+    print_scope_line(&at);
+    match remove(&at.root, filter, force) {
         Ok(report) => {
             print_adoption_notice(report.adopted.as_deref());
             print_remove_report(&report);
@@ -761,10 +842,45 @@ fn run_remove(
         Err(err) => {
             print_adoption_after_error(&err);
             print_error_chain(&err);
-            eprintln!();
-            eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
+            print_failure_hints(&err, &at, names);
             EXIT_ERROR
         }
+    }
+}
+
+/// The hints after a failed `update` or `remove`. When the error is
+/// `not in lockfile`, prints one line for each named item that the current
+/// scope's lockfile does not hold and the other scope's lockfile holds. When
+/// there is no such item, prints the `upskill doctor` hint.
+fn print_failure_hints(err: &anyhow::Error, at: &ScopeRoot, names: &[String]) {
+    let other = at.scope.other();
+    let not_in_lockfile = err
+        .chain()
+        .any(|c| c.to_string().starts_with("not in lockfile:"));
+    let found = match scope_root(other) {
+        Ok(other_root) if not_in_lockfile && !same_directory(&other_root.root, &at.root) => {
+            let here = installed_names(&at.root, names);
+            let unknown: Vec<String> = names
+                .iter()
+                .filter(|n| !here.contains(n))
+                .cloned()
+                .collect();
+            let held = installed_names(&other_root.root, &unknown);
+            Some((other_root, held))
+        }
+        _ => None,
+    };
+    eprintln!();
+    match found {
+        Some((other_root, held)) if !held.is_empty() => {
+            for name in held {
+                eprintln!(
+                    "  hint: '{name}' is installed in the {other} scope ({}); pass --{other}",
+                    other_root.root.display()
+                );
+            }
+        }
+        _ => eprintln!("  hint: run 'upskill doctor' to check for inconsistencies"),
     }
 }
 
@@ -862,17 +978,19 @@ fn run_update(args: UpdateArgs) -> i32 {
         force,
         flag_clients,
     } = args;
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Global) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
 
     let plugin_scope = scope_to_plugin_scope(global, project);
-    let is_global = global || (!project && !is_inside_git_repo());
+    let is_global = at.scope == Scope::Global;
     let selection = resolve_selection(&flag_clients, project_config_root(is_global));
+
+    print_scope_line(&at);
 
     let terminal = !dry_run && !yes && std::io::IsTerminal::is_terminal(&std::io::stdin());
     let mut apply_all = ApplyAll;
@@ -886,7 +1004,7 @@ fn run_update(args: UpdateArgs) -> i32 {
         &mut apply_all
     };
     let result = update(
-        &target,
+        &at,
         names,
         plugin_scope,
         &selection,
@@ -912,8 +1030,7 @@ fn run_update(args: UpdateArgs) -> i32 {
                 print_adoption_after_error(&err);
             }
             print_error_chain(&err);
-            eprintln!();
-            eprintln!("  hint: run 'upskill doctor' to check for inconsistencies");
+            print_failure_hints(&err, &at, names);
             EXIT_ERROR
         }
     }
@@ -1403,20 +1520,24 @@ fn short(h: &Option<String>) -> String {
 }
 
 fn run_doctor(global: bool, project: bool, json: bool) -> i32 {
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let roots = match report_scopes(global, project) {
+        Ok(roots) => roots,
+        Err(ScopeError::Other(err)) => {
+            print_error_chain(&err);
+            return EXIT_ERROR;
+        }
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
 
-    match doctor(&target) {
+    match doctor_scopes(&roots) {
         Ok(report) => {
             if json {
                 print_doctor_json(&report);
             } else {
-                print_doctor_report(&report);
+                print_doctor_scopes(&report);
             }
             if report.is_clean() {
                 EXIT_SUCCESS
@@ -1431,20 +1552,45 @@ fn run_doctor(global: bool, project: bool, json: bool) -> i32 {
     }
 }
 
-fn print_doctor_json(report: &DoctorReport) {
+fn print_doctor_json(report: &DoctorScopes) {
     if style::is_quiet() {
         return;
     }
     // serde_json::to_string_pretty cannot fail for owned data — every
-    // field on DoctorReport derives Serialize and contains no maps with
+    // field on DoctorScopes derives Serialize and contains no maps with
     // non-string keys. unwrap is safe.
     println!("{}", serde_json::to_string_pretty(report).unwrap());
 }
 
-fn print_doctor_report(report: &DoctorReport) {
+fn print_doctor_scopes(report: &DoctorScopes) {
     if style::is_quiet() {
         return;
     }
+    for (index, entry) in report.scopes.iter().enumerate() {
+        if index > 0 {
+            println!();
+        }
+        println!(
+            "{} ({})",
+            style::name(&entry.scope.to_string()),
+            entry.root.display()
+        );
+        print_doctor_report(&entry.report);
+    }
+    if !report.in_both_scopes.is_empty() {
+        println!();
+        for item in &report.in_both_scopes {
+            println!(
+                "{} {} {} is installed in both scopes",
+                style::dim("note:"),
+                item.kind,
+                style::name(&item.name)
+            );
+        }
+    }
+}
+
+fn print_doctor_report(report: &DoctorReport) {
     if report.is_clean() {
         println!("{} clean", style::success("doctor:"));
         // Fall through: still print skipped_plugins warnings if any.
@@ -1463,6 +1609,24 @@ fn print_doctor_report(report: &DoctorReport) {
                 style::name(&m.name)
             );
             for path in &m.missing_files {
+                println!("    - {}", style::dim(&path.display().to_string()));
+            }
+        }
+    }
+
+    if !report.earlier_layout.is_empty() {
+        println!(
+            "{} files at earlier global paths ({} item(s)) — run 'upskill update --global' to move them",
+            style::error_label("doctor:"),
+            report.earlier_layout.len()
+        );
+        for e in &report.earlier_layout {
+            println!(
+                "  {} {}",
+                style::dim(kind_label(e.kind)),
+                style::name(&e.name)
+            );
+            for path in &e.files {
                 println!("    - {}", style::dim(&path.display().to_string()));
             }
         }
@@ -1711,20 +1875,24 @@ fn kind_label(kind: ItemKind) -> &'static str {
 }
 
 fn run_list(global: bool, project: bool, json: bool) -> i32 {
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let roots = match report_scopes(global, project) {
+        Ok(roots) => roots,
+        Err(ScopeError::Other(err)) => {
+            print_error_chain(&err);
+            return EXIT_ERROR;
+        }
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
 
-    match list(&target) {
-        Ok(report) => {
+    match list_scopes(&roots) {
+        Ok(scoped) => {
             if json {
-                print_list_json(&report);
+                print_list_json(&scoped);
             } else {
-                print_list_report(&report);
+                print_list_report(&scoped);
             }
             EXIT_SUCCESS
         }
@@ -1735,21 +1903,59 @@ fn run_list(global: bool, project: bool, json: bool) -> i32 {
     }
 }
 
-fn print_list_json(report: &ListReport) {
+/// The scopes that `list` and `doctor` report, in the order project, global.
+///
+/// `--global` gives the global scope and `--project` gives the project scope,
+/// which fails with [`ScopeError::ProjectIsHome`] when the current directory is
+/// the home directory. Without a flag, both scopes are given, except that the global scope alone
+/// is given when the current directory is the home directory (both scopes
+/// would be the same lockfile), and the project scope alone is given, with a
+/// note on stderr, when the home directory is not known.
+fn report_scopes(global: bool, project: bool) -> Result<Vec<ScopeRoot>, ScopeError> {
+    if global {
+        return Ok(vec![scope_root(Scope::Global).map_err(ScopeError::Other)?]);
+    }
+    if project {
+        return Ok(vec![project_scope_root()?]);
+    }
+    let project_root = scope_root(Scope::Project).map_err(ScopeError::Other)?;
+    let Ok(global_root) = scope_root(Scope::Global) else {
+        if !style::is_quiet() {
+            eprintln!("note: the global scope is not shown: HOME is not set");
+        }
+        return Ok(vec![project_root]);
+    };
+    if same_directory(&project_root.root, &global_root.root) {
+        return Ok(vec![global_root]);
+    }
+    Ok(vec![project_root, global_root])
+}
+
+/// True when both paths name the same directory. Compares canonical paths and
+/// compares the given paths when a path cannot be canonicalised.
+fn same_directory(a: &std::path::Path, b: &std::path::Path) -> bool {
+    match (a.canonicalize(), b.canonicalize()) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => a == b,
+    }
+}
+
+fn print_list_json(scoped: &[ScopedList]) {
     if style::is_quiet() {
         return;
     }
     // serde_json::to_string_pretty cannot fail for owned data — every
-    // field on ListReport derives Serialize and contains no maps with
+    // field on ScopedList derives Serialize and contains no maps with
     // non-string keys. unwrap is safe.
-    println!("{}", serde_json::to_string_pretty(report).unwrap());
+    let document = serde_json::json!({ "scopes": scoped });
+    println!("{}", serde_json::to_string_pretty(&document).unwrap());
 }
 
-fn print_list_report(report: &ListReport) {
+fn print_list_report(scoped: &[ScopedList]) {
     if style::is_quiet() {
         return;
     }
-    if report.is_empty() {
+    if scoped.iter().all(|s| s.report.is_empty()) {
         println!("No items installed.");
         println!();
         println!("  Get started: upskill add owner/repo");
@@ -1757,24 +1963,39 @@ fn print_list_report(report: &ListReport) {
         return;
     }
 
-    print_list_section("rules", &report.rules);
-    print_list_section("skills", &report.skills);
-    print_list_section("agents", &report.agents);
-    print_list_bundles(&report.bundles);
+    for (index, entry) in scoped.iter().enumerate() {
+        if index > 0 {
+            println!();
+        }
+        println!(
+            "{} ({})",
+            style::name(&entry.scope.to_string()),
+            entry.root.display()
+        );
+        let report = &entry.report;
+        if report.is_empty() {
+            println!("  No items installed.");
+            continue;
+        }
+        print_list_section("rules", &report.rules);
+        print_list_section("skills", &report.skills);
+        print_list_section("agents", &report.agents);
+        print_list_bundles(&report.bundles);
+    }
 }
 
 fn print_list_section(label: &str, items: &[ListedItem]) {
     if items.is_empty() {
         return;
     }
-    println!("{} ({})", style::name(label), items.len());
+    println!("  {} ({})", style::name(label), items.len());
     for item in items {
         let pinned = match &item.git_ref {
             Some(r) => format!("@{r}"),
             None => String::new(),
         };
         println!(
-            "  {:<32} {}",
+            "    {:<32} {}",
             style::name(&item.name),
             style::dim(&format!("{}{pinned}", item.source))
         );
@@ -1785,14 +2006,14 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
     if bundles.is_empty() {
         return;
     }
-    println!("{} ({})", style::name("bundles"), bundles.len());
+    println!("  {} ({})", style::name("bundles"), bundles.len());
     for bundle in bundles {
         let pinned = match &bundle.git_ref {
             Some(r) => format!("@{r}"),
             None => String::new(),
         };
         println!(
-            "  {:<32} {}",
+            "    {:<32} {}",
             style::name(&bundle.name),
             style::dim(&format!("{}{pinned}", bundle.source))
         );
@@ -2101,13 +2322,15 @@ fn unconfigure_mcp(
 }
 
 fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
-    let target = match install_target(global, project) {
-        Ok(t) => t,
+    let at = match resolve_scope(global, project, NoFlag::Global) {
+        Ok(at) => at,
         Err(err) => {
             print_error(&err);
-            return EXIT_ERROR;
+            return err.exit_code();
         }
     };
+    print_scope_line(&at);
+    let target = at.root;
 
     let mcp_scope = scope_to_plugin_scope(global, project);
 

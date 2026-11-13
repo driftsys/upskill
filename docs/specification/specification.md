@@ -32,10 +32,14 @@ This document describes upskill's behaviour against that contract.
 
 ### 1.2 Two scopes
 
-| Scope   | Lives at         | Use                                            |
-| ------- | ---------------- | ---------------------------------------------- |
-| Project | `<cwd>/.agents/` | Content shared across the team via git.        |
-| Global  | `$HOME/.agents/` | Content available to a single user, all repos. |
+| Scope   | Root    | Use                                            |
+| ------- | ------- | ---------------------------------------------- |
+| Project | `<cwd>` | Content shared across the team via git.        |
+| Global  | `$HOME` | Content available to a single user, all repos. |
+
+The root of a scope holds its lockfile (§4) and the per-client output of its
+items. The output paths relative to the root are in §3.1. `$HOME` is the value
+of the `HOME` environment variable, or of `USERPROFILE` when `HOME` is not set.
 
 ### 1.3 Two roles
 
@@ -90,9 +94,20 @@ upskill add <source> [items...] [--global|--project]
 `items...` after the source filter to a subset. There is no interactive picker;
 install-all-by-default fits bundle curation.
 
-Default scope is `--project` (write into the current repo's `.agents/...`),
-falling back to `--global` (`$HOME/.agents/...`) when the current directory is
-not inside a git repo. Either flag can be passed explicitly.
+`--project` writes into the current directory; `--global` writes under `$HOME`.
+Inside a git repository, `add` without a scope flag uses the project scope.
+Outside a git repository, `add` without a scope flag writes nothing and stops
+with exit code 2 and a message that asks for `--project` or `--global`. When the
+current directory is the home directory, which is the root of the global scope,
+the project scope is refused: `add` writes nothing and stops with exit code 2
+and a message that asks for `--global`, with `--project` and with no flag, in or
+outside a git repository. `update`, `remove` and `remove-mcp` do the same with
+`--project`, and with no flag in a home directory that is a git repository; with
+no flag in a home directory that is not a git repository, they use the global
+scope.
+
+`add`, `update`, `remove` and `remove-mcp` print one line to stderr before they
+change anything, `scope: <scope> (<root>)`. `--quiet` hides it.
 
 Before any write, `add` classifies every destination of every item against the
 item's `files` and `pending` records (§4). A destination is a conflict when it
@@ -142,6 +157,11 @@ items installed from another source; it then lists these files after
 upskill update [name...] [--global|--project] [--dry-run] [--force]
 ```
 
+Without a scope flag, `update` uses the project scope inside a git repository
+and the global scope outside one. `--project` uses the current directory. When
+the current directory is the home directory, the project scope is refused with
+exit code 2 and a message that asks for `--global`.
+
 Always fetches the latest source before regenerating. Absorbs the role of a
 separate `sync` command — there is no `--offline` flag in v1; offline use is
 covered by passing local paths to `add` / `update`.
@@ -152,6 +172,16 @@ covered by passing local paths to `add` / `update`.
   frontmatter field, `update` regenerates outputs from the same SSOT.
 - **Track upstream evolution.** `update` git-pulls source repos and regenerates
   items whose source hash changed.
+
+`update --global` also moves an install that a released version wrote at the
+earlier global Copilot paths (`.github/skills`, `.github/instructions` and
+`.github/agents` under `$HOME`): it writes the item at the path of §3.1 and
+deletes the file at the earlier path when it is unchanged. An edited file at the
+earlier path is kept and named in the output. The item of such a run is reported
+as up to date when its source did not change; the line
+`Changed N file(s) written or deleted` counts the moved files. The empty client
+root and kind directories that remain (for example `$HOME/.github/skills`) are
+kept, as the pruning rule of §2.3 states.
 
 `update` applies the conflict rules of `add` (§2.1). An item with a modified or
 unowned destination is not written and keeps its lockfile entry. When a source
@@ -294,11 +324,20 @@ still rejects the removed GitLab shorthands with exit 2; use a full HTTPS URL.
 ### 2.3 `remove`
 
 ```text
-upskill remove [name...] [--source <label>] [--global] [--force]
+upskill remove [name...] [--source <label>] [--global|--project] [--force]
 ```
 
-Removes installed items from the matching scope. Either name one or more items,
-or pass `--source <label>` to remove every item that came from a single source.
+Removes installed items from the matching scope. Without a scope flag, `remove`
+uses the project scope inside a git repository and the global scope outside one.
+When the current directory is the home directory, the project scope is refused
+with exit code 2 and a message that asks for `--global`. When a named item is
+not in the lockfile of that scope but the other scope records it, `remove` fails
+as for any unknown name and prints
+`hint: '<name>' is installed in the <scope> scope (<root>); pass --<scope>` to
+stderr, one line for each such name. A name that the current scope also holds
+gets no such line. When no name qualifies, `remove` prints the `upskill doctor`
+hint instead; `update <name>` does the same. Either name one or more items, or
+pass `--source <label>` to remove every item that came from a single source.
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched.
 
@@ -312,37 +351,52 @@ not a regular file. A recorded regular file that cannot be read is handled as
 modified. An absent recorded file is ignored. A file that the record does not
 list is **unowned** and is never deleted. Empty item directories are then
 deleted; client roots and kind directories are kept. A recorded path outside the
-client roots (`.claude`, `.github`, `.agents`, `.opencode`) is never deleted,
-and a symbolic link in the item part of a recorded path's parent directories
-makes `remove` fail before any deletion. An item whose `files` and `pending`
-records are both empty has no file deleted. The lockfile entry of each removed
-item is dropped. `remove` adopts a `schema: 1` lockfile and prints the adoption
-notice, except when a name is not in the lockfile, which is an error.
+client roots (`.claude`, `.github`, `.copilot`, `.agents`, `.opencode`) is never
+deleted, and a symbolic link in the item part of a recorded path's parent
+directories makes `remove` fail before any deletion. An item whose `files` and
+`pending` records are both empty has no file deleted. The lockfile entry of each
+removed item is dropped. `remove` adopts a `schema: 1` lockfile and prints the
+adoption notice, except when a name is not in the lockfile, which is an error.
 
 ### 2.4 `list` / `doctor`
 
 - `list` — show installed content from `.upskill-lock.json`, grouped by kind.
   Bundles are surfaced in a separate section. The `--available` view (items
   discoverable from configured sources) is deferred for a future release.
-- `doctor` — verify on-disk state matches the lock file. Ten independent
-  buckets: missing per-client outputs (reinstall fixes), modified recorded files
-  (content differs from the recorded SHA-256, compared as in §2.1), recorded
-  files that could not be inspected (`doctor` continues with the others), SSOT
-  hash drift on `local:` sources (`update` fixes), lockfile entries with no
-  recoverable source (`remove` fixes), installed plugins missing from the client
-  (`update --yes` reinstalls: a run in a terminal applies a source only when its
-  preview changes something, and the plugin and MCP steps are not part of the
-  preview), skipped plugins (informational — CLI was absent at install time),
-  orphaned dependencies (informational), MCP server reconciliation, and
-  interrupted items (an item with a non-empty `pending` record: run the same
-  command again to complete it). Exit 0 when clean, 1 when any drift bucket is
-  non-empty. Skipped plugins are warnings and do not affect the exit code.
-  Missing, modified and unreadable files are checked against the `files` record;
-  a recorded path that `remove` would never delete (outside the client roots,
-  fewer than three components, or with a `..` component) is skipped without a
-  report. For an item with an empty or missing `files` record (a `schema: 1`
-  lockfile, or a `schema: 2` item with an empty list), `doctor` checks each
-  per-client entry file instead.
+  Without a scope flag, `list` and `doctor` report both scopes: the project
+  scope (the current directory, in or outside a git repository) first, then the
+  global scope (`$HOME`). `--global` or `--project` limits the report to that
+  scope. When the current directory is the home directory, only the global scope
+  is reported, and `--project` is refused with exit code 2 and a message that
+  asks for `--global`. When neither `HOME` nor `USERPROFILE` is set, only the
+  project scope is reported and stderr gets
+  `note: the global scope is not shown: HOME is not set`. With `--json`, `list`
+  prints `{"scopes": [{"scope", "root", <the buckets>}]}` and `doctor` prints
+  `{"scopes": [...], "in_both_scopes": [...]}`; both also when one scope is
+  selected.
+- `doctor` — verify on-disk state matches the lock file. Per scope, eleven
+  independent buckets: missing per-client outputs (reinstall fixes), modified
+  recorded files (content differs from the recorded SHA-256, compared as in
+  §2.1), recorded files that could not be inspected (`doctor` continues with the
+  others), SSOT hash drift on `local:` sources (`update` fixes), lockfile
+  entries with no recoverable source (`remove` fixes), installed plugins missing
+  from the client (`update --yes` reinstalls: a run in a terminal applies a
+  source only when its preview changes something, and the plugin and MCP steps
+  are not part of the preview), skipped plugins (informational — CLI was absent
+  at install time), orphaned dependencies (informational), MCP server
+  reconciliation, and interrupted items (an item with a non-empty `pending`
+  record: run the same command again to complete it), and, for the global scope
+  only, files at the earlier global Copilot paths (`earlier_layout`;
+  `upskill update --global` moves them). `doctor` also prints a note for each
+  item that the lockfiles of both scopes record; the note does not change the
+  exit code. Exit 0 when clean, 1 when any drift bucket is non-empty, including
+  `earlier_layout`. Skipped plugins are warnings and do not affect the exit
+  code. Missing, modified and unreadable files are checked against the `files`
+  record; a recorded path that `remove` would never delete (outside the client
+  roots, fewer than three components, or with a `..` component) is skipped
+  without a report. For an item with an empty or missing `files` record (a
+  `schema: 1` lockfile, or a `schema: 2` item with an empty list), `doctor`
+  checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -395,11 +449,31 @@ update. No CI generation step. No committed `dist/` artifacts.
 
 ### 3.1 Per-client output paths
 
+Paths relative to the root of the scope, in the project scope and in the global
+scope, except where the global scope is stated.
+
 | Item kind | Claude Code                             | GitHub Copilot                                                | opencode                                           |
 | --------- | --------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------- |
 | Rule      | `.claude/rules/<name>.md` with `paths:` | `.github/instructions/<name>.instructions.md` with `applyTo:` | `.agents/rules/<name>/RULE.md` (canonical-store)   |
 | Skill     | `.claude/skills/<name>/SKILL.md`        | `.github/skills/<name>/SKILL.md`                              | `.agents/skills/<name>/SKILL.md` (canonical-store) |
 | Agent     | `.claude/agents/<name>.md`              | `.github/agents/<name>.agent.md`                              | `.opencode/agents/<name>.md`                       |
+
+In the global scope, Copilot content is written to the personal directories of
+Copilot CLI under `$HOME`:
+
+| Item kind | GitHub Copilot, global scope                   |
+| --------- | ---------------------------------------------- |
+| Rule      | `.copilot/instructions/<name>.instructions.md` |
+| Skill     | `.copilot/skills/<name>/SKILL.md`              |
+| Agent     | `.copilot/agents/<name>.agent.md`              |
+
+Sources:
+[Copilot CLI configuration directory](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference)
+(`skills/` and `agents/` under `~/.copilot`) and
+[custom instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions)
+(`$HOME/.copilot/instructions/**/*.instructions.md`). The Claude Code paths and
+the opencode paths are the same in both scopes. upskill does not read
+`COPILOT_HOME` or `CLAUDE_CONFIG_DIR`.
 
 Per-client frontmatter mapping is defined in
 [format-spec §7](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#7-generation-client-specific-output)
@@ -419,7 +493,10 @@ generated files.
 
 ### 3.4 Ancillary file handling
 
-Three files outside the per-item path tree are managed idempotently:
+Three files outside the per-item path tree are managed idempotently. In the
+global scope they are written under `$HOME` as in a project; the
+`.vscode/settings.json` entry points at `.github/instructions`, which a global
+install no longer writes:
 
 - **`CLAUDE.md`** at repo root — created once with `@AGENTS.md` content if
   absent. Never overwritten.

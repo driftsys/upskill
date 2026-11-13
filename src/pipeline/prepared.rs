@@ -214,6 +214,10 @@ pub(super) fn prepare_install(
     // Runs before the adoption and before any write, so a refused install
     // changes no file. Aliases apply to entry-source items only, as in the
     // plan below.
+    let at = crate::scope::ScopeRoot {
+        scope: options.scope,
+        root: target.to_path_buf(),
+    };
     if let Some(closure) = &closure {
         let no_aliases = plan::PlanNames::default();
         for (src_label, si) in &closure.by_source {
@@ -222,13 +226,13 @@ pub(super) fn prepare_install(
             } else {
                 &no_aliases
             };
-            install::check_sources_outside_outputs(&si.root, target, Some(&si.items), names)?;
+            install::check_sources_outside_outputs(&si.root, &at, Some(&si.items), names)?;
         }
     } else {
         // Without a closure, `items` is not empty: a bundle-file source always
         // gets a closure, and only a request with names defers to name
         // resolution.
-        install::check_name_resolution_outside_outputs(&local_source, target, items, &entry_names)?;
+        install::check_name_resolution_outside_outputs(&local_source, &at, items, &entry_names)?;
     }
 
     // -- Plan every output; nothing is written until `commit` --
@@ -260,6 +264,7 @@ pub(super) fn prepare_install(
                 Some(&si.items),
                 &options.selection,
                 names,
+                options.scope,
             )?;
             r.items.extend(part.items);
             r.planned.extend(part.planned);
@@ -268,13 +273,20 @@ pub(super) fn prepare_install(
         }
         r
     } else if items.is_empty() {
-        install_from_local_path_selective(&local_source, None, &options.selection, &entry_names)?
+        install_from_local_path_selective(
+            &local_source,
+            None,
+            &options.selection,
+            &entry_names,
+            options.scope,
+        )?
     } else {
         install_with_name_resolution_from_local(
             &local_source,
             items,
             &options.selection,
             &entry_names,
+            options.scope,
         )?
     };
 
@@ -602,8 +614,11 @@ impl PreparedInstall {
 
         // Per ADR-0003: when the install includes any rule, register
         // `.github/instructions` in `.vscode/settings.json`'s
-        // `chat.instructionsFilesLocations` so VS Code Copilot picks up the
-        // generated `<name>.instructions.md` files.
+        // `chat.instructionsFilesLocations`. That directory is the Copilot
+        // rule path of the project scope, where VS Code Copilot picks up the
+        // generated `<name>.instructions.md` files. In the global scope the
+        // rule files are written to `.copilot/instructions`, which this
+        // entry does not point at.
         crate::ancillary::ensure_vscode_instructions_registered(target, has_rules)?;
 
         Ok(report)

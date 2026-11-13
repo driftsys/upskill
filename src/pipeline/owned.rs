@@ -13,7 +13,7 @@ use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
 
 use super::ALL_CLIENTS;
-use super::output::{output_path, resource_base_path};
+use super::output::{released_output_path, released_resource_base_path};
 use crate::generate::Client;
 use crate::lockfile::{LOCKFILE_NAME, LockedItem, Lockfile, OwnedFile, SCHEMA1_BACKUP_NAME};
 
@@ -217,10 +217,10 @@ fn existing_item_files(target: &Path, item: &LockedItem) -> Result<Vec<OwnedFile
         return Ok(files);
     }
     for client in item_clients(item) {
-        let mut rels = vec![output_path(item.kind, client, &item.name)];
+        let mut rels = vec![released_output_path(item.kind, client, &item.name)];
         walk_regular_files(
             target,
-            &resource_base_path(item.kind, client, &item.name),
+            &released_resource_base_path(item.kind, client, &item.name),
             &mut rels,
         )?;
         rels.sort();
@@ -395,8 +395,8 @@ mod tests {
     #[test]
     fn adoption_records_only_the_listed_clients() {
         let tmp = tempfile::tempdir().unwrap();
-        let claude = output_path(ItemKind::Rule, Client::Claude, "r");
-        let copilot = output_path(ItemKind::Rule, Client::Copilot, "r");
+        let claude = released_output_path(ItemKind::Rule, Client::Claude, "r");
+        let copilot = released_output_path(ItemKind::Rule, Client::Copilot, "r");
         write(tmp.path(), &claude, b"claude");
         write(tmp.path(), &copilot, b"copilot");
         let mut lock = schema1_lock(tmp.path(), vec![item(ItemKind::Rule, "r", &["claude"])]);
@@ -419,10 +419,10 @@ mod tests {
     fn adoption_records_existing_files_and_keeps_backup() {
         let tmp = tempfile::tempdir().unwrap();
         let target = tmp.path();
-        let skill_entry = output_path(ItemKind::Skill, Client::Claude, "demo");
-        let skill_script =
-            resource_base_path(ItemKind::Skill, Client::Claude, "demo").join("scripts/run.sh");
-        let rule_entry = output_path(ItemKind::Rule, Client::Claude, "style");
+        let skill_entry = released_output_path(ItemKind::Skill, Client::Claude, "demo");
+        let skill_script = released_resource_base_path(ItemKind::Skill, Client::Claude, "demo")
+            .join("scripts/run.sh");
+        let rule_entry = released_output_path(ItemKind::Rule, Client::Claude, "style");
         write(target, &skill_entry, b"skill body");
         write(target, &skill_script, b"echo run");
         write(target, &rule_entry, b"rule body");
@@ -484,7 +484,7 @@ mod tests {
         lock.items = vec![item(ItemKind::Skill, "demo", &["claude"])];
         write(
             tmp.path(),
-            &output_path(ItemKind::Skill, Client::Claude, "demo"),
+            &released_output_path(ItemKind::Skill, Client::Claude, "demo"),
             b"body",
         );
         assert_eq!(adopt_schema1(tmp.path(), &mut lock).unwrap(), None);
@@ -611,8 +611,8 @@ mod tests {
     fn adoption_leaves_the_lock_unchanged_on_error() {
         use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();
-        let first = output_path(ItemKind::Rule, Client::Claude, "a");
-        let second = output_path(ItemKind::Rule, Client::Claude, "b");
+        let first = released_output_path(ItemKind::Rule, Client::Claude, "a");
+        let second = released_output_path(ItemKind::Rule, Client::Claude, "b");
         write(tmp.path(), &first, b"a");
         write(tmp.path(), &second, b"b");
         let blocked = tmp.path().join(&second);
@@ -639,10 +639,10 @@ mod tests {
     #[test]
     fn adoption_skips_symlink_entries_in_the_walk() {
         let tmp = tempfile::tempdir().unwrap();
-        let entry = output_path(ItemKind::Skill, Client::Claude, "demo");
+        let entry = released_output_path(ItemKind::Skill, Client::Claude, "demo");
         write(tmp.path(), &entry, b"body");
         write(tmp.path(), Path::new("outside.txt"), b"outside");
-        let base = resource_base_path(ItemKind::Skill, Client::Claude, "demo");
+        let base = released_resource_base_path(ItemKind::Skill, Client::Claude, "demo");
         std::os::unix::fs::symlink(
             tmp.path().join("outside.txt"),
             tmp.path().join(&base).join("link.txt"),
@@ -660,7 +660,7 @@ mod tests {
         for client in ALL_CLIENTS {
             write(
                 tmp.path(),
-                &output_path(ItemKind::Skill, client, "demo"),
+                &released_output_path(ItemKind::Skill, client, "demo"),
                 b"body",
             );
         }
@@ -679,7 +679,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         write(
             tmp.path(),
-            &output_path(ItemKind::Skill, Client::Claude, "demo"),
+            &released_output_path(ItemKind::Skill, Client::Claude, "demo"),
             b"body",
         );
         let mut lock = schema1_lock(
@@ -698,10 +698,10 @@ mod tests {
         for client in [Client::Claude, Client::Copilot] {
             write(
                 tmp.path(),
-                &output_path(ItemKind::Skill, client, "demo"),
+                &released_output_path(ItemKind::Skill, client, "demo"),
                 b"body",
             );
-            let base = resource_base_path(ItemKind::Skill, client, "demo");
+            let base = released_resource_base_path(ItemKind::Skill, client, "demo");
             write(tmp.path(), &base.join("a.txt"), b"a");
         }
         let mut lock = schema1_lock(

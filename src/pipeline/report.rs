@@ -11,6 +11,7 @@ use std::path::PathBuf;
 
 use super::ItemKind;
 use crate::generate::Client;
+use crate::scope::Scope;
 
 #[derive(Debug, Clone)]
 pub struct InstalledItem {
@@ -347,6 +348,24 @@ pub struct OrphanedDependency {
     pub former_requirers: Vec<String>,
 }
 
+/// Files of one item of the global scope that are still at the paths that a
+/// released version wrote, where the current version writes elsewhere (the
+/// Copilot paths). `upskill update --global` moves them.
+#[derive(Debug, Clone, Serialize)]
+pub struct EarlierLayoutFile {
+    pub kind: ItemKind,
+    pub name: String,
+    /// Paths relative to the global scope root.
+    pub files: Vec<PathBuf>,
+}
+
+/// An item that the lockfiles of both reported scopes record.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct BothScopesItem {
+    pub kind: ItemKind,
+    pub name: String,
+}
+
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct DoctorReport {
     pub missing_outputs: Vec<MissingOutput>,
@@ -378,6 +397,9 @@ pub struct DoctorReport {
     /// Items whose last `add` or `update` did not complete. Non-empty →
     /// `is_clean()` returns false.
     pub interrupted: Vec<InterruptedItem>,
+    /// Files of a global install at the paths of an earlier version. Always
+    /// empty for the project scope. Non-empty → `is_clean()` returns false.
+    pub earlier_layout: Vec<EarlierLayoutFile>,
 }
 
 impl DoctorReport {
@@ -386,7 +408,8 @@ impl DoctorReport {
     /// every CRLF replaced by LF) and can be read,
     /// every locally-sourced item still hashes the same, every lockfile
     /// entry has a recoverable source, no installed plugin is missing
-    /// from its client, and no item has an interrupted operation.
+    /// from its client, no item has an interrupted operation, and no file of
+    /// the scope is at an earlier global path.
     ///
     /// `skipped_plugins` (warn-skip outcomes) are informational: the user
     /// never had the CLI at install time, so this is the expected state.
@@ -399,6 +422,7 @@ impl DoctorReport {
             && self.orphan_entries.is_empty()
             && self.missing_plugins.is_empty()
             && self.interrupted.is_empty()
+            && self.earlier_layout.is_empty()
             && !self
                 .mcp_entries
                 .iter()
@@ -615,6 +639,43 @@ impl ListReport {
     }
 }
 
+/// The [`ListReport`] of one scope, with the scope and its root directory.
+/// Serialized with the report fields at the same level as `scope` and `root`.
+#[derive(Debug, Clone, Serialize)]
+pub struct ScopedList {
+    pub scope: Scope,
+    pub root: PathBuf,
+    #[serde(flatten)]
+    pub report: ListReport,
+}
+
+/// The [`DoctorReport`] of one scope, with the scope and its root directory.
+/// Serialized with the report fields at the same level as `scope` and `root`.
+#[derive(Debug, Clone, Serialize)]
+pub struct ScopedDoctor {
+    pub scope: Scope,
+    pub root: PathBuf,
+    #[serde(flatten)]
+    pub report: DoctorReport,
+}
+
+/// The reports of every checked scope, in the order given, and the items that
+/// the lockfiles of two checked scopes both record.
+#[derive(Debug, Clone, Serialize)]
+pub struct DoctorScopes {
+    pub scopes: Vec<ScopedDoctor>,
+    /// Sorted by kind, then name. An item here is a note and does not affect
+    /// `is_clean()`.
+    pub in_both_scopes: Vec<BothScopesItem>,
+}
+
+impl DoctorScopes {
+    /// True when the report of every scope is clean.
+    pub fn is_clean(&self) -> bool {
+        self.scopes.iter().all(|s| s.report.is_clean())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -670,6 +731,44 @@ mod tests {
             reason: OrphanReason::LocalPathGone,
         });
         assert!(!report.is_clean());
+    }
+
+    #[test]
+    fn doctor_report_not_clean_with_a_file_at_an_earlier_global_path() {
+        let mut report = DoctorReport::default();
+        report.earlier_layout.push(EarlierLayoutFile {
+            kind: ItemKind::Skill,
+            name: "x".into(),
+            files: vec![PathBuf::from(".github/skills/x/SKILL.md")],
+        });
+        assert!(!report.is_clean());
+    }
+
+    #[test]
+    fn doctor_scopes_is_clean_only_when_every_scope_is_clean() {
+        let scoped = |scope, report| ScopedDoctor {
+            scope,
+            root: PathBuf::from("/r"),
+            report,
+        };
+        let mut dirty = DoctorReport::default();
+        dirty.interrupted.push(InterruptedItem {
+            kind: ItemKind::Rule,
+            name: "x".into(),
+        });
+        let mut both = DoctorScopes {
+            scopes: vec![
+                scoped(Scope::Project, DoctorReport::default()),
+                scoped(Scope::Global, DoctorReport::default()),
+            ],
+            in_both_scopes: vec![BothScopesItem {
+                kind: ItemKind::Rule,
+                name: "x".into(),
+            }],
+        };
+        assert!(both.is_clean(), "a note does not make a scope unclean");
+        both.scopes[1].report = dirty;
+        assert!(!both.is_clean());
     }
 
     #[test]

@@ -42,8 +42,9 @@ pub enum Commands {
     ///
     /// Parses each item from the source, renders per-client output, and
     /// records the install in `.upskill-lock.json`. Default scope is the
-    /// current project; falls back to global (`$HOME`) when `cwd` is not
-    /// inside a git repo.
+    /// current project when `cwd` is inside a git repo. Outside one, pass
+    /// `--project` or `--global`. The project scope is refused when `cwd` is
+    /// the home directory (the root of the global scope): pass `--global`.
     #[command(
         display_order = 1,
         after_help = "EXAMPLES:\n  \
@@ -65,8 +66,9 @@ pub enum Commands {
         /// Install into `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Install into the current directory. Outside a git repo, `add` does
+        /// not choose a scope: pass either `--project` or `--global`. Refused with exit code 2 when
+        /// the current directory is the home directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Replace existing items from a different source without error,
@@ -126,8 +128,11 @@ pub enum Commands {
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Operate on the current directory. Without a scope flag, the
+        /// command uses the project scope inside a git repo and the global
+        /// scope outside one.
+        /// Refused with exit code 2 when the current directory is the home
+        /// directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Skip the confirmation prompt that `--source` shows on a TTY.
@@ -164,8 +169,11 @@ pub enum Commands {
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Operate on the current directory. Without a scope flag, the
+        /// command uses the project scope inside a git repo and the global
+        /// scope outside one.
+        /// Refused with exit code 2 when the current directory is the home
+        /// directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Apply every source without a question. In a terminal without
@@ -203,8 +211,11 @@ pub enum Commands {
     },
     /// List installed content recorded in `.upskill-lock.json`.
     ///
-    /// Items are grouped by kind (rules, skills, agents). Bundles, when
-    /// present, are surfaced as a separate section. The command never
+    /// Without a scope flag, both scopes are reported: the project scope
+    /// (current directory), then the global scope (`$HOME`). `--global` or
+    /// `--project` limits the report to that scope. In each scope, items
+    /// are grouped by kind (rules, skills, agents). Bundles, when present,
+    /// are surfaced as a separate section. The command never
     /// fetches and never inspects per-client output files — for that, run
     /// `upskill doctor`.
     #[command(
@@ -214,11 +225,11 @@ pub enum Commands {
             upskill list --global"
     )]
     List {
-        /// Read `$HOME/.upskill-lock.json` instead of the current directory.
+        /// Report only the global scope (`$HOME/.upskill-lock.json`).
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Report only the project scope (the current directory). Refused
+        /// with exit code 2 when the current directory is the home directory.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit a stable JSON document instead of the human-readable
@@ -231,8 +242,14 @@ pub enum Commands {
     /// Reports missing and modified recorded files, recorded files that
     /// cannot be inspected, SSOT hash drift on `local:` sources, lockfile
     /// entries with no recoverable source, orphaned dependencies, missing
-    /// and skipped plugins, MCP server state, and items whose last `add` or
-    /// `update` did not complete.
+    /// and skipped plugins, MCP server state, items whose last `add` or
+    /// `update` did not complete, and, for the global scope, files at the
+    /// earlier Copilot paths that `update --global` moves.
+    ///
+    /// Without a scope flag, both scopes are checked: the project scope
+    /// (current directory), then the global scope (`$HOME`). `--global` or
+    /// `--project` limits the check to that scope. An item installed in both
+    /// scopes is noted and does not change the exit code.
     ///
     /// Doctor never fetches; remote-source drift detection is
     /// `update --dry-run`. Exit 0 when clean, 1 when any drift is found.
@@ -243,11 +260,11 @@ pub enum Commands {
             upskill doctor --global"
     )]
     Doctor {
-        /// Operate on `$HOME` instead of the current directory.
+        /// Check only the global scope (`$HOME/.upskill-lock.json`).
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Check only the project scope (the current directory). Refused
+        /// with exit code 2 when the current directory is the home directory.
         #[arg(short = 'p', long = "project")]
         project: bool,
         /// Emit every report bucket as a stable JSON document. Exit code is
@@ -352,8 +369,11 @@ pub enum Commands {
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
-        /// Force project scope (current directory). Overrides the auto-detect
-        /// fallback to global when `cwd` is not inside a git repo.
+        /// Operate on the current directory. Without a scope flag, the
+        /// command uses the project scope inside a git repo and the global
+        /// scope outside one.
+        /// Refused with exit code 2 when the current directory is the home
+        /// directory; pass `--global`.
         #[arg(short = 'p', long = "project")]
         project: bool,
     },

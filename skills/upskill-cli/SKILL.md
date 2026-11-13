@@ -172,9 +172,10 @@ to run; CI should fail if `fmt` changes anything.
 
 ### `upskill doctor`
 
-Verifies the installed state of a consumer project against its
-`.upskill-lock.json`. Pure consistency check — no judgment on content shape.
-Common findings:
+Verifies the installed state against `.upskill-lock.json`. Without a scope flag
+it checks both scopes (project, then global); `--project` or `--global` limits
+it to one. Pure consistency check — no judgment on content shape. Common
+findings:
 
 - Generated per-client file missing (→ run `update`; in a terminal the block of
   its source shows the item as `update ... 1 file` and asks `Apply? [y/N/q]`) or
@@ -192,11 +193,14 @@ Common findings:
 - Plugin skipped at install time because the client CLI was not on PATH
   (informational warning — install the CLI then run `update --yes`)
 
-Exits 0 when clean. Exits 1 when drift is found (missing outputs, modified
-files, unreadable files, stale hashes, orphan entries, missing plugins, MCP
-servers that are not registered, or interrupted items: an `add` or `update` that
-did not complete, which running the same command again completes). Skipped
-plugins are warnings only and do not affect the exit code.
+Exits 0 when clean. Exits 1 when drift is found in either scope (missing
+outputs, modified files, unreadable files, stale hashes, orphan entries, missing
+plugins, MCP servers that are not registered, interrupted items: an `add` or
+`update` that did not complete, which running the same command again completes,
+or `earlier_layout` files: global-scope files at the earlier Copilot paths under
+`.github/`, which `update --global` moves). Skipped plugins are warnings only
+and do not affect the exit code. An item that both lockfiles record gets a note,
+which does not affect the exit code.
 
 ## Conventions to remember
 

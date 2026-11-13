@@ -130,6 +130,13 @@ scope, not committed). Per-client output paths and ancillary files (`CLAUDE.md`,
 [ADR-0003](docs/adr/0003-generation-pipeline.md) and
 [format-spec §7](docs/specification/format-spec.md).
 
+Without a scope flag, `add` stops outside a git repo (exit 2); `update`,
+`remove` and `remove-mcp` use the global scope there; `list` and `doctor` report
+both scopes. The project scope is refused (exit 2, pass `--global`) when `cwd`
+is the home directory. A global install writes Copilot content under
+`$HOME/.copilot/`. `add`, `update`, `remove` and `remove-mcp` print
+`scope: <scope> (<root>)` to stderr unless `--quiet` is set.
+
 ### Source format
 
 `upskill add` accepts:
@@ -170,7 +177,7 @@ the way you would for any manual `git clone`.
   `common::upskill_cmd(&fake_home)` — never a raw
   `Command::cargo_bin("upskill")`. The harness points `HOME`/`USERPROFILE` at a
   tempdir so a stray global-scope write can't land in the developer's real
-  `$HOME` (`add` defaults to global outside a git repo).
+  `$HOME` (`add` outside a git repo needs `--project` or `--global`).
   `tests/cli_test_harness_guard.rs` enforces this; a file that must control
   `HOME` itself opts out with an `upskill-allow-raw-cargo-bin: <reason>`
   comment. Pattern:

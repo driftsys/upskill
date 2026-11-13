@@ -59,8 +59,10 @@ const VSCODE_SETTINGS: &str = ".vscode/settings.json";
 const VSCODE_INSTRUCTIONS_KEY: &str = "chat.instructionsFilesLocations";
 
 /// Path entry inserted into `chat.instructionsFilesLocations` so VS Code
-/// Copilot picks up generated rule files at `.github/instructions/`. Matches
-/// the per-client output path for Copilot rules in format-spec §7.
+/// Copilot picks up generated rule files at `.github/instructions/`. This is
+/// the Copilot rule path of the project scope (format-spec §7). In the global
+/// scope the rule files are written to `.copilot/instructions/`, which this
+/// entry does not point at.
 const VSCODE_INSTRUCTIONS_PATH: &str = ".github/instructions";
 
 /// Outcome of a single ancillary write, surfaced for callers that want to

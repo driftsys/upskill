@@ -25,8 +25,9 @@ use crate::lockfile::{LockedItem, Lockfile, OwnedFile};
 /// into the `LockedItem` it upserts for each installed item.
 pub(super) type RecordedFiles = BTreeMap<(ItemKind, String), Vec<OwnedFile>>;
 
-/// Client roots under which a recorded path may be deleted.
-const CLIENT_ROOTS: [&str; 4] = [".claude", ".github", ".agents", ".opencode"];
+/// Client roots under which a recorded path may be deleted. `.copilot` is the
+/// root of the personal Copilot directories that the global scope writes.
+const CLIENT_ROOTS: [&str; 5] = [".claude", ".github", ".agents", ".opencode", ".copilot"];
 
 /// State of a destination that blocks the write of an item.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1092,6 +1093,22 @@ mod tests {
     use crate::lockfile::LockedItem;
     use crate::pipeline::plan::PlannedFile;
     use std::path::PathBuf;
+
+    #[test]
+    fn deletable_accepts_the_paths_under_every_client_root() {
+        for rel in [
+            ".claude/skills/x/SKILL.md",
+            ".github/skills/x/SKILL.md",
+            ".agents/skills/x/SKILL.md",
+            ".opencode/agents/x.md",
+            ".copilot/skills/x/SKILL.md",
+        ] {
+            assert_eq!(deletable(rel), Some(PathBuf::from(rel)), "{rel}");
+        }
+        for rel in [".other/skills/x/SKILL.md", ".copilot/skills", "../x/y/z"] {
+            assert_eq!(deletable(rel), None, "{rel}");
+        }
+    }
 
     fn planned(name: &str, files: &[(&str, &[u8])]) -> PlannedItem {
         PlannedItem {

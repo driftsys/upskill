@@ -4,7 +4,9 @@
 //! Walks a source directory laid out per format-spec §2.1, parses each
 //! item's frontmatter into the model (§3), renders per-client output via
 //! `crate::generate`, plans the result, and writes the plan to the
-//! per-client paths defined in format-spec §7 / ADR-0003.
+//! per-client paths computed by `output::output_path`. The project-scope
+//! paths are those of format-spec §7 / ADR-0003; the global Copilot paths
+//! differ and are listed in the doc comment of `output_path`.
 //!
 //! Entry points:
 //! - [`install_with_lockfile`] — consumer-facing; install + record state +
@@ -44,7 +46,7 @@ pub use apply::{ConflictState, FileConflict};
 pub use git::{fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;
-pub use lifecycle::{doctor, list, remove, update};
+pub use lifecycle::{doctor, doctor_scopes, installed_names, list, list_scopes, remove, update};
 pub use report::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -116,6 +118,10 @@ pub struct AddOptions {
     /// [`InstallReport::conflicts`]: its modified destinations are listed in
     /// [`InstallReport::kept_modified`], and its lockfile entry is unchanged.
     pub keep_unwithheld_edits: bool,
+    /// The scope of the install. It selects the output paths: the global
+    /// scope writes Copilot content under `~/.copilot`. The default is the
+    /// project scope.
+    pub scope: crate::scope::Scope,
 }
 
 const ALL_CLIENTS: [Client; 3] = Client::ALL;

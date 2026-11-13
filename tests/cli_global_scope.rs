@@ -1,8 +1,9 @@
-//! ATDD tests for global vs project scope and the auto-fallback rule.
+//! ATDD tests for global vs project scope.
 //!
-//! Spec §1.2 / §2.1: project (`<cwd>/`) is the default; global (`$HOME/`)
-//! kicks in when `-g/--global` is passed OR when `cwd` is not inside a git
-//! repo. `-p/--project` forces project regardless. `-g` and `-p` are
+//! Without a scope flag, the project (`<cwd>/`) is used inside a git repo.
+//! Outside one, `update` and `remove` use the global scope (`$HOME/`), and
+//! `add` refuses. `list` and `doctor` without a flag report both scopes. `-g/--global` selects global and
+//! `-p/--project` selects project regardless of git state. `-g` and `-p` are
 //! mutually exclusive at the clap layer.
 //!
 //! upskill-allow-raw-cargo-bin: this suite tests global scope itself — each
@@ -101,8 +102,8 @@ fn add_short_g_flag_works_too() {
 }
 
 #[test]
-fn auto_fallback_when_not_in_git_repo_uses_global() {
-    // No `.git` anywhere up the tree — auto-fallback to global.
+fn update_outside_a_git_repository_uses_global() {
+    // No `.git` anywhere up the tree: `update` without a flag uses global.
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
     let home = tmp.path().join("fakehome");
@@ -110,30 +111,39 @@ fn auto_fallback_when_not_in_git_repo_uses_global() {
     stage_source(&source);
     fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(&cwd).unwrap();
-    // No `.git` marker — cwd is NOT a project.
+    // No `.git` marker: cwd is NOT a project.
 
     Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
-        .args(["add", source.to_str().unwrap()])
+        .args(["add", "--global", source.to_str().unwrap()])
         .assert()
         .success();
 
+    let out = Command::cargo_bin("upskill")
+        .unwrap()
+        .current_dir(&cwd)
+        .env("HOME", &home)
+        .args(["update", "--yes"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let err = String::from_utf8_lossy(&out.stderr);
     assert!(
-        home.join(".upskill-lock.json").exists(),
-        "auto-fallback wrote to HOME"
+        err.contains(&format!("scope: global ({})", home.display())),
+        "{err}"
     );
     assert!(
         !cwd.join(".upskill-lock.json").exists(),
-        "auto-fallback did NOT write to cwd"
+        "update did NOT write to cwd"
     );
 }
 
 #[test]
-fn project_flag_overrides_auto_fallback() {
-    // `cwd` is NOT in a git repo, so auto-fallback would pick global.
-    // `-p/--project` forces project anyway.
+fn project_flag_installs_into_cwd_outside_a_git_repository() {
+    // `cwd` is NOT in a git repo, so `add` without a flag would refuse.
+    // `-p/--project` installs into `cwd` anyway.
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
     let home = tmp.path().join("fakehome");
@@ -193,12 +203,12 @@ fn list_global_reads_home_lockfile() {
         .assert()
         .success();
 
-    // `list` without `-g` from project cwd: reports nothing (project lockfile is absent).
+    // `list --project` from project cwd: reports nothing (project lockfile is absent).
     let project_assert = Command::cargo_bin("upskill")
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
-        .args(["list"])
+        .args(["list", "--project"])
         .assert()
         .success();
     let project_out = String::from_utf8(project_assert.get_output().stdout.clone()).unwrap();
@@ -277,4 +287,31 @@ fn add_global_errors_clearly_when_neither_home_nor_userprofile_set() {
         stderr.contains("USERPROFILE"),
         "error mentions USERPROFILE: {stderr}"
     );
+}
+
+#[test]
+fn list_and_doctor_report_the_project_scope_only_when_home_is_not_set() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cwd = tmp.path().join("cwd");
+    fs::create_dir_all(cwd.join(".git")).unwrap();
+    for args in [["list", "--json"], ["doctor", "--json"]] {
+        let assert = Command::cargo_bin("upskill")
+            .unwrap()
+            .current_dir(&cwd)
+            .env_remove("HOME")
+            .env_remove("USERPROFILE")
+            .args(args)
+            .assert()
+            .success();
+        let out = assert.get_output();
+        let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+        let scopes = v["scopes"].as_array().unwrap();
+        assert_eq!(scopes.len(), 1, "{args:?}: {v}");
+        assert_eq!(scopes[0]["scope"], "project", "{args:?}: {v}");
+        let stderr = String::from_utf8(out.stderr.clone()).unwrap();
+        assert!(
+            stderr.contains("note: the global scope is not shown: HOME is not set"),
+            "{args:?}: {stderr}"
+        );
+    }
 }
