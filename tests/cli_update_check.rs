@@ -496,14 +496,17 @@ fn a_terminal_update_keeps_the_recorded_commit_of_a_withheld_item() {
 
 /// The environment variables of `run_mapped`, for the terminal fixture.
 #[cfg(unix)]
-fn terminal_env(e: &Env) -> Vec<(&'static str, String)> {
-    vec![
+fn terminal_env(e: &Env, other: Option<&Path>) -> Vec<(&'static str, String)> {
+    let mut vars = vec![
         ("GIT_CONFIG_NOSYSTEM", "1".to_string()),
         (
             "GIT_CONFIG_GLOBAL",
             e.home.join("empty-gitconfig").display().to_string(),
         ),
-        ("GIT_CONFIG_COUNT", "2".to_string()),
+        (
+            "GIT_CONFIG_COUNT",
+            if other.is_some() { "3" } else { "2" }.to_string(),
+        ),
         (
             "GIT_CONFIG_KEY_0",
             format!("url.file://{}.insteadOf", e.upstream.display()),
@@ -513,7 +516,15 @@ fn terminal_env(e: &Env) -> Vec<(&'static str, String)> {
         ("GIT_CONFIG_VALUE_1", "always".to_string()),
         ("GIT_ALLOW_PROTOCOL", "file".to_string()),
         ("GIT_TERMINAL_PROMPT", "0".to_string()),
-    ]
+    ];
+    if let Some(other) = other {
+        vars.push((
+            "GIT_CONFIG_KEY_2",
+            format!("url.file://{}.insteadOf", other.display()),
+        ));
+        vars.push(("GIT_CONFIG_VALUE_2", format!("{OTHER_REMOTE}.git")));
+    }
+    vars
 }
 
 /// The recorded commit of the item `name` in the lockfile at `root`.
@@ -541,8 +552,13 @@ fn a_terminal_update_of_one_item_keeps_the_commit_of_an_unselected_item() {
     let head = upstream_head(&e);
     assert_ne!(old, head);
 
-    let result =
-        common::update_in_terminal_with_env(&e.repo, &e.home, &["alpha"], "", &terminal_env(&e));
+    let result = common::update_in_terminal_with_env(
+        &e.repo,
+        &e.home,
+        &["alpha"],
+        "",
+        &terminal_env(&e, None),
+    );
     assert_eq!(result["returncode"], 0, "{result}");
     assert_eq!(commit_of(&e.repo, "alpha"), head.as_str(), "{result}");
     assert_eq!(commit_of(&e.repo, "beta"), old.as_str(), "{result}");
@@ -551,6 +567,12 @@ fn a_terminal_update_of_one_item_keeps_the_commit_of_an_unselected_item() {
     let text = stdout(&out);
     assert!(text.contains("update available"), "{text}");
     assert!(text.contains("    skill beta\n"), "{text}");
+
+    // The status of a check with names comes from the named entries only.
+    let out = run(&e, &e.repo, &["update", "--check", "--project", "alpha"]);
+    let text = stdout(&out);
+    assert!(text.contains("  up to date\n"), "{text}");
+    assert!(!text.contains("update available"), "{text}");
 }
 
 fn short(commit: &str) -> &str {
@@ -910,4 +932,67 @@ fn update_records_the_commit_of_a_source_only_on_its_own_entries() {
     assert_eq!(commit_of(&e.repo, "alpha"), head.as_str());
     assert_eq!(commit_of(&e.repo, "beta"), head.as_str());
     assert_eq!(commit_of(&e.repo, "gamma"), other_head.as_str());
+}
+
+#[cfg(unix)]
+#[test]
+fn a_terminal_update_without_changes_records_the_commit_of_its_own_source_only() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let other = e.upstream.parent().unwrap().join("other");
+    fs::create_dir_all(&other).unwrap();
+    git_in_dir(&e, &other, &["init", "--initial-branch=main"]);
+    write_skill(&other, "gamma", "Gamma content.");
+    git_in_dir(&e, &other, &["add", "."]);
+    git_in_dir(&e, &other, &["commit", "-m", "other"]);
+    let out = run_with_other(&e, &other, &["add", OTHER_REMOTE, "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let other_head = git_in_dir(&e, &other, &["rev-parse", "HEAD"]);
+    // Only the first source gets a new commit; no item changes, so the
+    // terminal run asks nothing and takes the not-applied path.
+    let head = advance(&e, "NOTES.md", "second\n");
+    assert_ne!(head, other_head);
+    let result = common::update_in_terminal_with_env(
+        &e.repo,
+        &e.home,
+        &[],
+        "",
+        &terminal_env(&e, Some(&other)),
+    );
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(commit_of(&e.repo, "alpha"), head.as_str(), "{result}");
+    assert_eq!(commit_of(&e.repo, "beta"), head.as_str(), "{result}");
+    assert_eq!(commit_of(&e.repo, "gamma"), other_head.as_str(), "{result}");
+}
+
+#[test]
+fn check_prints_no_scope_line() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let out = run(&e, &e.repo, &["update", "--check"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert!(!stderr(&out).contains("scope:"), "{}", stderr(&out));
+    // Contrast: `update` prints the line.
+    let out = run(&e, &e.repo, &["update", "--yes"]);
+    assert!(
+        stderr(&out).contains("scope: project ("),
+        "{}",
+        stderr(&out)
+    );
+}
+
+#[test]
+fn check_in_the_home_directory_reports_the_global_scope_and_refuses_project() {
+    let e = env();
+    let out = run(&e, &e.outside, &["add", REMOTE, "--global", "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    // The home directory is a git repository, as in the `update` rule.
+    fs::create_dir_all(e.home.join(".git")).unwrap();
+    let out = run(&e, &e.home, &["update", "--check"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(text.contains("global ("), "{text}");
+    assert!(!text.contains("project ("), "{text}");
+    let out = run(&e, &e.home, &["update", "--check", "--project"]);
+    assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
 }

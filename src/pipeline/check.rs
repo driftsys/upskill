@@ -94,7 +94,8 @@ pub struct CheckedSource {
     pub source: String,
     pub status: SourceStatus,
     /// For `UpdateAvailable`: every item of a git source; the items whose
-    /// hash differs for a local path source. Sorted by kind, then name.
+    /// hash differs for a local path source. With names, only the entries with
+    /// those names are listed. Sorted by kind, then name.
     /// Empty for every other status.
     pub items: Vec<(ItemKind, String)>,
 }
@@ -620,6 +621,31 @@ mod tests {
             .insert(SOURCE.to_string(), Ok(Some(COMMIT_B.to_string())));
         let checks = check_scopes(&[project, global], &[], far(), &mut remote).unwrap();
         assert_eq!(remote.calls, 2);
+        assert_eq!(checks[0].sources[0].status, SourceStatus::UpToDate);
+        assert_eq!(checks[1].sources[0].status, SourceStatus::UpToDate);
+    }
+
+    #[test]
+    fn two_labels_with_one_clone_url_and_ref_are_looked_up_once() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = root(&tmp.path().join("p"), Scope::Project);
+        let global = root(&tmp.path().join("g"), Scope::Global);
+        // A subfolder is part of the label but not of the clone URL.
+        let with_subfolder = format!("{SOURCE}:skills/a");
+        save(
+            &project.root,
+            vec![entry(ItemKind::Skill, "a", &with_subfolder, Some(COMMIT_A))],
+        );
+        save(
+            &global.root,
+            vec![entry(ItemKind::Skill, "b", SOURCE, Some(COMMIT_A))],
+        );
+        let mut remote = FakeRemote::with(&with_subfolder, Ok(Some(COMMIT_A.to_string())));
+        remote
+            .answers
+            .insert(SOURCE.to_string(), Ok(Some(COMMIT_A.to_string())));
+        let checks = check_scopes(&[project, global], &[], far(), &mut remote).unwrap();
+        assert_eq!(remote.calls, 1);
         assert_eq!(checks[0].sources[0].status, SourceStatus::UpToDate);
         assert_eq!(checks[1].sources[0].status, SourceStatus::UpToDate);
     }

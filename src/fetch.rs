@@ -213,8 +213,9 @@ pub(crate) fn ls_remote(
     git_ref: Option<&str>,
     deadline: Instant,
 ) -> Result<Option<String>, RunError> {
-    let cmd = ls_remote_command(url, git_ref);
-    let output = run_until(cmd, deadline)?;
+    // The command goes to `run_until` as `ls_remote_command` built it, so
+    // that the test of that function covers the command that runs.
+    let output = run_until(ls_remote_command(url, git_ref), deadline)?;
 
     let lines: Vec<(&str, &str)> = output
         .lines()
