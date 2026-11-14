@@ -1710,6 +1710,20 @@ fn print_doctor_scopes(report: &DoctorScopes) {
             );
         }
     }
+    println!();
+    println!("Support levels:");
+    for cell in &report.support {
+        let mut line = format!(
+            "  {:<9} {:<6} {}",
+            cell.client,
+            cell.kind.to_string(),
+            cell.level
+        );
+        if let (Some(version), Some(date)) = (cell.client_version, cell.checked) {
+            line.push_str(&format!(" ({} {}, {})", cell.client, version, date));
+        }
+        println!("{line}");
+    }
 }
 
 fn print_doctor_report(report: &DoctorReport) {

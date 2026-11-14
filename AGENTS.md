@@ -85,6 +85,7 @@ src/
 ├── lint.rs              Author command — validate SSOT against the format spec
 ├── fmt.rs               Author command — canonicalise YAML frontmatter
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
+├── support.rs           Support level table (client x kind), printed by `doctor`
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
 └── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)

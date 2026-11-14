@@ -677,6 +677,7 @@ pub fn doctor_scopes(roots: &[ScopeRoot]) -> Result<DoctorScopes> {
     Ok(DoctorScopes {
         scopes,
         in_both_scopes,
+        support: crate::support::SUPPORT.to_vec(),
     })
 }
 

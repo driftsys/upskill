@@ -698,6 +698,13 @@ scope. For each scope it reports eleven independent buckets:
 record, `note: <kind> <name> is installed in both scopes`. The note does not
 change the exit code.
 
+After the reports of all scopes, also when a scope flag limits the report and
+when nothing is installed, `doctor` prints the section `Support levels:`: one
+line for each client and kind with its level, as in
+[Support levels](support-levels.md). A supported cell ends with
+`(<client> <version>, <date>)`. The section does not change the exit code, and
+`--quiet` hides it with the rest of the report.
+
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
 modified files, unreadable files, stale hashes, orphan entries, missing plugins,
 unregistered MCP servers, interrupted items, or files at earlier global paths).
@@ -708,14 +715,23 @@ is `update --check` (a lookup of the remote commit, without a fetch) and
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 The document has one element in `scopes` for each checked scope (also when
-`--global` or `--project` selects one scope) and the list `in_both_scopes`. The
-example shows one element of `scopes`; the keys `scope` and `root` come first
-and `earlier_layout` is always present, empty for the project scope.
+`--global` or `--project` selects one scope), the list `in_both_scopes`, and the
+list `support`, which holds one object for each client and kind with the keys
+`client`, `kind`, `level`, `client_version` and `checked` (the last two are
+`null` unless the level is `supported`). The example shows one element of
+`scopes`; the keys `scope` and `root` come first and `earlier_layout` is always
+present, empty for the project scope.
 
 ```json
 {
   "scopes": [ { "scope": "project", "root": "/path/to/project", "...": "..." } ],
-  "in_both_scopes": [ { "kind": "skill", "name": "..." } ]
+  "in_both_scopes": [ { "kind": "skill", "name": "..." } ],
+  "support": [
+    {
+      "client": "claude", "kind": "rule", "level": "experimental",
+      "client_version": null, "checked": null
+    }
+  ]
 }
 ```
 
