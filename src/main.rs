@@ -2692,6 +2692,11 @@ mod tests {
     use super::*;
     use upskill::pipeline::PreviewItem;
 
+    #[test]
+    fn the_notice_looks_up_the_sources_for_5_seconds_at_most() {
+        assert_eq!(NOTICE_TIME_LIMIT, Duration::from_secs(5));
+    }
+
     fn item(action: PreviewAction) -> PreviewItem {
         PreviewItem {
             kind: ItemKind::Skill,

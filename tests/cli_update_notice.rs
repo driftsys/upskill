@@ -203,6 +203,22 @@ fn age_cache(e: &Env, secs: u64) {
     fs::write(&path, serde_json::to_vec(&cache).unwrap()).unwrap();
 }
 
+/// As [`age_cache`], for the scope roots whose path ends with `suffix`.
+fn age_scope(e: &Env, suffix: &str, secs: u64) {
+    let path = cache_path(e);
+    let mut cache: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    let mut aged = 0;
+    for (root, state) in cache["scopes"].as_object_mut().unwrap() {
+        if root.ends_with(suffix) {
+            let at = state["checked_at"].as_u64().unwrap();
+            state["checked_at"] = (at - secs).into();
+            aged += 1;
+        }
+    }
+    assert_eq!(aged, 1, "no scope root ends with {suffix}: {cache}");
+    fs::write(&path, serde_json::to_vec(&cache).unwrap()).unwrap();
+}
+
 /// The scope roots of the cache file.
 fn cached_roots(e: &Env) -> Vec<String> {
     let cache: serde_json::Value =
@@ -215,6 +231,8 @@ fn cached_roots(e: &Env) -> Vec<String> {
         .collect()
 }
 
+const GLOBAL_LINE: &str =
+    "upskill: 2 updates available (global). Run \"upskill update --global\".\n";
 const PROJECT_LINE: &str = "upskill: 2 updates available (project). Run \"upskill update\".\n";
 const CHANGED_ALPHA: &str =
     "---\nschema: 1\nname: alpha\ndescription: Use for testing the update check\n---\n\nnew\n";
@@ -344,10 +362,15 @@ fn notice_survives_an_unwritable_cache_directory() {
         return;
     }
     let out = run(&e, &e.repo, &["update", "--notice"]);
+    // Nothing is stored, so the next session start checks and prints again.
+    let again = run(&e, &e.repo, &["update", "--notice"]);
     fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o755)).unwrap();
     assert_eq!(out.status.code(), Some(0));
     assert_eq!(stdout(&out), PROJECT_LINE);
     assert_eq!(stderr(&out), "");
+    assert_eq!(again.status.code(), Some(0));
+    assert_eq!(stdout(&again), PROJECT_LINE);
+    assert_eq!(stderr(&again), "");
 }
 
 #[test]
@@ -359,6 +382,80 @@ fn notice_prints_nothing_when_a_lockfile_cannot_be_read() {
     assert_eq!(out.status.code(), Some(0));
     assert_eq!(stdout(&out), "");
     assert_eq!(stderr(&out), "");
+    assert!(!cache_path(&e).exists());
+}
+
+/// Both scopes have a recorded, unreported set. Returns the environment.
+fn two_scopes_with_unreported_sets() -> Env {
+    let e = env();
+    let project = run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    assert!(project.status.success(), "{}", stderr(&project));
+    let global = run(&e, &e.outside, &["add", REMOTE, "--claude", "--global"]);
+    assert!(global.status.success(), "{}", stderr(&global));
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let quiet = run(&e, &e.repo, &["--quiet", "update", "--notice"]);
+    assert_eq!(stdout(&quiet), "");
+    assert_eq!(cached_roots(&e).len(), 2);
+    e
+}
+
+#[test]
+fn notice_prints_nothing_for_both_scopes_when_the_lockfile_of_a_due_scope_cannot_be_parsed() {
+    let e = two_scopes_with_unreported_sets();
+    age_scope(&e, "/repo", 86_400);
+    fs::write(e.repo.join(".upskill-lock.json"), "not json").unwrap();
+    let before = fs::read(cache_path(&e)).unwrap();
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+    assert_eq!(fs::read(cache_path(&e)).unwrap(), before);
+}
+
+#[test]
+fn notice_does_not_read_the_lockfile_of_a_scope_that_is_not_due() {
+    let e = two_scopes_with_unreported_sets();
+    fs::write(e.repo.join(".upskill-lock.json"), "not json").unwrap();
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), format!("{PROJECT_LINE}{GLOBAL_LINE}"));
+    assert_eq!(stderr(&out), "");
+}
+
+#[test]
+fn notice_contacts_the_source_only_for_the_scopes_that_are_due() {
+    let e = env();
+    let project = run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    assert!(project.status.success(), "{}", stderr(&project));
+    let global = run(&e, &e.outside, &["add", REMOTE, "--claude", "--global"]);
+    assert!(global.status.success(), "{}", stderr(&global));
+    // Both scopes are checked once, and nothing is available yet.
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
+    assert_eq!(cached_roots(&e).len(), 2);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    age_scope(&e, "/home", 86_400);
+    // Only the global scope is due. A check of the project scope would print
+    // its line too.
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), GLOBAL_LINE);
+}
+
+#[test]
+fn notice_keeps_the_reported_set_after_a_check_that_reached_no_source() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice"])),
+        PROJECT_LINE
+    );
+    age_cache(&e, 86_400);
+    let missing = e.home.join("missing");
+    let offline = run_mapped(&e, &e.repo, &["update", "--notice"], &missing);
+    assert_eq!(stdout(&offline), "");
+    age_cache(&e, 86_400);
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
 }
 
 #[test]
@@ -388,6 +485,39 @@ fn notice_drops_the_cache_entry_of_a_root_that_no_longer_has_a_lockfile() {
     let roots = cached_roots(&e);
     assert_eq!(roots.len(), 1, "{roots:?}");
     assert!(roots[0].ends_with("/repo"), "{roots:?}");
+}
+
+#[test]
+fn notice_writes_nothing_to_stderr_when_the_home_directory_is_not_known() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let out = command(&e, &e.repo, &["update", "--notice"], &e.upstream, None)
+        .env_remove("HOME")
+        .env_remove("USERPROFILE")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), PROJECT_LINE);
+    assert_eq!(stderr(&out), "");
+}
+
+#[test]
+fn notice_uses_no_cache_when_no_cache_directory_is_known() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let out = command(&e, &e.repo, &["update", "--notice"], &e.upstream, None)
+        .env_remove("HOME")
+        .env_remove("USERPROFILE")
+        .env_remove("XDG_CACHE_HOME")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+    // No file is written relative to the current directory.
+    assert!(!e.repo.join(".cache").exists());
 }
 
 #[test]
@@ -471,8 +601,10 @@ fn notice_refuses_other_flags_and_names() {
 
 #[test]
 fn notice_prints_the_project_line_before_the_global_line() {
+    // The two scopes hold different numbers of items, so a line that is
+    // printed with the state of the other scope is detected.
     let e = env();
-    let project = run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let project = run(&e, &e.repo, &["add", REMOTE, "alpha", "--claude"]);
     assert!(project.status.success(), "{}", stderr(&project));
     let global = run(&e, &e.outside, &["add", REMOTE, "--claude", "--global"]);
     assert!(global.status.success(), "{}", stderr(&global));
@@ -480,9 +612,7 @@ fn notice_prints_the_project_line_before_the_global_line() {
     let out = run(&e, &e.repo, &["update", "--notice"]);
     assert_eq!(
         stdout(&out),
-        format!(
-            "{PROJECT_LINE}upskill: 2 updates available (global). Run \"upskill update --global\".\n"
-        )
+        format!("upskill: 1 update available (project). Run \"upskill update\".\n{GLOBAL_LINE}")
     );
 }
 
