@@ -110,6 +110,7 @@ scope, in a git repository or not, and is refused with `--project` there.
 `add`, `update`, `remove` and `remove-mcp` print one line to stderr before they
 change anything, `scope: <scope> (<root>)`. `--quiet` hides it. `update --check`
 prints no such line; the block of each scope names the scope and its root.
+`update --notice` prints no such line either.
 
 Before any write, `add` classifies every destination of every item against the
 item's `files` and `pending` records (§4). A destination is a conflict when it
@@ -158,13 +159,15 @@ items installed from another source; it then lists these files after
 ```text
 upskill update [name...] [--global|--project] [--dry-run] [--force]
 upskill update --check [name...] [--global|--project]
+upskill update --notice
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
-and the global scope outside one; `update --check` reports both scopes instead.
-`--project` uses the current directory. When the current directory is the home
-directory, the project scope is refused with exit code 2 and a message that asks
-for `--global`; `update --check` with no flag reports the global scope there.
+and the global scope outside one; `update --check` and `update --notice` report
+both scopes instead. `--project` uses the current directory. When the current
+directory is the home directory, the project scope is refused with exit code 2
+and a message that asks for `--global`; `update --check` with no flag reports
+the global scope there.
 
 Without `--check`, always fetches the latest source before regenerating. Absorbs
 the role of a separate `sync` command — there is no `--offline` flag in v1;
@@ -326,16 +329,16 @@ question; it is saved when the source is applied for another reason, or with
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
-`--yes`, `--force` and the client flags (exit code 2). Without a scope flag it
-reports both scopes, in the order project, global; the global scope alone when
-the current directory is the home directory. A scope prints one block, headed
-`<scope> (<root>):`, with one line for each source that is not up to date, then
-`up to date` when it has sources and no such line, or `nothing installed` when
-it has no source. A line starts with the status label (`update available`,
-`no recorded commit`, `pinned to a commit`, `not reachable`, `not checked`) and
-names the source label. The last line is `No updates available.` or
-`<n> update(s) available. Run ...` with the command of each scope that has
-updates. The rules for one source, tested in this order:
+`--notice`, `--yes`, `--force` and the client flags (exit code 2). Without a
+scope flag it reports both scopes, in the order project, global; the global
+scope alone when the current directory is the home directory. A scope prints one
+block, headed `<scope> (<root>):`, with one line for each source that is not up
+to date, then `up to date` when it has sources and no such line, or
+`nothing installed` when it has no source. A line starts with the status label
+(`update available`, `no recorded commit`, `pinned to a commit`,
+`not reachable`, `not checked`) and names the source label. The last line is
+`No updates available.` or `<n> update(s) available. Run ...` with the command
+of each scope that has updates. The rules for one source, tested in this order:
 
 | Condition                                                                         | Status                                                    |
 | --------------------------------------------------------------------------------- | --------------------------------------------------------- |
@@ -361,6 +364,47 @@ entry without a recorded commit gives `no recorded commit`; a local path source
 has no recorded commit and is compared by content. Exit code 0 when the check
 ran, also when a source is not reachable; 1 when a lockfile cannot be read or
 parsed. `--quiet` suppresses the output.
+
+`update --notice` prints a session notice for a session-start hook. It accepts
+no name and no other flag (exit code 2). Its roots are the scopes that
+`update --check` reports without a flag; a root without a lockfile is left out.
+It keeps a cache file, `notice.json` in the upskill cache directory
+(`$XDG_CACHE_HOME/upskill`, else `~/.cache/upskill`), and changes no other file.
+The cache file is a JSON object `{"scopes": {<root path>: <state>}}`; the key is
+the path of the scope root, and a state has these fields, each defaulting to
+zero or empty when absent:
+
+| Field        | Type            | Meaning                                                                                                         |
+| ------------ | --------------- | --------------------------------------------------------------------------------------------------------------- |
+| `checked_at` | integer         | Unix time in seconds of the last check. A check that reached no source also sets it.                            |
+| `updates`    | array of string | The updates found by the last check that reached a source, sorted: `<kind>:<name>@<commit>` or `<kind>:<name>`. |
+| `reported`   | array of string | The set that the last printed notice reported, sorted.                                                          |
+
+A file that is absent, unreadable or not valid JSON is an empty cache. The
+rules, in order:
+
+1. A root is checked when it has no state, when `checked_at` is 86 400 seconds
+   or more before the current time, or when `checked_at` is after the current
+   time. The check is `update --check` for the selected roots with a time limit
+   of 5 seconds for all sources, and a source looked up for two roots once. The
+   check sets `checked_at` to the current time. It sets `updates` unless every
+   source of the root was `not reachable` or `not checked`; a root without a
+   source counts as reached.
+2. For each root, project then global, the command compares `updates` with
+   `reported`. When `updates` is empty, it empties `reported` and prints
+   nothing. When they are equal, it prints nothing. Otherwise it sets `reported`
+   to `updates` and prints
+   `upskill: <n> update(s) available (<scope>). Run "<command>".`, where `<n>`
+   is the number of entries of `updates` and `<command>` is `upskill update` for
+   the project scope and `upskill update --global` for the global scope.
+3. The cache file is written, through a temporary file and a rename, only when
+   its content changed. A failed write is ignored.
+
+Every failure after argument parsing, including a lockfile that cannot be parsed
+and an unknown home directory, prints nothing and gives exit code 0; nothing is
+written to stderr. When neither `XDG_CACHE_HOME` nor the home directory is
+known, no cache file is used and nothing is printed. With `--quiet`, rule 1 and
+rule 3 apply, and rule 2 prints nothing and leaves `reported` unchanged.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -877,11 +921,11 @@ to any depth (`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ### 6.3 Environment variables
 
-| Variable         | Purpose                                        |
-| ---------------- | ---------------------------------------------- |
-| `NO_COLOR`       | Disable colored output.                        |
-| `HTTPS_PROXY`    | HTTP proxy for network requests.               |
-| `XDG_CACHE_HOME` | Override cache directory for registry indexes. |
+| Variable         | Purpose                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| `NO_COLOR`       | Disable colored output.                                                             |
+| `HTTPS_PROXY`    | HTTP proxy for network requests.                                                    |
+| `XDG_CACHE_HOME` | Override cache directory for registry indexes and the `update --notice` cache file. |
 
 ## 7. Out of scope
 

@@ -1,8 +1,8 @@
 //! The session notice: when to print one line about available updates.
 //!
 //! The cache file records, for each scope root, the time of the last check
-//! that contacted the sources, the updates that check found, and the set that
-//! the last printed notice reported. The functions take the time as an
+//! (a check that reached no source also sets it), the updates that check
+//! found, and the set that the last printed notice reported. The functions take the time as an
 //! argument. Only [`NoticeCache::load`] and [`NoticeCache::save`] perform file
 //! I/O.
 

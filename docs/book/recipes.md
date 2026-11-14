@@ -77,6 +77,22 @@ that `update` skipped because of a modified file keeps its older commit, so its
 source stays `update available` until you resolve that item (a local path source
 is compared by content and has no commit).
 
+## Report available updates when a session starts
+
+`upskill update --notice` prints one line for each scope that has updates,
+prints a given set of updates once, contacts the sources at most once in 24
+hours, and always exits with code 0, so that it cannot make a hook fail. When it
+has nothing to report it prints nothing. Call it from a session-start hook that
+you write for your AI client:
+
+```bash
+upskill update --notice
+```
+
+See [`update --notice`](commands.md#update---notice) for the output, the cache
+file and the exit codes. A session without network access records the attempt
+and tries again after 24 hours.
+
 ## Bisect drift
 
 If a teammate's `.upskill-lock.json` shows different content than yours after

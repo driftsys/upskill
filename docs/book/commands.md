@@ -71,8 +71,8 @@ scope, in a git repository or not; with `--project` it is refused there.
 
 `add`, `update`, `remove` and `remove-mcp` print one line to stderr that names
 the scope and its root, for example `scope: global (/home/alice)`. `--quiet`
-hides it. `update --check` prints no such line: the block of each scope names
-the scope and its root.
+hides it. `update --check` and `update --notice` print no such line: the block
+of each scope in `update --check` names the scope and its root.
 
 **Client selection.** By default `add` emits output for **every** client.
 Restrict it to the clients you actually use with one or more of `--claude`,
@@ -196,14 +196,15 @@ upskill update                       # update everything
 upskill update code-review           # update one item
 upskill update --dry-run             # preview changes without applying
 upskill update --check               # report newer versions, without a fetch
+upskill update --notice              # one line per scope for a session start
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
-and the global scope outside one; `update --check` reports both scopes instead.
-`--project` uses the current directory and `--global` uses `$HOME`. When the
-current directory is the home directory, the project scope is refused with exit
-code 2 and a message that asks for `--global`; `update --check` with no flag
-reports the global scope there.
+and the global scope outside one; `update --check` and `update --notice` report
+both scopes instead. `--project` uses the current directory and `--global` uses
+`$HOME`. When the current directory is the home directory, the project scope is
+refused with exit code 2 and a message that asks for `--global`;
+`update --check` with no flag reports the global scope there.
 
 `update` always fetches before regenerating; there is no separate `sync`.
 [`update --check`](#update---check) is the exception: it never fetches. `update`
@@ -458,12 +459,12 @@ upskill update --check [name...] [--global | --project]
 ```
 
 Reports which sources have a newer version. It changes no file, fetches nothing
-and takes no other flag (`--dry-run`, `--yes`, `--force` and the client flags
-are refused with exit code 2). Without a scope flag it reports both scopes, as
-`list` does; `--global` or `--project` limits it to one. With names, it checks
-only the items with those names, grouped by source: the status and the item list
-of a source cover only those items. Output goes to stdout, and `--quiet`
-suppresses it:
+and takes no other flag (`--dry-run`, `--notice`, `--yes`, `--force` and the
+client flags are refused with exit code 2). Without a scope flag it reports both
+scopes, as `list` does; `--global` or `--project` limits it to one. With names,
+it checks only the items with those names, grouped by source: the status and the
+item list of a source cover only those items. Output goes to stdout, and
+`--quiet` suppresses it:
 
 ```text
 project (/path/to/repo):
@@ -515,6 +516,48 @@ compared by content.
 
 Exit code: 0 when the check ran, also when a source is not reachable or has an
 update. 1 when a lockfile cannot be read or parsed. 2 for a usage error.
+
+#### `update --notice`
+
+```bash
+upskill update --notice
+```
+
+Prints one line for each scope that has available updates, for a session-start
+hook of an AI client. It takes no item name and no other flag (any of them is
+refused with exit code 2). It uses the scopes that `list` uses, in the order
+project, global, and leaves out a scope that has no lockfile. It prints no scope
+line and writes nothing to stderr. A line has one of two forms:
+
+```text
+upskill: 2 updates available (project). Run "upskill update".
+upskill: 1 update available (global). Run "upskill update --global".
+```
+
+The number counts items, as in `update --check`.
+
+The command is quiet by design:
+
+- A set of updates is printed once. The command prints the line again only when
+  the set of available updates changes. When no update is available, it prints
+  nothing.
+- It contacts the sources at most once in 24 hours for each scope, with the same
+  lookups as `update --check` and a time limit of 5 seconds for all sources.
+  Between two lookups, it uses the result of the last one. A lookup that reaches
+  no source (for example when the session has no network access) also counts:
+  the next attempt waits for the 24 hours.
+- It exits with code 0 in every case after the arguments are parsed. A lockfile
+  that cannot be read, a source that is not reachable, an unknown home directory
+  and a cache file that cannot be read or written print nothing. A usage error
+  exits with code 2.
+- It changes no file under a scope root. The only file it writes is the cache
+  file `notice.json` in the upskill cache directory (`$XDG_CACHE_HOME/upskill`,
+  or `~/.cache/upskill`), which records for each scope root the time of the last
+  lookup, the updates found and the set that was printed. An invalid cache file
+  is treated as an empty one. When neither `XDG_CACHE_HOME` nor the home
+  directory is known, the command uses no cache and prints nothing.
+- With `--quiet` it prints no line. The lookups and the cache update still run,
+  and the set stays unreported, so a later run without `--quiet` prints it.
 
 ### `upskill remove [name...] [--source <label>] [--force]`
 

@@ -9,6 +9,7 @@ use upskill::config;
 use upskill::fmt::{FmtReport, fmt};
 use upskill::index;
 use upskill::lint::{LintReport, lint};
+use upskill::notice;
 use upskill::pipeline::{
     DoctorReport, DoctorScopes, GitRemote, InstallReport, ItemKind, ListedBundle, ListedItem,
     OrphanReason, PluginResult, PreviewAction, RemoveFilter, RemoveReport, ScopedCheck, ScopedList,
@@ -87,6 +88,7 @@ fn main() {
             names,
             dry_run,
             check,
+            notice,
             global,
             project,
             yes,
@@ -99,6 +101,7 @@ fn main() {
             names: &names,
             dry_run,
             check,
+            notice,
             yes,
             global,
             project,
@@ -923,6 +926,8 @@ struct UpdateArgs<'a> {
     dry_run: bool,
     /// `--check`: report the available updates and change nothing.
     check: bool,
+    /// `--notice`: print the session notice of available updates.
+    notice: bool,
     yes: bool,
     global: bool,
     project: bool,
@@ -979,12 +984,16 @@ fn run_update(args: UpdateArgs) -> i32 {
         names,
         dry_run,
         check,
+        notice,
         yes,
         global,
         project,
         force,
         flag_clients,
     } = args;
+    if notice {
+        return run_update_notice();
+    }
     if check {
         return run_update_check(names, global, project);
     }
@@ -1075,6 +1084,73 @@ fn run_update_check(names: &[String], global: bool, project: bool) -> i32 {
             EXIT_ERROR
         }
     }
+}
+
+/// The time that `update --notice` spends on the lookups of all sources.
+const NOTICE_TIME_LIMIT: Duration = Duration::from_secs(5);
+
+/// `update --notice`: print one line for each scope whose set of available
+/// updates was not reported yet. Exits with code 0 in every case. A failed
+/// step prints nothing and writes nothing to stderr. Under `--quiet`, the
+/// checks and the cache update run, and no line is printed or marked as
+/// reported.
+fn run_update_notice() -> i32 {
+    let _ = notice_lines();
+    EXIT_SUCCESS
+}
+
+fn notice_lines() -> Option<()> {
+    let cache_path = notice_cache_path()?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs();
+    let roots: Vec<ScopeRoot> = report_scopes_with_note(false, false, false)
+        .ok()?
+        .into_iter()
+        .filter(|at| at.root.join(upskill::lockfile::LOCKFILE_NAME).is_file())
+        .collect();
+    let mut cache = notice::NoticeCache::load(&cache_path);
+    let before = cache.clone();
+    let due: Vec<ScopeRoot> = roots
+        .iter()
+        .filter(|at| notice::needs_check(&cache, &at.root, now))
+        .cloned()
+        .collect();
+    if !due.is_empty() {
+        let deadline = Instant::now() + NOTICE_TIME_LIMIT;
+        for check in check_scopes(&due, &[], deadline, &mut GitRemote).ok()? {
+            notice::record_check(
+                &mut cache,
+                &check.root,
+                notice::update_set(&check),
+                notice::reached(&check),
+                now,
+            );
+        }
+    }
+    if !style::is_quiet() {
+        for at in &roots {
+            if let Some(line) = notice::decide(&mut cache, at.scope, &at.root) {
+                println!("{line}");
+            }
+        }
+    }
+    if cache != before {
+        let _ = cache.save(&cache_path);
+    }
+    Some(())
+}
+
+/// The cache file of the notice. `None` when neither `XDG_CACHE_HOME` nor the
+/// home directory is known, so that no file is written relative to the
+/// current directory.
+fn notice_cache_path() -> Option<PathBuf> {
+    let xdg_set = std::env::var("XDG_CACHE_HOME").is_ok_and(|v| !v.is_empty());
+    if !xdg_set && home_dir().is_none() {
+        return None;
+    }
+    Some(index::cache_root().join(notice::CACHE_FILE_NAME))
 }
 
 /// The width of the status label column of `update --check`.
@@ -2046,6 +2122,15 @@ fn run_list(global: bool, project: bool, json: bool) -> i32 {
 /// would be the same lockfile), and the project scope alone is given, with a
 /// note on stderr, when the home directory is not known.
 fn report_scopes(global: bool, project: bool) -> Result<Vec<ScopeRoot>, ScopeError> {
+    report_scopes_with_note(global, project, !style::is_quiet())
+}
+
+/// As [`report_scopes`]; `note` says whether the missing-home note is printed.
+fn report_scopes_with_note(
+    global: bool,
+    project: bool,
+    note: bool,
+) -> Result<Vec<ScopeRoot>, ScopeError> {
     if global {
         return Ok(vec![scope_root(Scope::Global).map_err(ScopeError::Other)?]);
     }
@@ -2054,7 +2139,7 @@ fn report_scopes(global: bool, project: bool) -> Result<Vec<ScopeRoot>, ScopeErr
     }
     let project_root = scope_root(Scope::Project).map_err(ScopeError::Other)?;
     let Ok(global_root) = scope_root(Scope::Global) else {
-        if !style::is_quiet() {
+        if note {
             eprintln!("note: the global scope is not shown: HOME is not set");
         }
         return Ok(vec![project_root]);

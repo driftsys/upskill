@@ -159,6 +159,7 @@ pub enum Commands {
             upskill update code-review\n  \
             upskill update --dry-run\n  \
             upskill update --check\n  \
+            upskill update --notice\n  \
             upskill update --global"
     )]
     Update {
@@ -173,9 +174,19 @@ pub enum Commands {
         /// source is compared by content. The lookups end after 10 seconds.
         #[arg(
             long = "check",
-            conflicts_with_all = ["dry_run", "yes", "force", "claude", "copilot", "vscode", "opencode"]
+            conflicts_with_all = ["dry_run", "yes", "force", "claude", "copilot", "vscode", "opencode", "notice"]
         )]
         check: bool,
+        /// Print one line for each scope that has available updates, for a
+        /// session-start hook of an AI client. A set of updates is printed
+        /// once. The sources are contacted at most once in 24 hours, for
+        /// 5 seconds at most. Prints nothing and exits with code 0 when a
+        /// step fails. Accepts no other argument or flag.
+        #[arg(
+            long = "notice",
+            conflicts_with_all = ["names", "dry_run", "check", "global", "project", "yes", "force", "claude", "copilot", "vscode", "opencode"]
+        )]
+        notice: bool,
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,
