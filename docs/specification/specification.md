@@ -170,9 +170,10 @@ directory is the home directory, the project scope is refused with exit code 2
 and a message that asks for `--global`; `update --check` and `update --notice`
 with no flag report the global scope there.
 
-Without `--check`, always fetches the latest source before regenerating. Absorbs
-the role of a separate `sync` command — there is no `--offline` flag in v1;
-offline use is covered by passing local paths to `add` / `update`.
+Without `--check` and `--notice`, always fetches the latest source before
+regenerating; `--check` and `--notice` fetch nothing. Absorbs the role of a
+separate `sync` command — there is no `--offline` flag in v1; offline use is
+covered by passing local paths to `add` / `update`.
 
 `update` covers two distinct behaviours:
 
@@ -377,11 +378,11 @@ object `{"scopes": {<root path>: <state>}}`; the key is the path of the scope
 root, and a state has these fields, each defaulting to zero or empty when
 absent:
 
-| Field        | Type            | Meaning                                                                                                         |
-| ------------ | --------------- | --------------------------------------------------------------------------------------------------------------- |
-| `checked_at` | integer         | Unix time in seconds of the last check. A check that reached no source also sets it.                            |
-| `updates`    | array of string | The updates found by the last check that reached a source, sorted: `<kind>:<name>@<commit>` or `<kind>:<name>`. |
-| `reported`   | array of string | The set that the last printed notice reported, sorted.                                                          |
+| Field        | Type            | Meaning                                                                                                     |
+| ------------ | --------------- | ----------------------------------------------------------------------------------------------------------- |
+| `checked_at` | integer         | Unix time in seconds of the last check. A check that reached no source also sets it.                        |
+| `updates`    | array of string | The updates found by the checks that reached a source, sorted: `<kind>:<name>@<commit>` or `<kind>:<name>`. |
+| `reported`   | array of string | The set that the last printed notice reported, sorted.                                                      |
 
 A file that is absent, unreadable or not valid JSON is an empty cache. The
 rules, in order:
@@ -390,27 +391,43 @@ rules, in order:
    or more before the current time, or when `checked_at` is after the current
    time. The check is `update --check` for the selected roots with a time limit
    of 5 seconds for all sources, and a source looked up for two roots once. The
-   check sets `checked_at` to the current time. It sets `updates` unless every
-   source of the root was `not reachable` or `not checked`; a root without a
-   source counts as reached.
+   check sets `checked_at` to the current time. It sets `updates` as follows:
+   when every source of the root answered (a root without a source counts as
+   answered), `updates` becomes the set that the check found; when at least one
+   source answered and at least one was `not reachable` or `not checked`, the
+   check adds its entries and keeps each earlier entry whose `<kind>:<name>`
+   part is not in the found set; when every source was `not reachable` or
+   `not checked`, `updates` stays.
 2. For each root, project then global, the command compares `updates` with
    `reported`. When `updates` is empty, it empties `reported` and prints
    nothing. When they are equal, it prints nothing. Otherwise it sets `reported`
    to `updates` and prints
    `upskill: <n> update(s) available (<scope>). Run "<command>".`, where `<n>`
-   is the number of entries of `updates` and `<command>` is `upskill update` for
-   the project scope and `upskill update --global` for the global scope.
-3. The cache file is written, through a temporary file and a rename, only when
-   its content changed. A failed write is ignored.
+   is the number of distinct entries of `updates` and `<command>` is
+   `upskill update` for the project scope and `upskill update --global` for the
+   global scope. `update --check` counts the items as it lists them.
+3. The state of a root that has no lockfile is removed, and so is every state
+   whose root directory holds no `.upskill-lock.json`. The command reads the
+   cache file again, applies the states of the roots of this run to that copy,
+   and writes the copy, through a temporary file and a rename, only when its
+   content changed. A failed write is ignored. A run that saves between the
+   second read and the rename of this run loses its entries; its roots are
+   checked again at their next session start.
 
 Every failure after argument parsing prints nothing and gives exit code 0;
-nothing is written to stderr. The failures are: no cache directory is known
-(neither an absolute `XDG_CACHE_HOME` nor the home directory), the scope roots
-cannot be determined, and a lockfile that cannot be parsed, which silences both
-scopes in that run and writes no cache file. A source that is not reachable
-prints nothing for its scope, and a failed read or write of the cache file is
-ignored. With `--quiet`, rule 1 and rule 3 apply, and rule 2 prints nothing and
-leaves `reported` unchanged.
+nothing is written to stderr. An interrupt (SIGINT) ends the command at once
+with exit code 0, prints nothing and leaves the cache file as it was; a failed
+installation of the signal handler is ignored. The failures are: no cache
+directory is known (neither an absolute `XDG_CACHE_HOME` nor the home
+directory), the scope roots cannot be determined, and a lockfile that cannot be
+parsed. Only a root that is due has its lockfile read; when that lockfile cannot
+be parsed, the command prints nothing for any root, also not the cached line of
+a root that is not due, and writes no cache file. A source that is not reachable
+adds no update, so its root prints a line only for the updates of its other
+sources, and a failed read or write of the cache file is ignored. When the cache
+directory cannot be written, nothing is stored, so the check runs and the line
+is printed at every session start. With `--quiet`, rule 1 and rule 3 apply, and
+rule 2 prints nothing and leaves `reported` unchanged.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,

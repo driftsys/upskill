@@ -711,7 +711,8 @@ fn reselect_from_entries(
 /// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
 /// handle the sources one at a time, sorted by source label. `update`
 /// always fetches per ADR-0004 — there is no `--offline`. `update --check`
-/// does not call this function: it fetches nothing and changes no file.
+/// and `update --notice` do not call this function: they fetch nothing and
+/// change no installed file.
 ///
 /// `names` selects which lockfile entries to update; empty means "all".
 /// When names are given, the entries' source labels are used to fetch

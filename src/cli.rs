@@ -151,7 +151,8 @@ pub enum Commands {
     /// `--dry-run`, prints for each source the block of what applying it
     /// would change, computed from the files on disk and the lockfile,
     /// without writing.
-    /// `update` always fetches; `update --check` never does.
+    /// `update` always fetches; `update --check` and `update --notice` never
+    /// do.
     #[command(
         display_order = 3,
         after_help = "EXAMPLES:\n  \
@@ -180,8 +181,10 @@ pub enum Commands {
         /// Print one line for each scope that has available updates, for a
         /// session-start hook of an AI client. A set of updates is printed
         /// once. The sources are contacted at most once in 24 hours, for
-        /// 5 seconds at most. Prints nothing and exits with code 0 when a
-        /// step fails. Accepts no other argument or flag.
+        /// 5 seconds at most, and without a fetch. After the arguments are
+        /// parsed, it exits with code 0 in every case, also when a step fails
+        /// or the process is interrupted, and prints nothing then. Accepts no
+        /// other argument or flag.
         #[arg(
             long = "notice",
             conflicts_with_all = ["names", "dry_run", "check", "global", "project", "yes", "force", "claude", "copilot", "vscode", "opencode"]
@@ -192,7 +195,7 @@ pub enum Commands {
         global: bool,
         /// Operate on the current directory. Without a scope flag, the
         /// command uses the project scope inside a git repo and the global
-        /// scope outside one; `--check` reports both scopes.
+        /// scope outside one; `--check` and `--notice` report both scopes.
         /// Refused with exit code 2 when the current directory is the home
         /// directory; pass `--global`.
         #[arg(short = 'p', long = "project")]

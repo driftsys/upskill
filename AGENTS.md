@@ -144,9 +144,10 @@ install writes Copilot content under `$HOME/.copilot/`. `add`, `update`,
 `--quiet` is set; `update --check` and `update --notice` print no scope line,
 and with no flag in the home directory they report the global scope instead of
 refusing. `update --notice` is built for a session-start hook: it exits 0 in
-every case after argument parsing, writes nothing to stderr, and keeps the time
-of the last check and the printed set in `<cache>/upskill/notice.json`
-(`$XDG_CACHE_HOME` when absolute, else `~/.cache`).
+every case after argument parsing, also on an interrupt, writes nothing to
+stderr, never fetches, and keeps the time of the last check and the printed set
+in `<cache>/upskill/notice.json` (`$XDG_CACHE_HOME` when absolute, else
+`~/.cache`).
 
 ### Source format
 

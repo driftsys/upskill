@@ -209,9 +209,10 @@ refused with exit code 2 and a message that asks for `--global`;
 there.
 
 `update` always fetches before regenerating; there is no separate `sync`.
-[`update --check`](#update---check) is the exception: it never fetches. `update`
-also re-runs the generation pipeline against the current upskill version, so
-client-format updates land without a separate command.
+[`update --check`](#update---check) and [`update --notice`](#update---notice)
+are the exceptions: they never fetch. `update` also re-runs the generation
+pipeline against the current upskill version, so client-format updates land
+without a separate command.
 
 ```bash
 upskill update --force               # also replace modified and unmanaged files
@@ -536,7 +537,8 @@ upskill: 2 updates available (project). Run "upskill update".
 upskill: 1 update available (global). Run "upskill update --global".
 ```
 
-The number counts items, as in `update --check`.
+The number counts distinct items: an item that two sources list with the same
+target commit counts once. `update --check` counts the items as it lists them.
 
 The command is quiet by design:
 
@@ -547,20 +549,33 @@ The command is quiet by design:
   lookups as `update --check` and a time limit of 5 seconds for all sources.
   Between two lookups, it uses the result of the last one. A lookup that reaches
   no source (for example when the session has no network access) also counts:
-  the next attempt waits for the 24 hours.
-- It exits with code 0 in every case after the arguments are parsed. It prints
-  nothing when no cache directory is known, when the scope roots cannot be
-  determined, when a lockfile cannot be parsed, and when a source is not
-  reachable. A lockfile that cannot be parsed in one scope silences the notice
-  for both scopes in that run. A cache file that cannot be read or written does
-  not stop the command: an invalid cache file is treated as an empty one, and a
-  failed write is ignored. A usage error exits with code 2.
+  the next attempt waits for the 24 hours, and the earlier result stays. A
+  lookup that reaches some sources but not all keeps the earlier updates of the
+  sources that it did not reach.
+- It exits with code 0 in every case after the arguments are parsed (a usage
+  error exits with code 2). An interrupt ends the command at once with exit code
+  0 and prints nothing. It prints nothing when no cache directory is known, when
+  the scope roots cannot be determined, and when a lockfile of a scope that is
+  due cannot be parsed. Only a scope that is due has its lockfile read: when
+  that lockfile cannot be parsed, the command prints nothing for either scope,
+  also not the cached line of the other scope, and writes no cache file. A
+  source that is not reachable adds no update; its scope prints a line only for
+  the updates of its other sources. A cache file that cannot be read or written
+  does not stop the command: an invalid cache file is treated as an empty one,
+  and a failed write is ignored. When the cache directory cannot be written,
+  nothing is stored, so the check runs and the line is printed at every session
+  start.
 - It changes no lockfile and no installed file. The only file it writes is the
   cache file `notice.json` in the upskill cache directory, which is
   `$XDG_CACHE_HOME/upskill` when `XDG_CACHE_HOME` is an absolute path (an empty
   or relative value is ignored) and `~/.cache/upskill` otherwise. The file
   records for each scope root the time of the last lookup, the updates found and
-  the set that was printed. When neither directory is known, the command uses no
+  the set that was printed. The entry of a root that has no lockfile is removed.
+  Before the command saves the file, it reads the file again and applies only
+  the entries of its own roots, so that a run that overlaps another run keeps
+  the entries of that run. A run that saves between that read and the save of
+  the command can still lose its entries; its roots are then checked again at
+  the next session start. When neither directory is known, the command uses no
   cache and prints nothing.
 - With `--quiet` it prints no line. The lookups and the cache update still run,
   and the set stays unreported, so a later run without `--quiet` prints it.

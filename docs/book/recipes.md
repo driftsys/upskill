@@ -81,9 +81,10 @@ is compared by content and has no commit).
 
 `upskill update --notice` prints one line for each scope that has updates,
 prints a given set of updates once, contacts the sources at most once in 24
-hours, and always exits with code 0, so that it cannot make a hook fail. When it
-has nothing to report it prints nothing. Call it from a session-start hook that
-you write for your AI client:
+hours, and exits with code 0 in every case after the arguments are parsed (also
+when it is interrupted), so that it cannot make a hook fail. When it has nothing
+to report it prints nothing. Call it from a session-start hook that you write
+for your AI client:
 
 ```bash
 upskill update --notice
