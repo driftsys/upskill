@@ -123,12 +123,10 @@ The documented shape of a hook file (not run):
   field, which the hook command would also have to build.
 - Both clients document that the session continues when the hook fails. Copilot
   CLI also documents that it continues when the hook passes its time limit; the
-  extract of the Claude Code page does not state that case.
-  `upskill update
-  --notice` exits with code 0 after argument parsing (a usage
-  error exits with code 2) and looks up the sources for 5 seconds at most, so a
-  hook cannot block a session start. A hook command should still tolerate a
-  missing `upskill` binary.
+  extract of the Claude Code page does not state that case. The notice command
+  exits with code 0 after argument parsing (a usage error exits with code 2) and
+  looks up the sources for 5 seconds at most, so a hook cannot block a session
+  start. A hook command should still tolerate a missing `upskill` binary.
 
 ## What the trial must record
 
