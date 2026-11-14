@@ -390,11 +390,13 @@ For a git source, `update` records the commit that it fetched in the lockfile
 entries of the source that the run selected, also when the source has no changes
 and is not applied, except the entry of an item whose update is skipped, which
 keeps its recorded commit. With names, an entry that the names did not select
-keeps its commit, except that a bundle source is reinstalled with every member,
-so an applied bundle source gives every member the fetched commit (only a
-changed commit value causes a lockfile write). This write is not a change: it
-does not count in the output above, and `update --dry-run` and a declined source
-record no commit.
+keeps its commit when the source is not applied. In an applied source, the
+reinstall covers the named items, the items that a named item requires, and
+every member of a bundle source; each reinstalled entry gets the commit of its
+own source, unless its update is skipped, and any other entry keeps its commit
+(only a changed commit value causes a lockfile write). This write is not a
+change: it does not count in the output above, and `update --dry-run` and a
+declined source record no commit.
 
 `update --dry-run` prints the blocks, then
 `Dry-run: would update <n> of <m> item(s)` and the line

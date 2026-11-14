@@ -294,12 +294,15 @@ item and a `kept modified file` note are not changes.
   applied (also on an item that keeps its modified files), and alone when the
   source has no changes and is not applied; an entry of an item whose update is
   skipped keeps its recorded commit. An entry that the names did not select
-  keeps its recorded commit when the source is not applied, and when it is
-  applied as a set of items; a bundle source is reinstalled with every member,
-  so every member gets the fetched commit when the source is applied. The
-  lockfile is saved only when a value differs. This write is not a change of the
-  source (see the preview above) and does not count in the output. A dry run, a
-  declined source and a stopped run record no commit.
+  keeps its recorded commit when the source is not applied. When the source is
+  applied, the reinstall covers the named items, the items that a named item
+  requires (from the same source or from another one), and every member of a
+  bundle source; each reinstalled entry gets the commit of its own source (an
+  entry from another source gets that source's commit), unless its update is
+  skipped, and any other entry keeps its recorded commit. The lockfile is saved
+  only when a value differs. This write is not a change of the source (see the
+  preview above) and does not count in the output. A dry run, a declined source
+  and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
