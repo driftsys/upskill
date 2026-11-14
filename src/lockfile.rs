@@ -78,6 +78,11 @@ pub struct LockedItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "ref")]
     pub git_ref: Option<String>,
+    /// Commit that the source resolved to when the item was installed or last
+    /// updated. Absent for a local path source and for an item installed
+    /// before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commit: Option<String>,
     /// SHA-256 of the SSOT item directory at install time. Used by future
     /// `update` / `doctor` for drift detection.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -342,19 +347,29 @@ fn lockfile_path(project_root: &Path) -> PathBuf {
     project_root.join(LOCKFILE_NAME)
 }
 
+/// Where an item came from: the source label, its pinned ref, and the
+/// commit that the fetch resolved.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceStamp {
+    pub label: String,
+    pub git_ref: Option<String>,
+    pub commit: Option<String>,
+}
+
 /// Project an [`InstallReport`] into one [`LockedItem`] per unique `(kind,
 /// name)` (the report has one entry per kind × name × client; the lockfile
 /// records each item once).
 ///
-/// `source_for` is a per-item `(label, ref)` lookup: it maps each `(kind,
-/// name)` to the `Display` form of the [`InstallSource`] it came from and
-/// that source's pinned ref. This lets cross-source dependency-pulled items
-/// record their own source rather than the entry source's. `hash` is looked
-/// up by the caller (the pipeline) per item; threading these through here
-/// keeps the lockfile module free of filesystem and source concerns.
+/// `source_for` is a per-item lookup: it maps each `(kind, name)` to a
+/// [`SourceStamp`], the `Display` form of the [`InstallSource`] it came from,
+/// that source's pinned ref and the commit that the fetch resolved. This lets
+/// cross-source dependency-pulled items record their own source rather than
+/// the entry source's. `hash` is looked up by the caller (the pipeline) per
+/// item; threading these through here keeps the lockfile module free of
+/// filesystem and source concerns.
 pub fn items_from_report(
     report: &InstallReport,
-    source_for: impl Fn(ItemKind, &str) -> (String, Option<String>),
+    source_for: impl Fn(ItemKind, &str) -> SourceStamp,
     required_by: &std::collections::BTreeMap<(ItemKind, String), Vec<String>>,
     mut hash_for: impl FnMut(ItemKind, &str) -> Option<String>,
 ) -> Vec<LockedItem> {
@@ -380,12 +395,17 @@ pub fn items_from_report(
     for key in order {
         let (group, clients) = meta.remove(&key).expect("meta populated for every key");
         let (kind, name) = key;
-        let (source, git_ref) = source_for(kind, &name);
+        let SourceStamp {
+            label: source,
+            git_ref,
+            commit,
+        } = source_for(kind, &name);
         out.push(LockedItem {
             kind,
             name: name.clone(),
             source,
             git_ref,
+            commit,
             hash: hash_for(kind, &name),
             source_name: None,
             required_by: required_by
@@ -414,6 +434,7 @@ mod tests {
             name: name.to_string(),
             source: "github:driftsys/skills".to_string(),
             git_ref: Some("v1.0.0".to_string()),
+            commit: None,
             hash: Some("sha256:deadbeef".to_string()),
             source_name: None,
             required_by: vec![],
@@ -658,7 +679,11 @@ mod tests {
 
         let items = items_from_report(
             &report,
-            |_, _| ("local:./src".to_string(), None),
+            |_, _| SourceStamp {
+                label: "local:./src".to_string(),
+                git_ref: None,
+                commit: None,
+            },
             &std::collections::BTreeMap::new(),
             |_, _| Some("sha256:abc".into()),
         );
@@ -808,6 +833,7 @@ mod tests {
             name: "brainstorming-v2".to_string(),
             source: "github:other-org/repo".to_string(),
             git_ref: None,
+            commit: None,
             hash: None,
             source_name: Some("brainstorming".to_string()),
             required_by: vec![],
@@ -827,6 +853,7 @@ mod tests {
             name: "brainstorming".to_string(),
             source: "github:driftsys/superpowers".to_string(),
             git_ref: None,
+            commit: None,
             hash: None,
             source_name: None,
             required_by: vec![],

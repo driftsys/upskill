@@ -79,6 +79,20 @@ impl Fixture {
         );
     }
 
+    /// `git rev-parse HEAD` of the source repository.
+    fn head(&self) -> String {
+        let output = Command::new("git")
+            .current_dir(&self.repo)
+            .args(["rev-parse", "HEAD"])
+            .env_remove("GIT_DIR")
+            .env_remove("GIT_WORK_TREE")
+            .env_remove("GIT_INDEX_FILE")
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        String::from_utf8(output.stdout).unwrap().trim().to_string()
+    }
+
     fn commit(&self) {
         self.git(&["add", "."]);
         self.git(&["commit", "-m", "test content"]);
@@ -259,6 +273,8 @@ fn legacy_item_update_preserves_alias_subfolder_and_preview_bytes() {
         let mut expected = old_lock;
         expected["items"][0]["source"] = modern.into();
         expected["items"][0]["hash"] = expected_hash.into();
+        // The update records the commit that the source resolved to.
+        expected["items"][0]["commit"] = f.head().into();
         // The ownership record follows the rewritten output.
         expected["items"][0]["files"][0]["sha256"] = sha256_hex(&f.output("installed")).into();
         assert_eq!(
@@ -335,6 +351,8 @@ fn reported_legacy_bundle_updates_and_preserves_unrelated_metadata() {
         if entry["name"] == "original" {
             entry["source"] = modern.into();
             entry["hash"] = expected_hash.clone().into();
+            // The update records the commit that the source resolved to.
+            entry["commit"] = f.head().into();
             // The ownership record follows the rewritten output.
             entry["files"][0]["sha256"] = sha256_hex(&f.output("original")).into();
         }

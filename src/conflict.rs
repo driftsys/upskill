@@ -86,6 +86,7 @@ mod tests {
                     name: name.to_owned(),
                     source: source.to_owned(),
                     git_ref: None,
+                    commit: None,
                     hash: None,
                     source_name: None,
                     required_by: vec![],

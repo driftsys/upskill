@@ -22,7 +22,7 @@ use super::{
     AddOptions, AdoptedBeforeFailure, InstallReport, ItemKind, PreviewAction, PreviewItem,
     bundle_item_names, fetch_ssot, owned,
 };
-use crate::lockfile::{LockedItem, Lockfile};
+use crate::lockfile::{LockedItem, Lockfile, SourceStamp};
 use crate::plugin::PluginScope;
 use crate::source::InstallSource;
 
@@ -33,6 +33,9 @@ pub(super) struct PreparedInstall {
     label: String,
     /// The pinned ref of the entry source; `None` for a local path.
     git_ref: Option<String>,
+    /// The commit that the fetch of the entry source resolved; `None` for a
+    /// local path.
+    commit: Option<String>,
     options: AddOptions,
     /// The plan, after `plan::merge_duplicates`.
     report: InstallReport,
@@ -68,7 +71,10 @@ pub(super) fn prepare_install(
     let label = source.to_string();
 
     // -- Pre-flight: fetch SSOT and scan for items before writing anything --
-    let (local_source, tmp_guard) = fetch_ssot(source)?;
+    let fetched = fetch_ssot(source)?;
+    let local_source = fetched.root;
+    let tmp_guard = fetched.guard;
+    let commit = fetched.commit;
     let scanned_items = scan_source_items(&local_source);
 
     // -- Validate bare --as with multi-item source --
@@ -126,7 +132,8 @@ pub(super) fn prepare_install(
     // item-level path uses, so the install + item-lockfile machinery is shared;
     // `resolved_bundles` carries each bundle's own source for the bundle
     // lockfile recording and plugin/MCP install.
-    let bundle_resolution = resolve_bundle_request(&label, &local_source, git_ref, items)?;
+    let bundle_resolution =
+        resolve_bundle_request(&label, &local_source, git_ref, commit.as_deref(), items)?;
     let (closure, resolved_bundles): (Option<DependencyClosure>, Vec<ResolvedBundle>) =
         if let Some((c, bundles)) = bundle_resolution {
             (Some(c), bundles)
@@ -138,6 +145,7 @@ pub(super) fn prepare_install(
                     &label,
                     &local_source,
                     git_ref,
+                    commit.as_deref(),
                     &requested,
                 )?),
                 Vec::new(),
@@ -299,6 +307,7 @@ pub(super) fn prepare_install(
     Ok(PreparedInstall {
         label,
         git_ref: git_ref.map(str::to_string),
+        commit,
         options: options.clone(),
         report,
         closure,
@@ -315,6 +324,40 @@ impl PreparedInstall {
             .iter()
             .map(|it| ((it.kind, it.name.clone()), it.source_hash.clone()))
             .collect()
+    }
+
+    /// Sets the fetched commit on the lockfile entries in `selected` (the
+    /// `(kind, installed name)` of each entry that the run selected and
+    /// whose update is not withheld) and saves the lockfile only when a
+    /// value differs. An entry that is not in `selected` keeps its recorded
+    /// commit. Writes nothing for a source without a commit (a local path).
+    /// Used by `update` for a source that is not applied because it has no
+    /// changes, so that the new commit alone does not leave the recorded
+    /// commit behind.
+    pub fn record_commit(
+        &self,
+        target: &Path,
+        selected: &BTreeSet<(ItemKind, String)>,
+    ) -> Result<()> {
+        let Some(commit) = &self.commit else {
+            return Ok(());
+        };
+        let mut lock = Lockfile::load(target)?;
+        let mut changed = false;
+        for item in lock
+            .items
+            .iter_mut()
+            .filter(|i| selected.contains(&(i.kind, i.name.clone())))
+        {
+            if item.commit.as_ref() != Some(commit) {
+                item.commit = Some(commit.clone());
+                changed = true;
+            }
+        }
+        if changed {
+            lock.save(target)?;
+        }
+        Ok(())
     }
 
     /// Whether the install includes a rule: the `has_rules` argument of the
@@ -376,17 +419,22 @@ impl PreparedInstall {
             } else {
                 BTreeMap::new()
             };
-        let item_source_lookup = |kind: ItemKind, name: &str| -> (String, Option<String>) {
+        let item_source_lookup = |kind: ItemKind, name: &str| -> SourceStamp {
             if let Some(closure) = &self.closure {
                 if let Some(src_label) = closure.item_source.get(&(kind, name.to_string())) {
-                    let gr = closure
-                        .by_source
-                        .get(src_label)
-                        .and_then(|si| si.git_ref.clone());
-                    return (src_label.clone(), gr);
+                    let source = closure.by_source.get(src_label);
+                    return SourceStamp {
+                        label: src_label.clone(),
+                        git_ref: source.and_then(|si| si.git_ref.clone()),
+                        commit: source.and_then(|si| si.commit.clone()),
+                    };
                 }
             }
-            (self.label.clone(), self.git_ref.clone())
+            SourceStamp {
+                label: self.label.clone(),
+                git_ref: self.git_ref.clone(),
+                commit: self.commit.clone(),
+            }
         };
         let mut new_items = crate::lockfile::items_from_report(
             &self.report,
@@ -463,6 +511,7 @@ impl PreparedInstall {
         let PreparedInstall {
             label,
             git_ref,
+            commit: _,
             options,
             mut report,
             closure: _closure,
@@ -495,7 +544,8 @@ impl PreparedInstall {
         report.forced = outcome.forced;
         report.changed = outcome.changed;
         // A skipped item keeps its lockfile entry unchanged, or gets none. An
-        // item kept for its modified files keeps its lockfile entry unchanged.
+        // item kept for its modified files keeps its lockfile entry unchanged,
+        // except for its commit.
         let skipped: BTreeSet<(ItemKind, String)> = report
             .conflicts
             .iter()
@@ -520,7 +570,24 @@ impl PreparedInstall {
         report.mcp_results =
             install_mcps_from_bundles(&report.bundles, plugin_scope, target, &options.selection);
 
+        // An item that keeps its modified files has an equal record
+        // (`apply::same_record`), so only its commit is brought up to date.
+        let kept_edits: BTreeSet<(ItemKind, String)> = outcome
+            .kept_edits
+            .iter()
+            .map(|c| (c.kind, c.name.clone()))
+            .collect();
         for mut item in new_items {
+            if kept_edits.contains(&(item.kind, item.name.clone())) {
+                if let Some(entry) = lock
+                    .items
+                    .iter_mut()
+                    .find(|i| i.kind == item.kind && i.name == item.name)
+                {
+                    entry.commit = item.commit.take();
+                }
+                continue;
+            }
             if skipped.contains(&(item.kind, item.name.clone())) {
                 continue;
             }
@@ -641,7 +708,8 @@ impl PreparedInstall {
 ///   otherwise. `record_only` is true when nothing is written or deleted,
 ///   `new_items` holds an entry for the item, and the lockfile record of
 ///   the item would change: the lockfile has no entry for the item yet, a
-///   field other than `files`, `pending` and `required_by` differs (see
+///   field other than `files`, `pending`, `required_by` and `commit`
+///   differs (see
 ///   [`apply::same_record`]), or the `files` record that `execute_plan`
 ///   would save ([`apply::ItemChanges::recorded_files`]: the planned files
 ///   and the records of the kept stale files) differs from the `files`
@@ -1042,6 +1110,7 @@ mod tests {
             name: "s".to_string(),
             source: "./src".to_string(),
             git_ref: None,
+            commit: None,
             hash: Some("h".to_string()),
             source_name: None,
             required_by: vec![],

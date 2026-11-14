@@ -126,7 +126,8 @@ pub(super) enum Disposition {
     /// Not written; an update is withheld. Reported in `ApplyOutcome::skipped`.
     Skip,
     /// Not written; nothing is withheld. Its modified destinations are
-    /// reported in `ApplyOutcome::kept_edits`. Its lockfile entry is unchanged.
+    /// reported in `ApplyOutcome::kept_edits`. Its lockfile entry is
+    /// unchanged, except that it receives the commit of the fetched source.
     KeepEdits,
 }
 
@@ -163,7 +164,8 @@ pub(super) fn apply_plan(
 /// any item when `overwrite` is true, is written ([`Disposition::Write`]):
 /// a conflicting regular file is replaced. When `overwrite` is false, an
 /// item with at least one conflict is not written: none of its files is
-/// written or deleted, and its lockfile record is unchanged. It is
+/// written or deleted, and its lockfile record is unchanged (a `KeepEdits`
+/// item below receives the commit of the fetched source). It is
 /// [`Disposition::KeepEdits`] (nothing is withheld from it) when all of
 /// these hold, and [`Disposition::Skip`] otherwise:
 ///
@@ -612,18 +614,20 @@ pub(super) fn execute_plan(
     Ok(outcome)
 }
 
-/// Whether `a` and `b` are equal in every field except `files`, `pending`
-/// and `required_by`. The comparison clears those three fields on clones
-/// and compares the rest, so a field added to `LockedItem` later is
+/// Whether `a` and `b` are equal in every field except `files`, `pending`,
+/// `required_by` and `commit`. The comparison clears those four fields on
+/// clones and compares the rest, so a field added to `LockedItem` later is
 /// compared too. `required_by` is provenance: the reinstall of a
 /// dependency's own source computes it differently from the reinstall of
 /// the source that requires the dependency, so it does not count as a
-/// change here.
+/// change here. `commit` is cleared because a new commit of a source whose
+/// item content is equal is not a change of the item.
 pub(super) fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
     let strip = |item: &LockedItem| LockedItem {
         files: Vec::new(),
         pending: Vec::new(),
         required_by: Vec::new(),
+        commit: None,
         ..item.clone()
     };
     strip(a) == strip(b)
@@ -1133,6 +1137,7 @@ mod tests {
             name: name.to_string(),
             source: "./src".to_string(),
             git_ref: None,
+            commit: None,
             hash: None,
             source_name: None,
             required_by: vec![],
@@ -1520,6 +1525,7 @@ mod pre_check_tests {
             name: "s".into(),
             source: "./src".into(),
             git_ref: None,
+            commit: None,
             hash: None,
             source_name: None,
             required_by: vec![],
@@ -1739,6 +1745,7 @@ mod conflict_tests {
             name: name.to_string(),
             source: "./src".to_string(),
             git_ref: None,
+            commit: None,
             hash: None,
             source_name: None,
             required_by: vec![],
@@ -2207,6 +2214,7 @@ mod repeatable_tests {
             name: "s".to_string(),
             source: "./src".to_string(),
             git_ref: None,
+            commit: None,
             hash: Some("new-hash".into()),
             source_name: None,
             required_by: vec![],
@@ -2891,6 +2899,7 @@ mod pending_stale_tests {
             name: "s".to_string(),
             source: "./src".to_string(),
             git_ref: None,
+            commit: None,
             hash: None,
             source_name: None,
             required_by: vec![],
@@ -2991,6 +3000,7 @@ mod disposition_tests {
             name: "s".to_string(),
             source: "./src".to_string(),
             git_ref: None,
+            commit: None,
             hash: Some("h".to_string()),
             source_name: None,
             required_by: vec![],

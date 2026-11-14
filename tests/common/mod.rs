@@ -33,7 +33,21 @@ pub fn update_in_terminal(
     args: &[&str],
     input: &str,
 ) -> serde_json::Value {
-    run_update_in_terminal(root, home, args, input, false, None)
+    run_update_in_terminal(root, home, args, input, false, None, &[])
+}
+
+/// As [`update_in_terminal`], with the environment variables `env` set on
+/// the command.
+#[cfg(unix)]
+#[allow(dead_code)] // Not every test binary that includes this module uses it.
+pub fn update_in_terminal_with_env(
+    root: &Path,
+    home: &Path,
+    args: &[&str],
+    input: &str,
+    env: &[(&str, String)],
+) -> serde_json::Value {
+    run_update_in_terminal(root, home, args, input, false, None, env)
 }
 
 /// As [`update_in_terminal`], with stderr written to the same pipe as
@@ -47,7 +61,7 @@ pub fn update_in_terminal_merged(
     args: &[&str],
     input: &str,
 ) -> serde_json::Value {
-    run_update_in_terminal(root, home, args, input, true, None)
+    run_update_in_terminal(root, home, args, input, true, None, &[])
 }
 
 /// As [`update_in_terminal_merged`] without input: when the output contains
@@ -60,7 +74,7 @@ pub fn update_in_terminal_interrupted(
     args: &[&str],
     at: &str,
 ) -> serde_json::Value {
-    run_update_in_terminal(root, home, args, "", true, Some(at))
+    run_update_in_terminal(root, home, args, "", true, Some(at), &[])
 }
 
 #[cfg(unix)]
@@ -72,6 +86,7 @@ fn run_update_in_terminal(
     input: &str,
     merge: bool,
     interrupt_at: Option<&str>,
+    env: &[(&str, String)],
 ) -> serde_json::Value {
     let mut update = upskill_cmd(home);
     update
@@ -79,6 +94,9 @@ fn run_update_in_terminal(
         .arg("update")
         .args(args)
         .env("NO_COLOR", "1");
+    for (key, value) in env {
+        update.env(key, value);
+    }
     let spec = serde_json::json!({
         "program": update.get_program().to_str().unwrap(),
         "args": update.get_args().map(|arg| arg.to_str().unwrap()).collect::<Vec<_>>(),

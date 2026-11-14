@@ -340,8 +340,8 @@ fn remove_selected(
 ///   bucket is not also reported as a missing output.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
-/// never fetches. Remote-source drift is detected by
-/// `update --dry-run`, which does fetch.
+/// never fetches. Remote-source drift is detected by `update --check`, which
+/// does not fetch, and by `update --dry-run`, which does fetch.
 pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     let target = at.root.as_path();
     let lock = crate::lockfile::Lockfile::load(target)?;
@@ -494,7 +494,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
         }
         // Non-local sources: doctor only validates per-client outputs.
         // Hash comparison would require a network fetch — out of scope
-        // here, see `update --dry-run`.
+        // here, see `update --check` and `update --dry-run`.
     }
 
     // -- Orphaned dependencies (advisory, issue #196) --
@@ -709,7 +709,8 @@ fn reselect_from_entries(
 
 /// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
 /// handle the sources one at a time, sorted by source label. `update`
-/// always fetches per ADR-0004 — there is no `--offline`.
+/// always fetches per ADR-0004 — there is no `--offline`. `update --check`
+/// does not call this function: it fetches nothing and changes no file.
 ///
 /// `names` selects which lockfile entries to update; empty means "all".
 /// When names are given, the entries' source labels are used to fetch
@@ -748,8 +749,8 @@ fn reselect_from_entries(
 /// its source hash equals it, it has no `pending` record, every such file
 /// is modified (none is unowned), nothing else of the item would be
 /// written or deleted, no stale file of the item would be deleted or kept,
-/// and no field of its lockfile record other than `files`, `pending` and
-/// `required_by` would change (`apply::same_record`), the modified
+/// and no field of its lockfile record other than `files`, `pending`,
+/// `required_by` and `commit` would change (`apply::same_record`), the modified
 /// files are listed in `kept_modified` and the item is reported as
 /// [`UpdateStatus::UpToDate`]; otherwise it is reported as
 /// [`UpdateStatus::SkippedModified`]. A modified file that the new version
@@ -761,6 +762,24 @@ fn reselect_from_entries(
 /// non-empty `pending` record whose source hash did not change is reported
 /// as [`UpdateStatus::CompletedInterrupted`], never as
 /// [`UpdateStatus::UpToDate`].
+///
+/// After the decision, a git source without changes
+/// ([`SourcePreview::has_changes`] is false) that is not applied, in a run
+/// that is not a dry run and not stopped, gets the fetched commit in the
+/// lockfile entries that the run selected (`names`, or every entry when
+/// `names` is empty; `PreparedInstall::record_commit`) except the entry of an
+/// item whose update is withheld (a [`PreviewAction::Skip`] item), which keeps
+/// its recorded commit. An entry of the source that `names` did not select
+/// keeps its recorded commit on this path. In an applied source the
+/// reinstall covers the selected entries, the entries that a selected item
+/// requires (from this source or from another one), and every member for a
+/// bundle source. Each reinstalled entry gets the commit of its own source,
+/// unless its update is skipped; any other entry keeps its recorded commit.
+/// The lockfile is saved only when a commit value differs. This write is not in
+/// [`UpdateReport::changed`] and does not make the source a source with
+/// changes. A declined source and a dry run write no commit. In an applied
+/// source, an item whose modified destinations are kept
+/// (`kept_modified`, see above) also gets the fetched commit.
 ///
 /// In a source that is not applied, an entry without a preview item is
 /// [`UpdateStatus::UpToDate`], and an entry with a preview item is
@@ -993,6 +1012,24 @@ pub fn update(
                             }
                         },
                     });
+                }
+                // A source without changes still gets the fetched commit in
+                // its selected lockfile entries. This write is not a change of the
+                // source: it is neither in `report.changed` nor counted by
+                // `has_changes`.
+                if !dry_run && !preview.has_changes() && decision != SourceDecision::Stop {
+                    let selected: std::collections::BTreeSet<(ItemKind, String)> = source_entries
+                        .iter()
+                        .filter(|e| {
+                            !preview.items.iter().any(|i| {
+                                i.action == PreviewAction::Skip
+                                    && i.kind == e.kind
+                                    && i.name == e.name
+                            })
+                        })
+                        .map(|e| (e.kind, e.name.clone()))
+                        .collect();
+                    prepared.record_commit(target, &selected)?;
                 }
                 if !dry_run && decision == SourceDecision::Stop {
                     report.stopped = true;

@@ -104,10 +104,12 @@ and a message that asks for `--global`, with `--project` and with no flag, in or
 outside a git repository. `update`, `remove` and `remove-mcp` do the same with
 `--project`, and with no flag in a home directory that is a git repository; with
 no flag in a home directory that is not a git repository, they use the global
-scope.
+scope. `update --check` with no flag in a home directory reports the global
+scope, in a git repository or not, and is refused with `--project` there.
 
 `add`, `update`, `remove` and `remove-mcp` print one line to stderr before they
-change anything, `scope: <scope> (<root>)`. `--quiet` hides it.
+change anything, `scope: <scope> (<root>)`. `--quiet` hides it. `update --check`
+prints no such line; the block of each scope names the scope and its root.
 
 Before any write, `add` classifies every destination of every item against the
 item's `files` and `pending` records (§4). A destination is a conflict when it
@@ -155,16 +157,18 @@ items installed from another source; it then lists these files after
 
 ```text
 upskill update [name...] [--global|--project] [--dry-run] [--force]
+upskill update --check [name...] [--global|--project]
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
-and the global scope outside one. `--project` uses the current directory. When
-the current directory is the home directory, the project scope is refused with
-exit code 2 and a message that asks for `--global`.
+and the global scope outside one; `update --check` reports both scopes instead.
+`--project` uses the current directory. When the current directory is the home
+directory, the project scope is refused with exit code 2 and a message that asks
+for `--global`; `update --check` with no flag reports the global scope there.
 
-Always fetches the latest source before regenerating. Absorbs the role of a
-separate `sync` command — there is no `--offline` flag in v1; offline use is
-covered by passing local paths to `add` / `update`.
+Without `--check`, always fetches the latest source before regenerating. Absorbs
+the role of a separate `sync` command — there is no `--offline` flag in v1;
+offline use is covered by passing local paths to `add` / `update`.
 
 `update` covers two distinct behaviours:
 
@@ -184,13 +188,14 @@ root and kind directories that remain (for example `$HOME/.github/skills`) are
 kept, as the pruning rule of §2.3 states.
 
 `update` applies the conflict rules of `add` (§2.1). An item with a modified or
-unowned destination is not written and keeps its lockfile entry. When a source
-hash is recorded for the item and equals the source hash of the item (an item
-with no recorded hash is skipped), the item has an empty `pending` record, every
-such destination is modified (none is unowned), applying the item would write or
+unowned destination is not written and keeps its lockfile entry (with its
+recorded commit, except under the rule that follows). When a source hash is
+recorded for the item and equals the source hash of the item (an item with no
+recorded hash is skipped), the item has an empty `pending` record, every such
+destination is modified (none is unowned), applying the item would write or
 delete no other file, the item has no recorded file that the new version no
 longer produces (present or absent), and its lockfile entry would not change in
-any field other than `files`, `pending` and `required_by` (for example
+any field other than `files`, `pending`, `required_by` and `commit` (for example
 `clients`), nothing is withheld: `update` reports `kept modified file: <path>`
 for each modified destination (in a terminal and with `--dry-run`, in the block
 of its source; with `--yes` or without a terminal, on stderr), and this note
@@ -224,15 +229,15 @@ fetched again when the source that requires it is reinstalled), runs the checks
 of §2.1, and computes a preview from the fetched content, the files on disk and
 the lockfile, just before the source is applied. A preview **changes something**
 when applying the source writes or deletes a file, changes the lockfile record
-of an item (any field except `pending` and `required_by`), completes an
-interrupted item (a non-empty `pending` record, §4), removes an item, or creates
-or changes a hand-shake file (§3.4). A write of a file that already holds the
-planned bytes is not a change, unless the executable bits (`0o111`) of the file
-differ from the target executable bits (Unix only): each executable bit of the
-source resource for which the file has the matching read bit (owner, group,
-other). The apply sets the executable bits to the target, so the file is a
-change. A difference in the other permission bits is not a change. A `skip` item
-and a `kept modified file` note are not changes.
+of an item (any field except `pending`, `required_by` and `commit`), completes
+an interrupted item (a non-empty `pending` record, §4), removes an item, or
+creates or changes a hand-shake file (§3.4). A write of a file that already
+holds the planned bytes is not a change, unless the executable bits (`0o111`) of
+the file differ from the target executable bits (Unix only): each executable bit
+of the source resource for which the file has the matching read bit (owner,
+group, other). The apply sets the executable bits to the target, so the file is
+a change. A difference in the other permission bits is not a change. A `skip`
+item and a `kept modified file` note are not changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action
@@ -283,6 +288,21 @@ and a `kept modified file` note are not changes.
   `Changed <n> file(s) written or deleted`. It prints
   `everything is up to date — nothing to do` when nothing changed, no item was
   skipped, no file was kept with a note and no lockfile was adopted.
+- **Recorded commit.** For a git source, `update` sets the fetched commit on the
+  lockfile entries of the source that the run selected (the named items, or
+  every item when no name is given): with the item records when the source is
+  applied (also on an item that keeps its modified files), and alone when the
+  source has no changes and is not applied; an entry of an item whose update is
+  skipped keeps its recorded commit. An entry that the names did not select
+  keeps its recorded commit when the source is not applied. When the source is
+  applied, the reinstall covers the named items, the items that a named item
+  requires (from the same source or from another one), and every member of a
+  bundle source; each reinstalled entry gets the commit of its own source (an
+  entry from another source gets that source's commit), unless its update is
+  skipped, and any other entry keeps its recorded commit. The lockfile is saved
+  only when a value differs. This write is not a change of the source (see the
+  preview above) and does not count in the output. A dry run, a declined source
+  and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
@@ -304,15 +324,53 @@ change of only `required_by` in an item record is not shown and does not cause a
 question; it is saved when the source is applied for another reason, or with
 `--yes`.
 
+`update --check` reports, for each selected scope, the sources that have a newer
+version. It changes no file, does not fetch and conflicts with `--dry-run`,
+`--yes`, `--force` and the client flags (exit code 2). Without a scope flag it
+reports both scopes, in the order project, global; the global scope alone when
+the current directory is the home directory. A scope prints one block, headed
+`<scope> (<root>):`, with one line for each source that is not up to date, then
+`up to date` when it has sources and no such line, or `nothing installed` when
+it has no source. A line starts with the status label (`update available`,
+`no recorded commit`, `pinned to a commit`, `not reachable`, `not checked`) and
+names the source label. The last line is `No updates available.` or
+`<n> update(s) available. Run ...` with the command of each scope that has
+updates. The rules for one source, tested in this order:
+
+| Condition                                                                         | Status                                                    |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| The source label cannot be parsed                                                 | `not reachable` (the parse error)                         |
+| Local path source that does not exist, or cannot be read                          | `not reachable` (`path not found`, or the read error)     |
+| Local path source: an item directory has another hash than recorded, or is absent | `update available`, those items listed; else `up to date` |
+| The ref is a full commit hash                                                     | `pinned to a commit`, not looked up                       |
+| The time limit (10 seconds for all sources) passed before the lookup              | `not checked`                                             |
+| `git ls-remote` timed out                                                         | `not reachable` (`time limit reached`)                    |
+| `git ls-remote` failed                                                            | `not reachable` (the message of git)                      |
+| The remote has no such ref, or no HEAD                                            | `not reachable` (`ref <ref> not found`, `HEAD not found`) |
+| An item has no recorded commit                                                    | `no recorded commit`                                      |
+| Every recorded commit equals the remote commit, without regard to case            | `up to date`                                              |
+| Otherwise                                                                         | `update available`, every selected item listed            |
+
+A git source is looked up at most once for all scopes, and a source that shares
+a lookup with an earlier source gets its result also after the time limit. A
+newer tag is not looked for. With names, only the entries with those names are
+grouped by source, so the status and the item list of a source cover only those
+items. An item of a git source that `update` skipped keeps its older commit, so
+its source is `update available` until the item is resolved, except that an
+entry without a recorded commit gives `no recorded commit`; a local path source
+has no recorded commit and is compared by content. Exit code 0 when the check
+ran, also when a source is not reachable; 1 when a lockfile cannot be read or
+parsed. `--quiet` suppresses the output.
+
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
 preserving namespace, ref and subfolder. Applying `update` canonicalizes the
 source labels of reinstalled items and bundles, even when their content is
-unchanged. `update --dry-run`, `list` and `doctor` do not rewrite lockfiles or
-generated output. Aliases, recorded selection, bundle membership and unrelated
-item/plugin/MCP records remain intact. The label canonicalization itself does
-not change the schema; the reinstall adopts a `schema: 1` lockfile as described
-in §4 (State files).
+unchanged. `update --dry-run`, `update --check`, `list` and `doctor` do not
+rewrite lockfiles or generated output. Aliases, recorded selection, bundle
+membership and unrelated item/plugin/MCP records remain intact. The label
+canonicalization itself does not change the schema; the reinstall adopts a
+`schema: 1` lockfile as described in §4 (State files).
 
 The supported historical authority grammar and reconciliation limits are defined
 in the
@@ -595,6 +653,7 @@ across-repo continuity for global scope.
       "name": "code-review",
       "source": "github:driftsys/skills",
       "ref": "v1.2.0",
+      "commit": "<40 hex digits>",
       "hash": "sha256:..."
     }
   ],

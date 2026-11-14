@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, Instant};
 
 use crate::source::GithubRepo;
 
@@ -80,6 +81,186 @@ pub(crate) fn shallow_clone(
         return Err(format!("git clone failed: {}", stderr.trim()));
     }
     Ok(())
+}
+
+/// `git rev-parse HEAD` in `dir` (the clone or a directory inside it). For a
+/// clone of an annotated tag, `HEAD` is the tagged commit.
+pub(crate) fn head_commit(dir: &Path) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(dir)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .output()
+        .map_err(|err| format!("failed to run git rev-parse: {}", err))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("git rev-parse HEAD failed: {}", stderr.trim()));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+/// Why `run_until` did not return the output of a command.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum RunError {
+    /// The deadline passed. Either the command had not exited and was killed,
+    /// or it had exited and a descendant process still held an inherited
+    /// pipe open, so the output was not complete.
+    TimedOut,
+    /// The command could not start or exited with a failure. Holds the first
+    /// line of stderr, or the spawn error.
+    Failed(String),
+}
+
+/// Run `cmd` and return its stdout. Kills the child and returns `TimedOut`
+/// when it has not exited at `deadline`. `Failed` holds the first line of
+/// stderr, or the spawn error.
+///
+/// Guarantee: the call returns by `deadline` plus a scheduling margin (the
+/// child poll interval is 20 ms). Two reader threads drain stdout and stderr
+/// while the child runs, so a child that writes more than the pipe buffer does
+/// not block. If the child exits but a descendant keeps an inherited pipe open,
+/// the readers cannot finish; the call then returns `TimedOut` at the
+/// deadline and leaves the blocked reader threads detached. Output is
+/// returned only when both pipes reached end of file by the deadline.
+///
+/// Only the child itself is killed at the deadline. A process that the child
+/// started (for example `git-remote-https` or `ssh`) is not killed and can run
+/// on after the call returns.
+pub(crate) fn run_until(mut cmd: Command, deadline: Instant) -> Result<String, RunError> {
+    use std::io::Read;
+    use std::process::Stdio;
+    use std::sync::mpsc;
+
+    let mut child = cmd
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|err| RunError::Failed(err.to_string()))?;
+
+    // Each reader sends (is_stdout, bytes) once its pipe reaches end of file.
+    let (tx, rx) = mpsc::channel::<(bool, Vec<u8>)>();
+    if let Some(mut pipe) = child.stdout.take() {
+        let tx = tx.clone();
+        std::thread::spawn(move || {
+            let mut bytes = Vec::new();
+            let _ = pipe.read_to_end(&mut bytes);
+            let _ = tx.send((true, bytes));
+        });
+    }
+    if let Some(mut pipe) = child.stderr.take() {
+        let tx = tx.clone();
+        std::thread::spawn(move || {
+            let mut bytes = Vec::new();
+            let _ = pipe.read_to_end(&mut bytes);
+            let _ = tx.send((false, bytes));
+        });
+    }
+    drop(tx);
+
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) => {}
+            Err(err) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(RunError::Failed(err.to_string()));
+            }
+        }
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(RunError::TimedOut);
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    };
+
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    // The sender of a reader that ended is dropped, so `recv_timeout` also
+    // ends when both readers are done.
+    for _ in 0..2 {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        match rx.recv_timeout(remaining) {
+            Ok((true, bytes)) => stdout = bytes,
+            Ok((false, bytes)) => stderr = bytes,
+            Err(_) => return Err(RunError::TimedOut),
+        }
+    }
+
+    if !status.success() {
+        let stderr = String::from_utf8_lossy(&stderr);
+        let first = stderr.lines().next().unwrap_or("").trim();
+        let message = if first.is_empty() {
+            format!("command failed: {}", status)
+        } else {
+            first.to_string()
+        };
+        return Err(RunError::Failed(message));
+    }
+    Ok(String::from_utf8_lossy(&stdout).into_owned())
+}
+
+/// The commit that `git_ref` (or `HEAD` when `None`) names at `url`, from
+/// `git ls-remote` without a fetch. `Ok(None)` when the remote has no such
+/// ref. A branch wins over a tag of the same name; an annotated tag gives the
+/// tagged commit.
+pub(crate) fn ls_remote(
+    url: &str,
+    git_ref: Option<&str>,
+    deadline: Instant,
+) -> Result<Option<String>, RunError> {
+    // The command goes to `run_until` as `ls_remote_command` built it, so
+    // that the test of that function covers the command that runs.
+    let output = run_until(ls_remote_command(url, git_ref), deadline)?;
+
+    let lines: Vec<(&str, &str)> = output
+        .lines()
+        .filter_map(|line| line.split_once('\t'))
+        .collect();
+    let find = |name: &str| {
+        lines
+            .iter()
+            .find(|(_, n)| *n == name)
+            .map(|(hash, _)| hash.to_string())
+    };
+    Ok(match git_ref {
+        None => find("HEAD"),
+        Some(r) => find(&format!("refs/heads/{r}"))
+            .or_else(|| find(&format!("refs/tags/{r}^{{}}")))
+            .or_else(|| find(&format!("refs/tags/{r}"))),
+    })
+}
+
+/// The `git ls-remote` command of [`ls_remote`]. It sets
+/// `GIT_TERMINAL_PROMPT=0`, so that git fails instead of asking for
+/// credentials on the terminal.
+fn ls_remote_command(url: &str, git_ref: Option<&str>) -> Command {
+    let mut cmd = Command::new("git");
+    cmd.arg("ls-remote").arg("--").arg(url);
+    match git_ref {
+        None => {
+            cmd.arg("HEAD");
+        }
+        Some(r) => {
+            cmd.arg(format!("refs/heads/{r}"))
+                .arg(format!("refs/tags/{r}"))
+                .arg(format!("refs/tags/{r}^{{}}"));
+        }
+    }
+    cmd.env("GIT_TERMINAL_PROMPT", "0")
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE");
+    cmd
+}
+
+/// True for 40 lowercase or uppercase hexadecimal characters.
+pub(crate) fn is_full_commit_hash(git_ref: &str) -> bool {
+    git_ref.len() == 40 && git_ref.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
 /// Attempt a sparse clone: `--depth 1 --filter=blob:none --sparse` followed
@@ -289,6 +470,244 @@ mod tests {
         git(&["push", "-u", "origin", "main"], Some(&work));
 
         repo
+    }
+
+    /// `git <args>` in `dir`, returning trimmed stdout.
+    fn git_out(dir: &Path, args: &[&str]) -> String {
+        let out = Cmd::new("git")
+            .args(args)
+            .current_dir(dir)
+            .env_remove("GIT_DIR")
+            .env_remove("GIT_WORK_TREE")
+            .env_remove("GIT_INDEX_FILE")
+            .output()
+            .expect("git command");
+        assert!(
+            out.status.success(),
+            "git {:?} failed: {}",
+            args,
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8_lossy(&out.stdout).trim().to_string()
+    }
+
+    fn far_deadline() -> Instant {
+        Instant::now() + Duration::from_secs(30)
+    }
+
+    fn file_url(bare: &Path) -> String {
+        format!("file://{}", bare.display())
+    }
+
+    /// Create a commit on top of `HEAD` in `bare` without a work tree.
+    fn add_commit(bare: &Path) -> String {
+        git_out(
+            bare,
+            &[
+                "-c",
+                "user.name=test",
+                "-c",
+                "user.email=test@test.com",
+                "commit-tree",
+                "HEAD^{tree}",
+                "-p",
+                "HEAD",
+                "-m",
+                "second",
+            ],
+        )
+    }
+
+    #[test]
+    fn ls_remote_without_a_ref_is_the_head_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let got = ls_remote(&file_url(&bare), None, far_deadline()).expect("ls-remote");
+        assert_eq!(got, Some(git_out(&bare, &["rev-parse", "HEAD"])));
+    }
+
+    #[test]
+    fn ls_remote_of_a_branch_is_its_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let second = add_commit(&bare);
+        git_out(&bare, &["branch", "dev", &second]);
+        let got = ls_remote(&file_url(&bare), Some("dev"), far_deadline()).expect("ls-remote");
+        assert_eq!(got, Some(second));
+    }
+
+    #[test]
+    fn ls_remote_of_a_lightweight_tag_is_its_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let first = git_out(&bare, &["rev-parse", "HEAD"]);
+        git_out(&bare, &["tag", "light"]);
+        let second = add_commit(&bare);
+        git_out(&bare, &["update-ref", "refs/heads/main", &second]);
+        let got = ls_remote(&file_url(&bare), Some("light"), far_deadline()).expect("ls-remote");
+        assert_ne!(first, second);
+        assert_eq!(got, Some(first));
+    }
+
+    #[test]
+    fn ls_remote_of_an_annotated_tag_is_the_tagged_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        git_out(
+            &bare,
+            &[
+                "-c",
+                "user.name=test",
+                "-c",
+                "user.email=test@test.com",
+                "tag",
+                "-a",
+                "v1",
+                "-m",
+                "v1",
+            ],
+        );
+        let got = ls_remote(&file_url(&bare), Some("v1"), far_deadline()).expect("ls-remote");
+        let commit = git_out(&bare, &["rev-parse", "v1^{commit}"]);
+        assert_ne!(commit, git_out(&bare, &["rev-parse", "v1"]));
+        assert_eq!(got, Some(commit));
+    }
+
+    #[test]
+    fn ls_remote_of_a_branch_named_like_a_tag_is_the_branch() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let second = add_commit(&bare);
+        git_out(&bare, &["tag", "v2"]);
+        git_out(&bare, &["branch", "v2", &second]);
+        let got = ls_remote(&file_url(&bare), Some("v2"), far_deadline()).expect("ls-remote");
+        assert_eq!(got, Some(second));
+    }
+
+    #[test]
+    fn ls_remote_never_prompts_for_credentials() {
+        let cmd = ls_remote_command("https://example.invalid/team/skills", None);
+        let prompt = cmd
+            .get_envs()
+            .find(|(key, _)| *key == "GIT_TERMINAL_PROMPT")
+            .map(|(_, value)| value);
+        assert_eq!(prompt, Some(Some(std::ffi::OsStr::new("0"))));
+    }
+
+    #[test]
+    fn ls_remote_of_an_unknown_ref_is_none() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let got = ls_remote(&file_url(&bare), Some("nope"), far_deadline()).expect("ls-remote");
+        assert_eq!(got, None);
+    }
+
+    #[test]
+    fn ls_remote_of_a_missing_repository_fails() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let url = file_url(&tmp.path().join("absent"));
+        match ls_remote(&url, None, far_deadline()) {
+            Err(RunError::Failed(message)) => assert!(!message.is_empty()),
+            other => panic!("expected Failed, got {:?}", other),
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn run_until_kills_a_command_that_passes_the_deadline() {
+        let start = Instant::now();
+        let mut cmd = Command::new("sleep");
+        cmd.arg("5");
+        let result = run_until(cmd, start + Duration::from_millis(200));
+        assert_eq!(result, Err(RunError::TimedOut));
+        assert!(start.elapsed() < Duration::from_secs(2));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn run_until_returns_output_larger_than_the_pipe_buffer() {
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "head -c 200000 /dev/zero | tr '\\0' 'x'"]);
+        let out = run_until(cmd, Instant::now() + Duration::from_secs(10)).expect("output");
+        assert_eq!(out.len(), 200_000);
+    }
+
+    /// A descendant that keeps the inherited stdout open after the child exits
+    /// makes the output incomplete at the deadline. The result is `TimedOut`,
+    /// returned by the deadline.
+    #[cfg(unix)]
+    #[test]
+    fn run_until_holds_the_deadline_when_a_descendant_keeps_the_pipe_open() {
+        let start = Instant::now();
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "sleep 5 & exit 0"]);
+        let result = run_until(cmd, start + Duration::from_millis(300));
+        assert_eq!(result, Err(RunError::TimedOut));
+        assert!(start.elapsed() < Duration::from_secs(2));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn run_until_returns_the_first_line_of_stderr_on_failure() {
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "echo first >&2; echo second >&2; exit 3"]);
+        let result = run_until(cmd, Instant::now() + Duration::from_secs(10));
+        assert_eq!(result, Err(RunError::Failed("first".to_string())));
+    }
+
+    #[test]
+    fn is_full_commit_hash_accepts_forty_hex_characters_only() {
+        assert!(is_full_commit_hash(&"a".repeat(40)));
+        assert!(is_full_commit_hash(
+            "0123456789abcdefABCDEF0123456789abcdef01"
+        ));
+        assert!(!is_full_commit_hash(&"a".repeat(39)));
+        assert!(!is_full_commit_hash(&"a".repeat(41)));
+        assert!(!is_full_commit_hash("main"));
+        assert!(!is_full_commit_hash(&format!("{}g", "a".repeat(39))));
+    }
+
+    #[test]
+    fn head_commit_of_a_clone_is_the_commit_of_the_source() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(&dest).unwrap();
+
+        let url = format!("file://{}", bare.display());
+        shallow_clone(&url, None, "cloned", &dest, None).expect("clone must succeed");
+
+        let commit = head_commit(&dest.join("cloned")).expect("head commit");
+        assert_eq!(commit, git_out(&bare, &["rev-parse", "HEAD"]));
+        assert_eq!(commit.len(), 40);
+    }
+
+    #[test]
+    fn head_commit_of_an_annotated_tag_clone_is_the_tagged_commit() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let bare = make_test_repo(tmp.path());
+        git_out(
+            &bare,
+            &[
+                "-c",
+                "user.name=test",
+                "-c",
+                "user.email=test@test.com",
+                "tag",
+                "-a",
+                "v1",
+                "-m",
+                "v1",
+            ],
+        );
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(&dest).unwrap();
+
+        let url = format!("file://{}", bare.display());
+        shallow_clone(&url, Some("v1"), "cloned", &dest, None).expect("clone must succeed");
+
+        let commit = head_commit(&dest.join("cloned")).expect("head commit");
+        assert_eq!(commit, git_out(&bare, &["rev-parse", "v1^{commit}"]));
     }
 
     #[test]

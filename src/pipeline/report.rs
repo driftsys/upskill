@@ -243,7 +243,8 @@ pub struct UnreadableFile {
 
 /// SSOT content hash differs from what the lockfile recorded at install
 /// time. Only computed for `local:` sources still on disk —
-/// remote-source drift is the job of `update --dry-run`, which fetches.
+/// remote-source drift is the job of `update --check`, which does not fetch,
+/// and `update --dry-run`, which fetches.
 #[derive(Debug, Clone, Serialize)]
 pub struct StaleHash {
     pub kind: ItemKind,
@@ -443,7 +444,10 @@ pub enum UpdateStatus {
     /// kept (listed in [`UpdateReport::kept_modified`]): nothing of it was
     /// written, and those files differ from what the source renders. Also
     /// the status of an item of a source that was not applied and that has
-    /// no preview item.
+    /// no preview item. For a git source that was not applied because it has
+    /// no changes, `update` still writes the fetched commit to the lockfile
+    /// entries that the run selected, except the entry of an item whose update
+    /// is skipped; that write is not a change of the item.
     UpToDate,
     /// The source of the item was applied, and the source hash of the item
     /// differs from the hash recorded in the lockfile entry (or no hash was
@@ -545,7 +549,9 @@ impl SourcePreview {
     /// item record: an item has a non-empty `write`, `delete` or `forced`,
     /// or its action is `Complete` or `Remove`, or it is `record_only`; or a
     /// hand-shake file would be created or changed. A `Skip` item and a
-    /// note in `kept_notes` are not changes.
+    /// note in `kept_notes` are not changes. The write of a new source commit
+    /// to the lockfile entries of a source without changes (except the entries of
+    /// skipped items) is not a change.
     pub fn has_changes(&self) -> bool {
         self.items.iter().any(|item| {
             !item.write.is_empty()

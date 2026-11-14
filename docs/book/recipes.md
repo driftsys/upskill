@@ -61,6 +61,22 @@ remove everything that came from it:
 upskill remove --source github:owner/bundles:platform-baseline.bundle.yaml
 ```
 
+## See whether a source has a newer version
+
+```bash
+upskill update --check              # both scopes
+upskill update --check --global     # the global scope only
+```
+
+The check asks each git remote for the commit of the recorded ref with
+`git ls-remote` and compares it with the commit in `.upskill-lock.json`. It
+fetches nothing and changes no file. When it reports `update available`, run
+`upskill update` (project) or `upskill update --global`. A source reported as
+`no recorded commit` needs one `upskill update` first. An item of a git source
+that `update` skipped because of a modified file keeps its older commit, so its
+source stays `update available` until you resolve that item (a local path source
+is compared by content and has no commit).
+
 ## Bisect drift
 
 If a teammate's `.upskill-lock.json` shows different content than yours after

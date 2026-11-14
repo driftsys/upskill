@@ -66,11 +66,13 @@ a message that asks for `--global`, with `--project` and with no flag, in or
 outside a git repository. `update`, `remove` and `remove-mcp` do the same with
 `--project`, and with no flag in a home directory that is a git repository; with
 no flag in a home directory that is not a git repository, they use the global
-scope.
+scope. `update --check` with no flag in a home directory reports the global
+scope, in a git repository or not; with `--project` it is refused there.
 
 `add`, `update`, `remove` and `remove-mcp` print one line to stderr that names
 the scope and its root, for example `scope: global (/home/alice)`. `--quiet`
-hides it.
+hides it. `update --check` prints no such line: the block of each scope names
+the scope and its root.
 
 **Client selection.** By default `add` emits output for **every** client.
 Restrict it to the clients you actually use with one or more of `--claude`,
@@ -193,15 +195,18 @@ Pull latest sources and regenerate changed items.
 upskill update                       # update everything
 upskill update code-review           # update one item
 upskill update --dry-run             # preview changes without applying
+upskill update --check               # report newer versions, without a fetch
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
-and the global scope outside one. `--project` uses the current directory and
-`--global` uses `$HOME`. When the current directory is the home directory, the
-project scope is refused with exit code 2 and a message that asks for
-`--global`.
+and the global scope outside one; `update --check` reports both scopes instead.
+`--project` uses the current directory and `--global` uses `$HOME`. When the
+current directory is the home directory, the project scope is refused with exit
+code 2 and a message that asks for `--global`; `update --check` with no flag
+reports the global scope there.
 
-`update` always fetches before regenerating; there is no separate `sync`. It
+`update` always fetches before regenerating; there is no separate `sync`.
+[`update --check`](#update---check) is the exception: it never fetches. `update`
 also re-runs the generation pipeline against the current upskill version, so
 client-format updates land without a separate command.
 
@@ -239,17 +244,18 @@ operation (no `pending` record), every such destination is a recorded file that
 was modified (not a file that upskill does not manage), applying the item would
 write or delete no other file, the item has no recorded file that the new
 version no longer contains (present or absent), and its lockfile entry would not
-change in any field other than its file records and `required_by` (for example
-`clients`). `update` then reports `kept modified file: <path>` for each modified
-destination: in a terminal and with `--dry-run`, in the block of its source (see
-below); with `--yes` or without a terminal, on stderr. This note does not change
-the exit code. In every other case (for example the source changed, or the flags
-no longer select a client of the item), `update` reports the item as skipped. In
-a terminal and with `--dry-run`, the block of the source has a `skip` line for
-the item that names each such file. With `--yes` or without a terminal, `update`
-prints `skipped <kind> <name>: <path> was modified or is not managed by upskill`
-on stderr for each such file. A skipped item of a source that is applied, or of
-a source whose preview changes nothing, makes `update` print
+change in any field other than its file records, `required_by` and the recorded
+source commit (for example `clients`). `update` then reports
+`kept modified file: <path>` for each modified destination: in a terminal and
+with `--dry-run`, in the block of its source (see below); with `--yes` or
+without a terminal, on stderr. This note does not change the exit code. In every
+other case (for example the source changed, or the flags no longer select a
+client of the item), `update` reports the item as skipped. In a terminal and
+with `--dry-run`, the block of the source has a `skip` line for the item that
+names each such file. With `--yes` or without a terminal, `update` prints
+`skipped <kind> <name>: <path> was modified or is not managed by upskill` on
+stderr for each such file. A skipped item of a source that is applied, or of a
+source whose preview changes nothing, makes `update` print
 `Use --force to replace.` on stderr and exit with code 1 after it has written
 the other items. A `skip` line of `--dry-run`, or of a source that the user
 declined, does neither. The limit of this rule: when a new version of upskill
@@ -380,6 +386,18 @@ was updated, completed or removed, but files were written or deleted, it prints
 `everything is up to date — nothing to do` when nothing changed, no item was
 skipped, no file was kept with a note and no lockfile was adopted.
 
+For a git source, `update` records the commit that it fetched in the lockfile
+entries of the source that the run selected, also when the source has no changes
+and is not applied, except the entry of an item whose update is skipped, which
+keeps its recorded commit. With names, an entry that the names did not select
+keeps its commit when the source is not applied. In an applied source, the
+reinstall covers the named items, the items that a named item requires, and
+every member of a bundle source; each reinstalled entry gets the commit of its
+own source, unless its update is skipped, and any other entry keeps its commit
+(only a changed commit value causes a lockfile write). This write is not a
+change: it does not count in the output above, and `update --dry-run` and a
+declined source record no commit.
+
 `update --dry-run` prints the blocks, then
 `Dry-run: would update <n> of <m> item(s)` and the line
 `Each block is computed for the current state; a later block does not include the effect of an earlier one.`
@@ -421,9 +439,9 @@ Older installations may record `gitlab:org/repo` or
 `gitlab+gitlab.example.com:org/team/repo:skills/team.bundle.yaml` source labels.
 `update` reads unambiguous historical labels and writes the corresponding HTTPS
 labels after a successful reinstall. Installed aliases, pinned refs and bundle
-membership survive. `update --dry-run`, `list` and `doctor` leave recorded
-labels and generated bytes unchanged. New `add` commands still require modern
-syntax.
+membership survive. `update --dry-run`, `update --check`, `list` and `doctor`
+leave recorded labels and generated bytes unchanged. New `add` commands still
+require modern syntax.
 
 For an explicit port, historical state must separate the port from the
 namespace: `gitlab+gitlab.example.com:8443:org/team/repo`. Malformed or
@@ -432,6 +450,71 @@ ambiguous authorities receive reconciliation guidance before fetch. See the
 before correcting a label; verify the intended HTTPS remote, ref and subfolder.
 This label compatibility step does not itself change the schema; the reinstall
 adopts a `schema: 1` lockfile as described in [State files](#state-files).
+
+#### `update --check`
+
+```bash
+upskill update --check [name...] [--global | --project]
+```
+
+Reports which sources have a newer version. It changes no file, fetches nothing
+and takes no other flag (`--dry-run`, `--yes`, `--force` and the client flags
+are refused with exit code 2). Without a scope flag it reports both scopes, as
+`list` does; `--global` or `--project` limits it to one. With names, it checks
+only the items with those names, grouped by source: the status and the item list
+of a source cover only those items. Output goes to stdout, and `--quiet`
+suppresses it:
+
+```text
+project (/path/to/repo):
+  update available    https://example.invalid/team/skills  1a2b3c4 -> 5d6e7f8
+    skill alpha
+    skill beta
+  not reachable       owner/other: <reason>
+global (/home/user):
+  up to date
+2 updates available. Run "upskill update".
+```
+
+A scope with no source prints `nothing installed`; so does a scope where the
+given names match no item. The number in the last line counts items, not
+sources. The last line is `No updates available.` when no source has an update.
+Otherwise it names the command for each scope that has updates:
+`Run "upskill update".`, `Run "upskill update --global".`, or both, joined by
+`and`.
+
+A git source is compared by commit. `upskill` runs `git ls-remote` against the
+clone URL of the source, for the ref of the source (the default branch when it
+has none), and compares the result with the commit recorded in the lockfile. A
+source that appears in both scopes is looked up once. A newer tag is not looked
+for: a source pinned to `@v1` is up to date while `v1` points to the recorded
+commit. Credentials come from the git configuration, as for `add`. A local path
+source is compared by content: an item whose directory hash differs from the
+recorded hash is listed, and no commit is printed.
+
+| Label                | Meaning                                                                                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `up to date`         | Every recorded commit equals the remote commit, or no item of a local path source changed.                                                                                                                    |
+| `update available`   | A recorded commit differs from the remote commit (every selected item of the source is listed), or an item of a local path source changed.                                                                    |
+| `pinned to a commit` | The ref is a full commit hash. The source is not looked up.                                                                                                                                                   |
+| `no recorded commit` | An item of a git source has no recorded commit, as when it was installed by an earlier version. Run `upskill update` once.                                                                                    |
+| `not reachable`      | The source label cannot be parsed, the lookup failed, the remote has no HEAD or no such ref, the local path does not exist or cannot be read, or the time limit passed during the lookup. The reason follows. |
+| `not checked`        | The time limit passed before the lookup of this source started.                                                                                                                                               |
+
+The lookups of all sources share a time limit of 10 seconds. A source that gets
+no answer by then is `not reachable`, and later sources that need a lookup are
+`not checked`; a source that shares a lookup with an earlier source gets the
+result of that lookup also after the time limit.
+
+After an `update` that skipped an item of a git source because of a modified or
+unmanaged file, the item keeps its older commit, so `update --check` reports its
+source as `update available` until you resolve the skipped item (for example
+with `update --force`). An entry that has no recorded commit is reported as
+`no recorded commit` instead. A local path source has no recorded commit: it is
+compared by content.
+
+Exit code: 0 when the check ran, also when a source is not reachable or has an
+update. 1 when a lockfile cannot be read or parsed. 2 for a usage error.
 
 ### `upskill remove [name...] [--source <label>] [--force]`
 
@@ -620,7 +703,8 @@ modified files, unreadable files, stale hashes, orphan entries, missing plugins,
 unregistered MCP servers, interrupted items, or files at earlier global paths).
 Skipped plugins and unverifiable MCP entries are informational warnings and do
 not affect the exit code. `doctor` never fetches; remote-source drift detection
-is `update --dry-run`.
+is `update --check` (a lookup of the remote commit, without a fetch) and
+`update --dry-run` (a fetch and a preview).
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 The document has one element in `scopes` for each checked scope (also when
@@ -812,13 +896,16 @@ Files whose frontmatter and body are already canonical are left untouched (no
 The lockfile carries a top-level `schema` field for forward compatibility. A new
 lockfile is written with `schema: 2`. Each item entry may carry `files` and
 `pending` lists. `add` and `update` record in `files` every file they write for
-the item, with its client, its path and the SHA-256 of its bytes. When they
-reinstall an item, they delete the recorded files that the new version no longer
-produces, unless another item installed by the same command writes that path,
-and only when the file is unchanged: a modified recorded file is kept and stays
-in the record. A file that the record does not list is never deleted. A file at
-a path that the new version writes is replaced only when it is unchanged, absent
-or already equal to the new bytes; otherwise the item is not written (see
+the item, with its client, its path and the SHA-256 of its bytes. An item of a
+git source also carries `commit`, the commit of the source at the last `add` or
+`update` of the item; an item that `update` skips keeps its older commit (see
+[`upskill update`](#upskill-update-name)). When they reinstall an item, they
+delete the recorded files that the new version no longer produces, unless
+another item installed by the same command writes that path, and only when the
+file is unchanged: a modified recorded file is kept and stays in the record. A
+file that the record does not list is never deleted. A file at a path that the
+new version writes is replaced only when it is unchanged, absent or already
+equal to the new bytes; otherwise the item is not written (see
 [`upskill add`](#upskill-add-source-items) and
 [`upskill update`](#upskill-update-name)) unless `--force` is given. An item
 that its source no longer contains is removed by `update` with the rules of

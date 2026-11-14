@@ -19,6 +19,8 @@ references must be reconciled as part of that feature's review.
   with an ownership record in the lockfile, repeatable operations and support
   levels. Part 1 covers delivery steps 0 to 4. Step 0, which removes the
   unreachable lifecycle code, is the first change.
+  [Part 2](plans/2026-11-13-customization-resteer-part2.md) covers delivery
+  steps 6 to 8 and was approved by the user on 2026-11-13.
 
 - [Copilot-local plugin exclusion profile](../technotes/copilot-project-plugin-overlay-profile.md)
   : proposed under [#446](https://github.com/driftsys/upskill/issues/446).
