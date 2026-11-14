@@ -51,12 +51,27 @@ const fn cell(client: &'static str, kind: ItemKind, level: SupportLevel) -> Supp
     }
 }
 
+const fn supported(
+    client: &'static str,
+    kind: ItemKind,
+    client_version: &'static str,
+    checked: &'static str,
+) -> SupportCell {
+    SupportCell {
+        client,
+        kind,
+        level: SupportLevel::Supported,
+        client_version: Some(client_version),
+        checked: Some(checked),
+    }
+}
+
 /// Twelve cells: four clients in the order `claude`, `copilot`, `opencode`,
 /// `codex`, each with rule, skill and agent.
 pub const SUPPORT: &[SupportCell] = &[
-    cell("claude", ItemKind::Rule, SupportLevel::Experimental),
-    cell("claude", ItemKind::Skill, SupportLevel::Experimental),
-    cell("claude", ItemKind::Agent, SupportLevel::Experimental),
+    supported("claude", ItemKind::Rule, "2.1.308", "2026-11-14"),
+    supported("claude", ItemKind::Skill, "2.1.308", "2026-11-14"),
+    supported("claude", ItemKind::Agent, "2.1.308", "2026-11-14"),
     cell("copilot", ItemKind::Rule, SupportLevel::Experimental),
     cell("copilot", ItemKind::Skill, SupportLevel::Experimental),
     cell("copilot", ItemKind::Agent, SupportLevel::Experimental),
@@ -124,6 +139,28 @@ mod tests {
                 assert!(pairs.contains(&(client, kind)), "{client} {kind}");
             }
         }
+    }
+
+    #[test]
+    fn the_table_holds_the_recorded_smoke_results() {
+        let rows: Vec<String> = SUPPORT.iter().map(|c| format_row(c, 8)).collect();
+        assert_eq!(
+            rows,
+            [
+                "  claude   rule   supported (claude 2.1.308, 2026-11-14)",
+                "  claude   skill  supported (claude 2.1.308, 2026-11-14)",
+                "  claude   agent  supported (claude 2.1.308, 2026-11-14)",
+                "  copilot  rule   experimental",
+                "  copilot  skill  experimental",
+                "  copilot  agent  experimental",
+                "  opencode rule   experimental",
+                "  opencode skill  experimental",
+                "  opencode agent  experimental",
+                "  codex    rule   unsupported",
+                "  codex    skill  unsupported",
+                "  codex    agent  unsupported",
+            ]
+        );
     }
 
     #[test]

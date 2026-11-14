@@ -23,20 +23,20 @@ a release and does not affect another cell.
 A supported cell holds the client version of the smoke run that passed and the
 date of that run. `-` marks an absent version or date.
 
-| Client   | Kind  | Level        | Client version | Checked |
-| -------- | ----- | ------------ | -------------- | ------- |
-| claude   | rule  | experimental | -              | -       |
-| claude   | skill | experimental | -              | -       |
-| claude   | agent | experimental | -              | -       |
-| copilot  | rule  | experimental | -              | -       |
-| copilot  | skill | experimental | -              | -       |
-| copilot  | agent | experimental | -              | -       |
-| opencode | rule  | experimental | -              | -       |
-| opencode | skill | experimental | -              | -       |
-| opencode | agent | experimental | -              | -       |
-| codex    | rule  | unsupported  | -              | -       |
-| codex    | skill | unsupported  | -              | -       |
-| codex    | agent | unsupported  | -              | -       |
+| Client   | Kind  | Level        | Client version | Checked    |
+| -------- | ----- | ------------ | -------------- | ---------- |
+| claude   | rule  | supported    | 2.1.308        | 2026-11-14 |
+| claude   | skill | supported    | 2.1.308        | 2026-11-14 |
+| claude   | agent | supported    | 2.1.308        | 2026-11-14 |
+| copilot  | rule  | experimental | -              | -          |
+| copilot  | skill | experimental | -              | -          |
+| copilot  | agent | experimental | -              | -          |
+| opencode | rule  | experimental | -              | -          |
+| opencode | skill | experimental | -              | -          |
+| opencode | agent | experimental | -              | -          |
+| codex    | rule  | unsupported  | -              | -          |
+| codex    | skill | unsupported  | -              | -          |
+| codex    | agent | unsupported  | -              | -          |
 
 `upskill doctor` prints this table after the report of the scopes, in the
 section `Support levels:`, and `upskill doctor --json` holds it in the key
@@ -55,11 +55,14 @@ experimental until its design settles these paths.
 A maintainer runs the smoke test against the real clients. It needs
 authenticated clients and makes paid model calls, so hosted CI does not run it.
 
-No smoke run has been recorded yet, so every implemented cell is `experimental`.
-The tool names that the smoke mode allows for the skill and agent cells
-(`SMOKE_TOOLS` in the script) are confirmed for Claude Code 2.1.308 only. They
-are not confirmed for GitHub Copilot CLI 1.0.110: the one run on that version
-ended with an exceeded monthly quota, so the client never answered.
+One smoke run is recorded, on 2026-11-14. On Claude Code 2.1.308 all six cells
+passed (rule, skill and agent, each at project and global scope), so the three
+`claude` cells are `supported`. One run on GitHub Copilot CLI 1.0.110 could not
+be completed because the account's monthly quota was used up (HTTP 402), so
+every Copilot cell is `unavailable` and has no result. The Copilot cells stay
+`experimental`. The tool names that the smoke mode allows for the skill and
+agent cells (`SMOKE_TOOLS` in the script) are confirmed for Claude Code 2.1.308
+only. They stay unconfirmed for Copilot CLI 1.0.110.
 
 ```bash
 just smoke                  # print the cells; no model call
