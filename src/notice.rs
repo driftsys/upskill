@@ -21,10 +21,13 @@ pub const NETWORK_PERIOD_SECS: u64 = 24 * 60 * 60;
 /// The name of the cache file in the upskill cache directory.
 pub const CACHE_FILE_NAME: &str = "notice.json";
 
-/// State of one scope root in the cache file.
+/// State of one scope root in the cache file. A missing field of a file reads
+/// as its default value.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ScopeState {
-    /// Unix time in seconds of the last check that contacted the sources.
+    /// Unix time in seconds of the last check. A check that reached no source
+    /// also sets it, so the next attempt waits for the period.
     pub checked_at: u64,
     /// The available updates found by that check, sorted.
     pub updates: Vec<String>,
@@ -34,6 +37,7 @@ pub struct ScopeState {
 
 /// The cache file: scope root path to state.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct NoticeCache {
     pub scopes: BTreeMap<String, ScopeState>,
 }
@@ -59,7 +63,10 @@ impl NoticeCache {
         tmp_name.push(format!(".{}.tmp", std::process::id()));
         let tmp = dir.join(tmp_name);
         let text = serde_json::to_string_pretty(self).context("failed to serialize the cache")?;
-        fs::write(&tmp, text).with_context(|| format!("failed to write {}", tmp.display()))?;
+        fs::write(&tmp, text).with_context(|| {
+            let _ = fs::remove_file(&tmp);
+            format!("failed to write {}", tmp.display())
+        })?;
         fs::rename(&tmp, path).with_context(|| {
             let _ = fs::remove_file(&tmp);
             format!("failed to replace {}", path.display())
@@ -71,11 +78,12 @@ fn key(root: &Path) -> String {
     root.display().to_string()
 }
 
-/// True when the state of `root` is older than the period, or absent.
+/// True when the state of `root` is older than the period, absent, or dated
+/// after `now` (the clock moved back).
 pub fn needs_check(cache: &NoticeCache, root: &Path, now: u64) -> bool {
     match cache.scopes.get(&key(root)) {
         None => true,
-        Some(state) => now.saturating_sub(state.checked_at) >= NETWORK_PERIOD_SECS,
+        Some(state) => state.checked_at > now || now - state.checked_at >= NETWORK_PERIOD_SECS,
     }
 }
 
@@ -135,7 +143,8 @@ pub fn record_check(
 
 /// The line to print for `root`, and the cache change that goes with it.
 /// Returns `None` when `updates` is empty (and clears `reported`) or equals
-/// `reported`. Otherwise sets `reported = updates` and returns the line.
+/// `reported`, and when `root` has no state. Otherwise sets
+/// `reported = updates` and returns the line.
 pub fn decide(cache: &mut NoticeCache, scope: Scope, root: &Path) -> Option<String> {
     let state = cache.scopes.get_mut(&key(root))?;
     if state.updates.is_empty() {
@@ -336,5 +345,76 @@ mod tests {
             update_set(&check),
             set(&["agent:local", "rule:alpha@c9", "skill:zeta@c9"])
         );
+    }
+
+    #[test]
+    fn a_check_time_in_the_future_needs_a_check() {
+        let cache = recorded(&[]);
+        assert!(needs_check(&cache, &root(), 999));
+    }
+
+    #[test]
+    fn a_file_of_the_wrong_shape_loads_as_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(CACHE_FILE_NAME);
+        for text in ["[]", "{\"scopes\": 3}", "3", "null"] {
+            fs::write(&path, text).unwrap();
+            assert_eq!(NoticeCache::load(&path), NoticeCache::default(), "{text}");
+        }
+    }
+
+    #[test]
+    fn a_scope_without_the_reported_field_keeps_the_other_data() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(CACHE_FILE_NAME);
+        fs::write(
+            &path,
+            r#"{"scopes": {"/work/project": {"checked_at": 7, "updates": ["skill:a@c1"]}}}"#,
+        )
+        .unwrap();
+        let cache = NoticeCache::load(&path);
+        let state = &cache.scopes["/work/project"];
+        assert_eq!(state.checked_at, 7);
+        assert_eq!(state.updates, set(&["skill:a@c1"]));
+        assert!(state.reported.is_empty());
+    }
+
+    #[test]
+    fn a_root_without_state_prints_nothing() {
+        let mut cache = NoticeCache::default();
+        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(cache, NoticeCache::default());
+    }
+
+    #[test]
+    fn record_check_stores_the_updates_sorted() {
+        let cache = recorded(&["skill:b@c1", "rule:a@c1"]);
+        assert_eq!(
+            cache.scopes[&key(&root())].updates,
+            set(&["rule:a@c1", "skill:b@c1"])
+        );
+    }
+
+    #[test]
+    fn two_orders_of_one_set_print_once() {
+        let mut cache = recorded(&["skill:b@c1", "rule:a@c1"]);
+        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        record_check(
+            &mut cache,
+            &root(),
+            set(&["rule:a@c1", "skill:b@c1"]),
+            true,
+            2_000,
+        );
+        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+    }
+
+    #[test]
+    fn the_same_item_listed_twice_counts_once() {
+        let check = check(vec![
+            source(update(Some("c9")), vec![(ItemKind::Skill, "a")]),
+            source(update(Some("c9")), vec![(ItemKind::Skill, "a")]),
+        ]);
+        assert_eq!(update_set(&check), set(&["skill:a@c9"]));
     }
 }
