@@ -770,8 +770,10 @@ fn reselect_from_entries(
 /// `names` is empty; `PreparedInstall::record_commit`) except the entry of an
 /// item whose update is withheld (a [`PreviewAction::Skip`] item), which keeps
 /// its recorded commit. An entry of the source that `names` did not select
-/// keeps its recorded commit. The lockfile is saved only when a commit value
-/// differs. This write is not in
+/// keeps its recorded commit on this path. In an applied source the
+/// reinstall covers the selected entries, or every member for a bundle source,
+/// and each reinstalled entry gets the fetched commit. The lockfile is saved
+/// only when a commit value differs. This write is not in
 /// [`UpdateReport::changed`] and does not make the source a source with
 /// changes. A declined source and a dry run write no commit. In an applied
 /// source, an item whose modified destinations are kept
