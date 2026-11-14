@@ -1719,16 +1719,7 @@ fn print_doctor_scopes(report: &DoctorScopes) {
         .max()
         .unwrap_or(0);
     for cell in &report.support {
-        let mut line = format!(
-            "  {:<client_width$} {:<6} {}",
-            cell.client,
-            cell.kind.to_string(),
-            cell.level
-        );
-        if let (Some(version), Some(date)) = (cell.client_version, cell.checked) {
-            line.push_str(&format!(" ({} {}, {})", cell.client, version, date));
-        }
-        println!("{line}");
+        println!("{}", upskill::support::format_row(cell, client_width));
     }
 }
 

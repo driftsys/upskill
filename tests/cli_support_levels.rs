@@ -37,8 +37,33 @@ fn doctor_prints_one_level_for_each_client_and_kind() {
         .iter()
         .position(|l| *l == "Support levels:")
         .unwrap_or_else(|| panic!("no section in:\n{text}"));
-    let rows = &lines[at + 1..at + 1 + SUPPORT.len()];
+    let rows: Vec<&str> = lines[at + 1..]
+        .iter()
+        .copied()
+        .take_while(|l| l.starts_with("  "))
+        .collect();
     assert_eq!(rows.len(), 12, "{text}");
+    let order = [
+        ("claude", "rule", "experimental"),
+        ("claude", "skill", "experimental"),
+        ("claude", "agent", "experimental"),
+        ("copilot", "rule", "experimental"),
+        ("copilot", "skill", "experimental"),
+        ("copilot", "agent", "experimental"),
+        ("opencode", "rule", "experimental"),
+        ("opencode", "skill", "experimental"),
+        ("opencode", "agent", "experimental"),
+        ("codex", "rule", "unsupported"),
+        ("codex", "skill", "unsupported"),
+        ("codex", "agent", "unsupported"),
+    ];
+    for (row, (client, kind, level)) in rows.iter().zip(order) {
+        assert_eq!(
+            row.split_whitespace().collect::<Vec<_>>(),
+            [client, kind, level],
+            "{text}"
+        );
+    }
     for (row, cell) in rows.iter().zip(SUPPORT) {
         assert_eq!(
             row.split_whitespace().collect::<Vec<_>>(),
@@ -51,6 +76,40 @@ fn doctor_prints_one_level_for_each_client_and_kind() {
         .rposition(|l| l.starts_with("doctor:"))
         .unwrap();
     assert!(last_scope_report < at, "{text}");
+}
+
+#[test]
+fn doctor_prints_the_support_levels_after_the_reports_of_an_unclean_repository() {
+    let (tmp, home, repo) = empty_repo();
+    let source = tmp.path().join("source/rules/r1");
+    std::fs::create_dir_all(&source).unwrap();
+    std::fs::write(
+        source.join("RULE.md"),
+        "---\nschema: 1\nname: r1\ndescription: Use when testing\n---\n\nBody.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&repo)
+        .args([
+            "add",
+            tmp.path().join("source").to_str().unwrap(),
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    std::fs::remove_file(repo.join(".claude/rules/r1.md")).unwrap();
+    let out = common::upskill_cmd(&home)
+        .current_dir(&repo)
+        .arg("doctor")
+        .assert()
+        .code(1);
+    let text = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    let problem = text.find("missing per-client outputs").unwrap();
+    let global = text.find("global (").unwrap();
+    let heading = text.find("Support levels:").unwrap();
+    assert!(problem < global && global < heading, "{text}");
+    assert_eq!(text.matches("Support levels:").count(), 1, "{text}");
 }
 
 #[test]
@@ -155,9 +214,5 @@ fn the_user_guide_table_equals_the_compiled_table() {
         })
         .collect();
     assert_eq!(page_rows.len(), SUPPORT.len(), "{page_rows:#?}");
-    let mut left = page_rows.clone();
-    let mut right = compiled.clone();
-    left.sort();
-    right.sort();
-    assert_eq!(left, right);
+    assert_eq!(page_rows, compiled);
 }

@@ -68,9 +68,49 @@ pub const SUPPORT: &[SupportCell] = &[
     cell("codex", ItemKind::Agent, SupportLevel::Unsupported),
 ];
 
+/// One line of the `doctor` support section: the client padded to
+/// `client_width`, the kind, the level, and for a cell with a version and a
+/// date the suffix ` (<client> <version>, <date>)`.
+pub fn format_row(cell: &SupportCell, client_width: usize) -> String {
+    let mut line = format!(
+        "  {:<client_width$} {:<6} {}",
+        cell.client,
+        cell.kind.to_string(),
+        cell.level
+    );
+    if let (Some(version), Some(date)) = (cell.client_version, cell.checked) {
+        line.push_str(&format!(" ({} {}, {})", cell.client, version, date));
+    }
+    line
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_supported_row_ends_with_the_client_version_and_the_date() {
+        let supported = SupportCell {
+            client: "claude",
+            kind: ItemKind::Skill,
+            level: SupportLevel::Supported,
+            client_version: Some("2.1.0"),
+            checked: Some("2026-11-20"),
+        };
+        assert_eq!(
+            format_row(&supported, 8),
+            "  claude   skill  supported (claude 2.1.0, 2026-11-20)"
+        );
+    }
+
+    #[test]
+    fn an_experimental_row_has_no_suffix() {
+        let experimental = cell("copilot", ItemKind::Agent, SupportLevel::Experimental);
+        assert_eq!(
+            format_row(&experimental, 8),
+            "  copilot  agent  experimental"
+        );
+    }
 
     #[test]
     fn the_table_has_one_cell_for_each_client_and_kind() {

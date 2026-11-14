@@ -4,8 +4,10 @@ import importlib.util
 import io
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
@@ -23,15 +25,31 @@ def smoke_args(**overrides):
     return argparse.Namespace(**values)
 
 
+def source_markers(source):
+    """The marker that each item of an installed source holds, by kind."""
+    source = Path(source)
+    markers = {}
+    for kind, folder in (('rule', 'rules'), ('skill', 'skills'), ('agent', 'agents')):
+        text = next((source / folder).glob('*/*.md')).read_text()
+        markers[kind] = next(w for w in text.split() if w.startswith('SMOKE_'))
+    return markers
+
+
 class FakeRunner:
-    """Records every command. `answer(command)` returns the scripted output."""
+    """Records every command with its cwd and env. `answer(command)` returns the scripted output."""
 
     def __init__(self, answer=None):
         self.commands = []
+        self.cwds = []
+        self.envs = []
+        self.git_repositories = []
         self.answer = answer
 
     def __call__(self, command, cwd, timeout, env):
         self.commands.append([str(part) for part in command])
+        self.cwds.append(Path(cwd))
+        self.envs.append(env)
+        self.git_repositories.append((Path(cwd) / '.git').is_dir())
         if self.answer:
             scripted = self.answer(self.commands[-1])
             if scripted is not None:
@@ -84,6 +102,17 @@ class SmokeRunTest(unittest.TestCase):
         self.assertFalse([c for c in runner.commands if '--global' in c])
 
     def test_global_items_are_removed_after_a_timeout(self):
+        # The real `invoke` returns the state `timeout`; it never raises.
+        def answer(command):
+            if command[0] == 'claude' and '--version' not in command:
+                return {'state': 'timeout', 'response': '', 'sha256': None}
+
+        runner = FakeRunner(answer)
+        results = q.run_smoke(smoke_args(scopes=['global'], allow_real_home=True), runner)
+        self.assertEqual({cell['result'] for cell in results}, {'timeout'})
+        self.assert_the_asked_item_is_removed(runner)
+
+    def test_a_raised_timeout_is_a_timeout_and_the_items_are_removed(self):
         def answer(command):
             if command[0] == 'claude' and '--version' not in command:
                 raise subprocess.TimeoutExpired(command, 5)
@@ -91,11 +120,17 @@ class SmokeRunTest(unittest.TestCase):
         runner = FakeRunner(answer)
         results = q.run_smoke(smoke_args(scopes=['global'], allow_real_home=True), runner)
         self.assertEqual({cell['result'] for cell in results}, {'timeout'})
-        last = runner.commands[-1]
-        self.assertEqual(last[1:4], ['remove', '--global', '--yes'])
-        self.assertTrue(last[4].startswith('upskill-smoke-'))
+        self.assert_the_asked_item_is_removed(runner)
+
+    def assert_the_asked_item_is_removed(self, runner):
         add = next(c for c in runner.commands if c[1] == 'add')
         self.assertIn('--global', add)
+        last = runner.commands[-1]
+        self.assertEqual(last[1:4], ['remove', '--global', '--yes'])
+        prompts = [c[-1] for c in runner.commands if c[0] == 'claude' and '--version' not in c]
+        self.assertEqual(len(prompts), 3)
+        for prompt in prompts:
+            self.assertIn('`' + last[4] + '`', prompt)
 
     def test_global_items_are_removed_after_an_exception(self):
         def answer(command):
@@ -107,13 +142,80 @@ class SmokeRunTest(unittest.TestCase):
             q.run_smoke(smoke_args(scopes=['global'], allow_real_home=True), runner)
         self.assertEqual(runner.commands[-1][1:4], ['remove', '--global', '--yes'])
 
+    def test_the_removed_name_is_the_installed_name(self):
+        installed = []
+
+        def answer(command):
+            if command[1] == 'add':
+                installed.extend(p.name for folder in ('rules', 'skills', 'agents') for p in (Path(command[2]) / folder).iterdir())
+
+        runner = FakeRunner(answer)
+        q.run_smoke(smoke_args(scopes=['global'], allow_real_home=True), runner)
+        removed = runner.commands[-1][4]
+        self.assertEqual(installed, [removed] * 3)
+
+    def test_nothing_is_removed_after_a_failed_global_install(self):
+        def answer(command):
+            if command[1] == 'add':
+                return {'state': 'failure', 'stdout': ''}
+
+        runner = FakeRunner(answer)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), runner)
+        self.assertFalse([c for c in runner.commands if c[1] == 'remove'])
+        self.assertNotIn('warning:', out.getvalue())
+        self.assertEqual(out.getvalue().count('install-failed'), 3)
+
     def test_a_relative_binary_path_is_made_absolute(self):
         runner = FakeRunner()
         q.run_smoke(smoke_args(upskill=Path('target/release/upskill'), scopes=['global'], allow_real_home=True), runner)
-        for command in runner.commands:
-            if command[1] in ('add', 'remove'):
-                self.assertTrue(os.path.isabs(command[0]), command)
-                self.assertEqual(command[0], str(Path('target/release/upskill').resolve()))
+        absolute = str(Path('target/release/upskill').resolve())
+        upskill_commands = [c for c in runner.commands if c[1] in ('add', 'remove')]
+        self.assertEqual([c[1] for c in upskill_commands], ['add', 'remove'])
+        for command in upskill_commands:
+            self.assertEqual(command[0], absolute)
+
+    def test_each_client_installs_for_itself_and_is_asked_in_the_cell_repository(self):
+        runner = FakeRunner()
+        q.run_smoke(smoke_args(clients=['claude', 'copilot']), runner)
+        for client in ('claude', 'copilot'):
+            indexes = [i for i, c in enumerate(runner.commands) if c[0] == client and '--version' not in c]
+            self.assertEqual(len(indexes), 3)
+            add = next(i for i, c in enumerate(runner.commands) if c[1] == 'add' and '--' + client in c)
+            others = [c for c in ('--claude', '--copilot') if c != '--' + client]
+            self.assertFalse([o for o in others if o in runner.commands[add]])
+            self.assertEqual(runner.cwds[add].name, client + '-project')
+            self.assertTrue(runner.git_repositories[add])
+            for i in indexes:
+                self.assertEqual(runner.cwds[i], runner.cwds[add])
+                self.assertTrue(runner.git_repositories[i])
+
+    def test_commands_run_without_repository_selectors_or_the_claude_nesting_variable(self):
+        runner = FakeRunner()
+        with mock.patch.dict(os.environ, {'GIT_DIR': '/nowhere', 'CLAUDECODE': '1'}):
+            q.run_smoke(smoke_args(), runner)
+        self.assertTrue(runner.envs)
+        for env in runner.envs:
+            self.assertNotIn('GIT_DIR', env)
+            self.assertNotIn('CLAUDECODE', env)
+
+    def test_the_markers_and_the_name_differ_between_runs(self):
+        def run_once():
+            seen = {}
+
+            def answer(command):
+                if command[1] == 'add':
+                    seen['markers'] = sorted(source_markers(command[2]).values())
+                    seen['name'] = next((Path(command[2]) / 'rules').iterdir()).name
+
+            q.run_smoke(smoke_args(), FakeRunner(answer))
+            return seen
+
+        first, second = run_once(), run_once()
+        self.assertEqual(len(first['markers']), 3)
+        self.assertFalse(set(first['markers']) & set(second['markers']))
+        self.assertNotEqual(first['name'], second['name'])
 
     def test_a_failed_install_is_reported_as_install_failed(self):
         def answer(command):
@@ -187,17 +289,22 @@ class SmokeRunTest(unittest.TestCase):
         self.assertEqual({cell['client_version'] for cell in results}, {'1.2.3'})
 
     def test_a_kind_is_supported_only_when_both_scopes_pass(self):
+        def cell(kind, scope, result):
+            return {'client': 'claude', 'kind': kind, 'scope': scope, 'result': result, 'client_version': '1.2.3'}
+
         cells = [
-            {'client': 'claude', 'kind': 'rule', 'scope': 'project', 'result': 'pass', 'client_version': '1.2.3'},
-            {'client': 'claude', 'kind': 'rule', 'scope': 'global', 'result': 'pass', 'client_version': '1.2.3'},
-            {'client': 'claude', 'kind': 'skill', 'scope': 'project', 'result': 'pass', 'client_version': '1.2.3'},
-            {'client': 'claude', 'kind': 'skill', 'scope': 'global', 'result': 'fail', 'client_version': '1.2.3'},
-            {'client': 'claude', 'kind': 'agent', 'scope': 'project', 'result': 'pass', 'client_version': '1.2.3'},
+            cell('rule', 'project', 'pass'), cell('rule', 'global', 'pass'),
+            cell('skill', 'project', 'pass'), cell('skill', 'global', 'fail'),
+            cell('agent', 'project', 'pass'),
+            cell('hook', 'global', 'pass'), cell('hook', 'project', 'fail'),
+            cell('mcp', 'global', 'pass'),
         ]
         levels = q.smoke_levels(cells)
         self.assertEqual(levels[('claude', 'rule')], 'supported')
         self.assertEqual(levels[('claude', 'skill')], 'experimental')
         self.assertEqual(levels[('claude', 'agent')], 'experimental')
+        self.assertEqual(levels[('claude', 'hook')], 'experimental')
+        self.assertEqual(levels[('claude', 'mcp')], 'experimental')
 
     def test_exit_code_is_0_when_a_cell_fails(self):
         def answer(command):
@@ -217,13 +324,61 @@ class SmokeRunTest(unittest.TestCase):
         self.assertEqual(q.smoke_response('copilot', stdout), 'MARK')
         self.assertEqual(q.smoke_response('claude', ' MARK \n'), 'MARK')
 
-    def test_the_client_command_never_grants_shell_or_file_tools(self):
-        for client in q.SMOKE_CLIENTS:
-            for kind in q.SMOKE_KINDS:
-                joined = ' '.join(q.smoke_command(client, kind, 'prompt', 'project'))
-                self.assertNotIn('allow-all', joined)
-                self.assertNotIn('yolo', joined)
-                self.assertNotIn('Bash', joined)
+    def test_a_copilot_stream_that_is_not_complete_has_no_response(self):
+        message = '{"type":"assistant.message","data":{"content":"MARK"}}\n'
+        for stdout in (message,
+                       message + '{"type":"result","exitCode":1}\n',
+                       message + '{"type":"result"}\n',
+                       message + '{"type":"result","exitCode":false}\n',
+                       message + '{"type":"result","exitCode":0}\n{"type":"assistant.idle"}\n',
+                       message + '{"type":"result","exitCode":0}\n{"type":"result","exitCode":0}\n',
+                       ''):
+            self.assertIsNone(q.smoke_response('copilot', stdout), stdout)
+
+    def test_a_copilot_cell_with_the_marker_but_an_incomplete_stream_fails(self):
+        seen = {}
+
+        def answer(command):
+            if command[1] == 'add':
+                seen['rule'] = source_markers(command[2])['rule']
+            if command[0] == 'copilot' and '--version' not in command:
+                return {'state': 'success', 'stdout': '{"type":"assistant.message","data":{"content":"' + seen['rule'] + '"}}\n' + self.tail}
+
+        for tail, expected in (('{"type":"result","exitCode":0}\n', 'pass'), ('', 'fail'), ('{"type":"result","exitCode":1}\n', 'fail')):
+            self.tail = tail
+            results = q.run_smoke(smoke_args(clients=['copilot'], kinds=['rule']), FakeRunner(answer))
+            self.assertEqual([cell['result'] for cell in results], [expected], tail)
+
+    def test_the_client_command_is_exactly_the_restricted_command(self):
+        mcp = '{"mcpServers":{}}'
+        expected = {
+            ('claude', 'rule', 'project'): ['claude', '-p', '--tools', '', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', mcp, '--setting-sources', 'project', 'P'],
+            ('claude', 'skill', 'project'): ['claude', '-p', '--tools', 'Skill', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', mcp, '--setting-sources', 'project', 'P'],
+            ('claude', 'agent', 'global'): ['claude', '-p', '--tools', 'Agent', '--no-session-persistence', '--strict-mcp-config', '--mcp-config', mcp, '--setting-sources', 'user', 'P'],
+            ('copilot', 'rule', 'project'): ['copilot', '--no-auto-update', '--disable-builtin-mcps', '--available-tools=', '--no-ask-user', '--output-format', 'json', '--log-level', 'none', '-p', 'P'],
+            ('copilot', 'skill', 'global'): ['copilot', '--no-auto-update', '--disable-builtin-mcps', '--available-tools=skill', '--allow-tool=skill', '--no-ask-user', '--output-format', 'json', '--log-level', 'none', '-p', 'P'],
+            ('copilot', 'agent', 'project'): ['copilot', '--no-auto-update', '--disable-builtin-mcps', '--available-tools=task', '--allow-tool=task', '--no-ask-user', '--output-format', 'json', '--log-level', 'none', '-p', 'P'],
+        }
+        for (client, kind, scope), command in expected.items():
+            self.assertEqual(q.smoke_command(client, kind, 'P', scope), command)
+
+    def test_smoke_flags_are_refused_without_smoke(self):
+        # The parser refuses before any client or upskill command can start.
+        script = str(ROOT / 'scripts' / 'qualify-native-instructions.py')
+        for flags in (['--kinds', 'rule'], ['--scopes', 'project'], ['--allow-real-home'], ['--upskill', 'x']):
+            done = subprocess.run([sys.executable, '-I', script, *flags], capture_output=True, text=True)
+            self.assertEqual(done.returncode, 2, flags)
+            self.assertIn('only apply with --smoke', done.stderr)
+
+    def test_without_run_the_output_lists_the_cells_and_no_level(self):
+        out = io.StringIO()
+        runner = FakeRunner()
+        with contextlib.redirect_stdout(out):
+            code = q.smoke_main(smoke_args(run=False), runner)
+        self.assertEqual(code, 0)
+        self.assertEqual(runner.commands, [])
+        lines = out.getvalue().splitlines()
+        self.assertEqual(lines, ['claude %s project not-run -' % kind for kind in q.SMOKE_KINDS])
 
 
 @unittest.skipUnless(BINARY.exists(), 'target/debug/upskill is not built')
@@ -244,17 +399,20 @@ class SmokeSourceInstallTest(unittest.TestCase):
             done = subprocess.run([str(BINARY), 'add', str(source), '--claude', '--copilot', '--project'],
                                   cwd=repo, env=env, capture_output=True, text=True)
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-            installed = [p for p in repo.rglob('*') if p.is_file() and '.git' not in p.parts]
-            for marker in markers.values():
-                holders = [p for p in installed if marker in p.read_text(errors='ignore')]
-                self.assertGreaterEqual(len(holders), 2, (marker, holders))
-            names = {str(p.relative_to(repo)) for p in installed}
-            for expected in ('.claude/rules/upskill-smoke-test.md', '.claude/skills/upskill-smoke-test/SKILL.md',
-                             '.claude/agents/upskill-smoke-test.md',
-                             '.github/instructions/upskill-smoke-test.instructions.md',
-                             '.github/skills/upskill-smoke-test/SKILL.md',
-                             '.github/agents/upskill-smoke-test.agent.md'):
-                self.assertIn(expected, names)
+            installed = {str(p.relative_to(repo)): p.read_text(errors='ignore')
+                         for p in repo.rglob('*') if p.is_file() and '.git' not in p.parts}
+            n = 'upskill-smoke-test'
+            expected = {
+                '.claude/rules/' + n + '.md': 'rule', '.github/instructions/' + n + '.instructions.md': 'rule',
+                '.claude/skills/' + n + '/SKILL.md': 'skill', '.github/skills/' + n + '/SKILL.md': 'skill',
+                '.claude/agents/' + n + '.md': 'agent', '.github/agents/' + n + '.agent.md': 'agent',
+            }
+            for path, kind in expected.items():
+                self.assertIn(path, installed)
+                self.assertIn(markers[kind], installed[path], path)
+                for other, marker in markers.items():
+                    if other != kind:
+                        self.assertNotIn(marker, installed[path], path)
 
 
 if __name__ == '__main__':
