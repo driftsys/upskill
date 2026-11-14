@@ -71,18 +71,23 @@ just smoke --run --clients claude --kinds skill --scopes project
 Without `--run` the script prints the cells it would run, with the result
 `not-run`, and starts no command and makes no model call. With `--run` it
 installs a generated source of one rule, one skill and one agent, asks the
-client one question for each kind in a new session, removes the items, and
-checks that the answer holds the marker of that kind. The marker appears only in
-the installed item, never in the question.
+client one question for each kind in a new session, and checks that the answer
+holds the marker of that kind. A project cell runs in a temporary repository
+that the script deletes at the end. A global cell removes the items with
+`upskill remove`, as described below. The marker appears only in the installed
+item, never in the question.
 
-| Flag                | Meaning                                                    |
-| ------------------- | ---------------------------------------------------------- |
-| `--run`             | Make the model calls                                       |
-| `--clients`         | `claude`, `copilot`; default both                          |
-| `--kinds`           | `rule`, `skill`, `agent`; default all                      |
-| `--scopes`          | `project`, `global`; default both                          |
-| `--allow-real-home` | Allow the global cells to write to the real home directory |
-| `--timeout`         | Seconds for each client call; default 90                   |
+| Flag                | Meaning                                                                      |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `--run`             | Make the model calls                                                         |
+| `--clients`         | `claude`, `copilot`; default both                                            |
+| `--kinds`           | `rule`, `skill`, `agent`; default all                                        |
+| `--scopes`          | `project`, `global`; default both                                            |
+| `--allow-real-home` | Allow the global cells to write to the real home directory                   |
+| `--timeout`         | Seconds for each client, `upskill add` and `upskill remove` call; default 90 |
+
+The flags `--kinds`, `--scopes`, `--allow-real-home` and `--upskill` are valid
+only with `--smoke`; without it the script exits with code 2.
 
 A project cell runs in a new temporary git repository. `HOME` is not changed, so
 the client stays authenticated. The path of `--upskill` may be relative; the
@@ -92,28 +97,35 @@ A global cell installs into the real home directory, under the item name
 `upskill-smoke-<12 hex digits>`. It runs only with `--allow-real-home`; without
 the flag the cell is `unavailable`. The script removes the three items with
 `upskill remove --global --yes <name>` after the cell, also after a timeout or
-an error. What a global cell leaves in the home directory after that removal, as
-checked with a temporary home that held a `CLAUDE.md`, `opencode.json` and
+an error. It does not run `remove` when `upskill add` failed without a timeout,
+because such an `add` installed nothing; after a timed-out `add` it does run.
+What a global cell leaves in the home directory after that removal, as checked
+with a temporary home that held a `CLAUDE.md`, `opencode.json` and
 `.vscode/settings.json` before the run:
 
 - An existing `CLAUDE.md` is not changed. When the file is absent, `add` creates
   it with the content `@AGENTS.md`.
-- An existing `opencode.json` is edited: `add` adds the key `instructions` with
-  the value `[".agents/rules/**/RULE.md"]` and keeps the other keys. `remove`
-  does not revert it.
-- An existing `.vscode/settings.json` is edited: `add` adds the key
-  `chat.instructionsFilesLocations` with the value
-  `{".github/instructions": true}` and keeps the other keys. `remove` does not
-  revert it.
+- `opencode.json`: the glob is `.agents/rules/**/RULE.md`. When the file is
+  absent, `add` creates it with the key `instructions` and an array that holds
+  the glob. When the file exists without the key `instructions`, `add` adds the
+  key with an array that holds the glob. When the key holds an array, `add`
+  appends the glob and keeps the other entries, and it leaves the file unchanged
+  if the glob is already in the array. `add` fails when the key is not an array.
+  `remove` does not revert the change.
+- `.vscode/settings.json`: `add` creates the file with
+  `{"chat.instructionsFilesLocations": {".github/instructions": true}}` when it
+  is absent. When the file exists without that key, `add` adds the key with that
+  value. When the key exists without the entry `.github/instructions`, `add`
+  adds the entry with the value `true`. When the entry exists, with either
+  value, `add` leaves the file unchanged. `remove` does not revert the change.
 - The item files are deleted. The empty directories
   `.claude/{agents,rules,skills}` or `.copilot/{agents,instructions,skills}`
   stay, and `.upskill-lock.json` stays with an empty item list.
 
 If the script is killed hard during a global cell, the items stay in the home
-directory. Remove them with
-`upskill remove --global --yes upskill-smoke-<12 hex
-digits>`;
-`upskill list --global` shows the name.
+directory. `upskill list --global` shows the name, which is `upskill-smoke-`
+followed by 12 hexadecimal digits. Remove the items with
+`upskill remove --global --yes <name>`.
 
 The result of a cell is `pass`, `fail`, `timeout`, `unavailable` or
 `install-failed`. A cell is `unavailable` when the client binary is missing, its
