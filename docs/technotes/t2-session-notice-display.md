@@ -5,10 +5,11 @@ records what the documentation of each client states about a hook that runs when
 a session starts. The trial itself has not been run: no hook was installed and
 no session was started. This note is informative.
 
-`upskill update --notice` prints one plain line on standard output when updates
-are available, for example
-`upskill: 3 updates available (project). Run "upskill update".` The question of
-trial T2 is what each client does with that line.
+`upskill update --notice` prints one plain line on standard output for each
+scope that has available updates (the project scope, then the global scope), for
+example `upskill: 3 updates available (project). Run "upskill update".` It
+prints a given set of updates once. The question of trial T2 is what each client
+does with such a line.
 
 ## Method
 
@@ -89,7 +90,8 @@ Sources: `https://docs.github.com/en/copilot/reference/hooks-configuration`,
 - **Claude Code files.** The page states that `.claude/settings.json` and
   `.claude/settings.local.json` in the repository are also read. A project that
   declares the hook for both clients could therefore run it twice in Copilot
-  CLI. The second run prints nothing, because the notice prints a set once.
+  CLI. When the two runs do not overlap, the second run prints nothing, because
+  the notice prints a set once. Two runs that overlap can both print the line.
 
 The documented shape of a hook file (not run):
 
@@ -106,9 +108,11 @@ The documented shape of a hook file (not run):
 
 ## What follows for the notice
 
-- In both clients the documented destination of the hook output is the context
-  of the model, not a message to the user. Whether the agent then tells the user
-  is the main question of the trial.
+- Claude Code documents the plain output of the hook as context for the model,
+  not as a message to the user. Copilot CLI documents that it consumes
+  `additionalContext` and does not state whether the user or the model receives
+  it. Whether the user sees the line, and whether the agent tells the user, are
+  the main questions of the trial.
 - Copilot CLI documents only a JSON object with `additionalContext`. A plain
   line may be ignored. If the trial confirms that, the hook command of the
   Copilot plugin must wrap the line in that object. The binary keeps printing a
@@ -116,9 +120,10 @@ The documented shape of a hook file (not run):
 - For Claude Code, a line that the user must see may need the `systemMessage`
   field, which the hook command would also have to build.
 - Both clients continue when the hook fails or passes its time limit, and
-  `upskill update --notice` exits with code 0 and looks up the sources for 5
-  seconds at most, so a hook cannot block a session start. A hook command should
-  still tolerate a missing `upskill` binary.
+  `upskill update --notice` exits with code 0 after argument parsing (a usage
+  error exits with code 2) and looks up the sources for 5 seconds at most, so a
+  hook cannot block a session start. A hook command should still tolerate a
+  missing `upskill` binary.
 
 ## What the trial must record
 
