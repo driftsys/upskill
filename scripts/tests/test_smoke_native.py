@@ -387,10 +387,37 @@ class SmokeRunTest(unittest.TestCase):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             q.smoke_main(smoke_args(clients=['copilot']), FakeRunner(answer))
-        notes = [l for l in out.getvalue().splitlines() if l.startswith('note: copilot ')]
-        self.assertEqual(len(notes), 3)
-        for note in notes:
-            self.assertIn('monthly quota is exceeded', note)
+        notes = [l for l in out.getvalue().splitlines() if l.startswith('note:')]
+        self.assertEqual(notes, ['note: copilot %s project copilot reports that the monthly quota is exceeded' % kind
+                                 for kind in q.SMOKE_KINDS])
+
+    def test_only_the_quota_case_has_a_reason(self):
+        seen = {}
+
+        def scenario(kind_of_answer):
+            def answer(command):
+                if command[1] == 'add':
+                    for kind, path in (('rule', 'rules'), ('skill', 'skills'), ('agent', 'agents')):
+                        text = next((Path(command[2]) / path).glob('*/*.md')).read_text()
+                        seen[kind] = next(w for w in text.split() if w.startswith('SMOKE_'))
+                    return {'state': 'success', 'stdout': ''}
+                if command[0] == 'claude' and '--version' not in command:
+                    kind = next(k for k in q.SMOKE_KINDS if command[-1] == q.smoke_prompt(k, command[-1].split('`')[1]))
+                    if kind_of_answer == 'marker':
+                        return {'state': 'success', 'stdout': seen[kind] + '\n'}
+                    if kind_of_answer == 'other marker':
+                        other = next(v for k, v in seen.items() if k != kind)
+                        return {'state': 'success', 'stdout': other + '\n'}
+                    return {'state': kind_of_answer, 'stdout': ''}
+            return answer
+
+        expected = {'marker': 'pass', 'other marker': 'fail', 'failure': 'fail', 'timeout': 'timeout',
+                    'unavailable': 'unavailable', 'authentication_failure': 'unavailable'}
+        for kind_of_answer, result in expected.items():
+            results = q.run_smoke(smoke_args(), FakeRunner(scenario(kind_of_answer)))
+            self.assertEqual({cell['result'] for cell in results}, {result}, kind_of_answer)
+            for cell in results:
+                self.assertNotIn('reason', cell, kind_of_answer)
 
     def test_a_quota_error_of_another_client_is_a_failure(self):
         stream = ('{"type":"session.error","data":{"errorType":"quota","statusCode":402}}\n'
@@ -600,7 +627,7 @@ class SmokeGlobalLockfileTest(unittest.TestCase):
         self.lock.write_bytes(self.ADOPTED)
 
     def run_cell(self, add_state='success', removal=None):
-        """The fake `add` adopts the lockfile to schema 2 and writes the copy `.v1`."""
+        """The fake `add` adopts the lockfile to schema 2 and writes the copy `.v1` when it is absent."""
         removal = removal or {'state': 'success', 'stdout': ''}
 
         def answer(command):
@@ -669,9 +696,22 @@ class SmokeGlobalLockfileTest(unittest.TestCase):
         with mock.patch.object(q, 'save_global_lockfile', side_effect=OSError('denied')):
             output = self.run_cell()
         self.assertEqual(self.lock.read_bytes(), self.ADOPTED)
+        self.assertEqual(self.v1.read_bytes(), self.ORIGINAL)
         warnings = [line for line in output.splitlines() if line.startswith('warning:')]
         self.assertEqual(len(warnings), 1)
         self.assertIn('the global lockfile was not restored: the global lockfile could not be read: denied', warnings[0])
+
+    def test_a_failed_removal_with_an_unreadable_lockfile_reports_the_removal(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        removal = {'state': 'failure', 'stdout': '', 'stderr': 'error: permission denied\n', 'exit_code': 1}
+        with mock.patch.object(q, 'save_global_lockfile', side_effect=OSError('denied')):
+            output = self.run_cell(removal=removal)
+        self.assertEqual(self.lock.read_bytes(), self.ADOPTED)
+        self.assertEqual(self.v1.read_bytes(), self.ORIGINAL)
+        warnings = [line for line in output.splitlines() if line.startswith('warning:')]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn('were not removed: upskill remove ended with state failure', warnings[0])
+        self.assertIn('lockfile was left as the run changed it', warnings[0])
 
     def test_an_error_while_restoring_is_a_warning_and_does_not_raise(self):
         self.lock.write_bytes(self.ORIGINAL)
