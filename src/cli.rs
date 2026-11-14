@@ -262,7 +262,8 @@ pub enum Commands {
     /// scopes is noted and does not change the exit code.
     ///
     /// Doctor never fetches; remote-source drift detection is
-    /// `update --check` (no fetch) and `update --dry-run` (fetches). Exit 0 when clean, 1 when any drift is found.
+    /// `update --check` (no fetch) and `update --dry-run` (fetches). Exit 0
+    /// when clean, 1 when any drift is found.
     #[command(
         display_order = 6,
         after_help = "EXAMPLES:\n  \

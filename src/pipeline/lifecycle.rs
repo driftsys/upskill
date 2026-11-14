@@ -494,7 +494,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
         }
         // Non-local sources: doctor only validates per-client outputs.
         // Hash comparison would require a network fetch — out of scope
-        // here, see `update --dry-run`.
+        // here, see `update --check` and `update --dry-run`.
     }
 
     // -- Orphaned dependencies (advisory, issue #196) --
@@ -709,7 +709,8 @@ fn reselect_from_entries(
 
 /// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
 /// handle the sources one at a time, sorted by source label. `update`
-/// always fetches per ADR-0004 — there is no `--offline`.
+/// always fetches per ADR-0004 — there is no `--offline`. `update --check`
+/// does not call this function: it fetches nothing and changes no file.
 ///
 /// `names` selects which lockfile entries to update; empty means "all".
 /// When names are given, the entries' source labels are used to fetch
@@ -1009,7 +1010,7 @@ pub fn update(
                     });
                 }
                 // A source without changes still gets the fetched commit in
-                // its lockfile entries. This write is not a change of the
+                // its selected lockfile entries. This write is not a change of the
                 // source: it is neither in `report.changed` nor counted by
                 // `has_changes`.
                 if !dry_run && !preview.has_changes() && decision != SourceDecision::Stop {

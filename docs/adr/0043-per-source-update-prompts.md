@@ -49,9 +49,9 @@ failed until `update --force`.
    are unchanged and whose executable bits differ from the target executable
    bits: each executable bit of its source resource for which the file has the
    matching read bit; a difference in the other permission bits is not a
-   change), changes an item record of the lockfile (any field except `pending`
-   and `required_by`), completes an interrupted item, removes an item, or
-   creates or changes a hand-shake file. `y` applies the source. `n` or any
+   change), changes an item record of the lockfile (any field except `pending`,
+   `required_by` and `commit`), completes an interrupted item, removes an item,
+   or creates or changes a hand-shake file. `y` applies the source. `n` or any
    other text continues without it. `q`, end of input or a read error stops the
    run; earlier sources stay applied. Ctrl-C while the question waits exits at
    once with code 130 and applies none of the changes shown for that source; an

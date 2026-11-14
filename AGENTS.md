@@ -136,7 +136,9 @@ Without a scope flag, `add` stops outside a git repo (exit 2); `update`,
 `update --check` report both scopes. The project scope is refused (exit 2, pass
 `--global`) when `cwd` is the home directory. A global install writes Copilot
 content under `$HOME/.copilot/`. `add`, `update`, `remove` and `remove-mcp`
-print `scope: <scope> (<root>)` to stderr unless `--quiet` is set.
+print `scope: <scope> (<root>)` to stderr unless `--quiet` is set;
+`update --check` prints no scope line, and with no flag in the home directory it
+reports the global scope instead of refusing.
 
 ### Source format
 

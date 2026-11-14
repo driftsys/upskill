@@ -66,11 +66,13 @@ a message that asks for `--global`, with `--project` and with no flag, in or
 outside a git repository. `update`, `remove` and `remove-mcp` do the same with
 `--project`, and with no flag in a home directory that is a git repository; with
 no flag in a home directory that is not a git repository, they use the global
-scope.
+scope. `update --check` with no flag in a home directory reports the global
+scope, in a git repository or not; with `--project` it is refused there.
 
 `add`, `update`, `remove` and `remove-mcp` print one line to stderr that names
 the scope and its root, for example `scope: global (/home/alice)`. `--quiet`
-hides it.
+hides it. `update --check` prints no such line: the block of each scope names
+the scope and its root.
 
 **Client selection.** By default `add` emits output for **every** client.
 Restrict it to the clients you actually use with one or more of `--claude`,
@@ -200,7 +202,8 @@ Without a scope flag, `update` uses the project scope inside a git repository
 and the global scope outside one; `update --check` reports both scopes instead.
 `--project` uses the current directory and `--global` uses `$HOME`. When the
 current directory is the home directory, the project scope is refused with exit
-code 2 and a message that asks for `--global`.
+code 2 and a message that asks for `--global`; `update --check` with no flag
+reports the global scope there.
 
 `update` always fetches before regenerating; there is no separate `sync`.
 [`update --check`](#update---check) is the exception: it never fetches. `update`
@@ -453,8 +456,9 @@ Reports which sources have a newer version. It changes no file, fetches nothing
 and takes no other flag (`--dry-run`, `--yes`, `--force` and the client flags
 are refused with exit code 2). Without a scope flag it reports both scopes, as
 `list` does; `--global` or `--project` limits it to one. With names, it checks
-only the sources of the items with those names. Output goes to stdout, and
-`--quiet` suppresses it:
+only the items with those names, grouped by source: the status and the item list
+of a source cover only those items. Output goes to stdout, and `--quiet`
+suppresses it:
 
 ```text
 project (/path/to/repo):
@@ -486,7 +490,7 @@ recorded hash is listed, and no commit is printed.
 | Label                | Meaning                                                                                                                                                                                                       |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `up to date`         | Every recorded commit equals the remote commit, or no item of a local path source changed.                                                                                                                    |
-| `update available`   | A recorded commit differs from the remote commit (every item of the source is listed), or an item of a local path source changed.                                                                             |
+| `update available`   | A recorded commit differs from the remote commit (every selected item of the source is listed), or an item of a local path source changed.                                                                    |
 | `pinned to a commit` | The ref is a full commit hash. The source is not looked up.                                                                                                                                                   |
 | `no recorded commit` | An item of a git source has no recorded commit, as when it was installed by an earlier version. Run `upskill update` once.                                                                                    |
 | `not reachable`      | The source label cannot be parsed, the lookup failed, the remote has no HEAD or no such ref, the local path does not exist or cannot be read, or the time limit passed during the lookup. The reason follows. |
@@ -497,10 +501,12 @@ no answer by then is `not reachable`, and later sources that need a lookup are
 `not checked`; a source that shares a lookup with an earlier source gets the
 result of that lookup also after the time limit.
 
-After an `update` that skipped an item because of a modified or unmanaged file,
-the item keeps its older commit, so `update --check` reports its source as
-`update available` until you resolve the skipped item (for example with
-`update --force`).
+After an `update` that skipped an item of a git source because of a modified or
+unmanaged file, the item keeps its older commit, so `update --check` reports its
+source as `update available` until you resolve the skipped item (for example
+with `update --force`). An entry that has no recorded commit is reported as
+`no recorded commit` instead. A local path source has no recorded commit: it is
+compared by content.
 
 Exit code: 0 when the check ran, also when a source is not reachable or has an
 update. 1 when a lockfile cannot be read or parsed. 2 for a usage error.
@@ -885,13 +891,16 @@ Files whose frontmatter and body are already canonical are left untouched (no
 The lockfile carries a top-level `schema` field for forward compatibility. A new
 lockfile is written with `schema: 2`. Each item entry may carry `files` and
 `pending` lists. `add` and `update` record in `files` every file they write for
-the item, with its client, its path and the SHA-256 of its bytes. When they
-reinstall an item, they delete the recorded files that the new version no longer
-produces, unless another item installed by the same command writes that path,
-and only when the file is unchanged: a modified recorded file is kept and stays
-in the record. A file that the record does not list is never deleted. A file at
-a path that the new version writes is replaced only when it is unchanged, absent
-or already equal to the new bytes; otherwise the item is not written (see
+the item, with its client, its path and the SHA-256 of its bytes. An item of a
+git source also carries `commit`, the commit of the source at the last `add` or
+`update` of the item; an item that `update` skips keeps its older commit (see
+[`upskill update`](#upskill-update-name)). When they reinstall an item, they
+delete the recorded files that the new version no longer produces, unless
+another item installed by the same command writes that path, and only when the
+file is unchanged: a modified recorded file is kept and stays in the record. A
+file that the record does not list is never deleted. A file at a path that the
+new version writes is replaced only when it is unchanged, absent or already
+equal to the new bytes; otherwise the item is not written (see
 [`upskill add`](#upskill-add-source-items) and
 [`upskill update`](#upskill-update-name)) unless `--force` is given. An item
 that its source no longer contains is removed by `update` with the rules of

@@ -2025,7 +2025,8 @@ fn run_list(global: bool, project: bool, json: bool) -> i32 {
     }
 }
 
-/// The scopes that `list` and `doctor` report, in the order project, global.
+/// The scopes that `list`, `doctor` and `update --check` report, in the order
+/// project, global.
 ///
 /// `--global` gives the global scope and `--project` gives the project scope,
 /// which fails with [`ScopeError::ProjectIsHome`] when the current directory is

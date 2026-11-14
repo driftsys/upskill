@@ -104,7 +104,9 @@ pub(crate) fn head_commit(dir: &Path) -> Result<String, String> {
 /// Why `run_until` did not return the output of a command.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum RunError {
-    /// The command had not exited at the deadline; it was killed.
+    /// The deadline passed. Either the command had not exited and was killed,
+    /// or it had exited and a descendant process still held an inherited
+    /// pipe open, so the output was not complete.
     TimedOut,
     /// The command could not start or exited with a failure. Holds the first
     /// line of stderr, or the spawn error.
@@ -122,6 +124,10 @@ pub(crate) enum RunError {
 /// the readers cannot finish; the call then returns `TimedOut` at the
 /// deadline and leaves the blocked reader threads detached. Output is
 /// returned only when both pipes reached end of file by the deadline.
+///
+/// Only the child itself is killed at the deadline. A process that the child
+/// started (for example `git-remote-https` or `ssh`) is not killed and can run
+/// on after the call returns.
 pub(crate) fn run_until(mut cmd: Command, deadline: Instant) -> Result<String, RunError> {
     use std::io::Read;
     use std::process::Stdio;
