@@ -97,16 +97,37 @@ fn run(e: &Env, cwd: &Path, args: &[&str]) -> std::process::Output {
 }
 
 fn run_mapped(e: &Env, cwd: &Path, args: &[&str], upstream: &Path) -> std::process::Output {
+    command(e, cwd, args, upstream, None).output().unwrap()
+}
+
+/// As [`run`], with `XDG_CACHE_HOME` set to `xdg`.
+fn run_xdg(e: &Env, cwd: &Path, args: &[&str], xdg: &str) -> std::process::Output {
+    command(e, cwd, args, &e.upstream, Some(xdg))
+        .output()
+        .unwrap()
+}
+
+fn command(
+    e: &Env,
+    cwd: &Path,
+    args: &[&str],
+    upstream: &Path,
+    xdg: Option<&str>,
+) -> assert_cmd::Command {
     let mut cmd = common::upskill_cmd(&e.home);
     for (key, _) in std::env::vars_os() {
         if key.to_string_lossy().starts_with("GIT_") {
             cmd.env_remove(key);
         }
     }
+    let xdg = match xdg {
+        Some(value) => value.into(),
+        None => e.home.parent().unwrap().join("cache").into_os_string(),
+    };
     cmd.current_dir(cwd)
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_CONFIG_GLOBAL", e.home.join("empty-gitconfig"))
-        .env("XDG_CACHE_HOME", e.home.parent().unwrap().join("cache"))
+        .env("XDG_CACHE_HOME", xdg)
         .env("GIT_CONFIG_COUNT", "2")
         .env(
             "GIT_CONFIG_KEY_0",
@@ -118,7 +139,8 @@ fn run_mapped(e: &Env, cwd: &Path, args: &[&str], upstream: &Path) -> std::proce
         // A regression that bypasses the rewrite fails locally, before any network use.
         .env("GIT_ALLOW_PROTOCOL", "file")
         .env("GIT_TERMINAL_PROMPT", "0");
-    cmd.args(args).output().unwrap()
+    cmd.args(args);
+    cmd
 }
 
 fn upstream_head(e: &Env) -> String {
@@ -241,24 +263,24 @@ fn notice_prints_again_when_the_set_changes() {
 }
 
 #[test]
-fn notice_clears_the_reported_set_when_the_updates_are_applied() {
+fn notice_prints_a_set_again_after_the_updates_were_applied_in_between() {
+    // A local path source has the identity `<kind>:<name>` without a commit,
+    // so the second set equals the first one. Only the clearing of the
+    // reported set lets the second notice print.
     let e = env();
-    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
-    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
-    assert_eq!(
-        stdout(&run(&e, &e.repo, &["update", "--notice"])),
-        PROJECT_LINE
-    );
+    let upstream = e.upstream.to_str().unwrap().to_string();
+    let added = run(&e, &e.repo, &["add", &upstream, "--claude"]);
+    assert!(added.status.success(), "{}", stderr(&added));
+    let line = "upskill: 1 update available (project). Run \"upskill update\".\n";
+    write_skill(&e.upstream, "alpha", "Changed once.");
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), line);
     let applied = run(&e, &e.repo, &["update", "--yes"]);
     assert!(applied.status.success(), "{}", stderr(&applied));
     age_cache(&e, 86_400);
     assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
-    advance(&e, "NOTES.md", "another commit\n");
+    write_skill(&e.upstream, "alpha", "Changed twice.");
     age_cache(&e, 86_400);
-    assert_eq!(
-        stdout(&run(&e, &e.repo, &["update", "--notice"])),
-        PROJECT_LINE
-    );
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), line);
 }
 
 #[test]
@@ -305,6 +327,10 @@ fn notice_survives_an_unwritable_cache_directory() {
     let cache_dir = e.home.parent().unwrap().join("cache");
     fs::create_dir_all(&cache_dir).unwrap();
     fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o555)).unwrap();
+    if fs::write(cache_dir.join("probe"), "").is_ok() {
+        eprintln!("skipped: the process can write to a read-only directory (running as root)");
+        return;
+    }
     let out = run(&e, &e.repo, &["update", "--notice"]);
     fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o755)).unwrap();
     assert_eq!(out.status.code(), Some(0));
@@ -370,6 +396,11 @@ fn notice_prints_no_line_under_quiet_and_keeps_the_set_unreported() {
     assert_eq!(quiet.status.code(), Some(0));
     assert_eq!(stdout(&quiet), "");
     assert_eq!(stderr(&quiet), "");
+    let cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    let states: Vec<_> = cache["scopes"].as_object().unwrap().values().collect();
+    assert_eq!(states.len(), 1, "{cache}");
+    assert!(states[0]["checked_at"].as_u64().unwrap() > 0, "{cache}");
     assert_eq!(
         stdout(&run(&e, &e.repo, &["update", "--notice"])),
         PROJECT_LINE
@@ -385,9 +416,96 @@ fn notice_refuses_other_flags_and_names() {
         &["update", "--notice", "--project"],
         &["update", "--notice", "--yes"],
         &["update", "--notice", "--dry-run"],
+        &["update", "--notice", "--force"],
+        &["update", "--notice", "--claude"],
+        &["update", "--notice", "--copilot"],
+        &["update", "--notice", "--vscode"],
+        &["update", "--notice", "--opencode"],
         &["update", "--notice", "alpha"],
     ] {
         let out = run(&e, &e.repo, args);
         assert_eq!(out.status.code(), Some(2), "{args:?}");
     }
+}
+
+#[test]
+fn notice_prints_the_project_line_before_the_global_line() {
+    let e = env();
+    let project = run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    assert!(project.status.success(), "{}", stderr(&project));
+    let global = run(&e, &e.outside, &["add", REMOTE, "--claude", "--global"]);
+    assert!(global.status.success(), "{}", stderr(&global));
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(
+        stdout(&out),
+        format!(
+            "{PROJECT_LINE}upskill: 2 updates available (global). Run \"upskill update --global\".\n"
+        )
+    );
+}
+
+#[test]
+fn notice_in_a_repository_without_a_lockfile_reports_the_global_scope_only() {
+    let e = env();
+    let added = run(&e, &e.outside, &["add", REMOTE, "--claude", "--global"]);
+    assert!(added.status.success(), "{}", stderr(&added));
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(
+        stdout(&out),
+        "upskill: 2 updates available (global). Run \"upskill update --global\".\n"
+    );
+    let cache = fs::read_to_string(cache_path(&e)).unwrap();
+    assert!(!cache.contains("/repo\""), "{cache}");
+    let parsed: serde_json::Value = serde_json::from_str(&cache).unwrap();
+    assert_eq!(parsed["scopes"].as_object().unwrap().len(), 1, "{cache}");
+}
+
+#[test]
+fn notice_ignores_a_relative_or_empty_cache_directory_variable() {
+    for xdg in ["relative-cache", ""] {
+        let e = env();
+        run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+        let out = run_xdg(&e, &e.repo, &["update", "--notice"], xdg);
+        assert_eq!(out.status.code(), Some(0));
+        assert_eq!(stderr(&out), "");
+        if !xdg.is_empty() {
+            assert!(!e.repo.join(xdg).exists(), "{xdg}");
+        }
+        assert!(
+            e.home.join(".cache/upskill/notice.json").is_file(),
+            "{xdg:?}"
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn notice_exits_with_code_0_and_writes_nothing_to_stderr_when_stdout_is_closed() {
+    use std::process::Stdio;
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let built = command(&e, &e.repo, &["update", "--notice"], &e.upstream, None);
+    // The harness command is rebuilt as a standard command to control stdio.
+    let mut std_cmd = std::process::Command::new(built.get_program());
+    std_cmd.args(built.get_args());
+    for (key, value) in built.get_envs() {
+        match value {
+            Some(value) => std_cmd.env(key, value),
+            None => std_cmd.env_remove(key),
+        };
+    }
+    std_cmd.current_dir(&e.repo);
+    let mut child = std_cmd
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    // Closing the read end before the command prints gives it a closed pipe.
+    drop(child.stdout.take());
+    let out = child.wait_with_output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stderr(&out), "");
 }
