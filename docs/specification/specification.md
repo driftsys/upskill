@@ -104,8 +104,9 @@ and a message that asks for `--global`, with `--project` and with no flag, in or
 outside a git repository. `update`, `remove` and `remove-mcp` do the same with
 `--project`, and with no flag in a home directory that is a git repository; with
 no flag in a home directory that is not a git repository, they use the global
-scope. `update --check` with no flag in a home directory reports the global
-scope, in a git repository or not, and is refused with `--project` there.
+scope. `update --check` and `update --notice` with no flag in a home directory
+report the global scope, in a git repository or not; `update --check --project`
+is refused there.
 
 `add`, `update`, `remove` and `remove-mcp` print one line to stderr before they
 change anything, `scope: <scope> (<root>)`. `--quiet` hides it. `update --check`
@@ -166,8 +167,8 @@ Without a scope flag, `update` uses the project scope inside a git repository
 and the global scope outside one; `update --check` and `update --notice` report
 both scopes instead. `--project` uses the current directory. When the current
 directory is the home directory, the project scope is refused with exit code 2
-and a message that asks for `--global`; `update --check` with no flag reports
-the global scope there.
+and a message that asks for `--global`; `update --check` and `update --notice`
+with no flag report the global scope there.
 
 Without `--check`, always fetches the latest source before regenerating. Absorbs
 the role of a separate `sync` command — there is no `--offline` flag in v1;
@@ -368,11 +369,13 @@ parsed. `--quiet` suppresses the output.
 `update --notice` prints a session notice for a session-start hook. It accepts
 no name and no other flag (exit code 2). Its roots are the scopes that
 `update --check` reports without a flag; a root without a lockfile is left out.
-It keeps a cache file, `notice.json` in the upskill cache directory
-(`$XDG_CACHE_HOME/upskill`, else `~/.cache/upskill`), and changes no other file.
-The cache file is a JSON object `{"scopes": {<root path>: <state>}}`; the key is
-the path of the scope root, and a state has these fields, each defaulting to
-zero or empty when absent:
+It changes no lockfile and no installed file. The only file it writes is the
+cache file `notice.json` in the upskill cache directory:
+`$XDG_CACHE_HOME/upskill` when `XDG_CACHE_HOME` is an absolute path (an empty or
+relative value is ignored), else `~/.cache/upskill`. The cache file is a JSON
+object `{"scopes": {<root path>: <state>}}`; the key is the path of the scope
+root, and a state has these fields, each defaulting to zero or empty when
+absent:
 
 | Field        | Type            | Meaning                                                                                                         |
 | ------------ | --------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -400,11 +403,14 @@ rules, in order:
 3. The cache file is written, through a temporary file and a rename, only when
    its content changed. A failed write is ignored.
 
-Every failure after argument parsing, including a lockfile that cannot be parsed
-and an unknown home directory, prints nothing and gives exit code 0; nothing is
-written to stderr. When neither `XDG_CACHE_HOME` nor the home directory is
-known, no cache file is used and nothing is printed. With `--quiet`, rule 1 and
-rule 3 apply, and rule 2 prints nothing and leaves `reported` unchanged.
+Every failure after argument parsing prints nothing and gives exit code 0;
+nothing is written to stderr. The failures are: no cache directory is known
+(neither an absolute `XDG_CACHE_HOME` nor the home directory), the scope roots
+cannot be determined, and a lockfile that cannot be parsed, which silences both
+scopes in that run and writes no cache file. A source that is not reachable
+prints nothing for its scope, and a failed read or write of the cache file is
+ignored. With `--quiet`, rule 1 and rule 3 apply, and rule 2 prints nothing and
+leaves `reported` unchanged.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -921,11 +927,11 @@ to any depth (`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ### 6.3 Environment variables
 
-| Variable         | Purpose                                                                             |
-| ---------------- | ----------------------------------------------------------------------------------- |
-| `NO_COLOR`       | Disable colored output.                                                             |
-| `HTTPS_PROXY`    | HTTP proxy for network requests.                                                    |
-| `XDG_CACHE_HOME` | Override cache directory for registry indexes and the `update --notice` cache file. |
+| Variable         | Purpose                                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------ |
+| `NO_COLOR`       | Disable colored output.                                                                                |
+| `HTTPS_PROXY`    | HTTP proxy for network requests.                                                                       |
+| `XDG_CACHE_HOME` | Override cache directory (an absolute path) for registry indexes and the `update --notice` cache file. |
 
 ## 7. Out of scope
 

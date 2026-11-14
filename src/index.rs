@@ -43,17 +43,24 @@ pub struct FreshResult {
 }
 
 /// Returns the root of the upskill cache: `$XDG_CACHE_HOME/upskill` or
-/// `~/.cache/upskill`.
+/// `~/.cache/upskill`. As the XDG specification requires, a value of
+/// `XDG_CACHE_HOME` that is empty or not an absolute path is ignored. When the
+/// home directory is not known either, the root is the relative path
+/// `.cache/upskill`.
 pub fn cache_root() -> PathBuf {
-    if let Some(xdg) = std::env::var("XDG_CACHE_HOME")
-        .ok()
-        .filter(|v| !v.is_empty())
+    known_cache_root().unwrap_or_else(|| PathBuf::from(".cache/upskill"))
+}
+
+/// As [`cache_root`], and `None` when neither an absolute `XDG_CACHE_HOME` nor
+/// the home directory is known.
+pub fn known_cache_root() -> Option<PathBuf> {
+    if let Some(xdg) = std::env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .filter(|v| v.is_absolute())
     {
-        return PathBuf::from(xdg).join("upskill");
+        return Some(xdg.join("upskill"));
     }
-    home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".cache/upskill")
+    home_dir().map(|home| home.join(".cache/upskill"))
 }
 
 /// Returns the cache directory for index files.

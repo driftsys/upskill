@@ -2,9 +2,9 @@
 //!
 //! The cache file records, for each scope root, the time of the last check
 //! (a check that reached no source also sets it), the updates that check
-//! found, and the set that the last printed notice reported. The functions take the time as an
-//! argument. Only [`NoticeCache::load`] and [`NoticeCache::save`] perform file
-//! I/O.
+//! found, and the set that the last printed notice reported. The functions
+//! take the time as an argument. Only [`NoticeCache::load`] and
+//! [`NoticeCache::save`] perform file I/O.
 
 use std::collections::BTreeMap;
 use std::fs;

@@ -136,16 +136,17 @@ scope, not committed). Per-client output paths and ancillary files (`CLAUDE.md`,
 [format-spec §7](docs/specification/format-spec.md).
 
 Without a scope flag, `add` stops outside a git repo (exit 2); `update`,
-`remove` and `remove-mcp` use the global scope there; `list`, `doctor` and
-`update --check` report both scopes. The project scope is refused (exit 2, pass
-`--global`) when `cwd` is the home directory. A global install writes Copilot
-content under `$HOME/.copilot/`. `add`, `update`, `remove` and `remove-mcp`
-print `scope: <scope> (<root>)` to stderr unless `--quiet` is set;
-`update --check` prints no scope line, and with no flag in the home directory it
-reports the global scope instead of refusing. `update --notice` is built for a
-session-start hook: it exits 0 in every case, prints no scope line and nothing
-to stderr, and keeps the time of the last check and the printed set in
-`<cache>/upskill/notice.json` (`$XDG_CACHE_HOME`, else `~/.cache`).
+`remove` and `remove-mcp` use the global scope there; `list`, `doctor`,
+`update --check` and `update --notice` report both scopes. The project scope is
+refused (exit 2, pass `--global`) when `cwd` is the home directory. A global
+install writes Copilot content under `$HOME/.copilot/`. `add`, `update`,
+`remove` and `remove-mcp` print `scope: <scope> (<root>)` to stderr unless
+`--quiet` is set; `update --check` and `update --notice` print no scope line,
+and with no flag in the home directory they report the global scope instead of
+refusing. `update --notice` is built for a session-start hook: it exits 0 in
+every case after argument parsing, writes nothing to stderr, and keeps the time
+of the last check and the printed set in `<cache>/upskill/notice.json`
+(`$XDG_CACHE_HOME` when absolute, else `~/.cache`).
 
 ### Source format
 

@@ -66,8 +66,9 @@ a message that asks for `--global`, with `--project` and with no flag, in or
 outside a git repository. `update`, `remove` and `remove-mcp` do the same with
 `--project`, and with no flag in a home directory that is a git repository; with
 no flag in a home directory that is not a git repository, they use the global
-scope. `update --check` with no flag in a home directory reports the global
-scope, in a git repository or not; with `--project` it is refused there.
+scope. `update --check` and `update --notice` with no flag in a home directory
+report the global scope, in a git repository or not; `update --check --project`
+is refused there.
 
 `add`, `update`, `remove` and `remove-mcp` print one line to stderr that names
 the scope and its root, for example `scope: global (/home/alice)`. `--quiet`
@@ -204,7 +205,8 @@ and the global scope outside one; `update --check` and `update --notice` report
 both scopes instead. `--project` uses the current directory and `--global` uses
 `$HOME`. When the current directory is the home directory, the project scope is
 refused with exit code 2 and a message that asks for `--global`;
-`update --check` with no flag reports the global scope there.
+`update --check` and `update --notice` with no flag report the global scope
+there.
 
 `update` always fetches before regenerating; there is no separate `sync`.
 [`update --check`](#update---check) is the exception: it never fetches. `update`
@@ -546,16 +548,20 @@ The command is quiet by design:
   Between two lookups, it uses the result of the last one. A lookup that reaches
   no source (for example when the session has no network access) also counts:
   the next attempt waits for the 24 hours.
-- It exits with code 0 in every case after the arguments are parsed. A lockfile
-  that cannot be read, a source that is not reachable, an unknown home directory
-  and a cache file that cannot be read or written print nothing. A usage error
-  exits with code 2.
-- It changes no file under a scope root. The only file it writes is the cache
-  file `notice.json` in the upskill cache directory (`$XDG_CACHE_HOME/upskill`,
-  or `~/.cache/upskill`), which records for each scope root the time of the last
-  lookup, the updates found and the set that was printed. An invalid cache file
-  is treated as an empty one. When neither `XDG_CACHE_HOME` nor the home
-  directory is known, the command uses no cache and prints nothing.
+- It exits with code 0 in every case after the arguments are parsed. It prints
+  nothing when no cache directory is known, when the scope roots cannot be
+  determined, when a lockfile cannot be parsed, and when a source is not
+  reachable. A lockfile that cannot be parsed in one scope silences the notice
+  for both scopes in that run. A cache file that cannot be read or written does
+  not stop the command: an invalid cache file is treated as an empty one, and a
+  failed write is ignored. A usage error exits with code 2.
+- It changes no lockfile and no installed file. The only file it writes is the
+  cache file `notice.json` in the upskill cache directory, which is
+  `$XDG_CACHE_HOME/upskill` when `XDG_CACHE_HOME` is an absolute path (an empty
+  or relative value is ignored) and `~/.cache/upskill` otherwise. The file
+  records for each scope root the time of the last lookup, the updates found and
+  the set that was printed. When neither directory is known, the command uses no
+  cache and prints nothing.
 - With `--quiet` it prints no line. The lookups and the cache update still run,
   and the set stays unreported, so a later run without `--quiet` prints it.
 

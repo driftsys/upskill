@@ -1,5 +1,6 @@
 use anyhow::Context;
 use clap::{Parser, error::ErrorKind};
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -1132,7 +1133,8 @@ fn notice_lines() -> Option<()> {
     if !style::is_quiet() {
         for at in &roots {
             if let Some(line) = notice::decide(&mut cache, at.scope, &at.root) {
-                println!("{line}");
+                // A closed pipe is not an error of the notice.
+                let _ = writeln!(std::io::stdout().lock(), "{line}");
             }
         }
     }
@@ -1142,15 +1144,10 @@ fn notice_lines() -> Option<()> {
     Some(())
 }
 
-/// The cache file of the notice. `None` when neither `XDG_CACHE_HOME` nor the
-/// home directory is known, so that no file is written relative to the
-/// current directory.
+/// The cache file of the notice. `None` when no cache directory is known, so
+/// that no file is written relative to the current directory.
 fn notice_cache_path() -> Option<PathBuf> {
-    let xdg_set = std::env::var("XDG_CACHE_HOME").is_ok_and(|v| !v.is_empty());
-    if !xdg_set && home_dir().is_none() {
-        return None;
-    }
-    Some(index::cache_root().join(notice::CACHE_FILE_NAME))
+    Some(index::known_cache_root()?.join(notice::CACHE_FILE_NAME))
 }
 
 /// The width of the status label column of `update --check`.
@@ -2112,8 +2109,8 @@ fn run_list(global: bool, project: bool, json: bool) -> i32 {
     }
 }
 
-/// The scopes that `list`, `doctor` and `update --check` report, in the order
-/// project, global.
+/// The scopes that `list`, `doctor`, `update --check` and `update --notice`
+/// report, in the order project, global.
 ///
 /// `--global` gives the global scope and `--project` gives the project scope,
 /// which fails with [`ScopeError::ProjectIsHome`] when the current directory is
