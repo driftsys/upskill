@@ -764,11 +764,13 @@ fn reselect_from_entries(
 ///
 /// After the decision, a git source without changes
 /// ([`SourcePreview::has_changes`] is false) that is not applied, in a run
-/// that is not a dry run and not stopped, gets the fetched commit in every
-/// lockfile entry of the source (`PreparedInstall::record_commit`) except the
-/// entry of an item whose update is withheld (a [`PreviewAction::Skip`]
-/// item), which keeps its recorded commit; the lockfile is saved only when a
-/// commit value differs. This write is not in
+/// that is not a dry run and not stopped, gets the fetched commit in the
+/// lockfile entries that the run selected (`names`, or every entry when
+/// `names` is empty; `PreparedInstall::record_commit`) except the entry of an
+/// item whose update is withheld (a [`PreviewAction::Skip`] item), which keeps
+/// its recorded commit. An entry of the source that `names` did not select
+/// keeps its recorded commit. The lockfile is saved only when a commit value
+/// differs. This write is not in
 /// [`UpdateReport::changed`] and does not make the source a source with
 /// changes. A declined source and a dry run write no commit. In an applied
 /// source, an item whose modified destinations are kept
@@ -1011,13 +1013,18 @@ pub fn update(
                 // source: it is neither in `report.changed` nor counted by
                 // `has_changes`.
                 if !dry_run && !preview.has_changes() && decision != SourceDecision::Stop {
-                    let withheld: std::collections::BTreeSet<(ItemKind, String)> = preview
-                        .items
+                    let selected: std::collections::BTreeSet<(ItemKind, String)> = source_entries
                         .iter()
-                        .filter(|i| i.action == PreviewAction::Skip)
-                        .map(|i| (i.kind, i.name.clone()))
+                        .filter(|e| {
+                            !preview.items.iter().any(|i| {
+                                i.action == PreviewAction::Skip
+                                    && i.kind == e.kind
+                                    && i.name == e.name
+                            })
+                        })
+                        .map(|e| (e.kind, e.name.clone()))
                         .collect();
-                    prepared.record_commit(target, &withheld)?;
+                    prepared.record_commit(target, &selected)?;
                 }
                 if !dry_run && decision == SourceDecision::Stop {
                     report.stopped = true;

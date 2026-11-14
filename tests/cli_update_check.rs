@@ -491,6 +491,65 @@ fn a_terminal_update_keeps_the_recorded_commit_of_a_withheld_item() {
     assert_eq!(commit_of("beta"), head.as_str(), "{result}");
 }
 
+/// The environment variables of `run_mapped`, for the terminal fixture.
+#[cfg(unix)]
+fn terminal_env(e: &Env) -> Vec<(&'static str, String)> {
+    vec![
+        ("GIT_CONFIG_NOSYSTEM", "1".to_string()),
+        (
+            "GIT_CONFIG_GLOBAL",
+            e.home.join("empty-gitconfig").display().to_string(),
+        ),
+        ("GIT_CONFIG_COUNT", "2".to_string()),
+        (
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", e.upstream.display()),
+        ),
+        ("GIT_CONFIG_VALUE_0", format!("{REMOTE}.git")),
+        ("GIT_CONFIG_KEY_1", "protocol.file.allow".to_string()),
+        ("GIT_CONFIG_VALUE_1", "always".to_string()),
+        ("GIT_ALLOW_PROTOCOL", "file".to_string()),
+        ("GIT_TERMINAL_PROMPT", "0".to_string()),
+    ]
+}
+
+/// The recorded commit of the item `name` in the lockfile at `root`.
+fn commit_of(root: &Path, name: &str) -> serde_json::Value {
+    lock(root)["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == name)
+        .unwrap_or_else(|| panic!("{name} not in the lockfile"))["commit"]
+        .clone()
+}
+
+#[cfg(unix)]
+#[test]
+fn a_terminal_update_of_one_item_keeps_the_commit_of_an_unselected_item() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let old = upstream_head(&e);
+    // `beta` changes upstream; `alpha` does not, so the preview of
+    // `update alpha` has no changes.
+    write_skill(&e.upstream, "beta", "Beta content, changed upstream.");
+    git_in(&e, &["add", "."]);
+    git_in(&e, &["commit", "-m", "change beta"]);
+    let head = upstream_head(&e);
+    assert_ne!(old, head);
+
+    let result =
+        common::update_in_terminal_with_env(&e.repo, &e.home, &["alpha"], "", &terminal_env(&e));
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(commit_of(&e.repo, "alpha"), head.as_str(), "{result}");
+    assert_eq!(commit_of(&e.repo, "beta"), old.as_str(), "{result}");
+
+    let out = run(&e, &e.repo, &["update", "--check", "--project"]);
+    let text = stdout(&out);
+    assert!(text.contains("update available"), "{text}");
+    assert!(text.contains("    skill beta\n"), "{text}");
+}
+
 fn short(commit: &str) -> &str {
     &commit[..7]
 }
