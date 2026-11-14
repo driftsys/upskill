@@ -77,14 +77,14 @@ that the script deletes at the end. A global cell removes the items with
 `upskill remove`, as described below. The marker appears only in the installed
 item, never in the question.
 
-| Flag                | Meaning                                                                      |
-| ------------------- | ---------------------------------------------------------------------------- |
-| `--run`             | Make the model calls                                                         |
-| `--clients`         | `claude`, `copilot`; default both                                            |
-| `--kinds`           | `rule`, `skill`, `agent`; default all                                        |
-| `--scopes`          | `project`, `global`; default both                                            |
-| `--allow-real-home` | Allow the global cells to write to the real home directory                   |
-| `--timeout`         | Seconds for each client, `upskill add` and `upskill remove` call; default 90 |
+| Flag                | Meaning                                                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `--run`             | Make the model calls                                                                                                       |
+| `--clients`         | `claude`, `copilot`; default both                                                                                          |
+| `--kinds`           | `rule`, `skill`, `agent`; default all                                                                                      |
+| `--scopes`          | `project`, `global`; default both                                                                                          |
+| `--allow-real-home` | Allow the global cells to write to the real home directory                                                                 |
+| `--timeout`         | Seconds for each client, `upskill add` and `upskill remove` call; default 90; the `<client> --version` call always uses 15 |
 
 The flags `--kinds`, `--scopes`, `--allow-real-home` and `--upskill` are valid
 only with `--smoke`; without it the script exits with code 2.
@@ -97,11 +97,13 @@ A global cell installs into the real home directory, under the item name
 `upskill-smoke-<12 hex digits>`. It runs only with `--allow-real-home`; without
 the flag the cell is `unavailable`. The script removes the three items with
 `upskill remove --global --yes <name>` after the cell, also after a timeout or
-an error. It does not run `remove` when `upskill add` failed without a timeout,
-because such an `add` installed nothing; after a timed-out `add` it does run.
-What a global cell leaves in the home directory after that removal, as checked
-with a temporary home that held a `CLAUDE.md`, `opencode.json` and
-`.vscode/settings.json` before the run:
+an error. It runs `remove` after every attempt of `add`, also a failed or
+timed-out one, because `add` is not atomic and a failed `add` can leave files
+and the lockfile entry. When `remove` reports that the name is not in the
+lockfile, nothing was left and the script prints no warning. What a global cell
+leaves in the home directory after that removal, as checked with a temporary
+home that held a `CLAUDE.md`, `opencode.json` and `.vscode/settings.json` before
+the run:
 
 - An existing `CLAUDE.md` is not changed. When the file is absent, `add` creates
   it with the content `@AGENTS.md`.
