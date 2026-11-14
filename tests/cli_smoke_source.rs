@@ -52,6 +52,10 @@ fn the_smoke_source_installs_each_kind_for_claude_and_copilot() {
     let tmp = tempfile::tempdir().unwrap();
     let source = tmp.path().join("source");
     if !write_source(&source) {
+        assert!(
+            std::env::var_os("CI").is_none(),
+            "python3 is not on PATH and CI is set: the smoke source is not validated"
+        );
         eprintln!("skipped: python3 is not on PATH");
         return;
     }
