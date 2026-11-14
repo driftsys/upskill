@@ -651,6 +651,85 @@ fn notice_ignores_a_relative_or_empty_cache_directory_variable() {
     }
 }
 
+#[test]
+fn notice_leaves_only_the_notice_file_in_the_cache_directory() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice"])),
+        PROJECT_LINE
+    );
+    let names: Vec<_> = fs::read_dir(cache_path(&e).parent().unwrap())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(names, ["notice.json"]);
+}
+
+#[test]
+fn notice_does_not_rewrite_a_cache_file_that_has_no_change() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
+    let before = fs::metadata(cache_path(&e)).unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    let after = fs::metadata(cache_path(&e)).unwrap();
+    assert_eq!(before.modified().unwrap(), after.modified().unwrap());
+}
+
+/// A second upstream with the skill `gamma`, reachable as `OTHER_REMOTE` only
+/// when `map` is true.
+const OTHER_REMOTE: &str = "https://example.invalid/team/other";
+
+fn run_with_other(e: &Env, args: &[&str], other: &Path, map: bool) -> std::process::Output {
+    let mut cmd = command(e, &e.repo, args, &e.upstream, None);
+    if map {
+        cmd.env("GIT_CONFIG_COUNT", "3")
+            .env(
+                "GIT_CONFIG_KEY_2",
+                format!("url.file://{}.insteadOf", other.display()),
+            )
+            .env("GIT_CONFIG_VALUE_2", format!("{OTHER_REMOTE}.git"));
+    }
+    cmd.output().unwrap()
+}
+
+#[test]
+fn notice_keeps_the_earlier_updates_of_a_source_that_was_not_reachable_in_a_later_check() {
+    let e = env();
+    let other = e.home.parent().unwrap().join("upstream2");
+    fs::create_dir_all(&other).unwrap();
+    git_in_dir(&e, &other, &["init", "--initial-branch=main"]);
+    write_skill(&other, "gamma", "Gamma content.");
+    git_in_dir(&e, &other, &["add", "."]);
+    git_in_dir(&e, &other, &["commit", "-m", "initial"]);
+    for source in [REMOTE, OTHER_REMOTE] {
+        let added = run_with_other(&e, &["add", source, "--claude"], &other, true);
+        assert!(added.status.success(), "{}", stderr(&added));
+    }
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    write_skill(&other, "gamma", "Gamma changed.");
+    git_in_dir(&e, &other, &["commit", "-am", "advance"]);
+    let first = run_with_other(&e, &["update", "--notice"], &other, true);
+    assert_eq!(
+        stdout(&first),
+        "upskill: 3 updates available (project). Run \"upskill update\".\n"
+    );
+    // The second source is not reachable now, and the first one moved on.
+    advance(&e, "NOTES.md", "another commit\n");
+    age_cache(&e, 86_400);
+    let second = run_with_other(&e, &["update", "--notice"], &other, false);
+    assert_eq!(second.status.code(), Some(0));
+    // The update of `gamma` that the first check found stays in the count.
+    assert_eq!(
+        stdout(&second),
+        "upskill: 3 updates available (project). Run \"upskill update\".\n"
+    );
+}
+
 /// The command as a standard command, to control its stdio and its process.
 #[cfg(unix)]
 fn standard_command(built: &assert_cmd::Command, cwd: &Path) -> std::process::Command {
@@ -729,19 +808,36 @@ fn notice_exits_with_code_0_and_prints_nothing_when_it_is_interrupted_during_a_l
     let e = env();
     run(&e, &e.repo, &["add", REMOTE, "--claude"]);
     advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
-    let blocked = BlockedRun::start(&e, &e.repo);
+    let mut blocked = BlockedRun::start(&e, &e.repo);
     let status = Command::new("kill")
         .args(["-INT", &blocked.child.id().to_string()])
         .status()
         .unwrap();
     assert!(status.success());
-    // A terminal sends SIGINT to the whole process group, `git` included.
-    std::thread::sleep(std::time::Duration::from_millis(300));
+    // The `git` call stays blocked: the command must end because of the
+    // interrupt, not because the lookup returned.
+    let mut ended = false;
+    for _ in 0..60 {
+        if blocked.child.try_wait().unwrap().is_some() {
+            ended = true;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    if !ended {
+        let _ = blocked.child.kill();
+    }
     blocked.release();
     let out = blocked.child.wait_with_output().unwrap();
+    assert!(
+        ended,
+        "the command did not end within 3 seconds of the interrupt"
+    );
     assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
     assert_eq!(stdout(&out), "");
     assert_eq!(stderr(&out), "");
+    // The command ended before its lookup: no cache file was written.
+    assert!(!cache_path(&e).exists());
 }
 
 #[cfg(unix)]
@@ -753,15 +849,35 @@ fn notice_runs_that_overlap_keep_the_cache_entries_of_each_other() {
     run(&e, &e.repo, &["add", REMOTE, "--claude"]);
     let added = run(&e, &other, &["add", REMOTE, "--claude"]);
     assert!(added.status.success(), "{}", stderr(&added));
-    // The first run loaded the cache and waits in its lookup.
-    let blocked = BlockedRun::start(&e, &e.repo);
+    // The cache file holds an outdated entry of the other project.
+    assert_eq!(stdout(&run(&e, &other, &["update", "--notice"])), "");
+    let mut cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    let outdated =
+        serde_json::json!({"checked_at": 1, "updates": ["skill:outdated@c0"], "reported": []});
+    for (root, state) in cache["scopes"].as_object_mut().unwrap() {
+        assert!(root.ends_with("/repo2"), "{root}");
+        *state = outdated.clone();
+    }
+    fs::write(cache_path(&e), serde_json::to_vec(&cache).unwrap()).unwrap();
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    // The first run loaded that cache and waits in its lookup.
+    let mut blocked = BlockedRun::start(&e, &e.repo);
     let second = run(&e, &other, &["update", "--notice"]);
     assert_eq!(second.status.code(), Some(0));
+    assert_eq!(stdout(&second), PROJECT_LINE);
     blocked.release();
-    let out = blocked.child.wait_with_output().unwrap();
-    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
-    let roots = cached_roots(&e);
-    assert_eq!(roots.len(), 2, "{roots:?}");
+    let status = blocked.child.wait().unwrap();
+    assert_eq!(status.code(), Some(0));
+    let cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    let states = cache["scopes"].as_object().unwrap();
+    assert_eq!(states.len(), 2, "{cache}");
+    let (_, other_state) = states.iter().find(|(r, _)| r.ends_with("/repo2")).unwrap();
+    // The newer entry of the second run stays; the first run did not write
+    // back the outdated one.
+    assert!(other_state["checked_at"].as_u64().unwrap() > 1, "{cache}");
+    assert_ne!(other_state["updates"], outdated["updates"], "{cache}");
 }
 
 #[cfg(unix)]

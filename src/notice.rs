@@ -37,8 +37,9 @@ pub struct ScopeState {
     /// also sets it, so the next attempt waits for the period.
     pub checked_at: u64,
     /// The available updates found by the checks, sorted. A check that
-    /// reached only some of the sources of the scope keeps the earlier
-    /// entries of the other sources (see [`record_check`]).
+    /// reached only some of the sources of the scope keeps every earlier entry
+    /// whose `<kind>:<name>` is not in the set that it found (see
+    /// [`record_check`]).
     pub updates: Vec<String>,
     /// The set that the last printed notice reported, sorted.
     pub reported: Vec<String>,
@@ -160,8 +161,9 @@ fn item_of(entry: &str) -> &str {
 ///
 /// - [`Reached::Fully`]: `updates` replaces the stored set.
 /// - [`Reached::Partly`]: `updates` is added, and each stored entry whose
-///   `<kind>:<name>` part is not in `updates` stays, because the source that
-///   did not answer may still hold that update.
+///   `<kind>:<name>` part is not in `updates` stays. The check cannot tell
+///   which source an earlier entry came from, so it keeps every such entry,
+///   also one of a source that answered.
 /// - [`Reached::Nothing`]: the stored set stays.
 pub fn record_check(
     cache: &mut NoticeCache,
@@ -380,7 +382,7 @@ mod tests {
 
     #[test]
     fn a_partly_reached_check_keeps_the_earlier_entries_that_it_did_not_find() {
-        let mut cache = recorded(&["rule:b@c1", "skill:a@c1"]);
+        let mut cache = recorded(&["rule:b@c1", "skill:a@c1", "skill:b@c1"]);
         record_check(
             &mut cache,
             &root(),
@@ -390,9 +392,10 @@ mod tests {
         );
         let state = &cache.scopes[&key(&root())];
         // `skill:a` is in the new set, so its earlier entry is replaced.
+        // `skill:b` has the kind of `skill:a` and another name: it stays.
         assert_eq!(
             state.updates,
-            set(&["rule:b@c1", "skill:a@c2", "skill:z@c2"])
+            set(&["rule:b@c1", "skill:a@c2", "skill:b@c1", "skill:z@c2"])
         );
         assert_eq!(state.checked_at, 2_000);
     }
@@ -412,17 +415,19 @@ mod tests {
 
     #[test]
     fn an_entry_without_a_commit_is_matched_by_kind_and_name() {
-        let mut cache = recorded(&["agent:local", "skill:a@c1"]);
+        let mut cache = recorded(&["agent:local", "agent:other", "skill:local@c1"]);
         record_check(
             &mut cache,
             &root(),
-            set(&["agent:local"]),
+            set(&["agent:local@c2"]),
             Reached::Partly,
             2_000,
         );
+        // The new entry replaces `agent:local`; the other name and the other
+        // kind with the same name stay.
         assert_eq!(
             cache.scopes[&key(&root())].updates,
-            set(&["agent:local", "skill:a@c1"])
+            set(&["agent:local@c2", "agent:other", "skill:local@c1"])
         );
     }
 
