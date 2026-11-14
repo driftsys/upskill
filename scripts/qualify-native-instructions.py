@@ -809,27 +809,29 @@ def smoke_levels(cells):
 
 
 def smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env):
+    """The pair (result, reason) of one cell; the reason is None when the result
+    needs none."""
     prompt = smoke_prompt(kind, name)
     cmd = smoke_command(client, kind, prompt, scope)
     try:
         result = runner(cmd, cwd, args.timeout, env)
     except subprocess.TimeoutExpired:
-        return 'timeout'
+        return 'timeout', None
     if result['state'] in SMOKE_UNAVAILABLE:
-        return 'unavailable'
+        return 'unavailable', None
     if result['state'] == 'timeout':
-        return 'timeout'
+        return 'timeout', None
     if smoke_quota_exceeded(client, result.get('stdout', '')):
-        return 'unavailable'
+        return 'unavailable', client + ' reports that the monthly quota is exceeded'
     if result['state'] != 'success':
-        return 'fail'
+        return 'fail', None
     response = smoke_response(client, result.get('stdout', ''))
     if response is None:
         # `run` also sets the state `failure` for a Copilot run without a
         # successful terminal `result` event.
-        return 'fail'
+        return 'fail', None
     others = [value for other, value in markers.items() if other != kind]
-    return classify_smoke(response, markers[kind], others)
+    return classify_smoke(response, markers[kind], others), None
 
 
 def smoke_client_version(client, base, runner, env):
@@ -863,7 +865,8 @@ def restore_global_lockfile(home, saved):
 
 def smoke_scope(client, scope, version, base, source, upskill, markers, name, args, runner, env):
     """The cells of one client in one scope: install, ask one question per
-    kind, and for the global scope remove what was installed."""
+    kind, and for the global scope remove what was installed and restore the
+    global lockfile to its state from before the cell."""
     cells = []
 
     def record(kind, result, reason=None):
@@ -901,7 +904,7 @@ def smoke_scope(client, scope, version, base, source, upskill, markers, name, ar
                 record(kind, 'install-failed', 'upskill add ended with state ' + added['state'])
             return cells
         for kind in args.kinds:
-            record(kind, smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env))
+            record(kind, *smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env))
     finally:
         if scope == 'global':
             try:
@@ -935,7 +938,9 @@ def run_smoke(args, runner=invoke):
     `<upskill> add <source> --<client> --project|--global`, ask one question
     per kind in a new client session, and return a list of
     {'client', 'kind', 'scope', 'result', 'client_version'}. A global cell
-    then removes the installed items with `upskill remove --global --yes`; a
+    then removes the installed items with `upskill remove --global --yes` and
+    restores the global lockfile and its `.v1` copy to their state from before
+    the cell; a
     project cell runs in a temporary repository that is deleted at the end.
     `result` is 'pass', 'fail', 'timeout', 'unavailable' or 'install-failed';
     'not run' without `--run`."""
