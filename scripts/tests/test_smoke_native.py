@@ -57,12 +57,6 @@ class SmokeSourceTest(unittest.TestCase):
                     if other != kind:
                         self.assertNotIn(marker, text)
 
-    def test_the_prompt_never_holds_a_marker(self):
-        for kind in q.SMOKE_KINDS:
-            prompt = q.smoke_prompt(kind, 'upskill-smoke-abc')
-            self.assertIn('upskill-smoke-abc', prompt)
-            self.assertNotIn('MARK', prompt)
-
 
 class SmokeClassifyTest(unittest.TestCase):
     def test_a_response_with_the_marker_passes(self):
@@ -113,6 +107,42 @@ class SmokeRunTest(unittest.TestCase):
             q.run_smoke(smoke_args(scopes=['global'], allow_real_home=True), runner)
         self.assertEqual(runner.commands[-1][1:4], ['remove', '--global', '--yes'])
 
+    def test_a_relative_binary_path_is_made_absolute(self):
+        runner = FakeRunner()
+        q.run_smoke(smoke_args(upskill=Path('target/release/upskill'), scopes=['global'], allow_real_home=True), runner)
+        for command in runner.commands:
+            if command[1] in ('add', 'remove'):
+                self.assertTrue(os.path.isabs(command[0]), command)
+                self.assertEqual(command[0], str(Path('target/release/upskill').resolve()))
+
+    def test_a_failed_install_is_reported_as_install_failed(self):
+        def answer(command):
+            if command[1] == 'add':
+                return {'state': 'failure', 'stdout': ''}
+
+        runner = FakeRunner(answer)
+        results = q.run_smoke(smoke_args(), runner)
+        self.assertEqual({cell['result'] for cell in results}, {'install-failed'})
+        self.assertTrue(all(cell['reason'] for cell in results))
+        self.assertFalse([c for c in runner.commands if c[0] == 'claude' and '--version' not in c])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(), FakeRunner(answer))
+        self.assertEqual(out.getvalue().count('note: '), 3)
+        self.assertIn('claude rule experimental', out.getvalue())
+
+    def test_a_failed_global_removal_is_reported(self):
+        def answer(command):
+            if command[1] == 'remove':
+                return {'state': 'failure', 'stdout': ''}
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), FakeRunner(answer))
+        warnings = [line for line in out.getvalue().splitlines() if line.startswith('warning: global items upskill-smoke-')]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn('were not removed: upskill remove ended with state failure', warnings[0])
+
     def test_an_authentication_failure_is_unavailable(self):
         def answer(command):
             if command[0] == 'claude' and '--version' not in command:
@@ -147,9 +177,13 @@ class SmokeRunTest(unittest.TestCase):
                 kind = next(k for k in q.SMOKE_KINDS if prompt == q.smoke_prompt(k, prompt.split('`')[1]))
                 return {'state': 'success', 'stdout': seen[kind] + '\n'}
 
-        results = q.run_smoke(smoke_args(), FakeRunner(answer))
+        runner = FakeRunner(answer)
+        results = q.run_smoke(smoke_args(), runner)
         self.assertEqual({cell['result'] for cell in results}, {'pass'})
         self.assertEqual(len(set(seen.values())), 3)
+        for command in runner.commands:
+            for marker in seen.values():
+                self.assertNotIn(marker, ' '.join(command))
         self.assertEqual({cell['client_version'] for cell in results}, {'1.2.3'})
 
     def test_a_kind_is_supported_only_when_both_scopes_pass(self):

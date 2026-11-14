@@ -80,28 +80,55 @@ the installed item, never in the question.
 | `--timeout`         | Seconds for each client call; default 90                   |
 
 A project cell runs in a new temporary git repository. `HOME` is not changed, so
-the client stays authenticated. A global cell installs into the real home
-directory, under the item name `upskill-smoke-<12 hex digits>`. It runs only
-with `--allow-real-home`; without the flag the cell is `unavailable`. The script
-removes the three items with `upskill remove --global --yes <name>` after the
-cell, also after a timeout or an error. The global install also creates or
-updates the first-time files that `add` writes (`CLAUDE.md`, `opencode.json`,
-`.vscode/settings.json`) and the global lockfile; `remove` does not delete these
-files.
+the client stays authenticated. The path of `--upskill` may be relative; the
+script resolves it, and refuses a path that is not a file when `--run` is set.
 
-The result of a cell is `pass`, `fail`, `timeout` or `unavailable`. A cell is
-`unavailable` when the client binary is missing, its version cannot be read, the
-client reports an authentication failure, or a global cell has no
-`--allow-real-home`. The output has one line for each cell:
+A global cell installs into the real home directory, under the item name
+`upskill-smoke-<12 hex digits>`. It runs only with `--allow-real-home`; without
+the flag the cell is `unavailable`. The script removes the three items with
+`upskill remove --global --yes <name>` after the cell, also after a timeout or
+an error. What a global cell leaves in the home directory after that removal, as
+checked with a temporary home that held a `CLAUDE.md`, `opencode.json` and
+`.vscode/settings.json` before the run:
+
+- An existing `CLAUDE.md` is not changed. When the file is absent, `add` creates
+  it with the content `@AGENTS.md`.
+- An existing `opencode.json` is edited: `add` adds the key `instructions` with
+  the value `[".agents/rules/**/RULE.md"]` and keeps the other keys. `remove`
+  does not revert it.
+- An existing `.vscode/settings.json` is edited: `add` adds the key
+  `chat.instructionsFilesLocations` with the value
+  `{".github/instructions": true}` and keeps the other keys. `remove` does not
+  revert it.
+- The item files are deleted. The empty directories
+  `.claude/{agents,rules,skills}` or `.copilot/{agents,instructions,skills}`
+  stay, and `.upskill-lock.json` stays with an empty item list.
+
+If the script is killed hard during a global cell, the items stay in the home
+directory. Remove them with
+`upskill remove --global --yes upskill-smoke-<12 hex
+digits>`;
+`upskill list --global` shows the name.
+
+The result of a cell is `pass`, `fail`, `timeout`, `unavailable` or
+`install-failed`. A cell is `unavailable` when the client binary is missing, its
+version cannot be read, the client reports an authentication failure, or a
+global cell has no `--allow-real-home`. A cell is `install-failed` when
+`upskill add` fails; the client is not asked, and the level stays
+`experimental`. The output has one line for each cell:
 
 ```text
 <client> <kind> <scope> <result> <client version>
 ```
 
-followed by one line for each client and kind, `<client> <kind> <level>`. The
-level is `supported` when both scopes passed and `experimental` otherwise. The
-script writes no file in the repository and exits with code 0 whenever it ran,
-whatever the results.
+Each cell that has a reason adds a line
+`note: <client> <kind> <scope> <reason>`. When the removal of a global item
+fails, the script prints
+`warning: global items <name> were not removed: <reason>`. With `--run`, one
+line for each client and kind follows, `<client> <kind> <level>`; without
+`--run` no level line appears. The level is `supported` when both scopes passed
+and `experimental` otherwise. The script writes no file in the repository and
+exits with code 0 whenever it ran, whatever the results.
 
 After a run, a maintainer sets each client and kind with the level `supported`
 in `src/support.rs`, with the client version and the date of the run, and

@@ -27,6 +27,7 @@ def isolated_git_environment():
     # disposable fixtures or the native clients' project discovery.
     return {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
 
+
 def fixtures(root, client, configured=False):
     marker = 'QUALIFIED_' + secrets.token_hex(16)
     staging_marker = 'STAGING_' + secrets.token_hex(16)
@@ -801,6 +802,9 @@ def run_smoke(args, runner=invoke):
     name = 'upskill-smoke-' + secrets.token_hex(6)
     env = isolated_git_environment()
     env.pop('CLAUDECODE', None)
+    # The runner starts every command in a temporary directory, so a relative
+    # path to the binary would not be found.
+    upskill = str(Path(args.upskill).resolve())
     results = []
     with tempfile.TemporaryDirectory(prefix='upskill-smoke-') as temporary:
         base = Path(temporary)
@@ -833,17 +837,25 @@ def run_smoke(args, runner=invoke):
                 cwd.mkdir()
                 if scope == 'project':
                     subprocess.run(['git', 'init', '-q', str(cwd)], env=env, check=True)
+                first = len(results)
                 try:
-                    installed = runner([str(args.upskill), 'add', str(source), '--' + client, '--' + scope], cwd, args.timeout, env)
+                    installed = runner([upskill, 'add', str(source), '--' + client, '--' + scope], cwd, args.timeout, env)
                     if installed['state'] != 'success':
                         for kind in args.kinds:
-                            record(kind, scope, 'fail', 'upskill add failed')
+                            record(kind, scope, 'install-failed', 'upskill add ended with state ' + installed['state'])
                         continue
                     for kind in args.kinds:
                         record(kind, scope, smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env))
                 finally:
                     if scope == 'global':
-                        runner([str(args.upskill), 'remove', '--global', '--yes', name], cwd, args.timeout, env)
+                        try:
+                            removed = runner([upskill, 'remove', '--global', '--yes', name], cwd, args.timeout, env)
+                            failure = None if removed['state'] == 'success' else 'upskill remove ended with state ' + removed['state']
+                        except subprocess.TimeoutExpired:
+                            failure = 'upskill remove timed out'
+                        if failure:
+                            for cell in results[first:]:
+                                cell['warning'] = 'global items ' + name + ' were not removed: ' + failure
     return results
 
 
@@ -855,13 +867,13 @@ def smoke_main(args, runner=invoke):
         print(cell['client'], cell['kind'], cell['scope'], cell['result'].replace(' ', '-') if cell['result'] == 'not run' else cell['result'], cell['client_version'])
     for cell in results:
         if cell.get('reason'):
-            print('note:', cell['client'], cell['scope'], cell['reason'])
-            break
+            print('note:', cell['client'], cell['kind'], cell['scope'], cell['reason'])
+    for warning in dict.fromkeys(cell['warning'] for cell in results if cell.get('warning')):
+        print('warning:', warning)
     if args.run:
         for (client, kind), level in smoke_levels(results).items():
             print(client, kind, level)
     return 0
-
 
 
 def run(args):
@@ -957,6 +969,10 @@ if __name__ == '__main__':
     if args.smoke:
         if not args.upskill:
             parser.error('--upskill is required with --smoke')
+        if args.evidence or args.replay_copilot_reader or args.replay_copilot_agent:
+            parser.error('--smoke cannot be combined with --evidence or a replay option')
+        if args.run and not args.upskill.is_file():
+            parser.error('--upskill does not name a file: ' + str(args.upskill))
         args.clients = args.clients or list(SMOKE_CLIENTS)
         if not set(args.clients) <= set(SMOKE_CLIENTS):
             parser.error('--smoke supports only ' + ', '.join(SMOKE_CLIENTS))
