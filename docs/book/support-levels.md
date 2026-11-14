@@ -58,8 +58,10 @@ authenticated clients and makes paid model calls, so hosted CI does not run it.
 One smoke run is recorded, on 2026-11-14. On Claude Code 2.1.308 all six cells
 passed (rule, skill and agent, each at project and global scope), so the three
 `claude` cells are `supported`. One run on GitHub Copilot CLI 1.0.110 could not
-be completed because the account's monthly quota was used up (HTTP 402), so
-every Copilot cell is `unavailable` and has no result. The Copilot cells stay
+be completed because the account's monthly quota was used up (HTTP 402). The
+script of that run, before it handled the quota, printed `fail` for every
+Copilot cell. The script now prints `unavailable` for that case, with a note
+that names the quota. No Copilot cell has a result, so the Copilot cells stay
 `experimental`. The tool names that the smoke mode allows for the skill and
 agent cells (`SMOKE_TOOLS` in the script) are confirmed for Claude Code 2.1.308
 only. They stay unconfirmed for Copilot CLI 1.0.110.

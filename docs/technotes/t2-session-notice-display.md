@@ -134,13 +134,27 @@ The documented shape of a hook file (not run):
 
 Run on 2026-11-14 with Claude Code 2.1.308, in a temporary git repository. The
 hook was declared in the project file `.claude/settings.json` of that
-repository, for the event `SessionStart` without a matcher. No plugin was
-installed. Each hook command appended a line to a log file, to show that it ran,
+repository, for the event `SessionStart` without a matcher. No plugin files
+exist for this trial: the hook was declared in project settings and not in a
+plugin, so that nothing under the home directory changes (the plan asked for a
+plugin). Each hook command appended a line to a log file, to show that it ran,
 and then printed its text. Eight model requests were made, two for each form:
 
 ```text
 claude -p "<prompt>" --output-format stream-json --verbose --include-hook-events --setting-sources project --no-session-persistence
 ```
+
+The settings file was the same for every form, with `<form>` replaced by the
+name of the script:
+
+```json
+{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"sh \"$CLAUDE_PROJECT_DIR/<form>.sh\""}]}]}}
+```
+
+Each script first appended the word `ran` to a log file in the repository, then
+printed: form A, the line followed by a newline; form B,
+`{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"<line>"}}`;
+form C, `{"systemMessage":"<line>"}`; form D, one JSON object with both fields.
 
 Prompt 1 was `Reply with the single word READY.` Prompt 2 asked whether the
 context holds a notice about upskill updates and asked for an exact quote. The
@@ -157,14 +171,16 @@ printed line was
 Observed:
 
 - The project hook ran without a trust or permission step, and every run exited
-  with code 0.
+  with code 0. This was observed for `claude -p` only.
 - With the plain line, the model received the text labelled as the output of the
   hook (`SessionStart:startup hook success: <line>`).
 - In the output stream, the line appeared only in the `system/hook_response`
   event, as the raw standard output of the hook, for every form. That event is
   written only with `--verbose --include-hook-events`.
-- With prompt 1 the final text was `READY` for every form. A user of
-  non-interactive mode therefore sees no notice unless they ask for it.
+- With prompt 1 the final text was `READY` for every form. The final text of the
+  reply did not hold the notice. The line was present in the output stream only
+  in the `system/hook_response` event, which is written with
+  `--verbose --include-hook-events`.
 - The text of `systemMessage` did not reach the model.
 
 Not observed:
@@ -185,13 +201,22 @@ person before the plugin is published.
 
 ## What the trial must record
 
-Still open after the Claude Code part above. For each client, with the client
-version:
+With the client version for each point. The Claude Code part above answered
+these points for non-interactive mode only:
 
-1. Whether the user sees the plain line.
+1. Whether the user sees the plain line. Answered for `claude -p`: the final
+   text did not hold it; the stream held it in the `system/hook_response` event.
+   Open for the interactive display of Claude Code.
 2. Whether the agent receives it, and whether the agent mentions it or asks the
-   user without being asked.
-3. The same two points for the JSON form of that client.
-4. For Copilot CLI, whether a plain line is ignored.
-5. For Copilot CLI, whether a hook declared in `.claude/settings.json` also
-   runs.
+   user without being asked. Answered for `claude -p`: the model received the
+   plain line and did not mention it without being asked.
+3. The same two points for the JSON form of that client. Answered for
+   `claude -p` (forms B, C and D above). Open for the interactive display.
+
+Open for Copilot CLI, every point:
+
+1. Whether the user sees the plain line, and whether the agent receives it and
+   mentions it.
+2. The same points for its JSON form.
+3. Whether a plain line is ignored.
+4. Whether a hook declared in `.claude/settings.json` also runs.
