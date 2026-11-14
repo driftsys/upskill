@@ -794,7 +794,8 @@ def run_smoke(args, runner=invoke):
     `<upskill> add <source> --<client> --project|--global`, ask one question
     per kind in a new client session, remove the items, and return a list of
     {'client', 'kind', 'scope', 'result', 'client_version'}. `result` is
-    'pass', 'fail', 'timeout' or 'unavailable'; 'not run' without `--run`."""
+    'pass', 'fail', 'timeout', 'unavailable' or 'install-failed'; 'not run'
+    without `--run`."""
     cells = [(client, kind, scope) for client in args.clients for scope in args.scopes for kind in args.kinds]
     if not args.run:
         return [{'client': c, 'kind': k, 'scope': s, 'result': 'not run', 'client_version': '-'} for c, k, s in cells]

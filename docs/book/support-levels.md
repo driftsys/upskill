@@ -55,6 +55,11 @@ experimental until its design settles these paths.
 A maintainer runs the smoke test against the real clients. It needs
 authenticated clients and makes paid model calls, so hosted CI does not run it.
 
+No smoke run has been recorded yet, so every implemented cell is `experimental`.
+The tool names that the smoke mode allows for the skill and agent cells
+(`SMOKE_TOOLS` in the script) have not been confirmed against the real clients;
+the first run may show that they need correction.
+
 ```bash
 just smoke                  # print the cells; no model call
 just smoke --run            # run every cell of claude and copilot
