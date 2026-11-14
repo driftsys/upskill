@@ -76,9 +76,11 @@ snapshot; a stable name does not imply that external research remains current.
   Q2 catalog and real-child observations; restriction enforcement remains
   unqualified.
 - [Session-start hook output in Claude Code and Copilot CLI](t2-session-notice-display.md):
-  preparation of trial T2, documentation only, read on 2026-11-14; Claude Code
-  documents the hook output as context for the model, and Copilot CLI does not
-  state who receives it; the trial has not been run.
+  trial T2; documentation of both clients read on 2026-11-14; Claude Code
+  2.1.308 in non-interactive mode: the model receives a plain line and
+  `additionalContext`, does not mention them without being asked, and does not
+  receive `systemMessage` (observed); the interactive display and the Copilot
+  CLI part are not run.
 - [Copilot visibility of duplicate installs](t1-copilot-duplicate-visibility.md):
   T1, Copilot 1.0.109; a rule installed for Claude and Copilot is listed twice
   (observed); that it is applied twice rests on the model's own statement; the
