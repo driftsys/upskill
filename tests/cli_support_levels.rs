@@ -14,30 +14,72 @@ fn empty_repo() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
     (tmp, home, repo)
 }
 
-#[test]
-fn doctor_prints_one_level_for_each_client_and_kind() {
+/// Runs `doctor` with `args` and returns its stdout.
+fn doctor_text(args: &[&str]) -> String {
     let (_tmp, home, repo) = empty_repo();
     let out = common::upskill_cmd(&home)
         .current_dir(&repo)
-        .arg("doctor")
+        .args(args)
         .assert()
         .success();
-    let text = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    String::from_utf8(out.get_output().stdout.clone()).unwrap()
+}
+
+fn doctor_json(args: &[&str]) -> serde_json::Value {
+    serde_json::from_str(&doctor_text(args)).unwrap()
+}
+
+#[test]
+fn doctor_prints_one_level_for_each_client_and_kind() {
+    let text = doctor_text(&["doctor"]);
     let lines: Vec<&str> = text.lines().collect();
     let at = lines
         .iter()
         .position(|l| *l == "Support levels:")
         .unwrap_or_else(|| panic!("no section in:\n{text}"));
-    let rows = &lines[at + 1..];
+    let rows = &lines[at + 1..at + 1 + SUPPORT.len()];
     assert_eq!(rows.len(), 12, "{text}");
-    assert_eq!(
-        rows[0].split_whitespace().collect::<Vec<_>>(),
-        ["claude", "rule", "experimental"]
-    );
-    assert_eq!(
-        rows[11].split_whitespace().collect::<Vec<_>>(),
-        ["codex", "agent", "unsupported"]
-    );
+    for (row, cell) in rows.iter().zip(SUPPORT) {
+        assert_eq!(
+            row.split_whitespace().collect::<Vec<_>>(),
+            [cell.client, &cell.kind.to_string(), &cell.level.to_string()],
+            "{text}"
+        );
+    }
+    let last_scope_report = lines
+        .iter()
+        .rposition(|l| l.starts_with("doctor:"))
+        .unwrap();
+    assert!(last_scope_report < at, "{text}");
+}
+
+#[test]
+fn doctor_prints_the_support_levels_after_the_scope_reports() {
+    let text = doctor_text(&["doctor"]);
+    let heading = text.find("Support levels:").unwrap();
+    let project = text.find("project (").unwrap();
+    let global = text.find("global (").unwrap();
+    assert!(project < global && global < heading, "{text}");
+}
+
+#[test]
+fn doctor_with_a_global_flag_prints_the_support_levels() {
+    let text = doctor_text(&["doctor", "--global"]);
+    assert!(text.contains("Support levels:"), "{text}");
+}
+
+#[test]
+fn doctor_json_with_a_scope_flag_holds_the_support_table() {
+    for flag in ["--project", "--global"] {
+        let v = doctor_json(&["doctor", "--json", flag]);
+        assert_eq!(v["support"].as_array().unwrap().len(), 12, "{flag}: {v}");
+    }
+}
+
+#[test]
+fn quiet_doctor_does_not_print_the_support_levels() {
+    let text = doctor_text(&["--quiet", "doctor"]);
+    assert!(!text.contains("Support levels:"), "{text}");
 }
 
 #[test]
@@ -92,16 +134,30 @@ fn the_user_guide_table_equals_the_compiled_table() {
             .collect::<Vec<_>>()
             .join(" ")
     };
-    let rows: Vec<String> = page.lines().map(collapse).collect();
-    for cell in SUPPORT {
-        let row = format!(
-            "| {} | {} | {} | {} | {} |",
-            cell.client,
-            cell.kind,
-            cell.level,
-            cell.client_version.unwrap_or("-"),
-            cell.checked.unwrap_or("-")
-        );
-        assert!(rows.contains(&row), "missing row: {row}");
-    }
+    // The rows of the cell table: five cells, not the header, not the separator.
+    let page_rows: Vec<String> = page
+        .lines()
+        .map(collapse)
+        .filter(|l| l.starts_with('|') && l.matches('|').count() == 6)
+        .filter(|l| !l.starts_with("| Client |") && !l.starts_with("| -"))
+        .collect();
+    let compiled: Vec<String> = SUPPORT
+        .iter()
+        .map(|cell| {
+            format!(
+                "| {} | {} | {} | {} | {} |",
+                cell.client,
+                cell.kind,
+                cell.level,
+                cell.client_version.unwrap_or("-"),
+                cell.checked.unwrap_or("-")
+            )
+        })
+        .collect();
+    assert_eq!(page_rows.len(), SUPPORT.len(), "{page_rows:#?}");
+    let mut left = page_rows.clone();
+    let mut right = compiled.clone();
+    left.sort();
+    right.sort();
+    assert_eq!(left, right);
 }

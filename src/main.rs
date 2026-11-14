@@ -1712,9 +1712,15 @@ fn print_doctor_scopes(report: &DoctorScopes) {
     }
     println!();
     println!("Support levels:");
+    let client_width = report
+        .support
+        .iter()
+        .map(|c| c.client.len())
+        .max()
+        .unwrap_or(0);
     for cell in &report.support {
         let mut line = format!(
-            "  {:<9} {:<6} {}",
+            "  {:<client_width$} {:<6} {}",
             cell.client,
             cell.kind.to_string(),
             cell.level

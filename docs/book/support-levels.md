@@ -47,16 +47,10 @@ location of OpenCode. `.agents/rules/<name>/RULE.md` with `$HOME/opencode.json`,
 and `.opencode/agents/`, are not documented personal locations. OpenCode stays
 experimental until its design settles these paths.
 
-## Run the smoke test
+## Smoke test
 
-The smoke test installs a fixture with a random marker through the real
-`upskill` binary, starts a new client session, and checks that the client
-returns the marker. It needs authenticated clients and makes paid model calls,
-so hosted CI does not run it. A maintainer runs it with `just smoke --run`.
-Without `--run` it prints the cells it would run and makes no model call. A
-global cell writes to the real home directory and runs only with
-`--allow-real-home`.
-
-After a run, a maintainer sets each cell that passed in both scopes to
-`Supported` in `src/support.rs`, with the client version and the date of the
-run, and updates the table above to match. A test fails when the two differ.
+A maintainer runs the smoke test against the real clients. It needs
+authenticated clients and makes paid model calls, so hosted CI does not run it.
+After a run, a maintainer sets each cell that passed to `Supported` in
+`src/support.rs`, with the client version and the date of the run, and updates
+the table above to match. A test fails when the two differ.
