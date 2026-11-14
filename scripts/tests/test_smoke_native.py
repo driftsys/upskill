@@ -557,7 +557,6 @@ class SmokeRunTest(unittest.TestCase):
         self.assertEqual(lines, ['claude %s project not-run -' % kind for kind in q.SMOKE_KINDS])
 
 
-@unittest.skipUnless(BINARY.exists(), 'target/debug/upskill is not built')
 class SmokeGlobalLockfileTest(unittest.TestCase):
     """A global cell leaves `.upskill-lock.json` and `.upskill-lock.json.v1` of
     the home directory as it found them."""
@@ -650,6 +649,7 @@ class SmokeGlobalLockfileTest(unittest.TestCase):
         self.assertIn('disk full', output)
 
 
+@unittest.skipUnless(BINARY.exists(), 'target/debug/upskill is not built')
 class SmokeSourceInstallTest(unittest.TestCase):
     def test_the_source_installs_the_three_kinds_for_both_clients(self):
         env = q.isolated_git_environment()
