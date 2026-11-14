@@ -47,6 +47,11 @@ fmt:
     cargo fmt
     prim fmt --exclude 'tests/fixtures/**'
 
+# Smoke test of installed content against the real clients (release build)
+smoke *args:
+    cargo build --release
+    python3 scripts/qualify-native-instructions.py --smoke --upskill target/release/upskill {{args}}
+
 # Generate and open rustdoc
 doc:
     cargo doc --open
