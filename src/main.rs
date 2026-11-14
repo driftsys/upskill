@@ -163,9 +163,12 @@ fn install_signal_handlers() -> anyhow::Result<()> {
 }
 
 /// The handler of `update --notice`: an interrupt ends the process at once
-/// with exit code 0 and prints nothing. The notice has no write to protect
-/// except the cache file, which `NoticeCache::save` replaces with a rename. A
-/// failed installation is ignored, because the notice never fails.
+/// with exit code 0 and prints nothing itself. The notice has no write to
+/// protect except the cache file, which `NoticeCache::save` replaces with a
+/// rename. An interrupt after the line was written and before the save lets
+/// the line print again in the next session, and a temporary file of the save
+/// can remain. A failed installation is ignored, because the notice never
+/// fails.
 fn install_notice_signal_handler() {
     let _ = ctrlc::set_handler(|| std::process::exit(EXIT_SUCCESS));
 }

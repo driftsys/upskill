@@ -549,24 +549,30 @@ The command is quiet by design:
   lookups as `update --check` and a time limit of 5 seconds for all sources.
   Between two lookups, it uses the result of the last one. A lookup that reaches
   no source (for example when the session has no network access) also counts:
-  the next attempt waits for the 24 hours, and the earlier result stays. A
-  lookup that reaches some sources but not all keeps the earlier updates of the
-  sources that it did not reach.
+  the next attempt waits for the 24 hours, and the stored updates stay. A lookup
+  that reaches all sources replaces the stored updates with the ones it found. A
+  lookup that reaches some sources but not all adds the updates it found and
+  keeps every earlier stored update whose item (kind and name) it did not find
+  again; it cannot tell which source an earlier update came from.
 - It exits with code 0 in every case after the arguments are parsed (a usage
   error exits with code 2). An interrupt ends the command at once with exit code
-  0 and prints nothing. It prints nothing when no cache directory is known, when
-  the scope roots cannot be determined, and when a lockfile of a scope that is
-  due cannot be parsed. Only a scope that is due has its lockfile read: when
-  that lockfile cannot be parsed, the command prints nothing for either scope,
-  also not the cached line of the other scope, and writes no cache file. A
-  source that is not reachable adds no update; its scope prints a line only for
-  the updates of its other sources. A cache file that cannot be read or written
-  does not stop the command: an invalid cache file is treated as an empty one,
-  and a failed write is ignored. When the cache directory cannot be written,
-  nothing is stored, so the check runs and the line is printed at every session
-  start.
-- It changes no lockfile and no installed file. The only file it writes is the
-  cache file `notice.json` in the upskill cache directory, which is
+  0. An interrupt during the lookups prints nothing and writes no cache file. An
+  interrupt after the line was written and before the cache file was saved lets
+  the same line print again in the next session, and a temporary file
+  `notice.json.<pid>.tmp` can remain in the cache directory. It prints nothing
+  when no cache directory is known, when the scope roots cannot be determined,
+  and when a lockfile of a scope that is due cannot be parsed. Only a scope that
+  is due has its lockfile read: when that lockfile cannot be parsed, the command
+  prints nothing for either scope, also not the cached line of the other scope,
+  and writes no cache file. A source that is not reachable adds no update, but
+  the updates stored from earlier lookups stay and are counted and printed as
+  described above. A cache file that cannot be read or written does not stop the
+  command: an invalid cache file is treated as an empty one, and a failed write
+  is ignored. When the cache directory cannot be written, nothing is stored, so
+  the check runs and the line is printed at every session start.
+- It changes no lockfile and no installed file. The only file it keeps is the
+  cache file `notice.json` in the upskill cache directory (it writes it through
+  a temporary file `notice.json.<pid>.tmp` and a rename), which is
   `$XDG_CACHE_HOME/upskill` when `XDG_CACHE_HOME` is an absolute path (an empty
   or relative value is ignored) and `~/.cache/upskill` otherwise. The file
   records for each scope root the time of the last lookup, the updates found and

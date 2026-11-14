@@ -183,8 +183,10 @@ pub enum Commands {
         /// once. The sources are contacted at most once in 24 hours, for
         /// 5 seconds at most, and without a fetch. After the arguments are
         /// parsed, it exits with code 0 in every case, also when a step fails
-        /// or the process is interrupted, and prints nothing then. Accepts no
-        /// other argument or flag.
+        /// or the process is interrupted. A failed step prints nothing; an
+        /// interrupt during the lookups prints nothing and an interrupt after
+        /// the line was written lets it print again in the next session.
+        /// Accepts no other argument or flag.
         #[arg(
             long = "notice",
             conflicts_with_all = ["names", "dry_run", "check", "global", "project", "yes", "force", "claude", "copilot", "vscode", "opencode"]

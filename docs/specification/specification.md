@@ -395,9 +395,10 @@ rules, in order:
    when every source of the root answered (a root without a source counts as
    answered), `updates` becomes the set that the check found; when at least one
    source answered and at least one was `not reachable` or `not checked`, the
-   check adds its entries and keeps each earlier entry whose `<kind>:<name>`
-   part is not in the found set; when every source was `not reachable` or
-   `not checked`, `updates` stays.
+   check adds its entries and keeps every earlier entry whose `<kind>:<name>`
+   part is not in the found set (the check cannot tell which source an earlier
+   entry came from); when every source was `not reachable` or `not checked`,
+   `updates` stays.
 2. For each root, project then global, the command compares `updates` with
    `reported`. When `updates` is empty, it empties `reported` and prints
    nothing. When they are equal, it prints nothing. Otherwise it sets `reported`
@@ -416,18 +417,21 @@ rules, in order:
 
 Every failure after argument parsing prints nothing and gives exit code 0;
 nothing is written to stderr. An interrupt (SIGINT) ends the command at once
-with exit code 0, prints nothing and leaves the cache file as it was; a failed
-installation of the signal handler is ignored. The failures are: no cache
-directory is known (neither an absolute `XDG_CACHE_HOME` nor the home
-directory), the scope roots cannot be determined, and a lockfile that cannot be
-parsed. Only a root that is due has its lockfile read; when that lockfile cannot
-be parsed, the command prints nothing for any root, also not the cached line of
-a root that is not due, and writes no cache file. A source that is not reachable
-adds no update, so its root prints a line only for the updates of its other
-sources, and a failed read or write of the cache file is ignored. When the cache
-directory cannot be written, nothing is stored, so the check runs and the line
-is printed at every session start. With `--quiet`, rule 1 and rule 3 apply, and
-rule 2 prints nothing and leaves `reported` unchanged.
+with exit code 0. During the lookups it prints nothing and writes no cache file.
+After the line was written and before the cache file was saved, the same line
+prints again in the next session. A temporary file `notice.json.<pid>.tmp` can
+remain in the cache directory. A failed installation of the signal handler is
+ignored. The failures are: no cache directory is known (neither an absolute
+`XDG_CACHE_HOME` nor the home directory), the scope roots cannot be determined,
+and a lockfile that cannot be parsed. Only a root that is due has its lockfile
+read; when that lockfile cannot be parsed, the command prints nothing for any
+root, also not the cached line of a root that is not due, and writes no cache
+file. A source that is not reachable adds no update, but the entries that
+earlier checks stored stay in `updates` (rule 1) and rule 2 counts them; a
+failed read or write of the cache file is ignored. When the cache directory
+cannot be written, nothing is stored, so the check runs and the line is printed
+at every session start. With `--quiet`, rule 1 and rule 3 apply, and rule 2
+prints nothing and leaves `reported` unchanged.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
