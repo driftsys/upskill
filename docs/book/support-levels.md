@@ -57,8 +57,9 @@ authenticated clients and makes paid model calls, so hosted CI does not run it.
 
 No smoke run has been recorded yet, so every implemented cell is `experimental`.
 The tool names that the smoke mode allows for the skill and agent cells
-(`SMOKE_TOOLS` in the script) have not been confirmed against the real clients;
-the first run may show that they need correction.
+(`SMOKE_TOOLS` in the script) are confirmed for Claude Code 2.1.308 only. They
+are not confirmed for GitHub Copilot CLI 1.0.110: the one run on that version
+ended with an exceeded monthly quota, so the client never answered.
 
 ```bash
 just smoke                  # print the cells; no model call
@@ -131,10 +132,11 @@ followed by 12 hexadecimal digits. Remove the items with
 
 The result of a cell is `pass`, `fail`, `timeout`, `unavailable` or
 `install-failed`. A cell is `unavailable` when the client binary is missing, its
-version cannot be read, the client reports an authentication failure, or a
-global cell has no `--allow-real-home`. A cell is `install-failed` when
-`upskill add` fails; the client is not asked, and the level stays
-`experimental`. The output has one line for each cell:
+version cannot be read, the client reports an authentication failure, GitHub
+Copilot CLI reports that the monthly quota is exceeded, or a global cell has no
+`--allow-real-home`. A cell is `install-failed` when `upskill add` fails; the
+client is not asked, and the level stays `experimental`. The output has one line
+for each cell:
 
 ```text
 <client> <kind> <scope> <result> <client version>

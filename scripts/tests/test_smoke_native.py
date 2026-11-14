@@ -357,6 +357,36 @@ class SmokeRunTest(unittest.TestCase):
         results = q.run_smoke(smoke_args(), FakeRunner(answer))
         self.assertEqual({cell['result'] for cell in results}, {'unavailable'})
 
+    def test_an_exceeded_copilot_quota_is_unavailable(self):
+        # Event shapes observed with Copilot CLI 1.0.110 when the monthly quota
+        # is used up: the model call fails with status 402, a `session.error`
+        # event follows, and the run ends with a `result` event of exit code 1.
+        stream = (
+            '{"type":"session.start","data":{"sessionId":"S","copilotVersion":"1.0.110"}}\n'
+            '{"type":"user.message","data":{"content":"question"}}\n'
+            '{"type":"model.call_failure","data":{"statusCode":402}}\n'
+            '{"type":"session.error","data":{"errorType":"quota","message":"You have exceeded your monthly quota","statusCode":402}}\n'
+            '{"type":"assistant.idle","data":{},"ephemeral":true}\n'
+            '{"type":"result","exitCode":1}\n')
+
+        def answer(command):
+            if command[0] == 'copilot' and '--version' not in command:
+                return {'state': 'failure', 'stdout': stream}
+
+        results = q.run_smoke(smoke_args(clients=['copilot']), FakeRunner(answer))
+        self.assertEqual({cell['result'] for cell in results}, {'unavailable'})
+
+    def test_another_copilot_session_error_is_a_failure(self):
+        stream = ('{"type":"session.error","data":{"errorType":"query","message":"Model is not available."}}\n'
+                  '{"type":"result","exitCode":1}\n')
+
+        def answer(command):
+            if command[0] == 'copilot' and '--version' not in command:
+                return {'state': 'failure', 'stdout': stream}
+
+        results = q.run_smoke(smoke_args(clients=['copilot'], kinds=['rule']), FakeRunner(answer))
+        self.assertEqual([cell['result'] for cell in results], ['fail'])
+
     def test_a_failing_version_command_makes_the_client_unavailable(self):
         def answer(command):
             if command[1:] == ['--version']:

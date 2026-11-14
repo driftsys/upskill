@@ -780,6 +780,23 @@ def smoke_response(client, stdout):
     return ''.join(texts).strip()
 
 
+def smoke_quota_exceeded(client, stdout):
+    """True when a Copilot stream holds a `session.error` event of type
+    `quota`: the account has no model calls left, so the cell says nothing
+    about the client."""
+    if client != 'copilot':
+        return False
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if (isinstance(event, dict) and event.get('type') == 'session.error'
+                and isinstance(event.get('data'), dict) and event['data'].get('errorType') == 'quota'):
+            return True
+    return False
+
+
 def smoke_levels(cells):
     """The level that the support table may hold for each client and kind:
     'supported' when both scopes passed, 'experimental' otherwise."""
@@ -802,6 +819,8 @@ def smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env
         return 'unavailable'
     if result['state'] == 'timeout':
         return 'timeout'
+    if smoke_quota_exceeded(client, result.get('stdout', '')):
+        return 'unavailable'
     if result['state'] != 'success':
         return 'fail'
     response = smoke_response(client, result.get('stdout', ''))
