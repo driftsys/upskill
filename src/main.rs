@@ -1710,6 +1710,17 @@ fn print_doctor_scopes(report: &DoctorScopes) {
             );
         }
     }
+    println!();
+    println!("Support levels:");
+    let client_width = report
+        .support
+        .iter()
+        .map(|c| c.client.len())
+        .max()
+        .unwrap_or(0);
+    for cell in &report.support {
+        println!("{}", upskill::support::format_row(cell, client_width));
+    }
 }
 
 fn print_doctor_report(report: &DoctorReport) {

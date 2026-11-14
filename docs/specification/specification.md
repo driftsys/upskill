@@ -430,8 +430,8 @@ adoption notice, except when a name is not in the lockfile, which is an error.
   project scope is reported and stderr gets
   `note: the global scope is not shown: HOME is not set`. With `--json`, `list`
   prints `{"scopes": [{"scope", "root", <the buckets>}]}` and `doctor` prints
-  `{"scopes": [...], "in_both_scopes": [...]}`; both also when one scope is
-  selected.
+  `{"scopes": [...], "in_both_scopes": [...], "support": [...]}`; both also when
+  one scope is selected.
 - `doctor` — verify on-disk state matches the lock file. Per scope, eleven
   independent buckets: missing per-client outputs (reinstall fixes), modified
   recorded files (content differs from the recorded SHA-256, compared as in
@@ -447,14 +447,18 @@ adoption notice, except when a name is not in the lockfile, which is an error.
   only, files at the earlier global Copilot paths (`earlier_layout`;
   `upskill update --global` moves them). `doctor` also prints a note for each
   item that the lockfiles of both scopes record; the note does not change the
-  exit code. Exit 0 when clean, 1 when any drift bucket is non-empty, including
-  `earlier_layout`. Skipped plugins are warnings and do not affect the exit
-  code. Missing, modified and unreadable files are checked against the `files`
-  record; a recorded path that `remove` would never delete (outside the client
-  roots, fewer than three components, or with a `..` component) is skipped
-  without a report. For an item with an empty or missing `files` record (a
-  `schema: 1` lockfile, or a `schema: 2` item with an empty list), `doctor`
-  checks each per-client entry file instead.
+  exit code. After the scope reports, `doctor` prints the support level of each
+  client and kind (`Support levels:`; the compiled table in `src/support.rs`,
+  stated in the user guide page "Support levels"); the section does not change
+  the exit code and `doctor` does not detect client versions. Exit 0 when clean,
+  1 when any drift bucket is non-empty, including `earlier_layout`. Skipped
+  plugins are warnings and do not affect the exit code. Missing, modified and
+  unreadable files are checked against the `files` record; a recorded path that
+  `remove` would never delete (outside the client roots, fewer than three
+  components, or with a `..` component) is skipped without a report. For an item
+  with an empty or missing `files` record (a `schema: 1` lockfile, or a
+  `schema: 2` item with an empty list), `doctor` checks each per-client entry
+  file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 

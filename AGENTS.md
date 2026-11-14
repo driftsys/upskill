@@ -48,6 +48,7 @@ just verify             # Commit check + build — run before PR
 just fmt                # Format Rust + Markdown
 just book               # Build the mdBook docs into book/
 just book-serve         # Serve the mdBook with live reload (opens in browser)
+just smoke              # List the smoke test cells; `just smoke --run` makes paid model calls
 ```
 
 After `git clone` or `git worktree add`, run `./bootstrap` once. It installs
@@ -85,6 +86,7 @@ src/
 ├── lint.rs              Author command — validate SSOT against the format spec
 ├── fmt.rs               Author command — canonicalise YAML frontmatter
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
+├── support.rs           Support level table (client x kind), printed by `doctor`
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
 └── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)
@@ -199,7 +201,8 @@ the way you would for any manual `git clone`.
   ```
 
 - Existing test files:
-  - **CLI:** `cli_add`, `cli_ci_mode`, `cli_exit_codes`, `cli_search`.
+  - **CLI:** `cli_add`, `cli_ci_mode`, `cli_exit_codes`, `cli_search`,
+    `cli_support_levels`, `cli_smoke_source`.
   - **Pipeline:** `pipeline_local`, `pipeline_source`, `pipeline_lockfile`.
   - **Generation (v0.2 pipeline):** `generate_skills`, `generate_rules`,
     `generate_agents`. Golden fixtures in `tests/fixtures/`.

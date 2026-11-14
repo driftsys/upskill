@@ -225,3 +225,26 @@ fn remove_unknown_name_is_general_error() {
         "stderr should name the missing item: {stderr}"
     );
 }
+
+/// `scripts/qualify-native-instructions.py` (the smoke mode) matches the text
+/// `not in lockfile: <name>` on stderr to tell an item that is not installed
+/// from another removal failure. Change both together.
+#[test]
+fn remove_global_of_an_absent_name_says_not_in_lockfile() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let cwd = tmp.path().join("cwd");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(&cwd).unwrap();
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&cwd)
+        .args(["remove", "--global", "--yes", "upskill-smoke-absent"])
+        .assert()
+        .failure()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("not in lockfile: upskill-smoke-absent"),
+        "{stderr}"
+    );
+}

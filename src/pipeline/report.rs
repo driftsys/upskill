@@ -673,6 +673,9 @@ pub struct DoctorScopes {
     /// Sorted by kind, then name. An item here is a note and does not affect
     /// `is_clean()`.
     pub in_both_scopes: Vec<BothScopesItem>,
+    /// The support level of each client and kind. It does not affect
+    /// `is_clean()`.
+    pub support: Vec<crate::support::SupportCell>,
 }
 
 impl DoctorScopes {
@@ -771,6 +774,7 @@ mod tests {
                 kind: ItemKind::Rule,
                 name: "x".into(),
             }],
+            support: crate::support::SUPPORT.to_vec(),
         };
         assert!(both.is_clean(), "a note does not make a scope unclean");
         both.scopes[1].report = dirty;

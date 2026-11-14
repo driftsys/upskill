@@ -10,6 +10,7 @@
 - [Commands](commands.md)
 - [Recipes](recipes.md)
 - [Conventions](conventions.md)
+- [Support levels](support-levels.md)
 
 # Reference
 
