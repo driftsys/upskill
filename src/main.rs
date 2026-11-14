@@ -1123,9 +1123,6 @@ fn notice_lines() -> Option<()> {
             .into_iter()
             .partition(|at| has_lockfile(&at.root));
     let mut cache = notice::NoticeCache::load(&cache_path);
-    for at in &without_lockfile {
-        notice::forget(&mut cache, &at.root);
-    }
     let due: Vec<ScopeRoot> = roots
         .iter()
         .filter(|at| notice::needs_check(&cache, &at.root, now))
