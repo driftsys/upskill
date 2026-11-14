@@ -575,6 +575,71 @@ mod tests {
     }
 
     #[test]
+    fn a_source_with_mixed_recorded_commits_has_an_update() {
+        let tmp = tempfile::tempdir().unwrap();
+        let at = root(&tmp.path().join("p"), Scope::Project);
+        // `alpha` holds the remote commit; the skipped item `beta` holds an
+        // older one. The lockfile keeps its entries sorted by name, so the
+        // first entry is up to date.
+        save(
+            &at.root,
+            vec![
+                entry(ItemKind::Skill, "alpha", SOURCE, Some(COMMIT_B)),
+                entry(ItemKind::Skill, "beta", SOURCE, Some(COMMIT_A)),
+            ],
+        );
+        let mut remote = FakeRemote::with(SOURCE, Ok(Some(COMMIT_B.to_string())));
+        let checks = check_scopes(&[at], &[], far(), &mut remote).unwrap();
+        assert_eq!(
+            status_of(&checks),
+            &SourceStatus::UpdateAvailable {
+                from: Some(COMMIT_A.to_string()),
+                to: Some(COMMIT_B.to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn the_lookup_of_a_source_is_keyed_by_its_ref() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = root(&tmp.path().join("p"), Scope::Project);
+        let global = root(&tmp.path().join("g"), Scope::Global);
+        let versioned = format!("{SOURCE}@v1");
+        save(
+            &project.root,
+            vec![entry(ItemKind::Skill, "a", &versioned, Some(COMMIT_A))],
+        );
+        save(
+            &global.root,
+            vec![entry(ItemKind::Skill, "b", SOURCE, Some(COMMIT_B))],
+        );
+        // The same clone URL with two refs gives two different commits.
+        let mut remote = FakeRemote::with(&versioned, Ok(Some(COMMIT_A.to_string())));
+        remote
+            .answers
+            .insert(SOURCE.to_string(), Ok(Some(COMMIT_B.to_string())));
+        let checks = check_scopes(&[project, global], &[], far(), &mut remote).unwrap();
+        assert_eq!(remote.calls, 2);
+        assert_eq!(checks[0].sources[0].status, SourceStatus::UpToDate);
+        assert_eq!(checks[1].sources[0].status, SourceStatus::UpToDate);
+    }
+
+    #[test]
+    fn an_unreachable_source_without_a_recorded_commit_is_not_reachable() {
+        let tmp = tempfile::tempdir().unwrap();
+        let at = root(&tmp.path().join("p"), Scope::Project);
+        save(&at.root, vec![entry(ItemKind::Skill, "a", SOURCE, None)]);
+        let mut remote = FakeRemote::with(SOURCE, Err(LookupError::Failed("gone".to_string())));
+        let checks = check_scopes(&[at], &[], far(), &mut remote).unwrap();
+        assert_eq!(
+            status_of(&checks),
+            &SourceStatus::NotReachable {
+                reason: "gone".to_string()
+            }
+        );
+    }
+
+    #[test]
     fn a_root_without_a_lockfile_has_no_sources() {
         let tmp = tempfile::tempdir().unwrap();
         let at = root(&tmp.path().join("p"), Scope::Project);
@@ -689,6 +754,53 @@ mod tests {
         fs::remove_dir_all(source.join("one")).unwrap();
         let mut remote = FakeRemote::default();
         let checks = check_scopes(&[at], &[], far(), &mut remote).unwrap();
+        assert_eq!(
+            checks[0].sources[0].items,
+            vec![(ItemKind::Skill, "one".to_string())]
+        );
+    }
+
+    #[test]
+    fn a_local_bundle_file_source_is_checked_against_its_registry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let registry = tmp.path().join("registry");
+        let item = registry.join("skills/one");
+        fs::create_dir_all(&item).unwrap();
+        fs::write(
+            item.join("SKILL.md"),
+            "---\nschema: 1\nname: one\ndescription: test one\n---\n# one\n",
+        )
+        .unwrap();
+        let bundle = registry.join("pack.bundle.yaml");
+        fs::write(
+            &bundle,
+            "schema: 1\nname: pack\ndescription: d\nitems:\n  skills: [one]\n",
+        )
+        .unwrap();
+        let at = root(&tmp.path().join("project"), Scope::Project);
+        install_with_lockfile(
+            &InstallSource::LocalPath(bundle),
+            &at.root,
+            &[],
+            PluginScope::Project,
+            &AddOptions::default(),
+        )
+        .unwrap();
+        let lock = Lockfile::load(&at.root).unwrap();
+        assert!(lock.items.iter().any(|i| i.name == "one"), "{lock:?}");
+        let mut remote = FakeRemote::default();
+        let checks = check_scopes(std::slice::from_ref(&at), &[], far(), &mut remote).unwrap();
+        assert_eq!(status_of(&checks), &SourceStatus::UpToDate);
+        fs::write(
+            item.join("SKILL.md"),
+            "---\nschema: 1\nname: one\ndescription: changed\n---\n# one\n",
+        )
+        .unwrap();
+        let checks = check_scopes(&[at], &[], far(), &mut remote).unwrap();
+        assert!(matches!(
+            status_of(&checks),
+            SourceStatus::UpdateAvailable { .. }
+        ));
         assert_eq!(
             checks[0].sources[0].items,
             vec![(ItemKind::Skill, "one".to_string())]

@@ -207,22 +207,7 @@ pub(crate) fn ls_remote(
     git_ref: Option<&str>,
     deadline: Instant,
 ) -> Result<Option<String>, RunError> {
-    let mut cmd = Command::new("git");
-    cmd.arg("ls-remote").arg("--").arg(url);
-    match git_ref {
-        None => {
-            cmd.arg("HEAD");
-        }
-        Some(r) => {
-            cmd.arg(format!("refs/heads/{r}"))
-                .arg(format!("refs/tags/{r}"))
-                .arg(format!("refs/tags/{r}^{{}}"));
-        }
-    }
-    cmd.env("GIT_TERMINAL_PROMPT", "0")
-        .env_remove("GIT_DIR")
-        .env_remove("GIT_WORK_TREE")
-        .env_remove("GIT_INDEX_FILE");
+    let cmd = ls_remote_command(url, git_ref);
     let output = run_until(cmd, deadline)?;
 
     let lines: Vec<(&str, &str)> = output
@@ -241,6 +226,29 @@ pub(crate) fn ls_remote(
             .or_else(|| find(&format!("refs/tags/{r}^{{}}")))
             .or_else(|| find(&format!("refs/tags/{r}"))),
     })
+}
+
+/// The `git ls-remote` command of [`ls_remote`]. It sets
+/// `GIT_TERMINAL_PROMPT=0`, so that git fails instead of asking for
+/// credentials on the terminal.
+fn ls_remote_command(url: &str, git_ref: Option<&str>) -> Command {
+    let mut cmd = Command::new("git");
+    cmd.arg("ls-remote").arg("--").arg(url);
+    match git_ref {
+        None => {
+            cmd.arg("HEAD");
+        }
+        Some(r) => {
+            cmd.arg(format!("refs/heads/{r}"))
+                .arg(format!("refs/tags/{r}"))
+                .arg(format!("refs/tags/{r}^{{}}"));
+        }
+    }
+    cmd.env("GIT_TERMINAL_PROMPT", "0")
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE");
+    cmd
 }
 
 /// True for 40 lowercase or uppercase hexadecimal characters.
@@ -567,6 +575,16 @@ mod tests {
         git_out(&bare, &["branch", "v2", &second]);
         let got = ls_remote(&file_url(&bare), Some("v2"), far_deadline()).expect("ls-remote");
         assert_eq!(got, Some(second));
+    }
+
+    #[test]
+    fn ls_remote_never_prompts_for_credentials() {
+        let cmd = ls_remote_command("https://example.invalid/team/skills", None);
+        let prompt = cmd
+            .get_envs()
+            .find(|(key, _)| *key == "GIT_TERMINAL_PROMPT")
+            .map(|(_, value)| value);
+        assert_eq!(prompt, Some(Some(std::ffi::OsStr::new("0"))));
     }
 
     #[test]

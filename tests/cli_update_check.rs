@@ -298,10 +298,13 @@ fn a_terminal_update_without_changes_records_the_commit_and_asks_nothing() {
     ];
     let result = common::update_in_terminal_with_env(&e.repo, &e.home, &[], "", &env_vars);
     assert_eq!(result["returncode"], 0, "{result}");
-    assert!(
-        !result["stdout"].as_str().unwrap().contains("Apply?"),
-        "{result}"
-    );
+    // The prompt goes to stderr.
+    for stream in ["stdout", "stderr"] {
+        assert!(
+            !result[stream].as_str().unwrap().contains("Apply?"),
+            "{result}"
+        );
+    }
     let lock = lock(&e.repo);
     let items = lock["items"].as_array().unwrap();
     assert!(!items.is_empty());
@@ -621,6 +624,16 @@ fn check_reports_both_scopes_and_a_flag_limits_it() {
         "{text}"
     );
 
+    let out = run(&e, &e.repo, &["update", "--check", "--project"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(text.contains("project ("), "{text}");
+    assert!(!text.contains("global ("), "{text}");
+    assert!(
+        text.ends_with("2 updates available. Run \"upskill update\".\n"),
+        "{text}"
+    );
+
     let out = run(&e, &e.repo, &["update", "--check", "--global"]);
     assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
     let text = stdout(&out);
@@ -775,7 +788,15 @@ fn check_fails_with_code_1_for_an_unreadable_lockfile() {
 
 #[test]
 fn check_refuses_flags_that_apply_changes() {
-    for flag in ["--dry-run", "--yes", "--force", "--claude"] {
+    for flag in [
+        "--dry-run",
+        "--yes",
+        "--force",
+        "--claude",
+        "--copilot",
+        "--vscode",
+        "--opencode",
+    ] {
         let e = env();
         let out = run(&e, &e.repo, &["update", "--check", flag]);
         assert_eq!(out.status.code(), Some(2), "{flag}");
@@ -811,4 +832,82 @@ fn check_aligns_the_source_column_across_statuses() {
         offset("not reachable", OTHER_REMOTE),
         "{text}"
     );
+}
+
+#[test]
+fn check_with_an_item_name_covers_only_that_item() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "NOTES.md", "second\n");
+    let out = run(&e, &e.repo, &["update", "--check", "--project", "alpha"]);
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let text = stdout(&out);
+    assert!(text.contains("    skill alpha\n"), "{text}");
+    assert!(!text.contains("skill beta"), "{text}");
+    assert!(
+        text.ends_with("1 update available. Run \"upskill update\".\n"),
+        "{text}"
+    );
+}
+
+#[test]
+fn check_omits_the_up_to_date_sources_of_a_scope_that_has_an_update() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let other = e.upstream.parent().unwrap().join("other");
+    fs::create_dir_all(&other).unwrap();
+    git_in_dir(&e, &other, &["init", "--initial-branch=main"]);
+    write_skill(&other, "gamma", "Gamma content.");
+    git_in_dir(&e, &other, &["add", "."]);
+    git_in_dir(&e, &other, &["commit", "-m", "other"]);
+    let out = run_with_other(&e, &other, &["add", OTHER_REMOTE, "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    advance(&e, "NOTES.md", "second\n");
+    let out = run_with_other(&e, &other, &["update", "--check", "--project"]);
+    let text = stdout(&out);
+    assert!(text.contains(REMOTE), "{text}");
+    assert!(!text.contains(OTHER_REMOTE), "{text}");
+    assert!(!text.contains("up to date"), "{text}");
+}
+
+#[test]
+fn check_of_an_annotated_tag_compares_the_tagged_commit() {
+    let e = env();
+    git_in(&e, &["tag", "-a", "v1", "-m", "release one"]);
+    let out = run(&e, &e.repo, &["add", &format!("{REMOTE}@v1"), "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    // The tag object differs from the commit it names.
+    let out = run(&e, &e.repo, &["update", "--check", "--project"]);
+    assert!(stdout(&out).contains("  up to date\n"), "{}", stdout(&out));
+    advance(&e, "NOTES.md", "second\n");
+    git_in(&e, &["tag", "-a", "-f", "v1", "-m", "release one, moved"]);
+    let out = run(&e, &e.repo, &["update", "--check", "--project"]);
+    assert!(
+        stdout(&out).contains("  update available    "),
+        "{}",
+        stdout(&out)
+    );
+}
+
+#[test]
+fn update_records_the_commit_of_a_source_only_on_its_own_entries() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let other = e.upstream.parent().unwrap().join("other");
+    fs::create_dir_all(&other).unwrap();
+    git_in_dir(&e, &other, &["init", "--initial-branch=main"]);
+    write_skill(&other, "gamma", "Gamma content.");
+    git_in_dir(&e, &other, &["add", "."]);
+    git_in_dir(&e, &other, &["commit", "-m", "other"]);
+    let out = run_with_other(&e, &other, &["add", OTHER_REMOTE, "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let other_head = git_in_dir(&e, &other, &["rev-parse", "HEAD"]);
+    // Only the first source gets a new commit, and no item changes.
+    let head = advance(&e, "NOTES.md", "second\n");
+    assert_ne!(head, other_head);
+    let out = run_with_other(&e, &other, &["update", "--yes"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(commit_of(&e.repo, "alpha"), head.as_str());
+    assert_eq!(commit_of(&e.repo, "beta"), head.as_str());
+    assert_eq!(commit_of(&e.repo, "gamma"), other_head.as_str());
 }
