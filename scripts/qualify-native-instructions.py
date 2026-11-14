@@ -412,7 +412,7 @@ def invoke(command, cwd, timeout, env):
         state = 'authentication_failure'
     # Preserve only exact probe responses, never arbitrary client output or credentials.
     reason = next((label for label, terms in {'permission_denied': ('operation not permitted', 'permission denied'), 'network_failure': ('connection refused', 'failed to connect', 'network', 'dns'), 'authentication_failure': ('not logged in', 'authentication', 'unauthorized', 'login required'), 'configuration_error': ('invalid', 'unknown option', 'unexpected argument')}.items() if any(term in lower for term in terms)), None)
-    return {'state': state, 'stdout': result.stdout, 'sha256': digest, 'exit_code': result.returncode, 'diagnostic_category': reason}
+    return {'state': state, 'stdout': result.stdout, 'stderr': result.stderr, 'sha256': digest, 'exit_code': result.returncode, 'diagnostic_category': reason}
 
 
 def command(client, prompt, output):
@@ -750,9 +750,11 @@ def smoke_command(client, kind, prompt, scope):
 
 def smoke_response(client, stdout):
     """The text that the client answered, or None when the run is not complete.
-    A Copilot run is complete when its stream has exactly one terminal `result`
-    event, that event is the last one, and its exit code is 0, as in
-    `copilot_response`. Tool events are allowed: a skill or agent cell uses a tool."""
+    A Copilot run is complete when its stream has exactly one `result` event,
+    that event is the last one, and its exit code is 0. This is weaker than
+    `copilot_response`, which also rejects tool events, several messages and
+    unknown event types: a skill or agent cell uses a tool and may answer in
+    several messages."""
     if client != 'copilot':
         return stdout.strip()
     texts = []
@@ -804,7 +806,8 @@ def smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env
         return 'fail'
     response = smoke_response(client, result.get('stdout', ''))
     if response is None:
-        # The same condition makes `run` set the state `failure`.
+        # `run` also sets the state `failure` for a Copilot run without a
+        # successful terminal `result` event.
         return 'fail'
     others = [value for other, value in markers.items() if other != kind]
     return classify_smoke(response, markers[kind], others)
@@ -841,12 +844,10 @@ def smoke_scope(client, scope, version, base, source, upskill, markers, name, ar
     cwd.mkdir()
     if scope == 'project':
         subprocess.run(['git', 'init', '-q', str(cwd)], env=env, check=True)
-    # A failed `add` installed nothing, so there is nothing to remove. A timed-out
-    # `add` may have installed part of the source.
-    installed = False
+    # `add` is not atomic: a failed or timed-out `add` can leave the lockfile
+    # entry and some files. A global cell therefore always runs `remove`.
     try:
         added = runner([upskill, 'add', str(source), '--' + client, '--' + scope], cwd, args.timeout, env)
-        installed = added['state'] in ('success', 'timeout')
         if added['state'] != 'success':
             for kind in args.kinds:
                 record(kind, 'install-failed', 'upskill add ended with state ' + added['state'])
@@ -854,10 +855,14 @@ def smoke_scope(client, scope, version, base, source, upskill, markers, name, ar
         for kind in args.kinds:
             record(kind, smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env))
     finally:
-        if scope == 'global' and installed:
+        if scope == 'global':
             try:
                 removed = runner([upskill, 'remove', '--global', '--yes', name], cwd, args.timeout, env)
-                failure = None if removed['state'] == 'success' else 'upskill remove ended with state ' + removed['state']
+                if removed['state'] == 'success' or 'not in lockfile: ' + name in removed.get('stderr', ''):
+                    # The name is not installed, so nothing is left to remove.
+                    failure = None
+                else:
+                    failure = 'upskill remove ended with state ' + removed['state']
             except subprocess.TimeoutExpired:
                 failure = 'upskill remove timed out'
             if failure:
@@ -976,6 +981,7 @@ def run(args):
                         if result['state'] == 'success' and tools_observed:
                             result['state'] = 'failure'
                     result.pop('stdout', None)
+                    result.pop('stderr', None)
                     result['response'] = response if response in (marker, staging_marker, fallback) else '[nonmatching response omitted]'
                     result['command'] = [str(part).replace(str(base), '$FIXTURE') for part in cmd]
                     result['fixture'] = str(project.relative_to(base))
