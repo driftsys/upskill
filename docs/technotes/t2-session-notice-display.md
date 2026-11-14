@@ -90,8 +90,10 @@ Sources: `https://docs.github.com/en/copilot/reference/hooks-configuration`,
 - **Claude Code files.** The page states that `.claude/settings.json` and
   `.claude/settings.local.json` in the repository are also read. A project that
   declares the hook for both clients could therefore run it twice in Copilot
-  CLI. When the two runs do not overlap, the second run prints nothing, because
-  the notice prints a set once. Two runs that overlap can both print the line.
+  CLI. When the two runs do not overlap and the first run saved its cache file,
+  the second run prints nothing, because the notice prints a set once. Two runs
+  that overlap can both print the line, and so can every run when the cache
+  directory cannot be written.
 
 The documented shape of a hook file (not run):
 
@@ -119,8 +121,11 @@ The documented shape of a hook file (not run):
   plain line, as the plan states.
 - For Claude Code, a line that the user must see may need the `systemMessage`
   field, which the hook command would also have to build.
-- Both clients continue when the hook fails or passes its time limit, and
-  `upskill update --notice` exits with code 0 after argument parsing (a usage
+- Both clients document that the session continues when the hook fails. Copilot
+  CLI also documents that it continues when the hook passes its time limit; the
+  extract of the Claude Code page does not state that case.
+  `upskill update
+  --notice` exits with code 0 after argument parsing (a usage
   error exits with code 2) and looks up the sources for 5 seconds at most, so a
   hook cannot block a session start. A hook command should still tolerate a
   missing `upskill` binary.
