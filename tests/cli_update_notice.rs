@@ -203,6 +203,18 @@ fn age_cache(e: &Env, secs: u64) {
     fs::write(&path, serde_json::to_vec(&cache).unwrap()).unwrap();
 }
 
+/// The scope roots of the cache file.
+fn cached_roots(e: &Env) -> Vec<String> {
+    let cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(e)).unwrap()).unwrap();
+    cache["scopes"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .cloned()
+        .collect()
+}
+
 const PROJECT_LINE: &str = "upskill: 2 updates available (project). Run \"upskill update\".\n";
 const CHANGED_ALPHA: &str =
     "---\nschema: 1\nname: alpha\ndescription: Use for testing the update check\n---\n\nnew\n";
@@ -350,6 +362,35 @@ fn notice_prints_nothing_when_a_lockfile_cannot_be_read() {
 }
 
 #[test]
+fn notice_drops_the_cache_entry_of_a_root_that_lost_its_lockfile() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
+    assert_eq!(cached_roots(&e).len(), 1);
+    fs::remove_file(e.repo.join(".upskill-lock.json")).unwrap();
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(cached_roots(&e).is_empty());
+}
+
+#[test]
+fn notice_drops_the_cache_entry_of_a_root_that_no_longer_has_a_lockfile() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
+    let mut cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    cache["scopes"]["/nonexistent/removed-project"] =
+        serde_json::json!({"checked_at": 1, "updates": ["skill:a@c1"], "reported": []});
+    fs::write(cache_path(&e), serde_json::to_vec(&cache).unwrap()).unwrap();
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    let roots = cached_roots(&e);
+    assert_eq!(roots.len(), 1, "{roots:?}");
+    assert!(roots[0].ends_with("/repo"), "{roots:?}");
+}
+
+#[test]
 fn notice_changes_no_file_outside_the_cache() {
     let e = env();
     run(&e, &e.repo, &["add", REMOTE, "--claude"]);
@@ -480,15 +521,9 @@ fn notice_ignores_a_relative_or_empty_cache_directory_variable() {
     }
 }
 
+/// The command as a standard command, to control its stdio and its process.
 #[cfg(unix)]
-#[test]
-fn notice_exits_with_code_0_and_writes_nothing_to_stderr_when_stdout_is_closed() {
-    use std::process::Stdio;
-    let e = env();
-    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
-    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
-    let built = command(&e, &e.repo, &["update", "--notice"], &e.upstream, None);
-    // The harness command is rebuilt as a standard command to control stdio.
+fn standard_command(built: &assert_cmd::Command, cwd: &Path) -> std::process::Command {
     let mut std_cmd = std::process::Command::new(built.get_program());
     std_cmd.args(built.get_args());
     for (key, value) in built.get_envs() {
@@ -497,7 +532,117 @@ fn notice_exits_with_code_0_and_writes_nothing_to_stderr_when_stdout_is_closed()
             None => std_cmd.env_remove(key),
         };
     }
-    std_cmd.current_dir(&e.repo);
+    std_cmd.current_dir(cwd);
+    std_cmd
+}
+
+/// A notice run that waits inside its first `git` call, and that call.
+#[cfg(unix)]
+struct BlockedRun {
+    child: std::process::Child,
+    git_pid: String,
+}
+
+#[cfg(unix)]
+impl BlockedRun {
+    /// Starts `update --notice` in `cwd` with a `git` that records its process
+    /// id and then sleeps. Returns when that `git` has started.
+    fn start(e: &Env, cwd: &Path) -> BlockedRun {
+        use std::os::unix::fs::PermissionsExt;
+        use std::process::Stdio;
+        let base = e.home.parent().unwrap();
+        let bin = base.join("blocking-bin");
+        fs::create_dir_all(&bin).unwrap();
+        let marker = base.join(format!("git-started-{}", cwd.display().to_string().len()));
+        let script = format!(
+            "#!/bin/sh\necho $$ > '{m}.tmp'\nmv '{m}.tmp' '{m}'\nexec sleep 60\n",
+            m = marker.display()
+        );
+        fs::write(bin.join("git"), script).unwrap();
+        fs::set_permissions(bin.join("git"), fs::Permissions::from_mode(0o755)).unwrap();
+        let built = command(e, cwd, &["update", "--notice"], &e.upstream, None);
+        let mut std_cmd = standard_command(&built, cwd);
+        let path = std::env::var_os("PATH").unwrap_or_default();
+        let mut dirs = vec![bin];
+        dirs.extend(std::env::split_paths(&path));
+        std_cmd.env("PATH", std::env::join_paths(dirs).unwrap());
+        let mut child = std_cmd
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut git_pid = None;
+        for _ in 0..200 {
+            if let Ok(pid) = fs::read_to_string(&marker) {
+                git_pid = Some(pid.trim().to_string());
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        let Some(git_pid) = git_pid else {
+            let _ = child.kill();
+            let _ = child.wait();
+            panic!("the command did not call git within 10 seconds");
+        };
+        BlockedRun { child, git_pid }
+    }
+
+    /// Ends the blocked `git` call, so that the lookup fails.
+    fn release(&self) {
+        Command::new("kill").arg(&self.git_pid).status().unwrap();
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn notice_exits_with_code_0_and_prints_nothing_when_it_is_interrupted_during_a_lookup() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let blocked = BlockedRun::start(&e, &e.repo);
+    let status = Command::new("kill")
+        .args(["-INT", &blocked.child.id().to_string()])
+        .status()
+        .unwrap();
+    assert!(status.success());
+    // A terminal sends SIGINT to the whole process group, `git` included.
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    blocked.release();
+    let out = blocked.child.wait_with_output().unwrap();
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+}
+
+#[cfg(unix)]
+#[test]
+fn notice_runs_that_overlap_keep_the_cache_entries_of_each_other() {
+    let e = env();
+    let other = e.home.parent().unwrap().join("repo2");
+    fs::create_dir_all(other.join(".git")).unwrap();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let added = run(&e, &other, &["add", REMOTE, "--claude"]);
+    assert!(added.status.success(), "{}", stderr(&added));
+    // The first run loaded the cache and waits in its lookup.
+    let blocked = BlockedRun::start(&e, &e.repo);
+    let second = run(&e, &other, &["update", "--notice"]);
+    assert_eq!(second.status.code(), Some(0));
+    blocked.release();
+    let out = blocked.child.wait_with_output().unwrap();
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    let roots = cached_roots(&e);
+    assert_eq!(roots.len(), 2, "{roots:?}");
+}
+
+#[cfg(unix)]
+#[test]
+fn notice_exits_with_code_0_and_writes_nothing_to_stderr_when_stdout_is_closed() {
+    use std::process::Stdio;
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let built = command(&e, &e.repo, &["update", "--notice"], &e.upstream, None);
+    let mut std_cmd = standard_command(&built, &e.repo);
     let mut child = std_cmd
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

@@ -49,7 +49,9 @@ fn main() {
     style::init(cli.no_color);
     style::set_quiet(cli.quiet);
 
-    if let Err(err) = install_signal_handlers() {
+    if matches!(cli.command, Commands::Update { notice: true, .. }) {
+        install_notice_signal_handler();
+    } else if let Err(err) = install_signal_handlers() {
         print_error(&err);
         std::process::exit(EXIT_ERROR);
     }
@@ -158,6 +160,14 @@ fn install_signal_handlers() -> anyhow::Result<()> {
         eprintln!("  hint: run 'upskill doctor' to check for partial installs");
     })
     .context("failed to install signal handler")
+}
+
+/// The handler of `update --notice`: an interrupt ends the process at once
+/// with exit code 0 and prints nothing. The notice has no write to protect
+/// except the cache file, which `NoticeCache::save` replaces with a rename. A
+/// failed installation is ignored, because the notice never fails.
+fn install_notice_signal_handler() {
+    let _ = ctrlc::set_handler(|| std::process::exit(EXIT_SUCCESS));
 }
 
 fn was_interrupted() -> bool {
@@ -1091,10 +1101,11 @@ fn run_update_check(names: &[String], global: bool, project: bool) -> i32 {
 const NOTICE_TIME_LIMIT: Duration = Duration::from_secs(5);
 
 /// `update --notice`: print one line for each scope whose set of available
-/// updates was not reported yet. Exits with code 0 in every case. A failed
-/// step prints nothing and writes nothing to stderr. Under `--quiet`, the
-/// checks and the cache update run, and no line is printed or marked as
-/// reported.
+/// updates was not reported yet. Exits with code 0 in every case after the
+/// arguments are parsed, also on an interrupt (see
+/// [`install_notice_signal_handler`]). A failed step prints nothing and writes
+/// nothing to stderr. Under `--quiet`, the checks and the cache update run,
+/// and no line is printed or marked as reported.
 fn run_update_notice() -> i32 {
     let _ = notice_lines();
     EXIT_SUCCESS
@@ -1106,13 +1117,15 @@ fn notice_lines() -> Option<()> {
         .duration_since(std::time::UNIX_EPOCH)
         .ok()?
         .as_secs();
-    let roots: Vec<ScopeRoot> = report_scopes_with_note(false, false, false)
-        .ok()?
-        .into_iter()
-        .filter(|at| at.root.join(upskill::lockfile::LOCKFILE_NAME).is_file())
-        .collect();
+    let (roots, without_lockfile): (Vec<ScopeRoot>, Vec<ScopeRoot>) =
+        report_scopes_with_note(false, false, false)
+            .ok()?
+            .into_iter()
+            .partition(|at| has_lockfile(&at.root));
     let mut cache = notice::NoticeCache::load(&cache_path);
-    let before = cache.clone();
+    for at in &without_lockfile {
+        notice::forget(&mut cache, &at.root);
+    }
     let due: Vec<ScopeRoot> = roots
         .iter()
         .filter(|at| notice::needs_check(&cache, &at.root, now))
@@ -1138,10 +1151,25 @@ fn notice_lines() -> Option<()> {
             }
         }
     }
-    if cache != before {
-        let _ = cache.save(&cache_path);
+    // The lookups can take seconds, and another run may have saved meanwhile:
+    // apply the roots of this run onto the file as it is now.
+    let handled: Vec<PathBuf> = roots
+        .iter()
+        .chain(&without_lockfile)
+        .map(|at| at.root.clone())
+        .collect();
+    let fresh = notice::NoticeCache::load(&cache_path);
+    let mut merged = notice::merge_roots(fresh.clone(), &cache, &handled);
+    notice::prune(&mut merged, has_lockfile);
+    if merged != fresh {
+        let _ = merged.save(&cache_path);
     }
     Some(())
+}
+
+/// True when the directory `root` holds a lockfile.
+fn has_lockfile(root: &std::path::Path) -> bool {
+    root.join(upskill::lockfile::LOCKFILE_NAME).is_file()
 }
 
 /// The cache file of the notice. `None` when no cache directory is known, so
