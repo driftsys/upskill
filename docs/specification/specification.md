@@ -370,8 +370,9 @@ parsed. `--quiet` suppresses the output.
 `update --notice` prints a session notice for a session-start hook. It accepts
 no name and no other flag (exit code 2). Its roots are the scopes that
 `update --check` reports without a flag; a root without a lockfile is left out.
-It changes no lockfile and no installed file. The only file it writes is the
-cache file `notice.json` in the upskill cache directory:
+It changes no lockfile and no installed file. The only file it keeps is the
+cache file `notice.json` in the upskill cache directory (it writes the file
+through a temporary file `notice.json.<pid>.tmp` and a rename):
 `$XDG_CACHE_HOME/upskill` when `XDG_CACHE_HOME` is an absolute path (an empty or
 relative value is ignored), else `~/.cache/upskill`. The cache file is a JSON
 object `{"scopes": {<root path>: <state>}}`; the key is the path of the scope

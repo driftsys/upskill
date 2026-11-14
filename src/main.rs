@@ -1120,11 +1120,11 @@ fn notice_lines() -> Option<()> {
         .duration_since(std::time::UNIX_EPOCH)
         .ok()?
         .as_secs();
-    let (roots, without_lockfile): (Vec<ScopeRoot>, Vec<ScopeRoot>) =
-        report_scopes_with_note(false, false, false)
-            .ok()?
-            .into_iter()
-            .partition(|at| has_lockfile(&at.root));
+    let roots: Vec<ScopeRoot> = report_scopes_with_note(false, false, false)
+        .ok()?
+        .into_iter()
+        .filter(|at| has_lockfile(&at.root))
+        .collect();
     let mut cache = notice::NoticeCache::load(&cache_path);
     let due: Vec<ScopeRoot> = roots
         .iter()
@@ -1153,11 +1153,9 @@ fn notice_lines() -> Option<()> {
     }
     // The lookups can take seconds, and another run may have saved meanwhile:
     // apply the roots of this run onto the file as it is now.
-    let handled: Vec<PathBuf> = roots
-        .iter()
-        .chain(&without_lockfile)
-        .map(|at| at.root.clone())
-        .collect();
+    // The entry of a root without a lockfile is not handled here: `prune`
+    // removes it.
+    let handled: Vec<PathBuf> = roots.iter().map(|at| at.root.clone()).collect();
     let fresh = notice::NoticeCache::load(&cache_path);
     let mut merged = notice::merge_roots(fresh.clone(), &cache, &handled);
     notice::prune(&mut merged, has_lockfile);

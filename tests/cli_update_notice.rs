@@ -667,17 +667,20 @@ fn notice_leaves_only_the_notice_file_in_the_cache_directory() {
     assert_eq!(names, ["notice.json"]);
 }
 
+#[cfg(unix)]
 #[test]
 fn notice_does_not_rewrite_a_cache_file_that_has_no_change() {
+    use std::os::unix::fs::MetadataExt;
     let e = env();
     run(&e, &e.repo, &["add", REMOTE, "--claude"]);
     assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
-    let before = fs::metadata(cache_path(&e)).unwrap();
-    std::thread::sleep(std::time::Duration::from_millis(50));
+    let bytes = fs::read(cache_path(&e)).unwrap();
+    // A save writes a temporary file and renames it, which gives a new inode.
+    let inode = fs::metadata(cache_path(&e)).unwrap().ino();
     let out = run(&e, &e.repo, &["update", "--notice"]);
     assert_eq!(out.status.code(), Some(0));
-    let after = fs::metadata(cache_path(&e)).unwrap();
-    assert_eq!(before.modified().unwrap(), after.modified().unwrap());
+    assert_eq!(fs::metadata(cache_path(&e)).unwrap().ino(), inode);
+    assert_eq!(fs::read(cache_path(&e)).unwrap(), bytes);
 }
 
 /// A second upstream with the skill `gamma`, reachable as `OTHER_REMOTE` only
@@ -838,6 +841,46 @@ fn notice_exits_with_code_0_and_prints_nothing_when_it_is_interrupted_during_a_l
     assert_eq!(stderr(&out), "");
     // The command ended before its lookup: no cache file was written.
     assert!(!cache_path(&e).exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn an_interrupted_notice_leaves_an_existing_cache_file_unchanged() {
+    use std::os::unix::fs::MetadataExt;
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    age_cache(&e, 86_400);
+    let aged = fs::read(cache_path(&e)).unwrap();
+    let aged_inode = fs::metadata(cache_path(&e)).unwrap().ino();
+    let mut blocked = BlockedRun::start(&e, &e.repo);
+    let status = Command::new("kill")
+        .args(["-INT", &blocked.child.id().to_string()])
+        .status()
+        .unwrap();
+    assert!(status.success());
+    let mut ended = false;
+    for _ in 0..60 {
+        if blocked.child.try_wait().unwrap().is_some() {
+            ended = true;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    if !ended {
+        let _ = blocked.child.kill();
+    }
+    blocked.release();
+    let out = blocked.child.wait_with_output().unwrap();
+    assert!(
+        ended,
+        "the command did not end within 3 seconds of the interrupt"
+    );
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert_eq!(stdout(&out), "");
+    assert_eq!(fs::read(cache_path(&e)).unwrap(), aged);
+    assert_eq!(fs::metadata(cache_path(&e)).unwrap().ino(), aged_inode);
 }
 
 #[cfg(unix)]
