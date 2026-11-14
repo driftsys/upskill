@@ -969,9 +969,20 @@ fn a_terminal_update_without_changes_records_the_commit_of_its_own_source_only()
 fn check_prints_no_scope_line() {
     let e = env();
     run(&e, &e.repo, &["add", REMOTE, "--claude"]);
-    let out = run(&e, &e.repo, &["update", "--check"]);
-    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
-    assert!(!stderr(&out).contains("scope:"), "{}", stderr(&out));
+    run(&e, &e.outside, &["add", REMOTE, "--global", "--claude"]);
+    for args in [
+        &["update", "--check"][..],
+        &["update", "--check", "--project"][..],
+        &["update", "--check", "--global"][..],
+    ] {
+        let out = run(&e, &e.repo, args);
+        assert_eq!(out.status.code(), Some(0), "{args:?}: {}", stderr(&out));
+        assert!(
+            !stderr(&out).contains("scope:"),
+            "{args:?}: {}",
+            stderr(&out)
+        );
+    }
     // Contrast: `update` prints the line.
     let out = run(&e, &e.repo, &["update", "--yes"]);
     assert!(
@@ -986,7 +997,8 @@ fn check_in_the_home_directory_reports_the_global_scope_and_refuses_project() {
     let e = env();
     let out = run(&e, &e.outside, &["add", REMOTE, "--global", "--claude"]);
     assert!(out.status.success(), "{}", stderr(&out));
-    // The home directory is a git repository, as in the `update` rule.
+    // The home directory is a git repository, the case in which `update`
+    // refuses the project scope too; the check must report the global scope.
     fs::create_dir_all(e.home.join(".git")).unwrap();
     let out = run(&e, &e.home, &["update", "--check"]);
     assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
@@ -995,4 +1007,76 @@ fn check_in_the_home_directory_reports_the_global_scope_and_refuses_project() {
     assert!(!text.contains("project ("), "{text}");
     let out = run(&e, &e.home, &["update", "--check", "--project"]);
     assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+    assert!(stderr(&out).contains("pass --global"), "{}", stderr(&out));
+}
+
+#[test]
+fn an_applied_update_with_a_name_records_the_commit_on_the_named_entry_only() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let old = upstream_head(&e);
+    write_skill(&e.upstream, "alpha", "Alpha content, changed upstream.");
+    git_in(&e, &["add", "."]);
+    git_in(&e, &["commit", "-m", "change alpha"]);
+    let head = upstream_head(&e);
+    assert_ne!(old, head);
+    let out = run(&e, &e.repo, &["update", "--yes", "alpha"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(commit_of(&e.repo, "alpha"), head.as_str());
+    // `beta` was not selected and is not reinstalled.
+    assert_eq!(commit_of(&e.repo, "beta"), old.as_str());
+}
+
+#[test]
+fn an_applied_update_records_the_commit_on_an_entry_that_a_named_item_requires() {
+    let e = env();
+    let skill = |body: &str| {
+        format!(
+            "---\nschema: 1\nname: alpha\ndescription: Use for testing the update check\nrequires:\n  skills: [beta]\n---\n\n{body}\n"
+        )
+    };
+    let path = e.upstream.join("skills/alpha/SKILL.md");
+    fs::write(&path, skill("Alpha content.")).unwrap();
+    git_in(&e, &["add", "."]);
+    git_in(&e, &["commit", "-m", "alpha requires beta"]);
+    let out = run(&e, &e.repo, &["add", REMOTE, "alpha", "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let old = upstream_head(&e);
+    assert_eq!(commit_of(&e.repo, "beta"), old.as_str());
+    fs::write(&path, skill("Alpha content, changed upstream.")).unwrap();
+    git_in(&e, &["add", "."]);
+    git_in(&e, &["commit", "-m", "change alpha"]);
+    let head = upstream_head(&e);
+    let out = run(&e, &e.repo, &["update", "--yes", "alpha"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(commit_of(&e.repo, "alpha"), head.as_str());
+    // `beta` is reinstalled through the `requires` closure of `alpha`.
+    assert_eq!(commit_of(&e.repo, "beta"), head.as_str());
+}
+
+#[test]
+fn an_applied_bundle_update_records_the_commit_on_every_member() {
+    let e = env();
+    fs::write(
+        e.upstream.join("pack.bundle.yaml"),
+        "schema: 1\nname: pack\ndescription: bundle for the update check\nitems:\n  skills:\n    - alpha\n    - beta\n",
+    )
+    .unwrap();
+    git_in(&e, &["add", "."]);
+    git_in(&e, &["commit", "-m", "bundle"]);
+    let source = format!("{REMOTE}:pack.bundle.yaml");
+    let out = run(&e, &e.repo, &["add", &source, "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let old = upstream_head(&e);
+    assert_eq!(commit_of(&e.repo, "alpha"), old.as_str());
+    assert_eq!(commit_of(&e.repo, "beta"), old.as_str());
+    write_skill(&e.upstream, "alpha", "Alpha content, changed upstream.");
+    git_in(&e, &["add", "."]);
+    git_in(&e, &["commit", "-m", "change alpha"]);
+    let head = upstream_head(&e);
+    // Only `beta` is named; the bundle source is reinstalled as a whole.
+    let out = run(&e, &e.repo, &["update", "--yes", "beta"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(commit_of(&e.repo, "alpha"), head.as_str());
+    assert_eq!(commit_of(&e.repo, "beta"), head.as_str());
 }
