@@ -141,7 +141,8 @@ cannot read the adopted file. The script does not restore in two cases. When the
 removal fails, the lockfile then stays as the run changed it, and the warning
 says so. When the script could not read the lockfile before the cell, it prints
 `warning: the global lockfile was not restored: the global lockfile could not be read: <reason>`.
-When the restore itself fails, the script prints a `warning:` line and goes on.
+When both cases occur, the script prints only the removal warning. When the
+restore itself fails, the script prints a `warning:` line and goes on.
 
 If the script is killed hard during a global cell, the items stay in the home
 directory. `upskill list --global` shows the name, which is `upskill-smoke-`

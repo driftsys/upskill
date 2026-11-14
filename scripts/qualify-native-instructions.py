@@ -868,7 +868,8 @@ def smoke_scope(client, scope, version, base, source, upskill, markers, name, ar
     kind, and for the global scope remove what was installed and restore the
     global lockfile to its state from before the cell. The lockfile is not
     restored when `upskill remove` fails, and when the lockfile could not be
-    read before the cell; both cases add a warning to every cell."""
+    read before the cell; each case adds a warning to every cell. When both
+    occur, only the removal warning is set."""
     cells = []
 
     def record(kind, result, reason=None):
@@ -944,7 +945,8 @@ def run_smoke(args, runner=invoke):
     then removes the installed items with `upskill remove --global --yes` and
     restores the global lockfile and its `.v1` copy to their state from before
     the cell. It does not restore when the removal fails or when the lockfile
-    could not be read before the cell; it then sets 'warning' on each cell. A
+    could not be read before the cell; it then sets 'warning' on each cell, and
+    when both occur only the removal warning. A
     project cell runs in a temporary repository that is deleted at the end.
     `result` is 'pass', 'fail', 'timeout', 'unavailable' or 'install-failed';
     'not run' without `--run`."""
