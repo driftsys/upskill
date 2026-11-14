@@ -195,8 +195,11 @@ class SmokeRunTest(unittest.TestCase):
                 return dict(removal, stderr=removal['stderr'].replace('NAME', names[0]))
 
         out = io.StringIO()
+        runner = FakeRunner(answer)
         with contextlib.redirect_stdout(out):
-            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), FakeRunner(answer))
+            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), runner)
+        removes = [c for c in runner.commands if c[1] == 'remove']
+        self.assertEqual(removes, [[removes[0][0], 'remove', '--global', '--yes', names[0]]])
         self.assertNotIn('warning:', out.getvalue())
 
     def test_another_removal_failure_after_a_failed_add_is_a_warning(self):
@@ -301,6 +304,50 @@ class SmokeRunTest(unittest.TestCase):
         warnings = [line for line in out.getvalue().splitlines() if line.startswith('warning: global items upskill-smoke-')]
         self.assertEqual(len(warnings), 1)
         self.assertIn('were not removed: upskill remove ended with state failure', warnings[0])
+
+    def test_a_removal_that_times_out_is_one_warning_naming_the_timeout(self):
+        def answer(command):
+            if command[1] == 'remove':
+                return {'state': 'timeout', 'stdout': ''}
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), FakeRunner(answer))
+        warnings = [line for line in out.getvalue().splitlines() if line.startswith('warning:')]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn('were not removed: upskill remove ended with state timeout', warnings[0])
+
+    def test_a_raised_timeout_of_the_removal_is_a_warning(self):
+        def answer(command):
+            if command[1] == 'remove':
+                raise subprocess.TimeoutExpired(command, 5)
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), FakeRunner(answer))
+        warnings = [line for line in out.getvalue().splitlines() if line.startswith('warning:')]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn('upskill remove timed out', warnings[0])
+
+    def test_a_project_cell_never_removes_and_never_uses_the_global_scope(self):
+        for add_state in ('success', 'failure', 'timeout'):
+            def answer(command, add_state=add_state):
+                if command[1] == 'add':
+                    return {'state': add_state, 'stdout': ''}
+
+            runner = FakeRunner(answer)
+            q.run_smoke(smoke_args(clients=['claude', 'copilot'], scopes=['project']), runner)
+            self.assertTrue([c for c in runner.commands if c[1] == 'add'])
+            self.assertFalse([c for c in runner.commands if c[1] == 'remove'], add_state)
+            self.assertFalse([c for c in runner.commands if '--global' in c], add_state)
+
+    def test_the_real_invoke_returns_the_standard_error_text(self):
+        code = "import sys; sys.stderr.write('error: not in lockfile: X\\n'); sys.exit(1)"
+        with tempfile.TemporaryDirectory() as tmp:
+            result = q.invoke([sys.executable, '-c', code], Path(tmp), 10, os.environ.copy())
+        self.assertEqual(result['state'], 'failure')
+        self.assertEqual(result['exit_code'], 1)
+        self.assertEqual(result['stderr'], 'error: not in lockfile: X\n')
 
     def test_an_authentication_failure_is_unavailable(self):
         def answer(command):

@@ -206,11 +206,27 @@ class OrchestrationTests(unittest.TestCase):
                     stdout = 'not json' if current_events == 'malformed' else json.dumps({'type': 'tool_use' if tool else 'text', 'text': marker})
                 else:
                     stdout = marker
-                return {'state': state, 'stdout': stdout, 'sha256': 'output-hash'}
+                extra = {'stderr': self.native_stderr} if getattr(self, 'native_stderr', None) else {}
+                return {'state': state, 'stdout': stdout, 'sha256': 'output-hash', **extra}
 
             with mock.patch.object(q, 'invoke', side_effect=invocation), contextlib.redirect_stdout(io.StringIO()):
                 q.run(argparse.Namespace(evidence=evidence, clients=[client], timeout=1, opencode_discovery=discovery))
             return json.loads((evidence / 'summary.json').read_text()), calls
+
+    def test_raw_stderr_never_reaches_the_evidence(self):
+        self.native_stderr = 'SECRET-TOKEN'
+        try:
+            for client in CANONICAL_PATHS:
+                with self.subTest(client=client):
+                    report, _ = self.controlled_run(client)
+                    text = json.dumps(report)
+                    self.assertNotIn('SECRET-TOKEN', text)
+                    self.assertNotIn('"stderr"', text)
+                    for probe in report['probes']:
+                        for outcome in probe['outcomes']:
+                            self.assertNotIn('stderr', outcome)
+        finally:
+            self.native_stderr = None
 
     def test_successful_orchestration_qualifies(self):
         for client in CANONICAL_PATHS:
