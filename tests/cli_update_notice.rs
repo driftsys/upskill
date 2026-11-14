@@ -203,19 +203,25 @@ fn age_cache(e: &Env, secs: u64) {
     fs::write(&path, serde_json::to_vec(&cache).unwrap()).unwrap();
 }
 
-/// As [`age_cache`], for the scope roots whose path ends with `suffix`.
-fn age_scope(e: &Env, suffix: &str, secs: u64) {
+/// True when the final component of the cache key `root`, read as a path, is
+/// `name`. Independent of the path separator and of the path prefix.
+fn is_root_named(root: &str, name: &str) -> bool {
+    Path::new(root).file_name() == Some(std::ffi::OsStr::new(name))
+}
+
+/// As [`age_cache`], for the scope root whose directory is named `name`.
+fn age_scope(e: &Env, name: &str, secs: u64) {
     let path = cache_path(e);
     let mut cache: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     let mut aged = 0;
     for (root, state) in cache["scopes"].as_object_mut().unwrap() {
-        if root.ends_with(suffix) {
+        if is_root_named(root, name) {
             let at = state["checked_at"].as_u64().unwrap();
             state["checked_at"] = (at - secs).into();
             aged += 1;
         }
     }
-    assert_eq!(aged, 1, "no scope root ends with {suffix}: {cache}");
+    assert_eq!(aged, 1, "no scope root is named {name}: {cache}");
     fs::write(&path, serde_json::to_vec(&cache).unwrap()).unwrap();
 }
 
@@ -402,7 +408,7 @@ fn two_scopes_with_unreported_sets() -> Env {
 #[test]
 fn notice_prints_nothing_for_both_scopes_when_the_lockfile_of_a_due_scope_cannot_be_parsed() {
     let e = two_scopes_with_unreported_sets();
-    age_scope(&e, "/repo", 86_400);
+    age_scope(&e, "repo", 86_400);
     fs::write(e.repo.join(".upskill-lock.json"), "not json").unwrap();
     let before = fs::read(cache_path(&e)).unwrap();
     let out = run(&e, &e.repo, &["update", "--notice"]);
@@ -433,7 +439,7 @@ fn notice_contacts_the_source_only_for_the_scopes_that_are_due() {
     assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
     assert_eq!(cached_roots(&e).len(), 2);
     advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
-    age_scope(&e, "/home", 86_400);
+    age_scope(&e, "home", 86_400);
     // Only the global scope is due. A check of the project scope would print
     // its line too.
     let out = run(&e, &e.repo, &["update", "--notice"]);
@@ -484,7 +490,7 @@ fn notice_drops_the_cache_entry_of_a_root_that_no_longer_has_a_lockfile() {
     assert_eq!(out.status.code(), Some(0));
     let roots = cached_roots(&e);
     assert_eq!(roots.len(), 1, "{roots:?}");
-    assert!(roots[0].ends_with("/repo"), "{roots:?}");
+    assert!(is_root_named(&roots[0], "repo"), "{roots:?}");
 }
 
 #[test]
@@ -627,10 +633,9 @@ fn notice_in_a_repository_without_a_lockfile_reports_the_global_scope_only() {
         stdout(&out),
         "upskill: 2 updates available (global). Run \"upskill update --global\".\n"
     );
-    let cache = fs::read_to_string(cache_path(&e)).unwrap();
-    assert!(!cache.contains("/repo\""), "{cache}");
-    let parsed: serde_json::Value = serde_json::from_str(&cache).unwrap();
-    assert_eq!(parsed["scopes"].as_object().unwrap().len(), 1, "{cache}");
+    let roots = cached_roots(&e);
+    assert_eq!(roots.len(), 1, "{roots:?}");
+    assert!(!is_root_named(&roots[0], "repo"), "{roots:?}");
 }
 
 #[test]
@@ -899,7 +904,7 @@ fn notice_runs_that_overlap_keep_the_cache_entries_of_each_other() {
     let outdated =
         serde_json::json!({"checked_at": 1, "updates": ["skill:outdated@c0"], "reported": []});
     for (root, state) in cache["scopes"].as_object_mut().unwrap() {
-        assert!(root.ends_with("/repo2"), "{root}");
+        assert!(is_root_named(root, "repo2"), "{root}");
         *state = outdated.clone();
     }
     fs::write(cache_path(&e), serde_json::to_vec(&cache).unwrap()).unwrap();
@@ -916,7 +921,10 @@ fn notice_runs_that_overlap_keep_the_cache_entries_of_each_other() {
         serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
     let states = cache["scopes"].as_object().unwrap();
     assert_eq!(states.len(), 2, "{cache}");
-    let (_, other_state) = states.iter().find(|(r, _)| r.ends_with("/repo2")).unwrap();
+    let (_, other_state) = states
+        .iter()
+        .find(|(r, _)| is_root_named(r, "repo2"))
+        .unwrap();
     // The newer entry of the second run stays; the first run did not write
     // back the outdated one.
     assert!(other_state["checked_at"].as_u64().unwrap() > 1, "{cache}");
