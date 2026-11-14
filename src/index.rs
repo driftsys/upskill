@@ -42,17 +42,23 @@ pub struct FreshResult {
     pub warning: Option<String>,
 }
 
-/// Returns the cache directory for index files.
-pub fn cache_dir() -> PathBuf {
+/// Returns the root of the upskill cache: `$XDG_CACHE_HOME/upskill` or
+/// `~/.cache/upskill`.
+pub fn cache_root() -> PathBuf {
     if let Some(xdg) = std::env::var("XDG_CACHE_HOME")
         .ok()
         .filter(|v| !v.is_empty())
     {
-        return PathBuf::from(xdg).join("upskill/index");
+        return PathBuf::from(xdg).join("upskill");
     }
     home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join(".cache/upskill/index")
+        .join(".cache/upskill")
+}
+
+/// Returns the cache directory for index files.
+pub fn cache_dir() -> PathBuf {
+    cache_root().join("index")
 }
 
 /// Returns the cache file path for a given registry name.
@@ -409,6 +415,11 @@ mod tests {
         let path = cache_path("my-registry");
         assert!(path.to_string_lossy().contains("upskill"));
         assert!(path.to_string_lossy().ends_with(".json"));
+    }
+
+    #[test]
+    fn the_index_directory_is_inside_the_cache_root() {
+        assert_eq!(cache_dir(), cache_root().join("index"));
     }
 
     #[test]

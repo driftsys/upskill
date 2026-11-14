@@ -1,0 +1,340 @@
+//! The session notice: when to print one line about available updates.
+//!
+//! The cache file records, for each scope root, the time of the last check
+//! that contacted the sources, the updates that check found, and the set that
+//! the last printed notice reported. The functions take the time as an
+//! argument. Only [`NoticeCache::load`] and [`NoticeCache::save`] perform file
+//! I/O.
+
+use std::collections::BTreeMap;
+use std::fs;
+use std::path::Path;
+
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+
+use crate::pipeline::{ScopedCheck, SourceStatus};
+use crate::scope::Scope;
+
+/// The shortest time in seconds between two checks that contact the sources.
+pub const NETWORK_PERIOD_SECS: u64 = 24 * 60 * 60;
+/// The name of the cache file in the upskill cache directory.
+pub const CACHE_FILE_NAME: &str = "notice.json";
+
+/// State of one scope root in the cache file.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScopeState {
+    /// Unix time in seconds of the last check that contacted the sources.
+    pub checked_at: u64,
+    /// The available updates found by that check, sorted.
+    pub updates: Vec<String>,
+    /// The set that the last printed notice reported, sorted.
+    pub reported: Vec<String>,
+}
+
+/// The cache file: scope root path to state.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NoticeCache {
+    pub scopes: BTreeMap<String, ScopeState>,
+}
+
+impl NoticeCache {
+    /// An absent, unreadable or invalid file is an empty cache.
+    pub fn load(path: &Path) -> NoticeCache {
+        fs::read_to_string(path)
+            .ok()
+            .and_then(|text| serde_json::from_str(&text).ok())
+            .unwrap_or_default()
+    }
+
+    /// Write to a temporary file in the same directory, then rename. Creates
+    /// the directory when it is absent.
+    pub fn save(&self, path: &Path) -> Result<()> {
+        let dir = path.parent().unwrap_or_else(|| Path::new("."));
+        fs::create_dir_all(dir).with_context(|| format!("failed to create {}", dir.display()))?;
+        let mut tmp_name = path
+            .file_name()
+            .map(|n| n.to_os_string())
+            .unwrap_or_else(|| CACHE_FILE_NAME.into());
+        tmp_name.push(format!(".{}.tmp", std::process::id()));
+        let tmp = dir.join(tmp_name);
+        let text = serde_json::to_string_pretty(self).context("failed to serialize the cache")?;
+        fs::write(&tmp, text).with_context(|| format!("failed to write {}", tmp.display()))?;
+        fs::rename(&tmp, path).with_context(|| {
+            let _ = fs::remove_file(&tmp);
+            format!("failed to replace {}", path.display())
+        })
+    }
+}
+
+fn key(root: &Path) -> String {
+    root.display().to_string()
+}
+
+/// True when the state of `root` is older than the period, or absent.
+pub fn needs_check(cache: &NoticeCache, root: &Path, now: u64) -> bool {
+    match cache.scopes.get(&key(root)) {
+        None => true,
+        Some(state) => now.saturating_sub(state.checked_at) >= NETWORK_PERIOD_SECS,
+    }
+}
+
+/// The identity of each available update of a scope, sorted:
+/// `<kind>:<name>@<to>` for a git source and `<kind>:<name>` for a local path
+/// source. Only sources with status `UpdateAvailable` contribute.
+pub fn update_set(check: &ScopedCheck) -> Vec<String> {
+    let mut set: Vec<String> = check
+        .sources
+        .iter()
+        .filter_map(|s| match &s.status {
+            SourceStatus::UpdateAvailable { to, .. } => Some((s, to)),
+            _ => None,
+        })
+        .flat_map(|(s, to)| {
+            s.items.iter().map(move |(kind, name)| match to {
+                Some(to) => format!("{kind}:{name}@{to}"),
+                None => format!("{kind}:{name}"),
+            })
+        })
+        .collect();
+    set.sort();
+    set.dedup();
+    set
+}
+
+/// False when the scope has at least one source and every source is
+/// `NotReachable` or `NotChecked`; true otherwise. A scope without sources
+/// counts as reached.
+pub fn reached(check: &ScopedCheck) -> bool {
+    check.sources.is_empty()
+        || check.sources.iter().any(|s| {
+            !matches!(
+                s.status,
+                SourceStatus::NotReachable { .. } | SourceStatus::NotChecked
+            )
+        })
+}
+
+/// Store the result of a check: `checked_at = now` and, unless the check
+/// reached no source (`reached` is false), `updates`.
+pub fn record_check(
+    cache: &mut NoticeCache,
+    root: &Path,
+    updates: Vec<String>,
+    reached: bool,
+    now: u64,
+) {
+    let state = cache.scopes.entry(key(root)).or_default();
+    state.checked_at = now;
+    if reached {
+        let mut updates = updates;
+        updates.sort();
+        state.updates = updates;
+    }
+}
+
+/// The line to print for `root`, and the cache change that goes with it.
+/// Returns `None` when `updates` is empty (and clears `reported`) or equals
+/// `reported`. Otherwise sets `reported = updates` and returns the line.
+pub fn decide(cache: &mut NoticeCache, scope: Scope, root: &Path) -> Option<String> {
+    let state = cache.scopes.get_mut(&key(root))?;
+    if state.updates.is_empty() {
+        state.reported.clear();
+        return None;
+    }
+    if state.updates == state.reported {
+        return None;
+    }
+    state.reported = state.updates.clone();
+    let count = state.updates.len();
+    let noun = if count == 1 { "update" } else { "updates" };
+    let command = match scope {
+        Scope::Project => "upskill update",
+        Scope::Global => "upskill update --global",
+    };
+    Some(format!(
+        "upskill: {count} {noun} available ({scope}). Run \"{command}\"."
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pipeline::{CheckedSource, ItemKind};
+    use std::path::PathBuf;
+
+    fn root() -> PathBuf {
+        PathBuf::from("/work/project")
+    }
+
+    fn set(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| s.to_string()).collect()
+    }
+
+    fn source(status: SourceStatus, items: Vec<(ItemKind, &str)>) -> CheckedSource {
+        CheckedSource {
+            source: "owner/repo".into(),
+            status,
+            items: items.into_iter().map(|(k, n)| (k, n.to_string())).collect(),
+        }
+    }
+
+    fn update(to: Option<&str>) -> SourceStatus {
+        SourceStatus::UpdateAvailable {
+            from: None,
+            to: to.map(String::from),
+        }
+    }
+
+    fn check(sources: Vec<CheckedSource>) -> ScopedCheck {
+        ScopedCheck {
+            scope: Scope::Project,
+            root: root(),
+            sources,
+        }
+    }
+
+    fn recorded(updates: &[&str]) -> NoticeCache {
+        let mut cache = NoticeCache::default();
+        record_check(&mut cache, &root(), set(updates), true, 1_000);
+        cache
+    }
+
+    #[test]
+    fn an_absent_cache_needs_a_check() {
+        assert!(needs_check(&NoticeCache::default(), &root(), 5));
+    }
+
+    #[test]
+    fn a_state_younger_than_the_period_needs_no_check() {
+        let cache = recorded(&[]);
+        assert!(!needs_check(&cache, &root(), 1_000 + 86_399));
+        assert!(needs_check(&cache, &root(), 1_000 + 86_400));
+    }
+
+    #[test]
+    fn a_new_set_prints_once() {
+        let mut cache = recorded(&["skill:a@c1", "rule:b@c1", "agent:c@c1"]);
+        assert_eq!(
+            decide(&mut cache, Scope::Project, &root()).as_deref(),
+            Some("upskill: 3 updates available (project). Run \"upskill update\".")
+        );
+        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+    }
+
+    #[test]
+    fn a_changed_set_prints_again() {
+        let mut cache = recorded(&["skill:a@c1"]);
+        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        record_check(&mut cache, &root(), set(&["skill:a@c2"]), true, 2_000);
+        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+    }
+
+    #[test]
+    fn an_empty_set_prints_nothing_and_clears_the_reported_set() {
+        let mut cache = recorded(&["skill:a@c1"]);
+        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        record_check(&mut cache, &root(), vec![], true, 2_000);
+        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert!(cache.scopes[&key(&root())].reported.is_empty());
+        record_check(&mut cache, &root(), set(&["skill:a@c1"]), true, 3_000);
+        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+    }
+
+    #[test]
+    fn an_equal_set_leaves_the_cache_unchanged() {
+        let mut cache = recorded(&["skill:a@c1"]);
+        decide(&mut cache, Scope::Project, &root());
+        let before = cache.clone();
+        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(cache, before);
+    }
+
+    #[test]
+    fn a_check_that_reached_no_source_keeps_the_updates_and_sets_checked_at() {
+        let mut cache = recorded(&["skill:a@c1"]);
+        record_check(&mut cache, &root(), vec![], false, 5_000);
+        let state = &cache.scopes[&key(&root())];
+        assert_eq!(state.updates, set(&["skill:a@c1"]));
+        assert_eq!(state.checked_at, 5_000);
+    }
+
+    #[test]
+    fn reached_is_false_only_when_every_source_failed_or_was_skipped() {
+        let failed = || {
+            source(
+                SourceStatus::NotReachable {
+                    reason: "offline".into(),
+                },
+                vec![],
+            )
+        };
+        let skipped = || source(SourceStatus::NotChecked, vec![]);
+        let fine = || source(SourceStatus::UpToDate, vec![]);
+        assert!(reached(&check(vec![])));
+        assert!(!reached(&check(vec![failed()])));
+        assert!(!reached(&check(vec![failed(), skipped()])));
+        assert!(reached(&check(vec![failed(), fine()])));
+        assert!(reached(&check(vec![source(update(Some("c1")), vec![])])));
+    }
+
+    #[test]
+    fn one_update_uses_the_singular_form() {
+        let mut cache = recorded(&["skill:a@c1"]);
+        assert_eq!(
+            decide(&mut cache, Scope::Project, &root()).as_deref(),
+            Some("upskill: 1 update available (project). Run \"upskill update\".")
+        );
+    }
+
+    #[test]
+    fn the_global_line_names_the_global_flag() {
+        let mut cache = recorded(&["skill:a@c1"]);
+        assert_eq!(
+            decide(&mut cache, Scope::Global, &root()).as_deref(),
+            Some("upskill: 1 update available (global). Run \"upskill update --global\".")
+        );
+    }
+
+    #[test]
+    fn an_invalid_cache_file_loads_as_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(CACHE_FILE_NAME);
+        assert_eq!(NoticeCache::load(&path), NoticeCache::default());
+        fs::write(&path, "not json {").unwrap();
+        assert_eq!(NoticeCache::load(&path), NoticeCache::default());
+    }
+
+    #[test]
+    fn save_then_load_returns_the_same_cache() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nested/cache").join(CACHE_FILE_NAME);
+        let mut cache = recorded(&["skill:a@c1", "rule:b"]);
+        decide(&mut cache, Scope::Project, &root());
+        cache.save(&path).unwrap();
+        assert_eq!(NoticeCache::load(&path), cache);
+        let names: Vec<_> = fs::read_dir(path.parent().unwrap())
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(names.len(), 1, "no temporary file stays: {names:?}");
+    }
+
+    #[test]
+    fn update_set_is_sorted_and_names_the_target_commit() {
+        let check = check(vec![
+            source(
+                update(Some("c9")),
+                vec![(ItemKind::Skill, "zeta"), (ItemKind::Rule, "alpha")],
+            ),
+            source(update(None), vec![(ItemKind::Agent, "local")]),
+            source(SourceStatus::UpToDate, vec![(ItemKind::Skill, "ignored")]),
+            source(SourceStatus::PinnedToCommit, vec![]),
+        ]);
+        assert_eq!(
+            update_set(&check),
+            set(&["agent:local", "rule:alpha@c9", "skill:zeta@c9"])
+        );
+    }
+}
