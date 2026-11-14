@@ -134,24 +134,26 @@ The documented shape of a hook file (not run):
 
 Run on 2026-11-14 with Claude Code 2.1.308, in a temporary git repository. The
 hook was declared in the project file `.claude/settings.json` of that
-repository, for the event `SessionStart` without a matcher. No plugin files
-exist for this trial: the hook was declared in project settings and not in a
-plugin, so that nothing under the home directory changes (the plan asked for a
-plugin). Each hook command appended a line to a log file, to show that it ran,
-and then printed its text. Eight model requests were made, two for each form:
+repository, for the event `SessionStart` without a matcher. No plugin was
+installed and no plugin files exist for this trial: the hook was declared in the
+project settings file of the temporary repository (the plan asked for a plugin).
+Each hook command appended a line to a log file, to show that it ran, and then
+printed its text. Eight model requests were made, two for each form:
 
 ```text
 claude -p "<prompt>" --output-format stream-json --verbose --include-hook-events --setting-sources project --no-session-persistence
 ```
 
 The settings file was the same for every form, with `<form>` replaced by the
-name of the script:
+name of the script of that form. The four scripts are named `a.sh`, `b.sh`,
+`c.sh` and `d.sh` here; these names are only for this description:
 
 ```json
 {"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"sh \"$CLAUDE_PROJECT_DIR/<form>.sh\""}]}]}}
 ```
 
-Each script first appended the word `ran` to a log file in the repository, then
+Each script (`a.sh` for form A, `b.sh` for form B, `c.sh` for form C, `d.sh` for
+form D) first appended the word `ran` to a log file in the repository, then
 printed: form A, the line followed by a newline; form B,
 `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"<line>"}}`;
 form C, `{"systemMessage":"<line>"}`; form D, one JSON object with both fields.

@@ -866,7 +866,9 @@ def restore_global_lockfile(home, saved):
 def smoke_scope(client, scope, version, base, source, upskill, markers, name, args, runner, env):
     """The cells of one client in one scope: install, ask one question per
     kind, and for the global scope remove what was installed and restore the
-    global lockfile to its state from before the cell."""
+    global lockfile to its state from before the cell. The lockfile is not
+    restored when `upskill remove` fails, and when the lockfile could not be
+    read before the cell; both cases add a warning to every cell."""
     cells = []
 
     def record(kind, result, reason=None):
@@ -937,10 +939,12 @@ def run_smoke(args, runner=invoke):
     """For each selected client and scope: install with
     `<upskill> add <source> --<client> --project|--global`, ask one question
     per kind in a new client session, and return a list of
-    {'client', 'kind', 'scope', 'result', 'client_version'}. A global cell
+    {'client', 'kind', 'scope', 'result', 'client_version'} dictionaries; a
+    cell can also hold 'reason' (the note text) and 'warning'. A global cell
     then removes the installed items with `upskill remove --global --yes` and
     restores the global lockfile and its `.v1` copy to their state from before
-    the cell; a
+    the cell. It does not restore when the removal fails or when the lockfile
+    could not be read before the cell; it then sets 'warning' on each cell. A
     project cell runs in a temporary repository that is deleted at the end.
     `result` is 'pass', 'fail', 'timeout', 'unavailable' or 'install-failed';
     'not run' without `--run`."""
