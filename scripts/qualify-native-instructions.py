@@ -780,6 +780,23 @@ def smoke_response(client, stdout):
     return ''.join(texts).strip()
 
 
+def smoke_quota_exceeded(client, stdout):
+    """True when a Copilot stream holds a `session.error` event of type
+    `quota`: the account has no model calls left, so the cell says nothing
+    about the client."""
+    if client != 'copilot':
+        return False
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if (isinstance(event, dict) and event.get('type') == 'session.error'
+                and isinstance(event.get('data'), dict) and event['data'].get('errorType') == 'quota'):
+            return True
+    return False
+
+
 def smoke_levels(cells):
     """The level that the support table may hold for each client and kind:
     'supported' when both scopes passed, 'experimental' otherwise."""
@@ -792,25 +809,29 @@ def smoke_levels(cells):
 
 
 def smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env):
+    """The pair (result, reason) of one cell; the reason is None when the result
+    needs none."""
     prompt = smoke_prompt(kind, name)
     cmd = smoke_command(client, kind, prompt, scope)
     try:
         result = runner(cmd, cwd, args.timeout, env)
     except subprocess.TimeoutExpired:
-        return 'timeout'
+        return 'timeout', None
     if result['state'] in SMOKE_UNAVAILABLE:
-        return 'unavailable'
+        return 'unavailable', None
     if result['state'] == 'timeout':
-        return 'timeout'
+        return 'timeout', None
+    if smoke_quota_exceeded(client, result.get('stdout', '')):
+        return 'unavailable', client + ' reports that the monthly quota is exceeded'
     if result['state'] != 'success':
-        return 'fail'
+        return 'fail', None
     response = smoke_response(client, result.get('stdout', ''))
     if response is None:
         # `run` also sets the state `failure` for a Copilot run without a
         # successful terminal `result` event.
-        return 'fail'
+        return 'fail', None
     others = [value for other, value in markers.items() if other != kind]
-    return classify_smoke(response, markers[kind], others)
+    return classify_smoke(response, markers[kind], others), None
 
 
 def smoke_client_version(client, base, runner, env):
@@ -821,9 +842,34 @@ def smoke_client_version(client, base, runner, env):
     return match.group(0) if match else None
 
 
+def save_global_lockfile(home):
+    """The state of the global lockfile before a global cell: its bytes (None
+    when absent) and whether the copy `.upskill-lock.json.v1` exists."""
+    lock = Path(home) / '.upskill-lock.json'
+    return (lock.read_bytes() if lock.exists() else None), (Path(home) / '.upskill-lock.json.v1').exists()
+
+
+def restore_global_lockfile(home, saved):
+    """Return the global lockfile to the state that `save_global_lockfile`
+    recorded. `add` adopts a `schema: 1` lockfile to `schema: 2` and writes the
+    copy `.v1`, and an older upskill cannot read `schema: 2`."""
+    content, had_v1 = saved
+    lock = Path(home) / '.upskill-lock.json'
+    if content is None:
+        lock.unlink(missing_ok=True)
+    else:
+        lock.write_bytes(content)
+    if not had_v1:
+        (Path(home) / '.upskill-lock.json.v1').unlink(missing_ok=True)
+
+
 def smoke_scope(client, scope, version, base, source, upskill, markers, name, args, runner, env):
     """The cells of one client in one scope: install, ask one question per
-    kind, and for the global scope remove what was installed."""
+    kind, and for the global scope remove what was installed and restore the
+    global lockfile to its state from before the cell. The lockfile is not
+    restored when `upskill remove` fails, and when the lockfile could not be
+    read before the cell; each case adds a warning to every cell. When both
+    occur, only the removal warning is set."""
     cells = []
 
     def record(kind, result, reason=None):
@@ -846,6 +892,14 @@ def smoke_scope(client, scope, version, base, source, upskill, markers, name, ar
         subprocess.run(['git', 'init', '-q', str(cwd)], env=env, check=True)
     # `add` is not atomic: a failed or timed-out `add` can leave the lockfile
     # entry and some files. A global cell therefore always runs `remove`.
+    home = Path(env.get('HOME') or Path.home())
+    saved = None
+    save_error = None
+    if scope == 'global':
+        try:
+            saved = save_global_lockfile(home)
+        except OSError as error:
+            save_error = 'the global lockfile could not be read: ' + str(error)
     try:
         added = runner([upskill, 'add', str(source), '--' + client, '--' + scope], cwd, args.timeout, env)
         if added['state'] != 'success':
@@ -853,7 +907,7 @@ def smoke_scope(client, scope, version, base, source, upskill, markers, name, ar
                 record(kind, 'install-failed', 'upskill add ended with state ' + added['state'])
             return cells
         for kind in args.kinds:
-            record(kind, smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env))
+            record(kind, *smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env))
     finally:
         if scope == 'global':
             try:
@@ -865,9 +919,20 @@ def smoke_scope(client, scope, version, base, source, upskill, markers, name, ar
                     failure = 'upskill remove ended with state ' + removed['state']
             except subprocess.TimeoutExpired:
                 failure = 'upskill remove timed out'
+            warning = None
             if failure:
+                warning = ('global items ' + name + ' were not removed: ' + failure
+                           + '; the global lockfile was left as the run changed it')
+            elif save_error:
+                warning = 'the global lockfile was not restored: ' + save_error
+            else:
+                try:
+                    restore_global_lockfile(home, saved)
+                except Exception as error:
+                    warning = 'the global lockfile was not restored: ' + str(error)
+            if warning:
                 for cell in cells:
-                    cell['warning'] = 'global items ' + name + ' were not removed: ' + failure
+                    cell['warning'] = warning
     return cells
 
 
@@ -875,8 +940,13 @@ def run_smoke(args, runner=invoke):
     """For each selected client and scope: install with
     `<upskill> add <source> --<client> --project|--global`, ask one question
     per kind in a new client session, and return a list of
-    {'client', 'kind', 'scope', 'result', 'client_version'}. A global cell
-    then removes the installed items with `upskill remove --global --yes`; a
+    {'client', 'kind', 'scope', 'result', 'client_version'} dictionaries; a
+    cell can also hold 'reason' (the note text) and 'warning'. A global cell
+    then removes the installed items with `upskill remove --global --yes` and
+    restores the global lockfile and its `.v1` copy to their state from before
+    the cell. It does not restore when the removal fails or when the lockfile
+    could not be read before the cell; it then sets 'warning' on each cell, and
+    when both occur only the removal warning. A
     project cell runs in a temporary repository that is deleted at the end.
     `result` is 'pass', 'fail', 'timeout', 'unavailable' or 'install-failed';
     'not run' without `--run`."""

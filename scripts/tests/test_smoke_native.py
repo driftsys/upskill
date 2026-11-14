@@ -16,6 +16,9 @@ spec = importlib.util.spec_from_file_location('qualification', ROOT / 'scripts' 
 q = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(q)
 
+REMOVAL_WARNING = (r'^warning: global items upskill-smoke-[0-9a-f]{12} were not removed: upskill remove ended with state failure; '
+                   r'the global lockfile was left as the run changed it$')
+
 BINARY = ROOT / 'target' / 'debug' / 'upskill'
 
 
@@ -90,6 +93,15 @@ class SmokeClassifyTest(unittest.TestCase):
 
 
 class SmokeRunTest(unittest.TestCase):
+    def setUp(self):
+        # A global cell reads and restores the lockfile of the home directory,
+        # so no test of this class may see the real home directory.
+        home = tempfile.TemporaryDirectory()
+        self.addCleanup(home.cleanup)
+        patcher = mock.patch.dict(os.environ, {'HOME': home.name})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_without_run_no_command_is_started(self):
         runner = FakeRunner()
         results = q.run_smoke(smoke_args(run=False, scopes=['project', 'global'], allow_real_home=True), runner)
@@ -290,7 +302,9 @@ class SmokeRunTest(unittest.TestCase):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             q.smoke_main(smoke_args(), FakeRunner(answer))
-        self.assertEqual(out.getvalue().count('note: '), 3)
+        notes = [l for l in out.getvalue().splitlines() if l.startswith('note:')]
+        self.assertEqual(notes, ['note: claude %s project upskill add ended with state failure' % kind
+                                 for kind in q.SMOKE_KINDS])
         self.assertIn('claude rule experimental', out.getvalue())
 
     def test_a_failed_global_removal_is_reported(self):
@@ -356,6 +370,131 @@ class SmokeRunTest(unittest.TestCase):
 
         results = q.run_smoke(smoke_args(), FakeRunner(answer))
         self.assertEqual({cell['result'] for cell in results}, {'unavailable'})
+
+    def test_an_exceeded_copilot_quota_is_unavailable(self):
+        # Event shapes observed with Copilot CLI 1.0.110 when the monthly quota
+        # is used up: the model call fails with status 402, a `session.error`
+        # event follows, and the run ends with a `result` event of exit code 1.
+        stream = (
+            '{"type":"session.start","data":{"sessionId":"S","copilotVersion":"1.0.110"}}\n'
+            '{"type":"user.message","data":{"content":"question"}}\n'
+            '{"type":"model.call_failure","data":{"statusCode":402}}\n'
+            '{"type":"session.error","data":{"errorType":"quota","message":"You have exceeded your monthly quota","statusCode":402}}\n'
+            '{"type":"assistant.idle","data":{},"ephemeral":true}\n'
+            '{"type":"result","exitCode":1}\n')
+
+        def answer(command):
+            if command[0] == 'copilot' and '--version' not in command:
+                return {'state': 'failure', 'stdout': stream}
+
+        results = q.run_smoke(smoke_args(clients=['copilot']), FakeRunner(answer))
+        self.assertEqual({cell['result'] for cell in results}, {'unavailable'})
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(clients=['copilot']), FakeRunner(answer))
+        notes = [l for l in out.getvalue().splitlines() if l.startswith('note:')]
+        self.assertEqual(notes, ['note: copilot %s project copilot reports that the monthly quota is exceeded' % kind
+                                 for kind in q.SMOKE_KINDS])
+
+    def question_cells(self, client, outcome):
+        """The cells of one run in which every question ends with `outcome`."""
+        seen = {}
+
+        def stream(content, exit_code=0, complete=True):
+            events = [{'type': 'assistant.message', 'data': {'content': content}}]
+            if complete:
+                events.append({'type': 'result', 'exitCode': exit_code})
+            return ''.join(json.dumps(event) + '\n' for event in events)
+
+        def answer(command):
+            if command[1] == 'add':
+                seen.update(source_markers(command[2]))
+                return {'state': 'success', 'stdout': ''}
+            if command[0] != client or '--version' in command:
+                return None
+            kind = next(k for k in q.SMOKE_KINDS if command[-1] == q.smoke_prompt(k, command[-1].split('`')[1]))
+            other = next(v for k, v in seen.items() if k != kind)
+            if outcome == 'raised timeout':
+                raise subprocess.TimeoutExpired(command, 5)
+            if outcome in ('failure', 'timeout', 'unavailable', 'authentication_failure'):
+                return {'state': outcome, 'stdout': ''}
+            if client == 'claude':
+                return {'state': 'success', 'stdout': (seen[kind] if outcome == 'marker' else other) + '\n'}
+            if outcome == 'marker':
+                return {'state': 'success', 'stdout': stream(seen[kind])}
+            if outcome == 'other marker':
+                return {'state': 'success', 'stdout': stream(other)}
+            if outcome == 'incomplete':
+                return {'state': 'success', 'stdout': stream(seen[kind], complete=False)}
+            error = '{"type":"session.error","data":{"errorType":"query","message":"Model is not available."}}\n'
+            return {'state': 'failure', 'stdout': error + '{"type":"result","exitCode":1}\n'}
+
+        args = smoke_args(clients=[client])
+        results = q.run_smoke(args, FakeRunner(answer))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(args, FakeRunner(answer))
+        return results, out.getvalue()
+
+    def test_a_question_outcome_has_no_reason_and_no_note(self):
+        common = {'failure': 'fail', 'timeout': 'timeout', 'raised timeout': 'timeout',
+                  'unavailable': 'unavailable', 'authentication_failure': 'unavailable',
+                  'marker': 'pass', 'other marker': 'fail'}
+        expected = {'claude': common,
+                    'copilot': dict(common, **{'incomplete': 'fail', 'session error': 'fail'})}
+        for client, outcomes in expected.items():
+            for outcome, result in outcomes.items():
+                results, output = self.question_cells(client, outcome)
+                label = client + ' ' + outcome
+                self.assertEqual({cell['result'] for cell in results}, {result}, label)
+                for cell in results:
+                    self.assertNotIn('reason', cell, label)
+                self.assertNotIn('note:', output, label)
+
+    def test_the_reason_of_a_version_failure_is_printed_for_each_cell(self):
+        for state in ('unavailable', 'failure'):
+            def answer(command, state=state):
+                if command[1:] == ['--version']:
+                    return {'state': state, 'stdout': ''}
+
+            for scopes in (['project'], ['global']):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    q.smoke_main(smoke_args(scopes=scopes, allow_real_home=True), FakeRunner(answer))
+                notes = [l for l in out.getvalue().splitlines() if l.startswith('note:')]
+                self.assertEqual(notes, ['note: claude %s %s claude --version failed' % (kind, scopes[0])
+                                         for kind in q.SMOKE_KINDS], (state, scopes))
+
+    def test_the_reason_of_a_missing_allow_real_home_is_printed_for_each_global_cell(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(clients=['claude', 'copilot'], scopes=['global']), FakeRunner())
+        notes = [l for l in out.getvalue().splitlines() if l.startswith('note:')]
+        reason = 'a global cell writes to the real home directory; pass --allow-real-home'
+        self.assertEqual(notes, ['note: %s %s global %s' % (client, kind, reason)
+                                 for client in ('claude', 'copilot') for kind in q.SMOKE_KINDS])
+
+    def test_a_quota_error_of_another_client_is_a_failure(self):
+        stream = ('{"type":"session.error","data":{"errorType":"quota","statusCode":402}}\n'
+                  '{"type":"result","exitCode":1}\n')
+
+        def answer(command):
+            if command[0] == 'claude' and '--version' not in command:
+                return {'state': 'failure', 'stdout': stream}
+
+        results = q.run_smoke(smoke_args(clients=['claude'], kinds=['rule']), FakeRunner(answer))
+        self.assertEqual([cell['result'] for cell in results], ['fail'])
+
+    def test_another_copilot_session_error_is_a_failure(self):
+        stream = ('{"type":"session.error","data":{"errorType":"query","message":"Model is not available."}}\n'
+                  '{"type":"result","exitCode":1}\n')
+
+        def answer(command):
+            if command[0] == 'copilot' and '--version' not in command:
+                return {'state': 'failure', 'stdout': stream}
+
+        results = q.run_smoke(smoke_args(clients=['copilot'], kinds=['rule']), FakeRunner(answer))
+        self.assertEqual([cell['result'] for cell in results], ['fail'])
 
     def test_a_failing_version_command_makes_the_client_unavailable(self):
         def answer(command):
@@ -516,6 +655,134 @@ class SmokeRunTest(unittest.TestCase):
         self.assertEqual(runner.commands, [])
         lines = out.getvalue().splitlines()
         self.assertEqual(lines, ['claude %s project not-run -' % kind for kind in q.SMOKE_KINDS])
+
+
+class SmokeGlobalLockfileTest(unittest.TestCase):
+    """A global cell leaves `.upskill-lock.json` and `.upskill-lock.json.v1` of
+    the home directory as it found them."""
+
+    ORIGINAL = b'{"schema": 1, "items": []}\n'
+    ADOPTED = b'{"schema": 2, "items": []}\n'
+
+    def setUp(self):
+        home = tempfile.TemporaryDirectory()
+        self.addCleanup(home.cleanup)
+        self.home = Path(home.name)
+        self.lock = self.home / '.upskill-lock.json'
+        self.v1 = self.home / '.upskill-lock.json.v1'
+        patcher = mock.patch.dict(os.environ, {'HOME': home.name})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def adopt(self):
+        """Like the real `add`: adopt the lockfile to schema 2 and copy the old
+        one to `.v1`, unless `.v1` exists."""
+        if self.lock.exists() and not self.v1.exists():
+            self.v1.write_bytes(self.lock.read_bytes())
+        self.lock.write_bytes(self.ADOPTED)
+
+    def run_cell(self, add_state='success', removal=None):
+        """The fake `add` adopts the lockfile to schema 2 and writes the copy `.v1` when it is absent."""
+        removal = removal or {'state': 'success', 'stdout': ''}
+
+        def answer(command):
+            if command[1] == 'add':
+                self.adopt()
+                return {'state': add_state, 'stdout': ''}
+            if command[1] == 'remove':
+                return removal
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), FakeRunner(answer))
+        return out.getvalue()
+
+    def test_the_lockfile_is_restored_after_a_successful_removal(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        output = self.run_cell()
+        self.assertEqual(self.lock.read_bytes(), self.ORIGINAL)
+        self.assertFalse(self.v1.exists())
+        self.assertNotIn('warning:', output)
+
+    def test_the_lockfile_is_restored_after_a_failed_add_and_a_name_that_is_not_installed(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        removal = {'state': 'failure', 'stdout': '', 'stderr': 'error: not in lockfile: x\n', 'exit_code': 1}
+
+        def answer(command):
+            if command[1] == 'add':
+                self.adopt()
+                self.name = next((Path(command[2]) / 'rules').iterdir()).name
+                return {'state': 'failure', 'stdout': ''}
+            if command[1] == 'remove':
+                return dict(removal, stderr='error: not in lockfile: ' + self.name + '\n')
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), FakeRunner(answer))
+        self.assertEqual(self.lock.read_bytes(), self.ORIGINAL)
+        self.assertFalse(self.v1.exists())
+        self.assertNotIn('warning:', out.getvalue())
+
+    def test_every_cell_holds_the_warning(self):
+        def answer(command):
+            if command[1] == 'remove':
+                return {'state': 'failure', 'stdout': '', 'stderr': 'error: permission denied\n', 'exit_code': 1}
+
+        results = q.run_smoke(smoke_args(scopes=['global'], allow_real_home=True), FakeRunner(answer))
+        self.assertEqual(len(results), len(q.SMOKE_KINDS))
+        for cell in results:
+            self.assertRegex(cell.get('warning', ''), REMOVAL_WARNING[len('^warning: '):])
+        self.assertEqual(len({cell['warning'] for cell in results}), 1)
+
+    def test_the_lockfile_is_not_restored_after_a_failed_removal(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        output = self.run_cell(removal={'state': 'failure', 'stdout': '', 'stderr': 'error: permission denied\n', 'exit_code': 1})
+        self.assertEqual(self.lock.read_bytes(), self.ADOPTED)
+        self.assertTrue(self.v1.exists())
+        warnings = [line for line in output.splitlines() if line.startswith('warning:')]
+        self.assertEqual(len(warnings), 1)
+        self.assertRegex(warnings[0], REMOVAL_WARNING)
+
+    def test_a_lockfile_that_did_not_exist_is_deleted(self):
+        output = self.run_cell()
+        self.assertFalse(self.lock.exists())
+        self.assertFalse(self.v1.exists())
+        self.assertNotIn('warning:', output)
+
+    def test_a_v1_copy_that_existed_before_is_kept(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        self.v1.write_bytes(b'older copy\n')
+        self.run_cell()
+        self.assertEqual(self.lock.read_bytes(), self.ORIGINAL)
+        self.assertEqual(self.v1.read_bytes(), b'older copy\n')
+
+    def test_a_lockfile_that_cannot_be_read_is_reported_and_not_restored(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        with mock.patch.object(q, 'save_global_lockfile', side_effect=OSError('denied')):
+            output = self.run_cell()
+        self.assertEqual(self.lock.read_bytes(), self.ADOPTED)
+        self.assertEqual(self.v1.read_bytes(), self.ORIGINAL)
+        warnings = [line for line in output.splitlines() if line.startswith('warning:')]
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings, ['warning: the global lockfile was not restored: the global lockfile could not be read: denied'])
+
+    def test_a_failed_removal_with_an_unreadable_lockfile_reports_the_removal(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        removal = {'state': 'failure', 'stdout': '', 'stderr': 'error: permission denied\n', 'exit_code': 1}
+        with mock.patch.object(q, 'save_global_lockfile', side_effect=OSError('denied')):
+            output = self.run_cell(removal=removal)
+        self.assertEqual(self.lock.read_bytes(), self.ADOPTED)
+        self.assertEqual(self.v1.read_bytes(), self.ORIGINAL)
+        warnings = [line for line in output.splitlines() if line.startswith('warning:')]
+        self.assertEqual(len(warnings), 1)
+        self.assertRegex(warnings[0], REMOVAL_WARNING)
+
+    def test_an_error_while_restoring_is_a_warning_and_does_not_raise(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        with mock.patch.object(q, 'restore_global_lockfile', side_effect=OSError('disk full')):
+            output = self.run_cell()
+        warnings = [line for line in output.splitlines() if line.startswith('warning:')]
+        self.assertEqual(warnings, ['warning: the global lockfile was not restored: disk full'])
 
 
 @unittest.skipUnless(BINARY.exists(), 'target/debug/upskill is not built')

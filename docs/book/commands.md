@@ -798,8 +798,8 @@ present, empty for the project scope.
   "in_both_scopes": [ { "kind": "skill", "name": "..." } ],
   "support": [
     {
-      "client": "claude", "kind": "rule", "level": "experimental",
-      "client_version": null, "checked": null
+      "client": "claude", "kind": "rule", "level": "supported",
+      "client_version": "2.1.308", "checked": "2026-11-14"
     }
   ]
 }

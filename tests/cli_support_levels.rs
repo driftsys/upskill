@@ -44,9 +44,9 @@ fn doctor_prints_one_level_for_each_client_and_kind() {
         .collect();
     assert_eq!(rows.len(), 12, "{text}");
     let order = [
-        ("claude", "rule", "experimental"),
-        ("claude", "skill", "experimental"),
-        ("claude", "agent", "experimental"),
+        ("claude", "rule", "supported"),
+        ("claude", "skill", "supported"),
+        ("claude", "agent", "supported"),
         ("copilot", "rule", "experimental"),
         ("copilot", "skill", "experimental"),
         ("copilot", "agent", "experimental"),
@@ -59,14 +59,23 @@ fn doctor_prints_one_level_for_each_client_and_kind() {
     ];
     for (row, (client, kind, level)) in rows.iter().zip(order) {
         assert_eq!(
-            row.split_whitespace().collect::<Vec<_>>(),
+            row.split_whitespace().take(3).collect::<Vec<_>>(),
             [client, kind, level],
             "{text}"
         );
     }
+    for row in &rows[..3] {
+        assert!(
+            row.ends_with(" supported (claude 2.1.308, 2026-11-14)"),
+            "{text}"
+        );
+    }
+    for row in &rows[3..] {
+        assert_eq!(row.split_whitespace().count(), 3, "{text}");
+    }
     for (row, cell) in rows.iter().zip(SUPPORT) {
         assert_eq!(
-            row.split_whitespace().collect::<Vec<_>>(),
+            row.split_whitespace().take(3).collect::<Vec<_>>(),
             [cell.client, &cell.kind.to_string(), &cell.level.to_string()],
             "{text}"
         );
@@ -179,8 +188,13 @@ fn doctor_json_holds_the_support_table() {
         );
     }
     assert_eq!(support[0]["client"], "claude");
-    assert_eq!(support[0]["level"], "experimental");
-    assert!(support[0]["checked"].is_null());
+    assert_eq!(support[0]["level"], "supported");
+    assert_eq!(support[0]["client_version"], "2.1.308");
+    assert_eq!(support[0]["checked"], "2026-11-14");
+    assert_eq!(support[3]["client"], "copilot");
+    assert_eq!(support[3]["level"], "experimental");
+    assert!(support[3]["client_version"].is_null());
+    assert!(support[3]["checked"].is_null());
 }
 
 #[test]

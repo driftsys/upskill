@@ -23,20 +23,20 @@ a release and does not affect another cell.
 A supported cell holds the client version of the smoke run that passed and the
 date of that run. `-` marks an absent version or date.
 
-| Client   | Kind  | Level        | Client version | Checked |
-| -------- | ----- | ------------ | -------------- | ------- |
-| claude   | rule  | experimental | -              | -       |
-| claude   | skill | experimental | -              | -       |
-| claude   | agent | experimental | -              | -       |
-| copilot  | rule  | experimental | -              | -       |
-| copilot  | skill | experimental | -              | -       |
-| copilot  | agent | experimental | -              | -       |
-| opencode | rule  | experimental | -              | -       |
-| opencode | skill | experimental | -              | -       |
-| opencode | agent | experimental | -              | -       |
-| codex    | rule  | unsupported  | -              | -       |
-| codex    | skill | unsupported  | -              | -       |
-| codex    | agent | unsupported  | -              | -       |
+| Client   | Kind  | Level        | Client version | Checked    |
+| -------- | ----- | ------------ | -------------- | ---------- |
+| claude   | rule  | supported    | 2.1.308        | 2026-11-14 |
+| claude   | skill | supported    | 2.1.308        | 2026-11-14 |
+| claude   | agent | supported    | 2.1.308        | 2026-11-14 |
+| copilot  | rule  | experimental | -              | -          |
+| copilot  | skill | experimental | -              | -          |
+| copilot  | agent | experimental | -              | -          |
+| opencode | rule  | experimental | -              | -          |
+| opencode | skill | experimental | -              | -          |
+| opencode | agent | experimental | -              | -          |
+| codex    | rule  | unsupported  | -              | -          |
+| codex    | skill | unsupported  | -              | -          |
+| codex    | agent | unsupported  | -              | -          |
 
 `upskill doctor` prints this table after the report of the scopes, in the
 section `Support levels:`, and `upskill doctor --json` holds it in the key
@@ -55,10 +55,16 @@ experimental until its design settles these paths.
 A maintainer runs the smoke test against the real clients. It needs
 authenticated clients and makes paid model calls, so hosted CI does not run it.
 
-No smoke run has been recorded yet, so every implemented cell is `experimental`.
-The tool names that the smoke mode allows for the skill and agent cells
-(`SMOKE_TOOLS` in the script) have not been confirmed against the real clients;
-the first run may show that they need correction.
+One smoke run is recorded, on 2026-11-14. On Claude Code 2.1.308 all six cells
+passed (rule, skill and agent, each at project and global scope), so the three
+`claude` cells are `supported`. One run on GitHub Copilot CLI 1.0.110 could not
+be completed because the account's monthly quota was used up (HTTP 402). The
+script of that run, before it handled the quota, printed `fail` for every
+Copilot cell. The script now prints `unavailable` for that case, with a note
+that names the quota. No Copilot cell has a result, so the Copilot cells stay
+`experimental`. The tool names that the smoke mode allows for the skill and
+agent cells (`SMOKE_TOOLS` in the script) are confirmed for Claude Code 2.1.308
+only. They stay unconfirmed for Copilot CLI 1.0.110.
 
 ```bash
 just smoke                  # print the cells; no model call
@@ -122,7 +128,21 @@ the run:
   value, `add` leaves the file unchanged. `remove` does not revert the change.
 - The item files are deleted. The empty directories
   `.claude/{agents,rules,skills}` or `.copilot/{agents,instructions,skills}`
-  stay, and `.upskill-lock.json` stays with an empty item list.
+  stay.
+
+A global cell restores the global lockfile to its bytes from before the cell.
+Before `add`, the script reads `.upskill-lock.json` and notes whether
+`.upskill-lock.json.v1` exists. After the removal it writes the saved bytes
+back, or deletes the lockfile when it did not exist, and deletes
+`.upskill-lock.json.v1` when it did not exist. The reason: `add` adopts a
+`schema: 1` lockfile to `schema: 2` and writes the copy `.upskill-lock.json.v1`
+unless that copy exists, and an installed upskill that predates `schema: 2`
+cannot read the adopted file. The script does not restore in two cases. When the
+removal fails, the lockfile then stays as the run changed it, and the warning
+says so. When the script could not read the lockfile before the cell, it prints
+`warning: the global lockfile was not restored: the global lockfile could not be read: <reason>`.
+When both cases occur, the script prints only the removal warning. When the
+restore itself fails, the script prints a `warning:` line and goes on.
 
 If the script is killed hard during a global cell, the items stay in the home
 directory. `upskill list --global` shows the name, which is `upskill-smoke-`
@@ -131,10 +151,11 @@ followed by 12 hexadecimal digits. Remove the items with
 
 The result of a cell is `pass`, `fail`, `timeout`, `unavailable` or
 `install-failed`. A cell is `unavailable` when the client binary is missing, its
-version cannot be read, the client reports an authentication failure, or a
-global cell has no `--allow-real-home`. A cell is `install-failed` when
-`upskill add` fails; the client is not asked, and the level stays
-`experimental`. The output has one line for each cell:
+version cannot be read, the client reports an authentication failure, GitHub
+Copilot CLI reports that the monthly quota is exceeded, or a global cell has no
+`--allow-real-home`. A cell is `install-failed` when `upskill add` fails; the
+client is not asked, and the level stays `experimental`. The output has one line
+for each cell:
 
 ```text
 <client> <kind> <scope> <result> <client version>
@@ -143,7 +164,9 @@ global cell has no `--allow-real-home`. A cell is `install-failed` when
 Each cell that has a reason adds a line
 `note: <client> <kind> <scope> <reason>`. When the removal of a global item
 fails, the script prints
-`warning: global items <name> were not removed: <reason>`. With `--run`, one
+`warning: global items <name> were not removed: <reason>; the global lockfile was left as the run changed it`.
+When the restore of the lockfile fails, it prints
+`warning: the global lockfile was not restored: <reason>`. With `--run`, one
 line for each client and kind follows, `<client> <kind> <level>`; without
 `--run` no level line appears. The level is `supported` when both scopes passed
 and `experimental` otherwise. The script writes no file in the repository and
