@@ -1,5 +1,6 @@
 use anyhow::Context;
 use clap::{Parser, error::ErrorKind};
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -9,6 +10,7 @@ use upskill::config;
 use upskill::fmt::{FmtReport, fmt};
 use upskill::index;
 use upskill::lint::{LintReport, lint};
+use upskill::notice;
 use upskill::pipeline::{
     DoctorReport, DoctorScopes, GitRemote, InstallReport, ItemKind, ListedBundle, ListedItem,
     OrphanReason, PluginResult, PreviewAction, RemoveFilter, RemoveReport, ScopedCheck, ScopedList,
@@ -47,7 +49,9 @@ fn main() {
     style::init(cli.no_color);
     style::set_quiet(cli.quiet);
 
-    if let Err(err) = install_signal_handlers() {
+    if matches!(cli.command, Commands::Update { notice: true, .. }) {
+        install_notice_signal_handler();
+    } else if let Err(err) = install_signal_handlers() {
         print_error(&err);
         std::process::exit(EXIT_ERROR);
     }
@@ -87,6 +91,7 @@ fn main() {
             names,
             dry_run,
             check,
+            notice,
             global,
             project,
             yes,
@@ -99,6 +104,7 @@ fn main() {
             names: &names,
             dry_run,
             check,
+            notice,
             yes,
             global,
             project,
@@ -154,6 +160,17 @@ fn install_signal_handlers() -> anyhow::Result<()> {
         eprintln!("  hint: run 'upskill doctor' to check for partial installs");
     })
     .context("failed to install signal handler")
+}
+
+/// The handler of `update --notice`: an interrupt ends the process at once
+/// with exit code 0 and prints nothing itself. The notice has no write to
+/// protect except the cache file, which `NoticeCache::save` replaces with a
+/// rename. An interrupt after the line was written and before the save lets
+/// the line print again in the next session, and a temporary file of the save
+/// can remain. A failed installation is ignored, because the notice never
+/// fails.
+fn install_notice_signal_handler() {
+    let _ = ctrlc::set_handler(|| std::process::exit(EXIT_SUCCESS));
 }
 
 fn was_interrupted() -> bool {
@@ -923,6 +940,8 @@ struct UpdateArgs<'a> {
     dry_run: bool,
     /// `--check`: report the available updates and change nothing.
     check: bool,
+    /// `--notice`: print the session notice of available updates.
+    notice: bool,
     yes: bool,
     global: bool,
     project: bool,
@@ -979,12 +998,16 @@ fn run_update(args: UpdateArgs) -> i32 {
         names,
         dry_run,
         check,
+        notice,
         yes,
         global,
         project,
         force,
         flag_clients,
     } = args;
+    if notice {
+        return run_update_notice();
+    }
     if check {
         return run_update_check(names, global, project);
     }
@@ -1075,6 +1098,82 @@ fn run_update_check(names: &[String], global: bool, project: bool) -> i32 {
             EXIT_ERROR
         }
     }
+}
+
+/// The time that `update --notice` spends on the lookups of all sources.
+const NOTICE_TIME_LIMIT: Duration = Duration::from_secs(5);
+
+/// `update --notice`: print one line for each scope whose set of available
+/// updates was not reported yet. Exits with code 0 in every case after the
+/// arguments are parsed, also on an interrupt (see
+/// [`install_notice_signal_handler`]). A failed step prints nothing and writes
+/// nothing to stderr. Under `--quiet`, the checks and the cache update run,
+/// and no line is printed or marked as reported.
+fn run_update_notice() -> i32 {
+    let _ = notice_lines();
+    EXIT_SUCCESS
+}
+
+fn notice_lines() -> Option<()> {
+    let cache_path = notice_cache_path()?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs();
+    let roots: Vec<ScopeRoot> = report_scopes_with_note(false, false, false)
+        .ok()?
+        .into_iter()
+        .filter(|at| has_lockfile(&at.root))
+        .collect();
+    let mut cache = notice::NoticeCache::load(&cache_path);
+    let due: Vec<ScopeRoot> = roots
+        .iter()
+        .filter(|at| notice::needs_check(&cache, &at.root, now))
+        .cloned()
+        .collect();
+    if !due.is_empty() {
+        let deadline = Instant::now() + NOTICE_TIME_LIMIT;
+        for check in check_scopes(&due, &[], deadline, &mut GitRemote).ok()? {
+            notice::record_check(
+                &mut cache,
+                &check.root,
+                notice::update_set(&check),
+                notice::reached(&check),
+                now,
+            );
+        }
+    }
+    if !style::is_quiet() {
+        for at in &roots {
+            if let Some(line) = notice::decide(&mut cache, at.scope, &at.root) {
+                // A closed pipe is not an error of the notice.
+                let _ = writeln!(std::io::stdout().lock(), "{line}");
+            }
+        }
+    }
+    // The lookups can take seconds, and another run may have saved meanwhile:
+    // apply the roots of this run onto the file as it is now.
+    // The entry of a root without a lockfile is not handled here: `prune`
+    // removes it.
+    let handled: Vec<PathBuf> = roots.iter().map(|at| at.root.clone()).collect();
+    let fresh = notice::NoticeCache::load(&cache_path);
+    let mut merged = notice::merge_roots(fresh.clone(), &cache, &handled);
+    notice::prune(&mut merged, has_lockfile);
+    if merged != fresh {
+        let _ = merged.save(&cache_path);
+    }
+    Some(())
+}
+
+/// True when the directory `root` holds a lockfile.
+fn has_lockfile(root: &std::path::Path) -> bool {
+    root.join(upskill::lockfile::LOCKFILE_NAME).is_file()
+}
+
+/// The cache file of the notice. `None` when no cache directory is known, so
+/// that no file is written relative to the current directory.
+fn notice_cache_path() -> Option<PathBuf> {
+    Some(index::known_cache_root()?.join(notice::CACHE_FILE_NAME))
 }
 
 /// The width of the status label column of `update --check`.
@@ -2036,8 +2135,8 @@ fn run_list(global: bool, project: bool, json: bool) -> i32 {
     }
 }
 
-/// The scopes that `list`, `doctor` and `update --check` report, in the order
-/// project, global.
+/// The scopes that `list`, `doctor`, `update --check` and `update --notice`
+/// report, in the order project, global.
 ///
 /// `--global` gives the global scope and `--project` gives the project scope,
 /// which fails with [`ScopeError::ProjectIsHome`] when the current directory is
@@ -2046,6 +2145,15 @@ fn run_list(global: bool, project: bool, json: bool) -> i32 {
 /// would be the same lockfile), and the project scope alone is given, with a
 /// note on stderr, when the home directory is not known.
 fn report_scopes(global: bool, project: bool) -> Result<Vec<ScopeRoot>, ScopeError> {
+    report_scopes_with_note(global, project, !style::is_quiet())
+}
+
+/// As [`report_scopes`]; `note` says whether the missing-home note is printed.
+fn report_scopes_with_note(
+    global: bool,
+    project: bool,
+    note: bool,
+) -> Result<Vec<ScopeRoot>, ScopeError> {
     if global {
         return Ok(vec![scope_root(Scope::Global).map_err(ScopeError::Other)?]);
     }
@@ -2054,7 +2162,7 @@ fn report_scopes(global: bool, project: bool) -> Result<Vec<ScopeRoot>, ScopeErr
     }
     let project_root = scope_root(Scope::Project).map_err(ScopeError::Other)?;
     let Ok(global_root) = scope_root(Scope::Global) else {
-        if !style::is_quiet() {
+        if note {
             eprintln!("note: the global scope is not shown: HOME is not set");
         }
         return Ok(vec![project_root]);
@@ -2581,6 +2689,11 @@ fn run_index(registry: Option<&str>, clear: bool) -> i32 {
 mod tests {
     use super::*;
     use upskill::pipeline::PreviewItem;
+
+    #[test]
+    fn the_notice_looks_up_the_sources_for_5_seconds_at_most() {
+        assert_eq!(NOTICE_TIME_LIMIT, Duration::from_secs(5));
+    }
 
     fn item(action: PreviewAction) -> PreviewItem {
         PreviewItem {

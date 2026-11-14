@@ -66,13 +66,14 @@ a message that asks for `--global`, with `--project` and with no flag, in or
 outside a git repository. `update`, `remove` and `remove-mcp` do the same with
 `--project`, and with no flag in a home directory that is a git repository; with
 no flag in a home directory that is not a git repository, they use the global
-scope. `update --check` with no flag in a home directory reports the global
-scope, in a git repository or not; with `--project` it is refused there.
+scope. `update --check` and `update --notice` with no flag in a home directory
+report the global scope, in a git repository or not; `update --check --project`
+is refused there.
 
 `add`, `update`, `remove` and `remove-mcp` print one line to stderr that names
 the scope and its root, for example `scope: global (/home/alice)`. `--quiet`
-hides it. `update --check` prints no such line: the block of each scope names
-the scope and its root.
+hides it. `update --check` and `update --notice` print no such line: the block
+of each scope in `update --check` names the scope and its root.
 
 **Client selection.** By default `add` emits output for **every** client.
 Restrict it to the clients you actually use with one or more of `--claude`,
@@ -196,19 +197,22 @@ upskill update                       # update everything
 upskill update code-review           # update one item
 upskill update --dry-run             # preview changes without applying
 upskill update --check               # report newer versions, without a fetch
+upskill update --notice              # one line per scope for a session start
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
-and the global scope outside one; `update --check` reports both scopes instead.
-`--project` uses the current directory and `--global` uses `$HOME`. When the
-current directory is the home directory, the project scope is refused with exit
-code 2 and a message that asks for `--global`; `update --check` with no flag
-reports the global scope there.
+and the global scope outside one; `update --check` and `update --notice` report
+both scopes instead. `--project` uses the current directory and `--global` uses
+`$HOME`. When the current directory is the home directory, the project scope is
+refused with exit code 2 and a message that asks for `--global`;
+`update --check` and `update --notice` with no flag report the global scope
+there.
 
 `update` always fetches before regenerating; there is no separate `sync`.
-[`update --check`](#update---check) is the exception: it never fetches. `update`
-also re-runs the generation pipeline against the current upskill version, so
-client-format updates land without a separate command.
+[`update --check`](#update---check) and [`update --notice`](#update---notice)
+are the exceptions: they never fetch. `update` also re-runs the generation
+pipeline against the current upskill version, so client-format updates land
+without a separate command.
 
 ```bash
 upskill update --force               # also replace modified and unmanaged files
@@ -458,12 +462,12 @@ upskill update --check [name...] [--global | --project]
 ```
 
 Reports which sources have a newer version. It changes no file, fetches nothing
-and takes no other flag (`--dry-run`, `--yes`, `--force` and the client flags
-are refused with exit code 2). Without a scope flag it reports both scopes, as
-`list` does; `--global` or `--project` limits it to one. With names, it checks
-only the items with those names, grouped by source: the status and the item list
-of a source cover only those items. Output goes to stdout, and `--quiet`
-suppresses it:
+and takes no other flag (`--dry-run`, `--notice`, `--yes`, `--force` and the
+client flags are refused with exit code 2). Without a scope flag it reports both
+scopes, as `list` does; `--global` or `--project` limits it to one. With names,
+it checks only the items with those names, grouped by source: the status and the
+item list of a source cover only those items. Output goes to stdout, and
+`--quiet` suppresses it:
 
 ```text
 project (/path/to/repo):
@@ -515,6 +519,72 @@ compared by content.
 
 Exit code: 0 when the check ran, also when a source is not reachable or has an
 update. 1 when a lockfile cannot be read or parsed. 2 for a usage error.
+
+#### `update --notice`
+
+```bash
+upskill update --notice
+```
+
+Prints one line for each scope that has available updates, for a session-start
+hook of an AI client. It takes no item name and no other flag (any of them is
+refused with exit code 2). It uses the scopes that `list` uses, in the order
+project, global, and leaves out a scope that has no lockfile. It prints no scope
+line and writes nothing to stderr. A line has one of two forms:
+
+```text
+upskill: 2 updates available (project). Run "upskill update".
+upskill: 1 update available (global). Run "upskill update --global".
+```
+
+The number counts distinct items: an item that two sources list with the same
+target commit counts once. `update --check` counts the items as it lists them.
+
+The command is quiet by design:
+
+- A set of updates is printed once. The command prints the line again only when
+  the set of available updates changes. When no update is available, it prints
+  nothing.
+- It contacts the sources at most once in 24 hours for each scope, with the same
+  lookups as `update --check` and a time limit of 5 seconds for all sources.
+  Between two lookups, it uses the result of the last one. A lookup that reaches
+  no source (for example when the session has no network access) also counts:
+  the next attempt waits for the 24 hours, and the stored updates stay. A lookup
+  that reaches all sources replaces the stored updates with the ones it found. A
+  lookup that reaches some sources but not all adds the updates it found and
+  keeps every earlier stored update whose item (kind and name) it did not find
+  again; it cannot tell which source an earlier update came from.
+- It exits with code 0 in every case after the arguments are parsed (a usage
+  error exits with code 2). An interrupt ends the command at once with exit code
+  0. An interrupt during the lookups prints nothing and writes no cache file. An
+  interrupt after the line was written and before the cache file was saved lets
+  the same line print again in the next session, and a temporary file
+  `notice.json.<pid>.tmp` can remain in the cache directory. It prints nothing
+  when no cache directory is known, when the scope roots cannot be determined,
+  and when a lockfile of a scope that is due cannot be parsed. Only a scope that
+  is due has its lockfile read: when that lockfile cannot be parsed, the command
+  prints nothing for either scope, also not the cached line of the other scope,
+  and writes no cache file. A source that is not reachable adds no update, but
+  the updates stored from earlier lookups stay and are counted and printed as
+  described above. A cache file that cannot be read or written does not stop the
+  command: an invalid cache file is treated as an empty one, and a failed write
+  is ignored. When the cache directory cannot be written, nothing is stored, so
+  the check runs and the line is printed at every session start.
+- It changes no lockfile and no installed file. The only file it keeps is the
+  cache file `notice.json` in the upskill cache directory (it writes it through
+  a temporary file `notice.json.<pid>.tmp` and a rename), which is
+  `$XDG_CACHE_HOME/upskill` when `XDG_CACHE_HOME` is an absolute path (an empty
+  or relative value is ignored) and `~/.cache/upskill` otherwise. The file
+  records for each scope root the time of the last lookup, the updates found and
+  the set that was printed. The entry of a root that has no lockfile is removed.
+  Before the command saves the file, it reads the file again and applies only
+  the entries of its own roots, so that a run that overlaps another run keeps
+  the entries of that run. A run that saves between that read and the save of
+  the command can still lose its entries; its roots are then checked again at
+  the next session start. When neither directory is known, the command uses no
+  cache and prints nothing.
+- With `--quiet` it prints no line. The lookups and the cache update still run,
+  and the set stays unreported, so a later run without `--quiet` prints it.
 
 ### `upskill remove [name...] [--source <label>] [--force]`
 

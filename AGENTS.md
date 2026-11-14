@@ -87,6 +87,8 @@ src/
 ├── fmt.rs               Author command — canonicalise YAML frontmatter
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
 ├── support.rs           Support level table (client x kind), printed by `doctor`
+├── notice.rs            `update --notice`: when a session notice line prints, and
+│                        the cache file that records it
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
 └── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)
@@ -134,13 +136,18 @@ scope, not committed). Per-client output paths and ancillary files (`CLAUDE.md`,
 [format-spec §7](docs/specification/format-spec.md).
 
 Without a scope flag, `add` stops outside a git repo (exit 2); `update`,
-`remove` and `remove-mcp` use the global scope there; `list`, `doctor` and
-`update --check` report both scopes. The project scope is refused (exit 2, pass
-`--global`) when `cwd` is the home directory. A global install writes Copilot
-content under `$HOME/.copilot/`. `add`, `update`, `remove` and `remove-mcp`
-print `scope: <scope> (<root>)` to stderr unless `--quiet` is set;
-`update --check` prints no scope line, and with no flag in the home directory it
-reports the global scope instead of refusing.
+`remove` and `remove-mcp` use the global scope there; `list`, `doctor`,
+`update --check` and `update --notice` report both scopes. The project scope is
+refused (exit 2, pass `--global`) when `cwd` is the home directory. A global
+install writes Copilot content under `$HOME/.copilot/`. `add`, `update`,
+`remove` and `remove-mcp` print `scope: <scope> (<root>)` to stderr unless
+`--quiet` is set; `update --check` and `update --notice` print no scope line,
+and with no flag in the home directory they report the global scope instead of
+refusing. `update --notice` is built for a session-start hook: it exits 0 in
+every case after argument parsing, also on an interrupt, writes nothing to
+stderr, never fetches, and keeps for each scope root the time of the last check,
+the updates found and the printed set in `<cache>/upskill/notice.json`
+(`$XDG_CACHE_HOME` when absolute, else `~/.cache`).
 
 ### Source format
 
@@ -202,7 +209,8 @@ the way you would for any manual `git clone`.
 
 - Existing test files:
   - **CLI:** `cli_add`, `cli_ci_mode`, `cli_exit_codes`, `cli_search`,
-    `cli_support_levels`, `cli_smoke_source`.
+    `cli_support_levels`, `cli_smoke_source`, `cli_update_check`,
+    `cli_update_notice`.
   - **Pipeline:** `pipeline_local`, `pipeline_source`, `pipeline_lockfile`.
   - **Generation (v0.2 pipeline):** `generate_skills`, `generate_rules`,
     `generate_agents`. Golden fixtures in `tests/fixtures/`.

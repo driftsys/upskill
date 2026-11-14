@@ -21,6 +21,7 @@ pub mod lint;
 pub mod lockfile;
 pub mod mcp;
 pub mod model;
+pub mod notice;
 pub mod parse;
 pub mod pipeline;
 pub mod plugin;
