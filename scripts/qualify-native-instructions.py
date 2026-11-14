@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Opt-in native instruction discovery probes; no credentials are read or copied."""
+"""Opt-in probes against the real AI clients; no credentials are read or copied.
+
+Without --smoke: native instruction discovery probes (--run and --evidence).
+With --smoke: a smoke test of installed rules, skills and agents (see
+`just smoke`); --run makes paid model calls."""
 import argparse
 import hashlib
 import importlib.util
@@ -745,19 +749,32 @@ def smoke_command(client, kind, prompt, scope):
 
 
 def smoke_response(client, stdout):
-    """The text that the client answered."""
+    """The text that the client answered, or None when the run is not complete.
+    A Copilot run is complete when its stream has exactly one terminal `result`
+    event, that event is the last one, and its exit code is 0, as in
+    `copilot_response`. Tool events are allowed: a skill or agent cell uses a tool."""
     if client != 'copilot':
         return stdout.strip()
     texts = []
+    kinds = []
+    results = []
     for line in stdout.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if isinstance(event, dict) and event.get('type') == 'assistant.message' and isinstance(event.get('data'), dict):
+        if not isinstance(event, dict):
+            continue
+        kinds.append(event.get('type'))
+        if event.get('type') == 'result':
+            results.append(event)
+        if event.get('type') == 'assistant.message' and isinstance(event.get('data'), dict):
             content = event['data'].get('content')
             if isinstance(content, str):
                 texts.append(content)
+    if (len(results) != 1 or kinds[-1] != 'result'
+            or type(results[0].get('exitCode')) is not int or results[0]['exitCode'] != 0):
+        return None
     return ''.join(texts).strip()
 
 
@@ -785,17 +802,79 @@ def smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env
         return 'timeout'
     if result['state'] != 'success':
         return 'fail'
+    response = smoke_response(client, result.get('stdout', ''))
+    if response is None:
+        # The same condition makes `run` set the state `failure`.
+        return 'fail'
     others = [value for other, value in markers.items() if other != kind]
-    return classify_smoke(smoke_response(client, result.get('stdout', '')), markers[kind], others)
+    return classify_smoke(response, markers[kind], others)
+
+
+def smoke_client_version(client, base, runner, env):
+    """The version number in the first line of `<client> --version`, or None."""
+    found = runner([client, '--version'], base, 15, env)
+    text = found.get('stdout', '').strip().splitlines() if found['state'] == 'success' else []
+    match = re.search(r'(?<!\d)\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?', text[0]) if text else None
+    return match.group(0) if match else None
+
+
+def smoke_scope(client, scope, version, base, source, upskill, markers, name, args, runner, env):
+    """The cells of one client in one scope: install, ask one question per
+    kind, and for the global scope remove what was installed."""
+    cells = []
+
+    def record(kind, result, reason=None):
+        cell = {'client': client, 'kind': kind, 'scope': scope, 'result': result, 'client_version': version or 'unknown'}
+        if reason:
+            cell['reason'] = reason
+        cells.append(cell)
+
+    if scope == 'global' and not args.allow_real_home:
+        for kind in args.kinds:
+            record(kind, 'unavailable', 'a global cell writes to the real home directory; pass --allow-real-home')
+        return cells
+    if version is None:
+        for kind in args.kinds:
+            record(kind, 'unavailable', client + ' --version failed')
+        return cells
+    cwd = base / (client + '-' + scope)
+    cwd.mkdir()
+    if scope == 'project':
+        subprocess.run(['git', 'init', '-q', str(cwd)], env=env, check=True)
+    # A failed `add` installed nothing, so there is nothing to remove. A timed-out
+    # `add` may have installed part of the source.
+    installed = False
+    try:
+        added = runner([upskill, 'add', str(source), '--' + client, '--' + scope], cwd, args.timeout, env)
+        installed = added['state'] in ('success', 'timeout')
+        if added['state'] != 'success':
+            for kind in args.kinds:
+                record(kind, 'install-failed', 'upskill add ended with state ' + added['state'])
+            return cells
+        for kind in args.kinds:
+            record(kind, smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env))
+    finally:
+        if scope == 'global' and installed:
+            try:
+                removed = runner([upskill, 'remove', '--global', '--yes', name], cwd, args.timeout, env)
+                failure = None if removed['state'] == 'success' else 'upskill remove ended with state ' + removed['state']
+            except subprocess.TimeoutExpired:
+                failure = 'upskill remove timed out'
+            if failure:
+                for cell in cells:
+                    cell['warning'] = 'global items ' + name + ' were not removed: ' + failure
+    return cells
 
 
 def run_smoke(args, runner=invoke):
     """For each selected client and scope: install with
     `<upskill> add <source> --<client> --project|--global`, ask one question
-    per kind in a new client session, remove the items, and return a list of
-    {'client', 'kind', 'scope', 'result', 'client_version'}. `result` is
-    'pass', 'fail', 'timeout', 'unavailable' or 'install-failed'; 'not run'
-    without `--run`."""
+    per kind in a new client session, and return a list of
+    {'client', 'kind', 'scope', 'result', 'client_version'}. A global cell
+    then removes the installed items with `upskill remove --global --yes`; a
+    project cell runs in a temporary repository that is deleted at the end.
+    `result` is 'pass', 'fail', 'timeout', 'unavailable' or 'install-failed';
+    'not run' without `--run`."""
     cells = [(client, kind, scope) for client in args.clients for scope in args.scopes for kind in args.kinds]
     if not args.run:
         return [{'client': c, 'kind': k, 'scope': s, 'result': 'not run', 'client_version': '-'} for c, k, s in cells]
@@ -811,52 +890,10 @@ def run_smoke(args, runner=invoke):
         base = Path(temporary)
         source = smoke_source(base / 'source', name, markers)
         for client in args.clients:
-            version = None
-
-            def record(kind, scope, result, reason=None):
-                cell = {'client': client, 'kind': kind, 'scope': scope, 'result': result, 'client_version': version or 'unknown'}
-                if reason:
-                    cell['reason'] = reason
-                results.append(cell)
-
             runnable = [s for s in args.scopes if s == 'project' or args.allow_real_home]
-            if runnable:
-                found = runner([client, '--version'], base, 15, env)
-                text = found.get('stdout', '').strip().splitlines() if found['state'] == 'success' else []
-                match = re.search(r'(?<!\d)\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?', text[0]) if text else None
-                version = match.group(0) if match else None
+            version = smoke_client_version(client, base, runner, env) if runnable else None
             for scope in args.scopes:
-                if scope == 'global' and not args.allow_real_home:
-                    for kind in args.kinds:
-                        record(kind, scope, 'unavailable', 'a global cell writes to the real home directory; pass --allow-real-home')
-                    continue
-                if version is None:
-                    for kind in args.kinds:
-                        record(kind, scope, 'unavailable', client + ' --version failed')
-                    continue
-                cwd = base / (client + '-' + scope)
-                cwd.mkdir()
-                if scope == 'project':
-                    subprocess.run(['git', 'init', '-q', str(cwd)], env=env, check=True)
-                first = len(results)
-                try:
-                    installed = runner([upskill, 'add', str(source), '--' + client, '--' + scope], cwd, args.timeout, env)
-                    if installed['state'] != 'success':
-                        for kind in args.kinds:
-                            record(kind, scope, 'install-failed', 'upskill add ended with state ' + installed['state'])
-                        continue
-                    for kind in args.kinds:
-                        record(kind, scope, smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env))
-                finally:
-                    if scope == 'global':
-                        try:
-                            removed = runner([upskill, 'remove', '--global', '--yes', name], cwd, args.timeout, env)
-                            failure = None if removed['state'] == 'success' else 'upskill remove ended with state ' + removed['state']
-                        except subprocess.TimeoutExpired:
-                            failure = 'upskill remove timed out'
-                        if failure:
-                            for cell in results[first:]:
-                                cell['warning'] = 'global items ' + name + ' were not removed: ' + failure
+                results.extend(smoke_scope(client, scope, version, base, source, upskill, markers, name, args, runner, env))
     return results
 
 
@@ -956,8 +993,8 @@ if __name__ == '__main__':
     parser.add_argument('--run', action='store_true', help='Explicitly opt in to native model requests')
     parser.add_argument('--smoke', action='store_true', help='Smoke test of installed content against the real clients')
     parser.add_argument('--upskill', type=Path, help='The upskill binary that the smoke test installs with')
-    parser.add_argument('--kinds', nargs='+', choices=SMOKE_KINDS, default=list(SMOKE_KINDS))
-    parser.add_argument('--scopes', nargs='+', choices=SMOKE_SCOPES, default=list(SMOKE_SCOPES))
+    parser.add_argument('--kinds', nargs='+', choices=SMOKE_KINDS, help='With --smoke: kinds to test; default all')
+    parser.add_argument('--scopes', nargs='+', choices=SMOKE_SCOPES, help='With --smoke: scopes to test; default both')
     parser.add_argument('--allow-real-home', action='store_true', help='Let global cells install into and remove from the real home directory')
     parser.add_argument('--clients', nargs='+', choices=CLIENTS, default=None)
     parser.add_argument('--opencode-discovery', choices=('default', 'configured', 'both'), default='both')
@@ -967,7 +1004,14 @@ if __name__ == '__main__':
     replay.add_argument('--replay-copilot-reader', type=Path, help='Replay retained Q1 receipts offline without a native client')
     replay.add_argument('--replay-copilot-agent', type=Path, help='Replay retained Q2 child receipts offline without a native client')
     args = parser.parse_args()
+    if not args.smoke:
+        given = [flag for flag, value in (('--kinds', args.kinds), ('--scopes', args.scopes),
+                                          ('--allow-real-home', args.allow_real_home), ('--upskill', args.upskill)) if value]
+        if given:
+            parser.error(', '.join(given) + ' only apply with --smoke')
     if args.smoke:
+        args.kinds = args.kinds or list(SMOKE_KINDS)
+        args.scopes = args.scopes or list(SMOKE_SCOPES)
         if not args.upskill:
             parser.error('--upskill is required with --smoke')
         if args.evidence or args.replay_copilot_reader or args.replay_copilot_agent:
