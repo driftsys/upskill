@@ -90,6 +90,15 @@ class SmokeClassifyTest(unittest.TestCase):
 
 
 class SmokeRunTest(unittest.TestCase):
+    def setUp(self):
+        # A global cell reads and restores the lockfile of the home directory,
+        # so no test of this class may see the real home directory.
+        home = tempfile.TemporaryDirectory()
+        self.addCleanup(home.cleanup)
+        patcher = mock.patch.dict(os.environ, {'HOME': home.name})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_without_run_no_command_is_started(self):
         runner = FakeRunner()
         results = q.run_smoke(smoke_args(run=False, scopes=['project', 'global'], allow_real_home=True), runner)
@@ -549,6 +558,98 @@ class SmokeRunTest(unittest.TestCase):
 
 
 @unittest.skipUnless(BINARY.exists(), 'target/debug/upskill is not built')
+class SmokeGlobalLockfileTest(unittest.TestCase):
+    """A global cell leaves `.upskill-lock.json` and `.upskill-lock.json.v1` of
+    the home directory as it found them."""
+
+    ORIGINAL = b'{"schema": 1, "items": []}\n'
+    ADOPTED = b'{"schema": 2, "items": []}\n'
+
+    def setUp(self):
+        home = tempfile.TemporaryDirectory()
+        self.addCleanup(home.cleanup)
+        self.home = Path(home.name)
+        self.lock = self.home / '.upskill-lock.json'
+        self.v1 = self.home / '.upskill-lock.json.v1'
+        patcher = mock.patch.dict(os.environ, {'HOME': home.name})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def run_cell(self, add_state='success', removal=None):
+        """The fake `add` adopts the lockfile to schema 2 and writes the copy `.v1`."""
+        removal = removal or {'state': 'success', 'stdout': ''}
+
+        def answer(command):
+            if command[1] == 'add':
+                self.lock.write_bytes(self.ADOPTED)
+                self.v1.write_bytes(self.ORIGINAL)
+                return {'state': add_state, 'stdout': ''}
+            if command[1] == 'remove':
+                return removal
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), FakeRunner(answer))
+        return out.getvalue()
+
+    def test_the_lockfile_is_restored_after_a_successful_removal(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        output = self.run_cell()
+        self.assertEqual(self.lock.read_bytes(), self.ORIGINAL)
+        self.assertFalse(self.v1.exists())
+        self.assertNotIn('warning:', output)
+
+    def test_the_lockfile_is_restored_after_a_failed_add_and_a_name_that_is_not_installed(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        removal = {'state': 'failure', 'stdout': '', 'stderr': 'error: not in lockfile: x\n', 'exit_code': 1}
+
+        def answer(command):
+            if command[1] == 'add':
+                self.lock.write_bytes(self.ADOPTED)
+                self.v1.write_bytes(self.ORIGINAL)
+                self.name = next((Path(command[2]) / 'rules').iterdir()).name
+                return {'state': 'failure', 'stdout': ''}
+            if command[1] == 'remove':
+                return dict(removal, stderr='error: not in lockfile: ' + self.name + '\n')
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            q.smoke_main(smoke_args(scopes=['global'], allow_real_home=True), FakeRunner(answer))
+        self.assertEqual(self.lock.read_bytes(), self.ORIGINAL)
+        self.assertFalse(self.v1.exists())
+        self.assertNotIn('warning:', out.getvalue())
+
+    def test_the_lockfile_is_not_restored_after_a_failed_removal(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        output = self.run_cell(removal={'state': 'failure', 'stdout': '', 'stderr': 'error: permission denied\n', 'exit_code': 1})
+        self.assertEqual(self.lock.read_bytes(), self.ADOPTED)
+        self.assertTrue(self.v1.exists())
+        warnings = [line for line in output.splitlines() if line.startswith('warning:')]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn('were not removed: upskill remove ended with state failure', warnings[0])
+        self.assertIn('lockfile was left as the run changed it', warnings[0])
+
+    def test_a_lockfile_that_did_not_exist_is_deleted(self):
+        output = self.run_cell()
+        self.assertFalse(self.lock.exists())
+        self.assertFalse(self.v1.exists())
+        self.assertNotIn('warning:', output)
+
+    def test_a_v1_copy_that_existed_before_is_kept(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        self.v1.write_bytes(b'older copy\n')
+        self.run_cell()
+        self.assertEqual(self.lock.read_bytes(), self.ORIGINAL)
+        self.assertTrue(self.v1.exists())
+
+    def test_an_error_while_restoring_is_a_warning_and_does_not_raise(self):
+        self.lock.write_bytes(self.ORIGINAL)
+        with mock.patch.object(q, 'restore_global_lockfile', side_effect=OSError('disk full'), create=True):
+            output = self.run_cell()
+        self.assertIn('warning: ', output)
+        self.assertIn('disk full', output)
+
+
 class SmokeSourceInstallTest(unittest.TestCase):
     def test_the_source_installs_the_three_kinds_for_both_clients(self):
         env = q.isolated_git_environment()

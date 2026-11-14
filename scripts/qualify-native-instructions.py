@@ -840,6 +840,27 @@ def smoke_client_version(client, base, runner, env):
     return match.group(0) if match else None
 
 
+def save_global_lockfile(home):
+    """The state of the global lockfile before a global cell: its bytes (None
+    when absent) and whether the copy `.upskill-lock.json.v1` exists."""
+    lock = Path(home) / '.upskill-lock.json'
+    return (lock.read_bytes() if lock.exists() else None), (Path(home) / '.upskill-lock.json.v1').exists()
+
+
+def restore_global_lockfile(home, saved):
+    """Return the global lockfile to the state that `save_global_lockfile`
+    recorded. `add` adopts a `schema: 1` lockfile to `schema: 2` and writes the
+    copy `.v1`, and an older upskill cannot read `schema: 2`."""
+    content, had_v1 = saved
+    lock = Path(home) / '.upskill-lock.json'
+    if content is None:
+        lock.unlink(missing_ok=True)
+    else:
+        lock.write_bytes(content)
+    if not had_v1:
+        (Path(home) / '.upskill-lock.json.v1').unlink(missing_ok=True)
+
+
 def smoke_scope(client, scope, version, base, source, upskill, markers, name, args, runner, env):
     """The cells of one client in one scope: install, ask one question per
     kind, and for the global scope remove what was installed."""
@@ -865,6 +886,14 @@ def smoke_scope(client, scope, version, base, source, upskill, markers, name, ar
         subprocess.run(['git', 'init', '-q', str(cwd)], env=env, check=True)
     # `add` is not atomic: a failed or timed-out `add` can leave the lockfile
     # entry and some files. A global cell therefore always runs `remove`.
+    home = Path(env.get('HOME') or Path.home())
+    saved = None
+    save_error = None
+    if scope == 'global':
+        try:
+            saved = save_global_lockfile(home)
+        except OSError as error:
+            save_error = 'the global lockfile could not be read: ' + str(error)
     try:
         added = runner([upskill, 'add', str(source), '--' + client, '--' + scope], cwd, args.timeout, env)
         if added['state'] != 'success':
@@ -884,9 +913,20 @@ def smoke_scope(client, scope, version, base, source, upskill, markers, name, ar
                     failure = 'upskill remove ended with state ' + removed['state']
             except subprocess.TimeoutExpired:
                 failure = 'upskill remove timed out'
+            warning = None
             if failure:
+                warning = ('global items ' + name + ' were not removed: ' + failure
+                           + '; the global lockfile was left as the run changed it')
+            elif save_error:
+                warning = 'the global lockfile was not restored: ' + save_error
+            else:
+                try:
+                    restore_global_lockfile(home, saved)
+                except Exception as error:
+                    warning = 'the global lockfile was not restored: ' + str(error)
+            if warning:
                 for cell in cells:
-                    cell['warning'] = 'global items ' + name + ' were not removed: ' + failure
+                    cell['warning'] = warning
     return cells
 
 

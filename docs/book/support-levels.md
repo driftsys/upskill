@@ -123,7 +123,18 @@ the run:
   value, `add` leaves the file unchanged. `remove` does not revert the change.
 - The item files are deleted. The empty directories
   `.claude/{agents,rules,skills}` or `.copilot/{agents,instructions,skills}`
-  stay, and `.upskill-lock.json` stays with an empty item list.
+  stay.
+
+A global cell restores the global lockfile to its bytes from before the cell.
+Before `add`, the script reads `.upskill-lock.json` and notes whether
+`.upskill-lock.json.v1` exists. After the removal it writes the saved bytes
+back, or deletes the lockfile when it did not exist, and deletes
+`.upskill-lock.json.v1` when it did not exist. The reason: `add` adopts a
+`schema: 1` lockfile to `schema: 2` and writes the copy `.upskill-lock.json.v1`,
+and an installed upskill that predates `schema: 2` cannot read the adopted file.
+The script does not restore when the removal fails: the lockfile then stays as
+the run changed it, and the warning says so. When the restore itself fails, the
+script prints a `warning:` line and goes on.
 
 If the script is killed hard during a global cell, the items stay in the home
 directory. `upskill list --global` shows the name, which is `upskill-smoke-`
@@ -145,7 +156,9 @@ for each cell:
 Each cell that has a reason adds a line
 `note: <client> <kind> <scope> <reason>`. When the removal of a global item
 fails, the script prints
-`warning: global items <name> were not removed: <reason>`. With `--run`, one
+`warning: global items <name> were not removed: <reason>; the global lockfile was left as the run changed it`.
+When the restore of the lockfile fails, it prints
+`warning: the global lockfile was not restored: <reason>`. With `--run`, one
 line for each client and kind follows, `<client> <kind> <level>`; without
 `--run` no level line appears. The level is `supported` when both scopes passed
 and `experimental` otherwise. The script writes no file in the repository and
