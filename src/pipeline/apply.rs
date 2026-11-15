@@ -206,8 +206,9 @@ pub(super) fn apply_plan(
 /// on the way to one, is a conflict of the item.
 ///
 /// It fails when two planned items have the same
-/// `(kind, name)` or an installed name contains a path separator, when two
-/// planned files have the same path, when one planned file is a directory
+/// `(kind, name)` or an installed name is empty, `.` or `..` or contains a
+/// path separator, when two planned files have the same path, when one
+/// planned file is a directory
 /// on the way to another, when a path to write or delete breaks the
 /// symbolic link rule of this module, or when a path to write is blocked:
 /// the client root or kind directory is a symbolic link to a missing target
