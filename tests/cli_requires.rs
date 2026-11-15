@@ -542,8 +542,18 @@ fn bare_update_keeps_required_by_for_both_source_orders() {
     for dependency_last in [true, false] {
         let tmp = tempfile::TempDir::new().unwrap();
         // The canonical path, so that the label of the source given on the
-        // command line and the label of the `requires` source have one form.
-        let root = fs::canonicalize(tmp.path()).unwrap();
+        // command line and the label of the `requires` source have one form
+        // (on macOS the temporary directory is behind a symbolic link). On
+        // Windows, `canonicalize` returns the verbatim form `\\?\C:\...`,
+        // which `add` does not take as a local path, so the prefix is removed.
+        let canonical = fs::canonicalize(tmp.path()).unwrap();
+        let root = std::path::PathBuf::from(
+            canonical
+                .to_str()
+                .unwrap()
+                .strip_prefix(r"\\?\")
+                .unwrap_or(canonical.to_str().unwrap()),
+        );
         let home = root.join("home");
         fs::create_dir_all(&home).unwrap();
         fs::create_dir_all(root.join(".git")).unwrap();
