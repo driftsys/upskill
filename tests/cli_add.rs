@@ -957,6 +957,30 @@ fn add_refuses_a_source_item_that_contains_the_output_path_of_another_item() {
 }
 
 #[test]
+fn add_checks_an_item_that_its_audience_skips_as_installed() {
+    // `q` lists only Copilot in `audience`, so `--claude` installs nothing
+    // for it. The overlap check does not apply `audience`: the Claude output
+    // path `.claude/skills/q` of `q` holds the source of `y`, and the install
+    // is refused.
+    assert_cross_item_overlap_refused(
+        &[
+            (
+                ".claude/skills/grp/q/SKILL.md",
+                "---\nname: q\ndescription: d\naudience:\n  - copilot\n---\nBody\n",
+            ),
+            (
+                ".claude/skills/q/y/SKILL.md",
+                "---\nname: y\ndescription: d\n---\nBody\n",
+            ),
+        ],
+        &["add", "./.claude/skills", "--claude", "--project"],
+        "y",
+        "q",
+        ".claude/skills/y/SKILL.md",
+    );
+}
+
+#[test]
 fn add_refuses_source_inside_copilot_skills_dir() {
     assert_source_overlap_refused(".github/skills", &["--copilot", "--project"]);
 }

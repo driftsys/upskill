@@ -232,7 +232,8 @@ pub(super) struct SourceItem {
 /// excluded item writes nothing. First, each such item is checked against
 /// its own paths with [`check_source_outside_outputs`]. Then the directory
 /// of every item, selected, excluded or not selected, is compared with the
-/// paths of every other such item (all clients, as in
+/// paths of every such item, its own included, which gives the result of
+/// the first step again (all clients, as in
 /// [`check_source_outside_outputs`]): the item directory must not be inside
 /// such a path or contain one. Called before the first deletion or write of
 /// the run.

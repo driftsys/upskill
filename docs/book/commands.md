@@ -118,12 +118,13 @@ written under its source name. The paths of each installed item are compared
 with the directory of that item and with the directory of every other item of
 every source that the run reads: the entry source, also one that only declares
 `requires`, and each dependency source. The directory of an item that is not
-installed (not named, excluded with `--exclude`, or not in the bundle) is
-protected in the same way, but such an item has no paths in the check, also when
-it is at its own output path. The `audience` field and the client selection are
-not applied: an item whose `audience` shares no client with the selected clients
-is still treated as installed, its paths for every client are compared, and it
-can cause a refusal although nothing would be installed for the item. The error
+installed (not named, excluded with `--exclude`, not in the bundle, or an item
+of a dependency source that the `requires` closure does not select) is protected
+in the same way, but such an item has no paths in the check, also when it is at
+its own output path. The `audience` field and the client selection are not
+applied: an item whose `audience` shares no client with the selected clients is
+still treated as installed, its paths for every client are compared, and it can
+cause a refusal although nothing would be installed for the item. The error
 names the item, the source directory and the output path, and for an overlap
 with another item also that item. `add` fails with exit code 1 before any file
 or lockfile is changed. `upskill update` is refused in the same way, including

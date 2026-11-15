@@ -1986,3 +1986,52 @@ fn update_refuses_a_source_item_inside_the_output_path_of_another_item() {
         lock_before
     );
 }
+
+#[test]
+fn update_refuses_a_source_item_that_contains_the_output_path_of_another_item() {
+    // The source is the project; `add` installs its skill `q` from `src/q`
+    // for Claude only. Then a skill is added in the folder `.agents` (a skill
+    // is named after its folder). That folder contains `.agents/skills/q`,
+    // the OpenCode output path of `q`, so `update` refuses.
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let q = proj.join("src").join("q");
+    fs::create_dir_all(&q).unwrap();
+    fs::write(
+        q.join("SKILL.md"),
+        "---\nname: q\ndescription: d\n---\nBody\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./", "q", "--claude", "--project"])
+        .assert()
+        .success();
+    let lock_before = fs::read(proj.join(".upskill-lock.json")).unwrap();
+    let agents = proj.join(".agents");
+    fs::create_dir_all(&agents).unwrap();
+    let body = "---\nname: a\ndescription: d\n---\nBody\n";
+    fs::write(agents.join("SKILL.md"), body).unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("the source directory of skill '.agents' (")
+            && stderr.contains(") contains the output path")
+            && stderr.contains("of skill 'q'; installing would delete"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(fs::read_to_string(agents.join("SKILL.md")).unwrap(), body);
+    assert!(!agents.join("skills").exists());
+    assert_eq!(
+        fs::read(proj.join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
