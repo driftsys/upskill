@@ -230,7 +230,8 @@ pub(super) fn prepare_install(
     // -- Refuse a source item that overlaps an output path of the run --
     // Runs before the adoption and before any write, so a refused install
     // changes no file. Aliases apply to entry-source items only, as in the
-    // plan below. The items of every source are compared with each other.
+    // plan below. The items of every source that the run reads are compared
+    // with each other.
     let at = crate::scope::ScopeRoot {
         scope: options.scope,
         root: target.to_path_buf(),
@@ -241,13 +242,20 @@ pub(super) fn prepare_install(
             excludes: options.excludes.clone(),
             ..plan::PlanNames::default()
         };
-        for (src_label, si) in &closure.by_source {
+        // Every visited source, also one without items in the run: its item
+        // directories are protected (an empty filter installs none of them).
+        let no_items = crate::bundle::ResolvedItems::default();
+        for (src_label, root) in &closure.source_roots {
             let names = if *src_label == label {
                 &entry_names
             } else {
                 &no_aliases
             };
-            install::collect_source_items(&si.root, Some(&si.items), names, &mut source_items)?;
+            let filter = closure
+                .by_source
+                .get(src_label)
+                .map_or(&no_items, |si| &si.items);
+            install::collect_source_items(root, Some(filter), names, &mut source_items)?;
         }
     } else {
         // Without a closure, `items` is not empty: a bundle-file source always
