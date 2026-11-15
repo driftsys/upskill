@@ -92,7 +92,9 @@ CLI supports legacy plugin manifests and Agent Plugins 1.0/1.1. Standard root
 `plugin.json` requires canonical `$schema` and `name`; optional metadata
 includes `version`, `description`, `author`, `license`, and `extensions`. Fixed
 portable components are `skills/` and `mcp.json`; Copilot agents, commands,
-rules, and hooks use `com.github.copilot/`. Legacy configurable component paths
+rules, and hooks use `com.github.copilot/`. Copilot CLI 1.0.112 was observed to
+load `hooks.json` at the plugin root (see the
+[T2 note](../t2-session-notice-display.md)). Legacy configurable component paths
 do not become standard fields. Install with `copilot plugin install SOURCE`;
 sources include `plugin@marketplace`, Git repositories, subdirectories, and
 local paths. `marketplace add`, `list`, `update`, `enable`, `disable`, and

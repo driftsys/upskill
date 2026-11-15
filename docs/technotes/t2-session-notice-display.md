@@ -2,9 +2,11 @@
 
 This note belongs to trial T2 of the customization re-steer (plan Task 9). It
 records what the documentation of each client states about a hook that runs when
-a session starts, and the result of the Claude Code part of the trial in
-non-interactive mode and of the Copilot CLI part in prompt mode. The interactive
-display of both clients has not been observed. This note is informative.
+a session starts, and the results of the trial: Claude Code in non-interactive
+mode and in the interactive terminal, Copilot CLI in prompt mode, and the
+session-notice plugins of both clients loaded from a directory. The interactive
+display of Copilot CLI has not been observed. No plugin was installed through a
+marketplace. This note is informative.
 
 `upskill update --notice` prints one plain line on standard output for each
 scope that has available updates (the project scope, then the global scope), for
@@ -75,9 +77,12 @@ Sources: `https://docs.github.com/en/copilot/reference/hooks-configuration`,
 
 - **Event.** `sessionStart`; it fires when "A new or resumed session begins."
 - **Declaration.** In a repository, `.github/hooks/*.json`. For a user,
-  `~/.copilot/hooks/`. In a plugin, `com.github.copilot/hooks/hooks.json` in the
-  Agent Plugins 1.0 layout, with `plugin.json` at the plugin root. The
-  documentation gives no example of a plugin `hooks.json`.
+  `~/.copilot/hooks/`. In a plugin, the documentation names
+  `com.github.copilot/hooks/hooks.json` in the Agent Plugins 1.0 layout, with
+  `plugin.json` at the plugin root. The documentation gives no example of a
+  plugin `hooks.json`. Observed instead: Copilot CLI 1.0.112 loaded a plugin
+  whose hooks are in `hooks.json` at the plugin root (see the plugin layout
+  section below).
 - **Output.** For `sessionStart`, "Only `additionalContext` is consumed." The
   standard output is parsed as JSON on exit code 0, and empty output means no
   action. The documentation does not state whether `additionalContext` is shown
@@ -116,16 +121,20 @@ The documented shape of a hook file (not run):
   not as a message to the user. Copilot CLI documents that it consumes
   `additionalContext` and does not state whether the user or the model receives
   it. The Copilot CLI trial in prompt mode showed that the model receives
-  `additionalContext` and does not mention it without being asked. Whether the
-  user sees the line in the interactive terminal is not observed for either
-  client.
-- Copilot CLI documents only a JSON object with `additionalContext`. A plain
-  line may be ignored. If the trial confirms that, the hook command of the
-  Copilot plugin must wrap the line in that object. The binary keeps printing a
-  plain line, as the plan states. The trial confirmed that Copilot CLI ignores a
-  plain line in prompt mode (see the Copilot CLI trial result below).
-- For Claude Code, a line that the user must see may need the `systemMessage`
-  field, which the hook command would also have to build.
+  `additionalContext` and does not mention it without being asked. In the
+  interactive terminal of Claude Code, only a hook output with `systemMessage`
+  is displayed to the user (see the interactive terminal section below). Whether
+  the user sees the line in the interactive terminal of Copilot CLI is not
+  observed (issue #530 tracks that the Copilot user does not see the notice).
+- Copilot CLI documents only a JSON object with `additionalContext`, and the
+  trial confirmed that it ignores a plain line in prompt mode (see the Copilot
+  CLI trial result below). The hook command of the Copilot plugin therefore
+  wraps the line in that object. The binary keeps printing a plain line, as the
+  plan states.
+- For Claude Code, a line that the user must see needs the `systemMessage`
+  field, and a line that the model must also receive needs `additionalContext`.
+  The hook command of the Claude Code plugin builds one JSON object with both
+  fields (form D).
 - Both clients document that the session continues when the hook fails. Copilot
   CLI also documents that it continues when the hook passes its time limit; the
   extract of the Claude Code page does not state that case. The notice command
@@ -186,12 +195,12 @@ Observed:
   reply did not hold the notice. The line was present in the output stream only
   in the `system/hook_response` event, which is written with
   `--verbose --include-hook-events`.
-- The text of `systemMessage` did not reach the model.
+- The text of `systemMessage` did not reach the model: when asked for the text,
+  the model answered `NONE`.
 
-Not observed:
+Not observed in this non-interactive trial (the interactive terminal is covered
+by the next section):
 
-- The interactive terminal: whether the plain line, `additionalContext` or
-  `systemMessage` is displayed to the user there.
 - The plain text output of `claude -p` without the stream format.
 - A session that starts in another way than `startup` (`resume`, `clear`,
   `compact`, `fork`).
@@ -200,9 +209,38 @@ Not observed:
 
 What follows for the Claude Code plugin: a plain line reaches the model, and the
 model does not report it on its own. A hook that must inform the user and the
-model would print JSON with both `systemMessage` and `additionalContext`. The
-display of `systemMessage` in the interactive terminal has to be confirmed by a
-person before the plugin is published.
+model prints JSON with both `systemMessage` and `additionalContext`. The display
+of `systemMessage` in the interactive terminal was confirmed by a person (next
+section).
+
+## Trial result: Claude Code, interactive terminal
+
+Observed by the maintainer on 2026-11-15 with Claude Code 2.1.308, in four
+temporary git repositories. In each, the hook was declared in the project
+`.claude/settings.json` for the event `SessionStart`, with one of the same four
+forms A to D as in the non-interactive trial. No plugin was installed.
+
+| Form of the hook output                             | Displayed to the user                                   |
+| --------------------------------------------------- | ------------------------------------------------------- |
+| A: the plain line                                   | no                                                      |
+| B: JSON with `hookSpecificOutput.additionalContext` | no                                                      |
+| C: JSON with `systemMessage`                        | yes, above the prompt as `SessionStart:startup says: …` |
+| D: JSON with both fields                            | yes, the same display as form C                         |
+
+Observed:
+
+- Claude Code asked to trust the folder before the first start. After that, each
+  hook ran.
+- Only the forms with `systemMessage` (C and D) are displayed. The display has
+  the shape `SessionStart:startup says: <line>`.
+- Combined with the non-interactive result (the model receives forms A, B and D,
+  and not form C), form D informs both the user and the model. The Claude Code
+  plugin prints form D.
+
+Not observed:
+
+- A session that starts in another way than `startup`.
+- The display after an install through a marketplace.
 
 ## Trial result: Copilot CLI, non-interactive mode
 
@@ -271,7 +309,8 @@ Not observed:
 
 - The interactive terminal: whether any form is displayed to the user there, and
   how the trust question is asked there.
-- A hook that a plugin declares: the trust rule for a plugin hook is not known.
+- A hook that a plugin declares: not run in this trial (see the plugin sections
+  below).
 - Form B declared in `.claude/settings.json`.
 - A hook declared for the user in `~/.copilot/hooks/`.
 
@@ -286,34 +325,84 @@ What follows for the Copilot plugin:
   project that declares the hook for both clients would run it twice in Copilot
   CLI. This is an inference: the trial declared the hook in one place only. The
   effect of two runs is described in the Copilot CLI section above.
-- A repository hook does not run in a folder that Copilot CLI does not trust.
+- A repository hook does not run in a folder that Copilot CLI does not trust. A
+  plugin hook did run in such a folder (see the plugin sections below).
+
+## Trial result: the session-notice plugins loaded from a directory
+
+Run on 2026-11-15, in prompt mode, in a temporary project that had one available
+update, with a separate cache directory for each pair of runs. Each plugin was
+loaded with `--plugin-dir`, and two sessions followed one another in the same
+project. The prompt asked whether the context holds a notice about upskill
+updates, and asked for an exact quote or `NONE`.
+
+| Client and plugin                   | Session 1       | Session 2       |
+| ----------------------------------- | --------------- | --------------- |
+| Claude Code 2.1.308, Claude plugin  | quoted the line | answered `NONE` |
+| Copilot CLI 1.0.112, Copilot plugin | quoted the line | answered `NONE` |
+
+The second session printed nothing because the notice prints a set of updates
+once.
+
+Limit of these runs: the Copilot CLI run was made at commit `648239a`, before
+the later changes to the hook command (`cd --` before the directory change and
+the replacement of control characters) and before the plugin was renamed to
+`upskill`. The Claude Code run was also made before the rename and before the
+change for control characters. The current plugin files were not run. No install
+through a marketplace was done.
+
+## Copilot CLI plugin layout and environment
+
+Observed with Copilot CLI 1.0.112 and a probe plugin loaded with `--plugin-dir`.
+The probe hook wrote its working directory, a filtered list of its environment
+and its standard input to a file.
+
+- Copilot CLI loaded a plugin whose manifest is `plugin.json` at the plugin root
+  and whose hooks are in `hooks.json` at the plugin root.
+- A plugin hook starts with the plugin root as its working directory, not the
+  project directory.
+- The environment holds `COPILOT_PROJECT_DIR` (the project directory),
+  `COPILOT_PLUGIN_ROOT` and `CLAUDE_PROJECT_DIR`.
+- The JSON on standard input holds `cwd`, `sessionId` and `source` (the probe
+  run also showed `timestamp` and `initialPrompt`).
+- This is why the hook command of the Copilot plugin enters
+  `COPILOT_PROJECT_DIR` before it runs `upskill update --notice`: the notice
+  finds the project scope from the working directory.
+- A plugin hook ran in a folder that Copilot CLI did not trust, while a
+  repository hook did not (see the Copilot CLI trial result above).
 
 ## What the trial must record
 
-With the client version for each point. The Claude Code part above answered
-these points for non-interactive mode only:
+With the client version for each point. Claude Code 2.1.308:
 
-1. Whether the user sees the plain line. Answered for `claude -p`: the final
-   text did not hold it; the stream held it in the `system/hook_response` event.
-   Open for the interactive display of Claude Code.
+1. Whether the user sees the plain line. Answered: no, in the interactive
+   terminal. In `claude -p` the final text did not hold it, and the stream held
+   it in the `system/hook_response` event.
 2. Whether the agent receives it, and whether the agent mentions it or asks the
    user without being asked. Answered for `claude -p`: the model received the
    plain line and did not mention it without being asked.
-3. The same two points for the JSON form of that client. Answered for
-   `claude -p` (forms B, C and D above). Open for the interactive display.
+3. The same two points for the JSON form of that client. Answered (forms B, C
+   and D above): `systemMessage` is displayed to the user and does not reach the
+   model, and `additionalContext` reaches the model and is not displayed.
 
-Copilot CLI 1.0.112, answered for prompt mode only:
+Copilot CLI 1.0.112:
 
 1. Whether the user sees the plain line, and whether the agent receives it and
-   mentions it. The plain line was ignored and did not reach the model. It did
-   not appear in the standard output or the standard error. Open for the
-   interactive terminal.
-2. The same points for its JSON form. The model received `additionalContext` and
-   did not mention it without being asked. The line appeared in the output only
-   as the model's answer to prompt 2. Open for the interactive terminal.
-3. Whether a plain line is ignored. Yes, in prompt mode.
-4. Whether a hook declared in `.claude/settings.json` also runs. Yes, in a
-   trusted folder, for the plain line (form E). Form B in that file was not run.
+   mentions it. Answered for prompt mode: the plain line was ignored and did not
+   reach the model, and did not appear in the standard output or the standard
+   error. Open for the interactive terminal.
+2. The same points for its JSON form. Answered for prompt mode: the model
+   received `additionalContext` and did not mention it without being asked. The
+   line appeared in the output only as the model's answer to prompt 2. Open for
+   the interactive terminal; issue #530 tracks that the Copilot user does not
+   see the notice.
+3. Whether a plain line is ignored. Answered: yes, in prompt mode.
+4. Whether a hook declared in `.claude/settings.json` also runs. Answered: yes,
+   in a trusted folder, for the plain line (form E). Form B in that file was not
+   run.
+5. Whether a hook that a plugin declares runs, and where. Answered: yes, from
+   `hooks.json` at the plugin root, with the plugin root as working directory,
+   and in a folder that was not trusted.
 
-Open for Copilot CLI: the interactive terminal, a hook that a plugin declares,
-and a hook declared in `~/.copilot/hooks/`.
+Still open: the interactive display of Copilot CLI, a hook declared in
+`~/.copilot/hooks/`, and an install of either plugin through a marketplace.
