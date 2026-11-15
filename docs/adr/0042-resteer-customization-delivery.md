@@ -1,6 +1,7 @@
 # AD-0042 — Re-steer customization delivery to reliable install, update and removal
 
-Status: **accepted**. Date: 2026-11-11.
+Status: **accepted**. Date: 2026-11-11. Amended on 2026-11-15 to state the
+delivered behaviour and to add Decision 8.
 [MVP epic #283](https://github.com/driftsys/upskill/issues/283). The archived
 [re-steer design](https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-11-11-customization-resteer-design.md)
 holds the original design and delivery order. This record states the decisions
@@ -109,16 +110,16 @@ and installed through a command.
    [#465](https://github.com/driftsys/upskill/issues/465) adds the trial record
    as the technote `t1-copilot-duplicate-visibility.md`.
 8. **Scope, update check and session notice.** The two scopes are named project
-   and global. `add`, `update` and `remove` print one line that states the scope
-   and its root. Outside a git repository and without a scope flag, `add` stops
-   and asks for `--project` or `--global`; `update`, `remove` and `remove-mcp`
-   use the global scope there. A global install writes Copilot content to the
-   personal directories of Copilot CLI under `$HOME/.copilot`. `list` and
-   `doctor` report both scopes. The lockfile records the commit that each git
-   source resolved to. `update --check` changes no file, compares the recorded
-   commit with `git ls-remote` for the recorded ref, skips a source pinned to a
-   full commit hash, does not look for newer tags, compares the content hash of
-   a local path source, and stops its lookups after 10 seconds.
+   and global. `add`, `update`, `remove` and `remove-mcp` print one line that
+   states the scope and its root. Outside a git repository and without a scope
+   flag, `add` stops and asks for `--project` or `--global`; `update`, `remove`
+   and `remove-mcp` use the global scope there. A global install writes Copilot
+   content to the personal directories of Copilot CLI under `$HOME/.copilot`.
+   `list` and `doctor` report both scopes. The lockfile records the commit that
+   each git source resolved to. `update --check` changes no file, compares the
+   recorded commit with `git ls-remote` for the recorded ref, skips a source
+   pinned to a full commit hash, does not look for newer tags, compares the
+   content hash of a local path source, and stops its lookups after 10 seconds.
    `update
    --notice` is built for a session-start hook: it prints one line
    for each scope that has updates, prints a given set of updates once, contacts
