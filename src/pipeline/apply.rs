@@ -16,6 +16,7 @@ use std::io::{ErrorKind, Write};
 use std::path::{Component, Path, PathBuf};
 
 use super::ItemKind;
+use super::output::in_item_layout;
 use super::owned::{FileState, classify, matches_recorded, rel_to_record, sha256_hex};
 use super::plan::{PlannedFile, PlannedItem};
 use crate::lockfile::{LockedItem, Lockfile, OwnedFile};
@@ -270,6 +271,10 @@ pub(super) fn decide_plan(
         let kept_paths: BTreeSet<&str> = files.iter().map(|f| f.path.as_str()).collect();
         let mut stale = Vec::new();
         if let Some(entry) = entry {
+            // `update` and `add` check the whole lockfile before the first
+            // write; this check is the second line of defence for a caller
+            // of `decide_plan` that did not.
+            check_item_records(target, entry)?;
             // A `pending` path is a recorded path too: a failed run may have
             // written it, and this plan may no longer contain it.
             for old in entry.files.iter().chain(&entry.pending) {
@@ -1020,9 +1025,48 @@ fn check_item_components(target: &Path, rel: &Path, skip_last: bool) -> Result<(
     Ok(())
 }
 
+/// Refuses every recorded path, in the `files` and in the `pending` list of
+/// `entry`, that is outside the layout of the item: the error names the
+/// lockfile under `target`, the list, the item and the path. A hand-edited
+/// record could otherwise make `update` or `remove` delete a file that
+/// upskill never wrote. Reads nothing on disk. See [`in_item_layout`].
+pub(super) fn check_item_records(target: &Path, entry: &LockedItem) -> Result<()> {
+    for (list, files) in [("files", &entry.files), ("pending", &entry.pending)] {
+        for file in files {
+            if !in_item_layout(entry.kind, &entry.name, &file.path) {
+                anyhow::bail!(
+                    "{} records the path {} in the `{list}` list of the {} `{}`, which is \
+                     outside the layout of that item; fix or remove the record. No file \
+                     was written or deleted",
+                    target.join(crate::lockfile::LOCKFILE_NAME).display(),
+                    file.path,
+                    entry.kind,
+                    entry.name
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// [`check_item_records`] for every item of `lock`, whether or not the
+/// running command selects it. `add`, `update` and `remove` call it before
+/// their first write, so that a bad record stops the whole run.
+pub(super) fn check_lockfile_records(target: &Path, lock: &Lockfile) -> Result<()> {
+    lock.items
+        .iter()
+        .try_for_each(|entry| check_item_records(target, entry))
+}
+
 /// The recorded path `rel` as a relative path, when it may be deleted: only
 /// plain components, at least three of them, and a first component that is
-/// a client root. `None` for any other recorded path, which is skipped.
+/// a client root. `None` for any other recorded path.
+///
+/// `add`, `update` and `remove` refuse a record outside the item layout
+/// before they call this function, and every path inside that layout is
+/// accepted here, so for them the `None` branch is not reached. It stays
+/// for `doctor`, which does not refuse a bad record and skips the paths
+/// that this function rejects.
 pub(super) fn deletable(rel: &str) -> Option<PathBuf> {
     let path = PathBuf::from(rel);
     let parts: Vec<Component> = path.components().collect();
@@ -1238,7 +1282,7 @@ mod tests {
     }
 
     #[test]
-    fn ignores_a_recorded_path_that_is_not_plain() {
+    fn refuses_a_recorded_path_that_is_not_plain() {
         let tmp = tempfile::tempdir().unwrap();
         let outside = tmp.path().join("outside.md");
         fs::write(&outside, b"keep").unwrap();
@@ -1253,7 +1297,9 @@ mod tests {
                 sha256: sha256_hex(b"keep"),
             }],
         ));
-        apply_plan(&target, &mut lock, &[planned("s", &[])], true, None, false).unwrap();
+        let err =
+            apply_plan(&target, &mut lock, &[planned("s", &[])], true, None, false).unwrap_err();
+        assert!(format!("{err:#}").contains("../outside.md"), "{err:#}");
         assert!(outside.exists());
     }
 
@@ -1357,7 +1403,7 @@ mod tests {
     }
 
     #[test]
-    fn does_not_delete_a_recorded_path_outside_the_client_roots() {
+    fn refuses_a_recorded_path_outside_the_client_roots() {
         let tmp = tempfile::tempdir().unwrap();
         let main = tmp.path().join("src/main.rs");
         fs::create_dir_all(main.parent().unwrap()).unwrap();
@@ -1370,7 +1416,7 @@ mod tests {
             "s",
             vec![record("src/main.rs"), record(".claude/x.md")],
         ));
-        apply_plan(
+        let err = apply_plan(
             tmp.path(),
             &mut lock,
             &[planned("s", &[])],
@@ -1378,7 +1424,8 @@ mod tests {
             None,
             false,
         )
-        .unwrap();
+        .unwrap_err();
+        assert!(format!("{err:#}").contains("src/main.rs"), "{err:#}");
         assert!(main.exists());
         assert!(shallow.exists());
     }
@@ -1629,7 +1676,7 @@ mod pre_check_tests {
     }
 
     #[test]
-    fn ignores_a_recorded_path_with_a_parent_component_inside_a_client_root() {
+    fn refuses_a_recorded_path_with_a_parent_component_inside_a_client_root() {
         let tmp = tempfile::tempdir().unwrap();
         let outside = tmp.path().join("outside.md");
         fs::write(&outside, b"keep").unwrap();
@@ -1640,7 +1687,8 @@ mod pre_check_tests {
             files: vec![],
             ..planned("s", ".claude/skills/s/SKILL.md")
         };
-        apply_plan(&target, &mut lock, &[s], true, None, false).unwrap();
+        let err = apply_plan(&target, &mut lock, &[s], true, None, false).unwrap_err();
+        assert!(format!("{err:#}").contains("outside.md"), "{err:#}");
         assert_eq!(fs::read(&outside).unwrap(), b"keep");
     }
 
@@ -2145,7 +2193,7 @@ mod conflict_tests {
     #[test]
     fn stale_file_of_one_item_is_not_deleted_when_another_item_writes_it() {
         let tmp = tempfile::tempdir().unwrap();
-        let shared = ".claude/skills/x/SKILL.md";
+        let shared = ".claude/skills/s/shared.md";
         put(tmp.path(), shared, b"old");
         let mut lock = lock_with("s", vec![owned(shared, b"old")]);
         let mut writer = planned("t", &[(shared, b"old")]);
@@ -2989,7 +3037,7 @@ mod pending_stale_tests {
     #[test]
     fn a_pending_path_that_another_item_plans_is_not_deleted() {
         let tmp = tempfile::tempdir().unwrap();
-        let shared = ".claude/skills/x/SKILL.md";
+        let shared = ".claude/skills/s/shared.md";
         put(tmp.path(), shared, b"r");
         let mut lock = lock_with(vec![], vec![owned(shared, b"r")]);
         let mut other = planned(&[(shared, b"r")]);
