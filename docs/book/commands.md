@@ -116,21 +116,26 @@ versions wrote (for example `upskill add ./.claude/skills`). An item renamed
 with `--as` is checked only under its installed (alias) name, because nothing is
 written under its source name. The paths of each installed item are compared
 with the directory of that item and with the directory of every other item of
-every source that the run reads: the entry source, also one that only declares
-`requires`, and each dependency source. The directory of an item that is not
-installed (not named, excluded with `--exclude`, not in the bundle, or an item
-of a dependency source that the `requires` closure does not select) is protected
-in the same way, but such an item has no paths in the check, also when it is at
-its own output path. The `audience` field and the client selection are not
-applied: an item whose `audience` shares no client with the selected clients is
-still treated as installed, its paths for every client are compared, and it can
-cause a refusal although nothing would be installed for the item. The error
-names the item, the source directory and the output path, and for an overlap
-with another item also that item. `add` fails with exit code 1 before any file
-or lockfile is changed. `upskill update` is refused in the same way, including
-for recorded aliases, but it checks each source just before it updates that
-source: the refusal comes before any change for that source, and an `update`
-over several sources may have updated earlier sources before it stops.
+every source that the install reads: the source given to `add`, also the source
+of a bundle file whose bundle selects no item and only declares `requires`, and
+each dependency source. The directory of an item that is not installed (not
+named, excluded with `--exclude`, not in the bundle, or an item of a dependency
+source that the `requires` closure does not select) is protected in the same
+way, but such an item has no paths in the check, also when it is at its own
+output path. The `audience` field and the client selection are not applied: an
+item whose `audience` shares no client with the selected clients is still
+treated as installed, its paths for every client are compared, and it can cause
+a refusal although nothing would be installed for the item. The error names the
+item, the source directory and the output path, and for an overlap with another
+item also that item. `add` fails with exit code 1 before any file or lockfile is
+changed. `upskill update` is refused in the same way, including for recorded
+aliases, but it installs each lockfile source again on its own and checks it
+just before it updates that source: it compares the items of that source and of
+the dependency sources that it reads for that source. It does not read the
+source of the bundle that pulled a dependency item into the lockfile, and it
+does not compare the items of two lockfile sources with each other. The refusal
+comes before any change for that source, and an `update` over several sources
+may have updated earlier sources before it stops.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
 destination of every item against the item's `files` and `pending` records (see

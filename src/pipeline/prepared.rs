@@ -230,8 +230,9 @@ pub(super) fn prepare_install(
     // -- Refuse a source item that overlaps an output path of the run --
     // Runs before the adoption and before any write, so a refused install
     // changes no file. Aliases apply to entry-source items only, as in the
-    // plan below. The items of every source that the run reads are compared
-    // with each other.
+    // plan below. The items of every source that this call reads are compared
+    // with each other: for `update`, one lockfile source and the dependency
+    // sources read for it, not the other lockfile sources.
     let at = crate::scope::ScopeRoot {
         scope: options.scope,
         root: target.to_path_buf(),
