@@ -669,7 +669,7 @@ Unregister an MCP server that a bundle install configured (see the `mcps:` note
 under [`upskill add`](#upskill-add-source-items)).
 
 ```bash
-upskill remove-mcp drawio            # remove from the project scope
+upskill remove-mcp drawio            # in a git repository: the project scope
 upskill remove-mcp drawio --global   # remove from the $HOME scope
 ```
 
