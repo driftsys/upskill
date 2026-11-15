@@ -373,3 +373,36 @@ fn copilot_hook_prints_nothing_when_project_directory_is_missing() {
     assert_silent_success(&out);
     assert!(recorded.is_none(), "upskill must not be called");
 }
+
+#[test]
+fn copilot_hook_enters_a_relative_directory_that_starts_with_a_hyphen() {
+    let run_dir = tempfile::tempdir().unwrap();
+    let target = run_dir.path().join("-x");
+    fs::create_dir(&target).unwrap();
+    let (out, recorded) = run_copilot_in_dirs(run_dir.path(), Some(Path::new("-x")));
+    assert!(out.status.success());
+    assert_eq!(
+        recorded
+            .expect("upskill must be called")
+            .canonicalize()
+            .unwrap(),
+        target.canonicalize().unwrap()
+    );
+}
+
+#[test]
+fn copilot_hook_enters_a_directory_whose_name_holds_a_space() {
+    let run_dir = tempfile::tempdir().unwrap();
+    let project = tempfile::tempdir().unwrap();
+    let target = project.path().join("a b");
+    fs::create_dir(&target).unwrap();
+    let (out, recorded) = run_copilot_in_dirs(run_dir.path(), Some(&target));
+    assert!(out.status.success());
+    assert_eq!(
+        recorded
+            .expect("upskill must be called")
+            .canonicalize()
+            .unwrap(),
+        target.canonicalize().unwrap()
+    );
+}
