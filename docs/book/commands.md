@@ -224,10 +224,17 @@ content to `.github/skills`, `.github/instructions` and `.github/agents` under
 [global paths](#per-client-output-paths): it writes the new file and deletes the
 file at the earlier path when that file is unchanged. An edited file at the
 earlier path is kept and named in the output. The items of such a run are
-reported as up to date when their source did not change; the line
-`Changed N file(s) written or deleted` counts the moved files. The empty client
-root and kind directories that remain, for example `$HOME/.github/skills`, are
-kept.
+reported as up to date when their source did not change, and the last line
+counts the moved files. For one skill, the output is:
+
+```text
+Updated 0 of 1 item(s)
+  skill foo                              up to date
+Changed 2 file(s) written or deleted
+```
+
+The empty client root and kind directories that remain, for example
+`$HOME/.github/skills`, are kept.
 
 `update` honours the same [client-selection](#upskill-add-source-items) flags
 and `clients:` config as `add` (`--claude`, `--copilot`, `--vscode`,
@@ -607,10 +614,13 @@ and the global scope outside one. When the current directory is the home
 directory, the project scope is refused with exit code 2 and a message that asks
 for `--global`. When a named item is not in the lockfile of that scope but the
 other scope records it, `remove` fails with `not in lockfile` and prints one
-line for each such name,
-`hint: '<name>' is installed in the <scope> scope (<root>); pass
---<scope>`, to
-stderr. A name that the current scope also holds gets no such line. When no name
+line for each such name, to stderr:
+
+```text
+hint: '<name>' is installed in the <scope> scope (<root>); pass --<scope>
+```
+
+A name that the current scope also holds gets no such line. When no name
 qualifies, `remove` prints the `upskill doctor` hint instead. `update <name>`
 does the same.
 
@@ -659,7 +669,7 @@ Unregister an MCP server that a bundle install configured (see the `mcps:` note
 under [`upskill add`](#upskill-add-source-items)).
 
 ```bash
-upskill remove-mcp drawio            # remove from the current project
+upskill remove-mcp drawio            # remove from the project scope
 upskill remove-mcp drawio --global   # remove from the $HOME scope
 ```
 

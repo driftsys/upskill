@@ -238,8 +238,11 @@ pub enum Commands {
     /// List installed content recorded in `.upskill-lock.json`.
     ///
     /// Without a scope flag, both scopes are reported: the project scope
-    /// (current directory), then the global scope (`$HOME`). `--global` or
-    /// `--project` limits the report to that scope. In each scope, items
+    /// (current directory), then the global scope (`$HOME`). When the
+    /// current directory is the home directory, only the global scope is
+    /// reported; when neither `HOME` nor `USERPROFILE` is set, only the
+    /// project scope is reported. `--global` or `--project` limits the
+    /// report to that scope. In each scope, items
     /// are grouped by kind (rules, skills, agents). Bundles, when present,
     /// are surfaced as a separate section. The command never
     /// fetches and never inspects per-client output files — for that, run
@@ -273,8 +276,11 @@ pub enum Commands {
     /// earlier Copilot paths that `update --global` moves.
     ///
     /// Without a scope flag, both scopes are checked: the project scope
-    /// (current directory), then the global scope (`$HOME`). `--global` or
-    /// `--project` limits the check to that scope. An item installed in both
+    /// (current directory), then the global scope (`$HOME`). When the
+    /// current directory is the home directory, only the global scope is
+    /// checked; when neither `HOME` nor `USERPROFILE` is set, only the
+    /// project scope is checked. `--global` or `--project` limits the
+    /// check to that scope. An item installed in both
     /// scopes is noted and does not change the exit code.
     ///
     /// Doctor never fetches; remote-source drift detection is
