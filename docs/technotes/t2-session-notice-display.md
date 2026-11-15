@@ -1,12 +1,12 @@
 # How Claude Code and Copilot CLI handle the output of a session-start hook
 
-This note belongs to trial T2 of the customization re-steer (plan Task 9). It
-records what the documentation of each client states about a hook that runs when
-a session starts, and the results of the trial: Claude Code in non-interactive
-mode and in the interactive terminal, Copilot CLI in prompt mode, and the
-session-notice plugins of both clients loaded from a directory. The interactive
-display of Copilot CLI has not been observed. No plugin was installed through a
-marketplace. This note is informative.
+This note belongs to trial T2 of the customization re-steer (delivery step 8).
+It records what the documentation of each client states about a hook that runs
+when a session starts, and the results of the trial: Claude Code in
+non-interactive mode and in the interactive terminal, Copilot CLI in prompt
+mode, and the session-notice plugins of both clients loaded from a directory and
+installed through a marketplace. The interactive display of Copilot CLI has not
+been observed. This note is informative.
 
 `upskill update --notice` prints one plain line on standard output for each
 scope that has available updates (the project scope, then the global scope), for
@@ -240,7 +240,8 @@ Observed:
 Not observed:
 
 - A session that starts in another way than `startup`.
-- The display after an install through a marketplace.
+- The display in the interactive terminal after an install through a marketplace
+  (the marketplace install ran in prompt mode only).
 
 ## Trial result: Copilot CLI, non-interactive mode
 
@@ -348,8 +349,36 @@ Limit of these runs: the Copilot CLI run was made at commit `648239a`, before
 the later changes to the hook command (`cd --` before the directory change and
 the replacement of control characters) and before the plugin was renamed to
 `upskill`. The Claude Code run was also made before the rename and before the
-change for control characters. The current plugin files were not run. No install
-through a marketplace was done.
+change for control characters. The current plugin files were not run in these
+runs. The marketplace install in the next section ran the final plugin files.
+
+## Trial result: install through a marketplace
+
+Run on 2026-11-15. Method: the marketplace was added from a local directory that
+held the content of `driftsys/metapowers` pull request 78 before its merge
+(`<client> plugin marketplace add <directory>`, then
+`<client> plugin install upskill@metapowers`). The runs used a temporary project
+with one available update, a new cache directory for each client, prompt mode,
+and the same prompt as the other plugin runs (it asks whether the context holds
+a notice about upskill updates, and asks for an exact quote or `NONE`). The
+plugin files were the final ones, after the rename to `upskill` and the change
+for control characters. The marketplace and the plugin were removed after the
+runs.
+
+| Client                                           | Session 1       | Session 2       |
+| ------------------------------------------------ | --------------- | --------------- |
+| Claude Code 2.1.308, user scope                  | quoted the line | answered `NONE` |
+| Copilot CLI 1.0.112, plugin from the marketplace | quoted the line | answered `NONE` |
+
+Copilot CLI used the manifest `.github/plugin/marketplace.json` and loaded the
+plugin from `plugins/upskill-copilot` in place. It copied nothing. No
+`--trust-folder` flag was passed.
+
+Not done:
+
+- An install from the GitHub repository `driftsys/metapowers`. The same content
+  was merged there afterwards.
+- The interactive terminal for this install.
 
 ## Copilot CLI plugin layout and environment
 
@@ -404,5 +433,8 @@ Copilot CLI 1.0.112:
    `hooks.json` at the plugin root, with the plugin root as working directory,
    and in a folder that was not trusted.
 
-Still open: the interactive display of Copilot CLI, a hook declared in
-`~/.copilot/hooks/`, and an install of either plugin through a marketplace.
+An install of either plugin through a marketplace is answered: the final plugin
+files passed it in prompt mode (see the marketplace section above). Still open:
+the interactive display of Copilot CLI, a hook declared in `~/.copilot/hooks/`,
+the interactive terminal for an install through a marketplace, and an install
+from the GitHub repository `driftsys/metapowers`.

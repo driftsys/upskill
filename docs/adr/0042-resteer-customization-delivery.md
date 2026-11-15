@@ -1,12 +1,17 @@
 # AD-0042 — Re-steer customization delivery to reliable install, update and removal
 
-Status: **accepted**. Date: 2026-11-11.
-[MVP epic #283](https://github.com/driftsys/upskill/issues/283). The
-[re-steer design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-11-11-customization-resteer-design.md)
-holds the full design and delivery order. The change that adds this record is
-delivery step 0: it removes the unused code (Decision 5). Decision 7 describes
-the layout that upskill already writes. The other decisions are not implemented
-yet.
+Status: **accepted**. Date: 2026-11-11. Amended on 2026-11-15 to state the
+delivered behaviour and to add Decision 8.
+[MVP epic #283](https://github.com/driftsys/upskill/issues/283). The archived
+[re-steer design](https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-11-11-customization-resteer-design.md)
+holds the original design and delivery order. This record states the decisions
+as delivered on `main`: delivery steps 0 to 8 are merged. The user guide
+([commands](https://github.com/driftsys/upskill/blob/main/docs/book/commands.md),
+[support levels](https://github.com/driftsys/upskill/blob/main/docs/book/support-levels.md))
+and the
+[specification](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md)
+describe the behaviour in detail. No release holds this work yet; the last
+release is v0.8.1.
 
 ## Context
 
@@ -31,24 +36,52 @@ and installed through a command.
 
 ## Decision
 
-1. **Ownership record in the lockfile.** Each installed item will record the
-   files written for it, with the client, the path relative to the scope root
-   and the SHA-256 of the bytes written. `update` and `remove` will replace or
+1. **Ownership record in the lockfile.** Each installed item records the files
+   written for it, with the client, the path relative to the scope root and the
+   SHA-256 of the bytes written, in the `files` list of the item. The lockfile
+   `schema` is `2`; `schema: 1` is still read. `update` and `remove` replace or
    delete only files whose current hash equals the recorded hash (or whose hash
    with every CRLF replaced by LF equals it), unless the user passes `--force`.
-2. **Repeatable operations.** An install or update will record its intended
-   files as pending in the lockfile before it writes, will write each file
-   through a temporary file and a rename, and will then promote the pending
-   record. Running the same command again after an interruption will complete
-   the operation. There will be no journal, no checkpoint model and no writer
-   lock.
-3. **Support levels in place of activation gates.** Each client and kind will
-   have one published level: supported, experimental or unsupported. A smoke
-   test against the real client will set the level. A failed or outdated cell
-   will change only its own level. It will not block a release or another cell.
+   A modified recorded file is kept. A file at a destination path that no record
+   covers is never overwritten without `--force`. When an item cannot be written
+   because a destination file is modified or unowned, `update` skips the item
+   and reports the files. When the source of an item did not change and the user
+   edited one of its files, `update` keeps that file and reports it. `remove`
+   deletes the recorded files one by one and then the item directories that are
+   empty; it never calls `remove_dir_all`. The first `add`, `update` or `remove`
+   that changes a `schema: 1` lockfile adopts it: it records each existing file
+   at the output paths of the items with its current hash, keeps the old bytes
+   as `.upskill-lock.json.v1`, and saves `schema: 2`. Delivered differently from
+   the design: the only earlier layout that upskill knows is the global Copilot
+   layout (`.github/skills`, `.github/instructions` and `.github/agents` under
+   `$HOME`). `doctor` reports files at those paths, and `update --global` moves
+   them and deletes an earlier file only when it is unchanged. There is no
+   confirmation prompt for files from earlier layouts.
+2. **Repeatable operations.** An install or update records its intended files as
+   pending in the `pending` list of the item in the lockfile before it writes,
+   writes each file through a stage file `.upskill-stage-<16 hex
+   digits>` in
+   the destination directory and a rename, and then promotes the pending record
+   to `files`. A file that holds the bytes of a `files` or `pending` record is
+   owned, so running the same command again after an interruption completes the
+   operation without `--force`. `doctor` reports an item with a pending record
+   as interrupted. There is no journal, no checkpoint model and no writer lock.
+   A stage file that a killed process left is not deleted.
+3. **Support levels in place of activation gates.** Each client and kind has one
+   published level: supported, experimental or unsupported. The levels are a
+   table compiled into the binary (`src/support.rs`); `doctor` prints it and
+   does not detect client versions. A maintainer runs the smoke test
+   (`scripts/qualify-native-instructions.py`, listed by `just smoke`) against
+   the real client, which needs authentication and makes paid model calls, and
+   then updates the table. A failed or outdated cell changes only its own level.
+   It does not block a release or another cell. As built on 2026-11-15, the
+   Claude Code and Copilot CLI cells for rules, skills and agents are
+   `supported`, with the client version and the date of the smoke run recorded
+   in the table.
 4. **Claude Code and Copilot first.** Codex and OpenCode follow, each with its
-   own short design. OpenCode keeps its current generation and is published as
-   experimental. Codex stays unsupported in the MVP.
+   own short design. OpenCode keeps its current generation, receives the shared
+   ownership behaviour and is published as experimental. Codex stays unsupported
+   in the MVP; it has no client flag.
 5. **Unused code is parked.** The library modules that no command could reach
    (`lifecycle`, `filesystem`, `operations`, `files`, `compile`, `instructions`,
    `source_manifest`, `ownership`), their tests, the legacy projection and the
@@ -61,7 +94,8 @@ and installed through a command.
    `update`, repeatable operations, scope, update check, support levels) for all
    content kinds at the same time. There is no order between skills and rules.
    The update check stays after the scope step, and the updater plugins stay
-   last.
+   last. All eight steps are merged; the release named in step 8 is a later,
+   separate step.
 7. **Both copies of a rule for Claude Code and Copilot.** Decided by the
    maintainer on 2026-11-11, after trial T1. When a rule is installed for both
    Claude Code and Copilot, upskill writes both the `.claude/rules` file and the
@@ -75,6 +109,30 @@ and installed through a command.
    trial T1. The change for
    [#465](https://github.com/driftsys/upskill/issues/465) adds the trial record
    as the technote `t1-copilot-duplicate-visibility.md`.
+8. **Scope, update check and session notice.** The two scopes are named project
+   and global. `add`, `update`, `remove` and `remove-mcp` print one line that
+   states the scope and its root. Outside a git repository and without a scope
+   flag, `add` stops and asks for `--project` or `--global`; `update`, `remove`
+   and `remove-mcp` use the global scope there. A global install writes Copilot
+   content to the personal directories of Copilot CLI under `$HOME/.copilot`.
+   `list` and `doctor` report both scopes. The lockfile records the commit that
+   each git source resolved to. `update --check` changes no file, compares the
+   recorded commit with `git ls-remote` for the recorded ref, skips a source
+   pinned to a full commit hash, does not look for newer tags, compares the
+   content hash of a local path source, and stops its lookups after 10 seconds.
+   `update
+   --notice` is built for a session-start hook: it prints one line
+   for each scope that has updates, prints a given set of updates once, contacts
+   the sources at most once in 24 hours for each scope with a time limit of 5
+   seconds, keeps its state in `notice.json` in the cache directory, and exits
+   with code 0 in every case after the arguments are parsed. upskill does not
+   apply updates without the user's command. The hook is delivered as a plugin
+   for each of Claude Code and Copilot CLI, both named `upskill`, with sources
+   in `plugins/upskill-claude` and `plugins/upskill-copilot` of this repository
+   and a published copy in `driftsys/metapowers`. The user installs the plugin
+   with the client's own command; upskill does not install or own it. Trial T2
+   (technote `t2-session-notice-display.md`) records how each client shows the
+   hook output.
 
 This record replaces the following clauses of
 [AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md):
@@ -121,6 +179,8 @@ OpenCode experimental and Codex unsupported (Decisions 3 and 4).
 - Client trials no longer gate a release. Their results set support levels.
 - Two upskill processes that change the same scope at the same time are not
   supported.
+- Shared files that upskill creates or edits (`CLAUDE.md`,
+  `.vscode/settings.json`, `opencode.json`) are outside the ownership record.
 - The decision records and design notes for the removed code are kept as history
   and marked withdrawn. The trial results stay in `docs/technotes/` as research.
 - Work on Codex instructions inside a team-owned `AGENTS.md` is reviewed again
