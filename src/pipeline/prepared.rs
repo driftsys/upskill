@@ -329,9 +329,10 @@ impl PreparedInstall {
 
     /// Sets the fetched commit on the lockfile entries in `selected` (the
     /// `(kind, installed name)` of each entry that the run selected and
-    /// whose update is not withheld) and saves the lockfile only when a
+    /// whose update is not withheld), refreshes `required_by` of every entry
+    /// with [`refresh_required_by`], and saves the lockfile only when a
     /// value differs. An entry that is not in `selected` keeps its recorded
-    /// commit. Writes nothing for a source without a commit (a local path).
+    /// commit. A source without a commit (a local path) sets no commit.
     /// Used by `update` for a source that is not applied because it has no
     /// changes, so that the new commit alone does not leave the recorded
     /// commit behind.
@@ -340,19 +341,18 @@ impl PreparedInstall {
         target: &Path,
         selected: &BTreeSet<(ItemKind, String)>,
     ) -> Result<()> {
-        let Some(commit) = &self.commit else {
-            return Ok(());
-        };
         let mut lock = Lockfile::load(target)?;
-        let mut changed = false;
-        for item in lock
-            .items
-            .iter_mut()
-            .filter(|i| selected.contains(&(i.kind, i.name.clone())))
-        {
-            if item.commit.as_ref() != Some(commit) {
-                item.commit = Some(commit.clone());
-                changed = true;
+        let mut changed = refresh_required_by(&mut lock, &self.new_items());
+        if let Some(commit) = &self.commit {
+            for item in lock
+                .items
+                .iter_mut()
+                .filter(|i| selected.contains(&(i.kind, i.name.clone())))
+            {
+                if item.commit.as_ref() != Some(commit) {
+                    item.commit = Some(commit.clone());
+                    changed = true;
+                }
             }
         }
         if changed {
@@ -546,7 +546,7 @@ impl PreparedInstall {
         report.changed = outcome.changed;
         // A skipped item keeps its lockfile entry unchanged, or gets none. An
         // item kept for its modified files keeps its lockfile entry unchanged,
-        // except for its commit.
+        // except for its commit. Both get the refreshed `required_by` below.
         let skipped: BTreeSet<(ItemKind, String)> = report
             .conflicts
             .iter()
@@ -571,6 +571,9 @@ impl PreparedInstall {
         report.mcp_results =
             install_mcps_from_bundles(&report.bundles, plugin_scope, target, &options.selection);
 
+        // `required_by` of every entry, also of a skipped or kept item, gets
+        // the provenance of this run (#504).
+        refresh_required_by(&mut lock, &new_items);
         // An item that keeps its modified files has an equal record
         // (`apply::same_record`), so only its commit is brought up to date.
         let kept_edits: BTreeSet<(ItemKind, String)> = outcome
@@ -595,6 +598,15 @@ impl PreparedInstall {
             item.files = recorded
                 .remove(&(item.kind, item.name.clone()))
                 .unwrap_or_default();
+            // The refreshed `required_by` of an existing entry contains the
+            // requirers of this run and keeps the requirers of other runs.
+            if let Some(existing) = lock
+                .items
+                .iter()
+                .find(|i| i.kind == item.kind && i.name == item.name)
+            {
+                item.required_by = existing.required_by.clone();
+            }
             lock.upsert(item);
         }
         if resolved_bundles.is_empty() {
@@ -691,6 +703,44 @@ impl PreparedInstall {
 
         Ok(report)
     }
+}
+
+/// Refreshes `required_by` of every entry of `lock` with the provenance of
+/// one run, and returns whether a value changed (#504).
+///
+/// `new_items` are the lockfile entries that the run plans, each with the
+/// `required_by` that the run's closure computed. The run read the
+/// `requires` of each of its items, so a requirer label (`"kind:name"`) of
+/// an item in `new_items` is removed from every entry and added back only
+/// where `new_items` records it. A requirer that is not an item of the run
+/// is kept, whether or not it is installed. The result is sorted and has no
+/// duplicates.
+fn refresh_required_by(lock: &mut Lockfile, new_items: &[LockedItem]) -> bool {
+    let evaluated: BTreeSet<String> = new_items
+        .iter()
+        .map(|i| format!("{}:{}", i.kind, i.name))
+        .collect();
+    let mut changed = false;
+    for entry in &mut lock.items {
+        let mut merged: BTreeSet<String> = entry
+            .required_by
+            .iter()
+            .filter(|r| !evaluated.contains(*r))
+            .cloned()
+            .collect();
+        if let Some(new) = new_items
+            .iter()
+            .find(|i| i.kind == entry.kind && i.name == entry.name)
+        {
+            merged.extend(new.required_by.iter().cloned());
+        }
+        let merged: Vec<String> = merged.into_iter().collect();
+        if merged != entry.required_by {
+            entry.required_by = merged;
+            changed = true;
+        }
+    }
+    changed
 }
 
 /// Maps each item of `decision` to a [`PreviewItem`], and returns the
@@ -1362,5 +1412,65 @@ mod tests {
         );
         assert!(items.is_empty());
         assert!(kept.is_empty());
+    }
+
+    /// A lockfile entry `kind:name` with `required_by`.
+    fn requirement(kind: ItemKind, name: &str, required_by: &[&str]) -> LockedItem {
+        let mut item = entry(vec![]);
+        item.kind = kind;
+        item.name = name.to_string();
+        item.required_by = required_by.iter().map(|r| r.to_string()).collect();
+        item
+    }
+
+    #[test]
+    fn refresh_required_by_sets_the_new_requirers_on_an_empty_entry() {
+        let mut lock = lock_of(vec![requirement(ItemKind::Skill, "x", &[])]);
+        let new = vec![
+            requirement(ItemKind::Agent, "a", &[]),
+            requirement(ItemKind::Skill, "x", &["agent:a"]),
+        ];
+        assert!(refresh_required_by(&mut lock, &new));
+        assert_eq!(lock.items[0].required_by, vec!["agent:a"]);
+    }
+
+    #[test]
+    fn refresh_required_by_keeps_a_requirer_that_is_not_in_the_run() {
+        // `agent:a` of another source recorded the requirement; this run
+        // installs `x` alone.
+        let mut lock = lock_of(vec![requirement(ItemKind::Skill, "x", &["agent:a"])]);
+        let new = vec![requirement(ItemKind::Skill, "x", &[])];
+        assert!(!refresh_required_by(&mut lock, &new));
+        assert_eq!(lock.items[0].required_by, vec!["agent:a"]);
+    }
+
+    #[test]
+    fn refresh_required_by_removes_a_requirer_of_the_run_that_no_longer_requires() {
+        // `x` is not in the run: only its requirer `agent:a` is.
+        let mut lock = lock_of(vec![
+            requirement(ItemKind::Agent, "a", &[]),
+            requirement(ItemKind::Skill, "x", &["agent:a", "agent:other"]),
+        ]);
+        let new = vec![requirement(ItemKind::Agent, "a", &[])];
+        assert!(refresh_required_by(&mut lock, &new));
+        assert_eq!(lock.items[1].required_by, vec!["agent:other"]);
+    }
+
+    #[test]
+    fn refresh_required_by_merges_sorted_without_duplicates() {
+        let mut lock = lock_of(vec![requirement(
+            ItemKind::Skill,
+            "x",
+            &["skill:z", "agent:a"],
+        )]);
+        let new = vec![
+            requirement(ItemKind::Agent, "a", &[]),
+            requirement(ItemKind::Skill, "x", &["agent:a", "agent:b"]),
+        ];
+        refresh_required_by(&mut lock, &new);
+        assert_eq!(
+            lock.items[0].required_by,
+            vec!["agent:a", "agent:b", "skill:z"]
+        );
     }
 }

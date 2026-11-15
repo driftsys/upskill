@@ -416,7 +416,13 @@ apply a source whose preview changes nothing, so it does not repair a missing
 plugin or MCP registration of that source; `upskill doctor` reports it and
 `update --yes` repairs it. A change of only the `required_by` field of an item
 record is not shown as a change and does not cause a question; it is saved when
-the source is applied for another reason, or with `--yes`.
+the source is applied, and also when the preview of the source changes nothing.
+It is not saved with `--dry-run` or for a source that the answer did not apply.
+Each `add` and each source of `update` refreshes `required_by` of every lockfile
+entry: an item of the run is removed as a requirer from every entry and added
+back where it still requires the item, and a requirer that is not an item of the
+run is kept, also when it is not installed. The result does not depend on the
+order of the sources or of two `add` commands.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.

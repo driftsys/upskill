@@ -85,10 +85,9 @@ failed until `update --force`.
 ## Consequences
 
 - A terminal run and an `update --yes` run reach the same end state when every
-  answer is `y`, with three exceptions, each for a source whose preview changes
-  nothing: its plugin and MCP steps, a change of only `required_by` in an item
-  record of the source, and a change confined to a `bundles` record of the
-  lockfile (the preview does not compare `bundles` records).
+  answer is `y`, with two exceptions, each for a source whose preview changes
+  nothing: its plugin and MCP steps, and a change confined to a `bundles` record
+  of the lockfile (the preview does not compare `bundles` records).
 - A run without a source change reports an edited file, asks to delete the files
   of a client that the flags no longer select, asks to complete an interrupted
   item, and adopts a `schema: 1` lockfile.
@@ -110,10 +109,10 @@ failed until `update --force`.
   - A `--dry-run` block is exact for the current disk, but does not include the
     effect of applying an earlier source.
   - A change of only `required_by` in an item record is not shown and does not
-    cause a question. The reinstall of a dependency's own source computes a
-    different `required_by` than the reinstall of the source that requires it,
-    so counting it would cause a question on every run. The change is saved when
-    the source is applied for another reason, or with `--yes`.
+    cause a question: it is provenance, not a change of the item. The change is
+    saved when the source is applied, and also when the preview of the source
+    changes nothing; it is not saved with `--dry-run` or for a declined source.
+    Each run keeps the requirers that are not items of the run (#504).
   - When a new version of upskill renders an unchanged source to different bytes
     in an edited file only, the new rendering is not written and only the note
     is printed, until `update --force`. `doctor` lists the modified files.

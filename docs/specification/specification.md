@@ -326,8 +326,13 @@ applied, are not part of the preview and are not a reason to ask, so a terminal
 run does not repair a missing plugin or MCP registration of a source whose
 preview changes nothing (`doctor` reports it, `update --yes` repairs it). A
 change of only `required_by` in an item record is not shown and does not cause a
-question; it is saved when the source is applied for another reason, or with
-`--yes`.
+question; it is saved when the source is applied, and also when the preview of
+the source changes nothing, but not with `--dry-run` or for a declined source.
+Each `add` and each source of `update` refreshes `required_by` of every lockfile
+entry: an item of the run is removed as a requirer from every entry and added
+back where it still requires the item, and a requirer that is not an item of the
+run is kept, also when it is not installed. The result does not depend on the
+order of the sources or of two `add` commands.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,

@@ -443,3 +443,287 @@ fn update_does_not_pull_unrelated_siblings_of_a_cross_source_dependency() {
         "the cross-source dependency must survive update: {lock}"
     );
 }
+
+/// Read the lockfile of `root`.
+fn read_lock(root: &Path) -> serde_json::Value {
+    serde_json::from_str(&fs::read_to_string(root.join(".upskill-lock.json")).unwrap()).unwrap()
+}
+
+/// The lockfile entry `kind`/`name` of `lock`.
+fn entry<'a>(lock: &'a serde_json::Value, kind: &str, name: &str) -> &'a serde_json::Value {
+    lock["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["kind"] == kind && i["name"] == name)
+        .unwrap_or_else(|| panic!("{kind}:{name} must be in the lockfile: {lock}"))
+}
+
+/// `required_by` of the entry `kind`/`name` (empty when absent).
+fn required_by(lock: &serde_json::Value, kind: &str, name: &str) -> Vec<String> {
+    entry(lock, kind, name)["required_by"]
+        .as_array()
+        .map(|a| a.iter().map(|v| v.as_str().unwrap().to_string()).collect())
+        .unwrap_or_default()
+}
+
+/// A project with `reg-a` (agent `code-review`, which requires skill `sarif`
+/// of `reg-b`) and `reg-b` (skill `sarif`). Returns `(tmp, home, reg_a, reg_b)`.
+fn cross_source_project() -> (
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+) {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let reg_b = tmp.path().join("reg-b");
+    write_item(&reg_b, "SKILL.md", "sarif", "");
+    let reg_a = tmp.path().join("reg-a");
+    write_item(
+        &reg_a,
+        "AGENT.md",
+        "code-review",
+        &format!(
+            "requires:\n  skills: [{{ name: sarif, source: {} }}]\n",
+            reg_b.display()
+        ),
+    );
+    (tmp, home, reg_a, reg_b)
+}
+
+/// #504: the reinstall of the dependency's own source keeps the requirer
+/// that another source recorded, for both orders of the two `add` commands.
+#[test]
+fn add_of_the_dependency_source_keeps_required_by_in_both_orders() {
+    for dependency_first in [false, true] {
+        let (tmp, home, reg_a, reg_b) = cross_source_project();
+        let add_a = [
+            "add".to_string(),
+            reg_a.display().to_string(),
+            "code-review".to_string(),
+        ];
+        let add_b = [
+            "add".to_string(),
+            reg_b.display().to_string(),
+            "sarif".to_string(),
+        ];
+        let order = if dependency_first {
+            [add_b.clone(), add_a.clone()]
+        } else {
+            [add_a.clone(), add_b.clone()]
+        };
+        for args in order {
+            common::upskill_cmd(&home)
+                .current_dir(tmp.path())
+                .args(&args)
+                .assert()
+                .success();
+        }
+        let lock = read_lock(tmp.path());
+        assert_eq!(
+            required_by(&lock, "skill", "sarif"),
+            vec!["agent:code-review".to_string()],
+            "dependency_first={dependency_first}: {lock}"
+        );
+    }
+}
+
+/// #504: a bare `update` that applies the dependency's source after the
+/// requirer's source keeps the requirer in `required_by`.
+#[test]
+fn bare_update_keeps_required_by_when_the_dependency_source_is_applied_last() {
+    let (tmp, home, reg_a, reg_b) = cross_source_project();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review"])
+        .assert()
+        .success();
+    // Change both sources, so that the update applies both of them.
+    let agent = reg_a.join("code-review/AGENT.md");
+    fs::write(&agent, fs::read_to_string(&agent).unwrap() + "\nchanged\n").unwrap();
+    let skill = reg_b.join("sarif/SKILL.md");
+    fs::write(&skill, fs::read_to_string(&skill).unwrap() + "\nchanged\n").unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+
+    let lock = read_lock(tmp.path());
+    assert_eq!(
+        required_by(&lock, "skill", "sarif"),
+        vec!["agent:code-review".to_string()],
+        "{lock}"
+    );
+}
+
+/// #504: `update` refreshes `required_by` of an item that keeps its edited
+/// files, without a change of its files or its hash, when the requirer of
+/// the same source stops requiring it.
+#[test]
+fn update_refreshes_required_by_of_a_kept_item() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let reg = tmp.path().join("reg");
+    write_item(
+        &reg,
+        "AGENT.md",
+        "code-review",
+        "requires:\n  skills: [sarif]\n",
+    );
+    write_item(&reg, "SKILL.md", "sarif", "");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg", "code-review", "--claude"])
+        .assert()
+        .success();
+    let before = read_lock(tmp.path());
+    assert_eq!(
+        required_by(&before, "skill", "sarif"),
+        vec!["agent:code-review".to_string()]
+    );
+
+    // Edit the installed file of `sarif`, so that the update keeps it.
+    let installed = tmp.path().join(".claude/skills/sarif/SKILL.md");
+    let edited = fs::read_to_string(&installed).unwrap() + "\nmy edit\n";
+    fs::write(&installed, &edited).unwrap();
+    // The requirer stops requiring `sarif`.
+    write_item(&reg, "AGENT.md", "code-review", "");
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+
+    let after = read_lock(tmp.path());
+    assert!(
+        required_by(&after, "skill", "sarif").is_empty(),
+        "required_by of the kept item must be refreshed: {after}"
+    );
+    let (old, new) = (
+        entry(&before, "skill", "sarif"),
+        entry(&after, "skill", "sarif"),
+    );
+    assert_eq!(old["hash"], new["hash"], "{after}");
+    assert_eq!(old["files"], new["files"], "{after}");
+    assert_eq!(fs::read_to_string(&installed).unwrap(), edited);
+}
+
+/// #504: when the requirer stops requiring a dependency of another source,
+/// `update` removes the requirer from `required_by` of the dependency,
+/// which the update does not reinstall, and `doctor` reports no orphan.
+#[test]
+fn update_refreshes_required_by_of_a_dependency_that_is_no_longer_required() {
+    let (tmp, home, reg_a, _reg_b) = cross_source_project();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review"])
+        .assert()
+        .success();
+    write_item(&reg_a, "AGENT.md", "code-review", "");
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+
+    let lock = read_lock(tmp.path());
+    assert!(
+        required_by(&lock, "skill", "sarif").is_empty(),
+        "required_by of sarif must be refreshed: {lock}"
+    );
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .arg("doctor")
+        .assert()
+        .get_output()
+        .stdout
+        .clone();
+    let out = String::from_utf8_lossy(&out);
+    assert!(
+        !out.contains("orphan"),
+        "doctor must report no orphan; stdout was: {out}"
+    );
+}
+
+/// #504: an `update` of sources without changes restores a missing
+/// requirer in `required_by` and reports no change.
+#[test]
+fn update_without_changes_refreshes_required_by_silently() {
+    let (tmp, home, _reg_a, _reg_b) = cross_source_project();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review"])
+        .assert()
+        .success();
+    // A lockfile written by an earlier version that dropped the requirer.
+    let path = tmp.path().join(".upskill-lock.json");
+    let mut lock = read_lock(tmp.path());
+    for item in lock["items"].as_array_mut().unwrap() {
+        item.as_object_mut().unwrap().remove("required_by");
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update"])
+        .assert()
+        .success()
+        .get_output()
+        .clone();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        !stdout.contains("updated") && !stdout.contains("sarif"),
+        "the refresh must print no item line; stdout was: {stdout}"
+    );
+
+    let lock = read_lock(tmp.path());
+    assert_eq!(
+        required_by(&lock, "skill", "sarif"),
+        vec!["agent:code-review".to_string()],
+        "{lock}"
+    );
+}
+
+/// #504: in a terminal, a source without changes is not applied; the
+/// update still restores a missing requirer in `required_by`, and asks
+/// nothing.
+#[cfg(unix)]
+#[test]
+fn terminal_update_without_changes_refreshes_required_by_silently() {
+    let (tmp, home, _reg_a, _reg_b) = cross_source_project();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review"])
+        .assert()
+        .success();
+    let path = tmp.path().join(".upskill-lock.json");
+    let mut lock = read_lock(tmp.path());
+    for item in lock["items"].as_array_mut().unwrap() {
+        item.as_object_mut().unwrap().remove("required_by");
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &[], "");
+    assert_eq!(result["returncode"], 0, "{result}");
+    for stream in ["stdout", "stderr"] {
+        assert!(
+            !result[stream].as_str().unwrap().contains("Apply"),
+            "{result}"
+        );
+    }
+    let lock = read_lock(tmp.path());
+    assert_eq!(
+        required_by(&lock, "skill", "sarif"),
+        vec!["agent:code-review".to_string()],
+        "{lock}"
+    );
+}

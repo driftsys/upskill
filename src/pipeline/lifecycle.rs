@@ -784,7 +784,9 @@ fn reselect_from_entries(
 /// requires (from this source or from another one), and every member for a
 /// bundle source. Each reinstalled entry gets the commit of its own source,
 /// unless its update is skipped; any other entry keeps its recorded commit.
-/// The lockfile is saved only when a commit value differs. This write is not in
+/// On this path `required_by` of every entry is also refreshed
+/// (`PreparedInstall::record_commit`), and the lockfile is saved only when
+/// a commit value or a `required_by` value differs. This write is not in
 /// [`UpdateReport::changed`] and does not make the source a source with
 /// changes. A declined source and a dry run write no commit. In an applied
 /// source, an item whose modified destinations are kept

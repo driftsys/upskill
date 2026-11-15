@@ -95,6 +95,11 @@ pub struct LockedItem {
     /// `"kind:name"` of every installed item that pulled this one in as a
     /// dependency. Empty for directly-requested items. Drives `doctor`'s
     /// orphaned-dependency check; never triggers auto-removal (#196).
+    /// Each `add` and `update` run of a source refreshes the field of every
+    /// entry: a requirer that is an item of the run is kept only where the
+    /// run's closure records it, and a requirer that is not an item of the
+    /// run is kept, also when it is not installed (#504). Sorted, without
+    /// duplicates.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_by: Vec<String>,
     /// Source folder this item was discovered in — the co-location
