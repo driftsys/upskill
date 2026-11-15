@@ -94,6 +94,16 @@ src/
 └── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)
 ```
 
+Outside `src/`, `plugins/` holds the sources of the session-notice hook plugins
+for Claude Code and Copilot CLI. Each plugin calls `upskill update --notice`
+from a session-start hook. These directories are the sources. A copy is
+published in the repository `driftsys/metapowers`, which holds the marketplace
+manifests (`.claude-plugin/marketplace.json` for Claude Code,
+`.github/plugin/marketplace.json` for Copilot CLI). A change to `plugins/` must
+be copied there. The Claude Code hook uses the matcher `startup` because the
+notice is meant for a new session: a resumed, cleared, compacted or forked
+session does not run the lookup again.
+
 Documentation map: [docs/README.md](docs/README.md). The published mdBook source
 is `docs/book/`; specifications are included from their canonical files. Working
 specs and plans are in `docs/wip/`; research is in `docs/technotes/`.
