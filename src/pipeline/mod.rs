@@ -167,7 +167,8 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// file at one of its destinations is not written, its lockfile entry is
 /// unchanged, and its conflicts are in [`InstallReport::conflicts`]; the
 /// other items are written (see `apply::decide_plan`). An installed name
-/// that contains a path separator fails before any change.
+/// that is empty, `.` or `..`, or that contains a path separator, fails
+/// before any change.
 ///
 /// Before the adoption and before any write, the overlap check refuses
 /// a source item directory that is, is inside, or contains one of its own

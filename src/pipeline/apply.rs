@@ -206,8 +206,9 @@ pub(super) fn apply_plan(
 /// on the way to one, is a conflict of the item.
 ///
 /// It fails when two planned items have the same
-/// `(kind, name)` or an installed name contains a path separator, when two
-/// planned files have the same path, when one planned file is a directory
+/// `(kind, name)` or an installed name is empty, `.` or `..` or contains a
+/// path separator, when two planned files have the same path, when one
+/// planned file is a directory
 /// on the way to another, when a path to write or delete breaks the
 /// symbolic link rule of this module, or when a path to write is blocked:
 /// the client root or kind directory is a symbolic link to a missing target
@@ -821,12 +822,28 @@ fn destination_conflict(
     Ok((!same).then_some(state))
 }
 
-/// Fails when two planned items have the same `(kind, installed name)`, or
-/// when an installed name contains a path separator (`/` or `\`).
-/// Changes nothing on disk.
+/// Fails when two planned items have the same `(kind, installed name)`,
+/// when an installed name is empty, `.` or `..`, or when an installed name
+/// contains a path separator (`/` or `\`). Changes nothing on disk.
 pub(super) fn check_installed_names(planned: &[PlannedItem]) -> Result<()> {
     let mut seen: BTreeSet<(ItemKind, &str)> = BTreeSet::new();
     for item in planned {
+        if matches!(item.name.as_str(), "" | "." | "..") {
+            match &item.source_name {
+                Some(source) => anyhow::bail!(
+                    "cannot install the {} `{source}` as `{}`: an installed name must not be \
+                     empty, `.` or `..`",
+                    item.kind,
+                    item.name
+                ),
+                None => anyhow::bail!(
+                    "cannot install the {} `{}`: an installed name must not be empty, `.` or \
+                     `..`",
+                    item.kind,
+                    item.name
+                ),
+            }
+        }
         if item.name.contains(['/', '\\']) {
             match &item.source_name {
                 Some(source) => anyhow::bail!(
@@ -2186,6 +2203,30 @@ mod conflict_tests {
         apply_plan(tmp.path(), &mut lock, &plan, false, None, false).unwrap();
         assert_eq!(fs::read(tmp.path().join(shared)).unwrap(), b"old");
         assert_eq!(lock.items[0].files, vec![owned(ENTRY, b"e")]);
+    }
+
+    #[test]
+    fn refuses_an_installed_name_that_is_empty_dot_or_dot_dot() {
+        for name in ["", ".", ".."] {
+            let item = planned(name, &[(".claude/skills/a/SKILL.md", b"x")]);
+            let err = check_installed_names(std::slice::from_ref(&item)).unwrap_err();
+            assert!(
+                err.to_string().contains(&format!(
+                    "the skill `{name}`: an installed name must not be empty"
+                )),
+                "{err}"
+            );
+            let aliased = PlannedItem {
+                source_name: Some("orig".into()),
+                ..item
+            };
+            let err = check_installed_names(&[aliased]).unwrap_err();
+            assert!(
+                err.to_string()
+                    .contains(&format!("the skill `orig` as `{name}`")),
+                "{err}"
+            );
+        }
     }
 
     #[test]
