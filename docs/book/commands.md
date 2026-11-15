@@ -157,9 +157,9 @@ then lists the replaced or deleted files after
 `Replaced or deleted <n> modified or unmanaged file(s) (--force)`; `-q/--quiet`
 hides this list.
 
-An installed name, or an `--as` alias, must not contain a path separator (`/` or
-`\`). `add` refuses such a name before it changes any file and names the item in
-the error.
+An installed name, or an `--as` alias, must not be empty, `.` or `..`, and must
+not contain a path separator (`/` or `\`). `add` refuses such a name before it
+changes any file and names the item in the error.
 
 A source rooted in a client directory (for example `~/.claude`) or one that
 contains a client output directory is not supported. The first `add` succeeds,
@@ -1068,10 +1068,10 @@ also when the command fails after the adoption was saved. `update --dry-run` and
 not in the lockfile. An `add` does not adopt when it is refused because a source
 item overlaps its own output paths, because an item conflicts with an item
 installed from another source, because two items would install under one name,
-or because an installed name contains a path separator. An `update` refused for
-one of these reasons does not adopt when the refused source is the first source
-it updates, and neither does an `update` whose first source resolves to no items
-while the lockfile records items from it.
+or because an installed name is empty, `.` or `..` or contains a path separator.
+An `update` refused for one of these reasons does not adopt when the refused
+source is the first source it updates, and neither does an `update` whose first
+source resolves to no items while the lockfile records items from it.
 
 ## Per-client output paths
 

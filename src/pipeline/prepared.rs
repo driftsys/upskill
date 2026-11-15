@@ -303,6 +303,17 @@ pub(super) fn prepare_install(
     // and also a member of a named bundle) is kept once. Two items with one
     // installed name fail here, before the adoption.
     plan::merge_duplicates(&mut report.planned);
+    // The same item reaches `report.items` once for the bundle and once for
+    // the name, so the summary would count it twice.
+    let mut seen = std::collections::BTreeSet::new();
+    report.items.retain(|i| {
+        seen.insert((
+            i.kind,
+            i.name.clone(),
+            i.client.name(),
+            i.output_path.clone(),
+        ))
+    });
     apply::check_installed_names(&report.planned)?;
 
     Ok(PreparedInstall {
