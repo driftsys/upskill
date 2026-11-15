@@ -100,6 +100,31 @@ pub(super) fn resource_base_path(
     }
 }
 
+/// Whether the recorded path `rel` is inside the layout that upskill can
+/// write for the item `(kind, name)`: it equals or lies below, for any
+/// client and either scope, the entry file, the resource base, or the
+/// released path of both. A path with a root, a prefix or a `..` component
+/// is never inside the layout. A recorded path is compared as written; no
+/// file system access happens here.
+pub(super) fn in_item_layout(kind: ItemKind, name: &str, rel: &str) -> bool {
+    use std::path::Component;
+    let path = Path::new(rel);
+    if !path.components().all(|c| matches!(c, Component::Normal(_))) {
+        return false;
+    }
+    ALL_CLIENTS.iter().any(|&client| {
+        let mut bases = vec![
+            released_output_path(kind, client, name),
+            released_resource_base_path(kind, client, name),
+        ];
+        for scope in [Scope::Project, Scope::Global] {
+            bases.push(output_path(scope, kind, client, name));
+            bases.push(resource_base_path(scope, kind, client, name));
+        }
+        bases.iter().any(|base| path.starts_with(base))
+    })
+}
+
 /// Refuse an install when the source item directory `source_dir` is the
 /// same directory as, is inside, or contains a path that the install
 /// deletes or writes for `(kind, name)` under the root of `at`. These are
@@ -488,5 +513,45 @@ mod tests {
         let (_tmp, target) = target_with_dir(".github/instructions/x");
         let source = target.join(".github/instructions/x");
         assert_refused_in(Scope::Global, &target, ItemKind::Rule, "x", &source);
+    }
+
+    #[test]
+    fn in_item_layout_accepts_the_paths_of_the_item() {
+        for rel in [
+            ".claude/skills/s/SKILL.md",
+            ".claude/skills/s/notes/a.md",
+            ".github/skills/s/SKILL.md",
+            ".copilot/skills/s/SKILL.md",
+        ] {
+            assert!(in_item_layout(ItemKind::Skill, "s", rel), "{rel}");
+        }
+        assert!(in_item_layout(
+            ItemKind::Agent,
+            "a",
+            ".copilot/agents/a.agent.md"
+        ));
+        assert!(in_item_layout(
+            ItemKind::Rule,
+            "r",
+            ".copilot/instructions/r.instructions.md"
+        ));
+    }
+
+    #[test]
+    fn in_item_layout_refuses_every_other_path() {
+        for rel in [
+            ".github/workflows/ci.yml",
+            ".claude/skills/other/SKILL.md",
+            ".claude/skills/sx/SKILL.md",
+            ".claude/skills/../../outside.txt",
+            ".claude/skills/s/../other/SKILL.md",
+            "/etc/hosts",
+            "/.claude/skills/s/SKILL.md",
+            "src/main.rs",
+            "",
+        ] {
+            assert!(!in_item_layout(ItemKind::Skill, "s", rel), "{rel}");
+        }
+        assert!(!in_item_layout(ItemKind::Skill, "s", ".claude/rules/s.md"));
     }
 }

@@ -480,13 +480,19 @@ to stderr; `--force` deletes a modified regular file, but never a path that is
 not a regular file. A recorded regular file that cannot be read is handled as
 modified. An absent recorded file is ignored. A file that the record does not
 list is **unowned** and is never deleted. Empty item directories are then
-deleted; client roots and kind directories are kept. A recorded path outside the
-client roots (`.claude`, `.github`, `.copilot`, `.agents`, `.opencode`) is never
-deleted, and a symbolic link in the item part of a recorded path's parent
-directories makes `remove` fail before any deletion. An item whose `files` and
-`pending` records are both empty has no file deleted. The lockfile entry of each
-removed item is dropped. `remove` adopts a `schema: 1` lockfile and prints the
-adoption notice, except when a name is not in the lockfile, which is an error.
+deleted; client roots and kind directories are kept. Before any deletion,
+`remove` checks the `files` and `pending` records of every item in the lockfile
+of the scope, also of items that it does not remove. A recorded path outside the
+layout that upskill writes for its item (the entry file or the resource
+directory of the item, for any client and scope, including the paths of released
+versions) makes `remove` fail with exit code 1; the error names the lockfile,
+the list, the item and the path, and nothing is deleted. Absolute paths and
+paths with a `..` component are outside that layout. A symbolic link in the item
+part of a recorded path's parent directories makes `remove` fail before any
+deletion. An item whose `files` and `pending` records are both empty has no file
+deleted. The lockfile entry of each removed item is dropped. `remove` adopts a
+`schema: 1` lockfile and prints the adoption notice, except when a name is not
+in the lockfile, which is an error.
 
 ### 2.4 `list` / `doctor`
 
@@ -695,19 +701,23 @@ change: the block of its source has a `complete` line for it, and in a terminal
 without `--yes` that source is asked about as for any other change (§2.2). A
 path of a `pending` record that the command that completes the operation does
 not plan is a stale recorded path: deleted when it matches its `pending` or
-`files` hash, kept and still recorded when modified. A stage file left by a
-process that was killed is not deleted by upskill. Two upskill processes that
-change one scope at the same time are not supported. `add`, `update` and
-`remove` (not `update --dry-run`, not `doctor`, not a `remove` that fails on an
-unknown name, not an `add`, or an `update` for its first source, that is refused
-for a source item that overlaps its own output paths, for a conflict with
-another source, for two items with one installed name, or for an installed name
-with a path separator, and not an `update` whose first source resolves to no
-items while the lockfile records items from it) adopt a `schema: 1` lockfile:
-they keep the old bytes as `.upskill-lock.json.v1` (an existing
-`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
-the items' output paths with its current hash, save `schema: 2`, and print the
-adopted paths to stderr.
+`files` hash, kept and still recorded when modified. Before the first write of a
+run, `add` and `update` (also `update --dry-run`) check the `files` and
+`pending` records of every item in the lockfile of the scope, also of items that
+the run does not select. A recorded path outside the layout of its item (§2.3)
+fails the command with exit code 1, and no file and no lockfile is written or
+deleted. `doctor` does not apply this check. A stage file left by a process that
+was killed is not deleted by upskill. Two upskill processes that change one
+scope at the same time are not supported. `add`, `update` and `remove` (not
+`update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
+not an `add`, or an `update` for its first source, that is refused for a source
+item that overlaps its own output paths, for a conflict with another source, for
+two items with one installed name, or for an installed name with a path
+separator, and not an `update` whose first source resolves to no items while the
+lockfile records items from it) adopt a `schema: 1` lockfile: they keep the old
+bytes as `.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept
+and not replaced), record each existing file at the items' output paths with its
+current hash, save `schema: 2`, and print the adopted paths to stderr.
 
 Two possible locations:
 

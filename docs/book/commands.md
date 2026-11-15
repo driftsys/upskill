@@ -634,12 +634,16 @@ A file that the record does not list (unowned), for example a file you added
 inside an item directory, is never deleted. After the files of an item are
 handled, `remove` deletes each item directory left empty; it never deletes a
 client root (such as `.claude`) or a kind directory (such as `.claude/skills`).
-A recorded path outside the client roots `.claude`, `.github`, `.copilot`,
-`.agents` and `.opencode` is never deleted. If a directory inside the item part
-of a recorded path (below the kind directory) is a symbolic link, `remove` fails
-before it deletes anything. An item whose `files` and `pending` records are both
-empty has nothing deleted. The lockfile entry of every removed item is dropped,
-including when files were kept.
+Before it deletes anything, `remove` checks the `files` and `pending` records of
+every item in the lockfile of the scope, also the items that it does not remove.
+A recorded path that is outside the layout that upskill writes for its item
+(another item's directory, a path outside the client roots, an absolute path or
+a path with a `..` component) makes `remove` fail with exit code 1. The error
+names the lockfile, the list, the item and the path; no file is deleted. If a
+directory inside the item part of a recorded path (below the kind directory) is
+a symbolic link, `remove` fails before it deletes anything. An item whose
+`files` and `pending` records are both empty has nothing deleted. The lockfile
+entry of every removed item is dropped, including when files were kept.
 
 `remove` adopts a `schema: 1` lockfile and prints the adoption notice, as
 described in [State files](#state-files). A name that is not in the lockfile is
@@ -989,10 +993,15 @@ git source also carries `commit`, the commit of the source at the last `add` or
 delete the recorded files that the new version no longer produces, unless
 another item installed by the same command writes that path, and only when the
 file is unchanged: a modified recorded file is kept and stays in the record. A
-file that the record does not list is never deleted. A file at a path that the
-new version writes is replaced only when it is unchanged, absent or already
-equal to the new bytes; otherwise the item is not written (see
-[`upskill add`](#upskill-add-source-items) and
+file that the record does not list is never deleted. Before it writes or deletes
+anything, the command (`add`, `update` and `update --dry-run` alike) checks the
+`files` and `pending` records of every item in the lockfile of the scope, also
+the items that it does not select. A recorded path that is outside the layout
+that upskill writes for its item fails the command with exit code 1; the error
+names the lockfile, the list, the item and the path, and no file and no lockfile
+is written or deleted. A file at a path that the new version writes is replaced
+only when it is unchanged, absent or already equal to the new bytes; otherwise
+the item is not written (see [`upskill add`](#upskill-add-source-items) and
 [`upskill update`](#upskill-update-name)) unless `--force` is given. An item
 that its source no longer contains is removed by `update` with the rules of
 `remove`. `remove` deletes only recorded files, as described in

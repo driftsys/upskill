@@ -170,6 +170,7 @@ pub(super) fn prepare_install(
     // This copy of the lockfile is used for the check only; `commit` loads
     // the lockfile again.
     let lock = Lockfile::load(target)?;
+    super::apply::check_lockfile_records(target, &lock)?;
     let mut conflicts = Vec::new();
     if let Some(closure) = &closure {
         // Group incoming items by their canonical source label; conflicts
