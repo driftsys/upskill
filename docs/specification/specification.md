@@ -188,10 +188,17 @@ earlier global Copilot paths (`.github/skills`, `.github/instructions` and
 `.github/agents` under `$HOME`): it writes the item at the path of §3.1 and
 deletes the file at the earlier path when it is unchanged. An edited file at the
 earlier path is kept and named in the output. The item of such a run is reported
-as up to date when its source did not change; the line
-`Changed N file(s) written or deleted` counts the moved files. The empty client
-root and kind directories that remain (for example `$HOME/.github/skills`) are
-kept, as the pruning rule of §2.3 states.
+as up to date when its source did not change, and the last line counts the moved
+files. For one skill, the output is:
+
+```text
+Updated 0 of 1 item(s)
+  skill foo                              up to date
+Changed 2 file(s) written or deleted
+```
+
+The empty client root and kind directories that remain (for example
+`$HOME/.github/skills`) are kept, as the pruning rule of §2.3 states.
 
 `update` applies the conflict rules of `add` (§2.1). An item with a modified or
 unowned destination is not written and keeps its lockfile entry (with its
