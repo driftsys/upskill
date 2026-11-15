@@ -295,3 +295,81 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
         }
     }
 }
+
+/// Runs the Copilot command with a fake `upskill` that records its working
+/// directory. `run_dir` is the current directory of the command and `project`
+/// is the value of `COPILOT_PROJECT_DIR`, if any. Returns the output and the
+/// recorded directory, or `None` when the fake was not called.
+fn run_copilot_in_dirs(run_dir: &Path, project: Option<&Path>) -> (Output, Option<PathBuf>) {
+    let tmp = tempfile::tempdir().unwrap();
+    let bin = tmp.path().join("bin");
+    fs::create_dir(&bin).unwrap();
+    let cwd_file = tmp.path().join("cwd");
+    let fake = bin.join("upskill");
+    fs::write(
+        &fake,
+        format!(
+            "#!/bin/sh\npwd -P > '{}'\necho 'upskill: notice'\n",
+            cwd_file.display()
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(&fake, fs::Permissions::from_mode(0o755)).unwrap();
+    let mut cmd = Command::new("sh");
+    cmd.arg("-c")
+        .arg(Plugin::Copilot.command())
+        .env_clear()
+        .env("PATH", format!("{}:/usr/bin:/bin", bin.display()))
+        .current_dir(run_dir);
+    if let Some(p) = project {
+        cmd.env("COPILOT_PROJECT_DIR", p);
+    }
+    let out = cmd.output().expect("sh runs");
+    let recorded = fs::read_to_string(&cwd_file)
+        .ok()
+        .map(|s| PathBuf::from(s.trim_end()));
+    (out, recorded)
+}
+
+#[test]
+fn copilot_hook_changes_to_the_project_directory() {
+    let run_dir = tempfile::tempdir().unwrap();
+    let project = tempfile::tempdir().unwrap();
+    let (out, recorded) = run_copilot_in_dirs(run_dir.path(), Some(project.path()));
+    assert!(out.status.success());
+    assert_eq!(
+        recorded.unwrap().canonicalize().unwrap(),
+        project.path().canonicalize().unwrap()
+    );
+}
+
+#[test]
+fn copilot_hook_stays_in_place_without_project_directory() {
+    let run_dir = tempfile::tempdir().unwrap();
+    let (out, recorded) = run_copilot_in_dirs(run_dir.path(), None);
+    assert!(out.status.success());
+    assert_eq!(
+        recorded.unwrap().canonicalize().unwrap(),
+        run_dir.path().canonicalize().unwrap()
+    );
+}
+
+#[test]
+fn copilot_hook_stays_in_place_with_empty_project_directory() {
+    let run_dir = tempfile::tempdir().unwrap();
+    let (out, recorded) = run_copilot_in_dirs(run_dir.path(), Some(Path::new("")));
+    assert!(out.status.success());
+    assert_eq!(
+        recorded.unwrap().canonicalize().unwrap(),
+        run_dir.path().canonicalize().unwrap()
+    );
+}
+
+#[test]
+fn copilot_hook_prints_nothing_when_project_directory_is_missing() {
+    let run_dir = tempfile::tempdir().unwrap();
+    let missing = run_dir.path().join("does-not-exist");
+    let (out, recorded) = run_copilot_in_dirs(run_dir.path(), Some(&missing));
+    assert_silent_success(&out);
+    assert!(recorded.is_none(), "upskill must not be called");
+}
