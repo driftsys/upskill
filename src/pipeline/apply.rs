@@ -128,7 +128,8 @@ pub(super) enum Disposition {
     Skip,
     /// Not written; nothing is withheld. Its modified destinations are
     /// reported in `ApplyOutcome::kept_edits`. Its lockfile entry is
-    /// unchanged, except that it receives the commit of the fetched source.
+    /// unchanged, except that it receives the commit of the fetched source
+    /// and the refreshed `required_by`.
     KeepEdits,
 }
 
@@ -165,10 +166,11 @@ pub(super) fn apply_plan(
 /// any item when `overwrite` is true, is written ([`Disposition::Write`]):
 /// a conflicting regular file is replaced. When `overwrite` is false, an
 /// item with at least one conflict is not written: none of its files is
-/// written or deleted, and its lockfile record is unchanged (a `KeepEdits`
-/// item below receives the commit of the fetched source). It is
-/// [`Disposition::KeepEdits`] (nothing is withheld from it) when all of
-/// these hold, and [`Disposition::Skip`] otherwise:
+/// written or deleted, and its lockfile record is unchanged here (a
+/// `KeepEdits` item below receives the commit of the fetched source, and
+/// `prepared::refresh_required_by` can change `required_by` of any
+/// entry). It is [`Disposition::KeepEdits`] (nothing is withheld from it)
+/// when all of these hold, and [`Disposition::Skip`] otherwise:
 ///
 /// - `keep_unwithheld_edits` is true;
 /// - every conflict is `Modified` and is a planned file of the item (not a
@@ -623,11 +625,10 @@ pub(super) fn execute_plan(
 /// Whether `a` and `b` are equal in every field except `files`, `pending`,
 /// `required_by` and `commit`. The comparison clears those four fields on
 /// clones and compares the rest, so a field added to `LockedItem` later is
-/// compared too. `required_by` is provenance: the reinstall of a
-/// dependency's own source computes it differently from the reinstall of
-/// the source that requires the dependency, so it does not count as a
-/// change here. `commit` is cleared because a new commit of a source whose
-/// item content is equal is not a change of the item.
+/// compared too. `required_by` is provenance that each run refreshes
+/// without a question (`prepared::refresh_required_by`), so it does not
+/// count as a change here. `commit` is cleared because a new commit of a
+/// source whose item content is equal is not a change of the item.
 pub(super) fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
     let strip = |item: &LockedItem| LockedItem {
         files: Vec::new(),

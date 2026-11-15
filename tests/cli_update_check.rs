@@ -1080,3 +1080,76 @@ fn an_applied_bundle_update_records_the_commit_on_every_member() {
     assert_eq!(commit_of(&e.repo, "alpha"), head.as_str());
     assert_eq!(commit_of(&e.repo, "beta"), head.as_str());
 }
+
+/// Makes `alpha` require `beta` in the upstream (one new commit) and
+/// installs the source for Claude.
+#[cfg(unix)]
+fn install_alpha_requiring_beta(e: &Env) {
+    advance(
+        e,
+        "skills/alpha/SKILL.md",
+        "---\nschema: 1\nname: alpha\ndescription: Use for testing the update check\nrequires:\n  skills: [beta]\n---\n\nAlpha content.\n",
+    );
+    let out = run(e, &e.repo, &["add", REMOTE, "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let beta = lock(&e.repo)["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == "beta")
+        .unwrap()["required_by"]
+        .clone();
+    assert_eq!(beta, serde_json::json!(["skill:alpha"]));
+}
+
+/// #504: a terminal `update` of a git source without changes, which is not
+/// applied, restores a missing requirer in `required_by`.
+#[cfg(unix)]
+#[test]
+fn a_terminal_update_of_a_git_source_without_changes_refreshes_required_by() {
+    let e = env();
+    install_alpha_requiring_beta(&e);
+    let mut value = lock(&e.repo);
+    for item in value["items"].as_array_mut().unwrap() {
+        item.as_object_mut().unwrap().remove("required_by");
+    }
+    fs::write(
+        e.repo.join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&value).unwrap(),
+    )
+    .unwrap();
+
+    let result =
+        common::update_in_terminal_with_env(&e.repo, &e.home, &[], "", &terminal_env(&e, None));
+    assert_eq!(result["returncode"], 0, "{result}");
+    let beta = lock(&e.repo)["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == "beta")
+        .unwrap()["required_by"]
+        .clone();
+    assert_eq!(beta, serde_json::json!(["skill:alpha"]), "{result}");
+}
+
+/// #504: a terminal `update` of a git source without changes, whose
+/// recorded commit equals the fetched commit and whose `required_by` values
+/// are current, does not save the lockfile.
+#[cfg(unix)]
+#[test]
+fn a_terminal_update_of_an_unchanged_git_source_saves_no_lockfile() {
+    let e = env();
+    install_alpha_requiring_beta(&e);
+    // A compact form that a save would rewrite as pretty-printed JSON.
+    let compact = serde_json::to_string(&lock(&e.repo)).unwrap();
+    fs::write(e.repo.join(".upskill-lock.json"), &compact).unwrap();
+
+    let result =
+        common::update_in_terminal_with_env(&e.repo, &e.home, &[], "", &terminal_env(&e, None));
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(
+        fs::read_to_string(e.repo.join(".upskill-lock.json")).unwrap(),
+        compact,
+        "{result}"
+    );
+}
