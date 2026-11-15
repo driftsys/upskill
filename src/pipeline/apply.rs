@@ -128,7 +128,8 @@ pub(super) enum Disposition {
     Skip,
     /// Not written; nothing is withheld. Its modified destinations are
     /// reported in `ApplyOutcome::kept_edits`. Its lockfile entry is
-    /// unchanged, except that it receives the commit of the fetched source.
+    /// unchanged, except that it receives the commit of the fetched source
+    /// and the refreshed `required_by`.
     KeepEdits,
 }
 
@@ -624,8 +625,8 @@ pub(super) fn execute_plan(
 /// clones and compares the rest, so a field added to `LockedItem` later is
 /// compared too. `required_by` is provenance that each run refreshes
 /// without a question (`prepared::refresh_required_by`), so it does not
-/// count as a change here. `commit` is cleared because a new commit of a source whose
-/// item content is equal is not a change of the item.
+/// count as a change here. `commit` is cleared because a new commit of a
+/// source whose item content is equal is not a change of the item.
 pub(super) fn same_record(a: &LockedItem, b: &LockedItem) -> bool {
     let strip = |item: &LockedItem| LockedItem {
         files: Vec::new(),

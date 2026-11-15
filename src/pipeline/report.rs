@@ -66,7 +66,8 @@ pub struct InstallReport {
     /// notice when it is `Some` and not empty.
     pub adopted: Option<Vec<String>>,
     /// Destinations that stopped the write of an item. Every item listed
-    /// here was not written, and its lockfile entry is unchanged.
+    /// here was not written, and its lockfile entry is unchanged except its
+    /// `required_by`.
     pub conflicts: Vec<super::FileConflict>,
     /// With `--force`: modified or unmanaged files that were replaced, and
     /// modified files that the new version no longer contains and that were
@@ -468,7 +469,8 @@ pub enum UpdateStatus {
     Removed,
     /// The item was not written because these destinations (relative to
     /// the install target root) are modified or not managed by upskill.
-    /// The files and the lockfile entry are unchanged. Reported for an
+    /// The files are unchanged, and the lockfile entry is unchanged except
+    /// its `required_by`. Reported for an
     /// applied source, and for a source that was not applied because it
     /// has no changes (see [`SourcePreview::has_changes`]).
     SkippedModified { files: Vec<PathBuf> },

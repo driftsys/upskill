@@ -122,7 +122,8 @@ pub struct AddOptions {
     /// modified destinations, and from which nothing is withheld (see
     /// `decide_plan`), is not written and is not reported in
     /// [`InstallReport::conflicts`]: its modified destinations are listed in
-    /// [`InstallReport::kept_modified`], and its lockfile entry is unchanged.
+    /// [`InstallReport::kept_modified`], and its lockfile entry is unchanged
+    /// except its commit and its `required_by`.
     pub keep_unwithheld_edits: bool,
     /// The scope of the install. It selects the output paths: the global
     /// scope writes Copilot content under `~/.copilot`. The default is the
@@ -160,12 +161,14 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// running the same command again completes a failed install (see
 /// `apply::execute_plan`); the bundles, plugins and MCP servers are saved
 /// after that. Existing
-/// lockfile entries for the same `(kind, name)` are replaced; entries
-/// installed from a different source are left in place.
+/// lockfile entries for the same `(kind, name)` are replaced, except that
+/// their `required_by` is refreshed (`prepared::refresh_required_by`), as
+/// is `required_by` of every other entry; entries installed from a
+/// different source are otherwise left in place.
 ///
 /// Unless `options.overwrite` is true, an item with a modified or unowned
 /// file at one of its destinations is not written, its lockfile entry is
-/// unchanged, and its conflicts are in [`InstallReport::conflicts`]; the
+/// unchanged except its `required_by`, and its conflicts are in [`InstallReport::conflicts`]; the
 /// other items are written (see `apply::decide_plan`). An installed name
 /// that contains a path separator fails before any change.
 ///

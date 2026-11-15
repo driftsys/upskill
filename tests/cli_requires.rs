@@ -531,34 +531,74 @@ fn add_of_the_dependency_source_keeps_required_by_in_both_orders() {
     }
 }
 
-/// #504: a bare `update` that applies the dependency's source after the
-/// requirer's source keeps the requirer in `required_by`.
+/// #504: a bare `update` that changes both sources keeps the requirer in
+/// `required_by`, for both orders of the two sources. `update` applies the
+/// sources in the order of their labels, so the directory names select the
+/// order: `dependency_last` names the requirer's source `a-req` and the
+/// dependency's source `z-dep`, otherwise `z-req` and `a-dep`. The test
+/// checks that the labels sort in the intended order.
 #[test]
-fn bare_update_keeps_required_by_when_the_dependency_source_is_applied_last() {
-    let (tmp, home, reg_a, reg_b) = cross_source_project();
-    common::upskill_cmd(&home)
-        .current_dir(tmp.path())
-        .args(["add", "./reg-a", "code-review"])
-        .assert()
-        .success();
-    // Change both sources, so that the update applies both of them.
-    let agent = reg_a.join("code-review/AGENT.md");
-    fs::write(&agent, fs::read_to_string(&agent).unwrap() + "\nchanged\n").unwrap();
-    let skill = reg_b.join("sarif/SKILL.md");
-    fs::write(&skill, fs::read_to_string(&skill).unwrap() + "\nchanged\n").unwrap();
+fn bare_update_keeps_required_by_for_both_source_orders() {
+    for dependency_last in [true, false] {
+        let tmp = tempfile::TempDir::new().unwrap();
+        // The canonical path, so that the label of the source given on the
+        // command line and the label of the `requires` source have one form.
+        let root = fs::canonicalize(tmp.path()).unwrap();
+        let home = root.join("home");
+        fs::create_dir_all(&home).unwrap();
+        fs::create_dir_all(root.join(".git")).unwrap();
+        let (req_dir, dep_dir) = if dependency_last {
+            ("a-req", "z-dep")
+        } else {
+            ("z-req", "a-dep")
+        };
+        let reg_dep = root.join(dep_dir);
+        write_item(&reg_dep, "SKILL.md", "sarif", "");
+        let reg_req = root.join(req_dir);
+        write_item(
+            &reg_req,
+            "AGENT.md",
+            "code-review",
+            &format!(
+                "requires:\n  skills: [{{ name: sarif, source: {} }}]\n",
+                reg_dep.display()
+            ),
+        );
+        common::upskill_cmd(&home)
+            .current_dir(&root)
+            .args(["add", &reg_req.display().to_string(), "code-review"])
+            .assert()
+            .success();
+        let lock = read_lock(&root);
+        let dep_label = entry(&lock, "skill", "sarif")["source"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let req_label = entry(&lock, "agent", "code-review")["source"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert_eq!(dep_label > req_label, dependency_last, "{lock}");
 
-    common::upskill_cmd(&home)
-        .current_dir(tmp.path())
-        .args(["update", "--yes"])
-        .assert()
-        .success();
+        // Change both sources, so that the update applies both of them.
+        let agent = reg_req.join("code-review/AGENT.md");
+        fs::write(&agent, fs::read_to_string(&agent).unwrap() + "\nchanged\n").unwrap();
+        let skill = reg_dep.join("sarif/SKILL.md");
+        fs::write(&skill, fs::read_to_string(&skill).unwrap() + "\nchanged\n").unwrap();
 
-    let lock = read_lock(tmp.path());
-    assert_eq!(
-        required_by(&lock, "skill", "sarif"),
-        vec!["agent:code-review".to_string()],
-        "{lock}"
-    );
+        common::upskill_cmd(&home)
+            .current_dir(&root)
+            .args(["update", "--yes"])
+            .assert()
+            .success();
+
+        let lock = read_lock(&root);
+        assert_eq!(
+            required_by(&lock, "skill", "sarif"),
+            vec!["agent:code-review".to_string()],
+            "dependency_last={dependency_last}: {lock}"
+        );
+    }
 }
 
 /// #504: `update` refreshes `required_by` of an item that keeps its edited
@@ -617,8 +657,13 @@ fn update_refreshes_required_by_of_a_kept_item() {
 }
 
 /// #504: when the requirer stops requiring a dependency of another source,
-/// `update` removes the requirer from `required_by` of the dependency,
-/// which the update does not reinstall, and `doctor` reports no orphan.
+/// `update` removes the requirer from `required_by` of the dependency, and
+/// after the removal of the requirer `doctor` reports no orphaned
+/// dependency. The bare update also reinstalls the dependency's source
+/// (after the requirer's source, in label order). The test passes on the
+/// code before #504 too, because that reinstall replaced `required_by`
+/// with an empty value; it pins that the run of the requirer's source
+/// removes the requirer.
 #[test]
 fn update_refreshes_required_by_of_a_dependency_that_is_no_longer_required() {
     let (tmp, home, reg_a, _reg_b) = cross_source_project();
@@ -640,6 +685,13 @@ fn update_refreshes_required_by_of_a_dependency_that_is_no_longer_required() {
         required_by(&lock, "skill", "sarif").is_empty(),
         "required_by of sarif must be refreshed: {lock}"
     );
+    // With a stale `required_by: [agent:code-review]`, `doctor` would report
+    // `sarif` as an orphaned dependency after this removal.
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["remove", "code-review"])
+        .assert()
+        .success();
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .arg("doctor")
@@ -649,8 +701,8 @@ fn update_refreshes_required_by_of_a_dependency_that_is_no_longer_required() {
         .clone();
     let out = String::from_utf8_lossy(&out);
     assert!(
-        !out.contains("orphan"),
-        "doctor must report no orphan; stdout was: {out}"
+        !out.contains("orphaned dependency"),
+        "doctor must report no orphaned dependency; stdout was: {out}"
     );
 }
 
@@ -725,5 +777,145 @@ fn terminal_update_without_changes_refreshes_required_by_silently() {
         required_by(&lock, "skill", "sarif"),
         vec!["agent:code-review".to_string()],
         "{lock}"
+    );
+}
+
+/// Installs `code-review` of `reg-a` (which records `sarif` as required by
+/// it), adds the bundle `pack` (agent `code-review`) to `reg-a`, runs `add`
+/// with `args`, and returns `required_by` of `sarif` after it.
+fn required_by_after_a_second_add(args: &[&str]) -> Vec<String> {
+    let (tmp, home, reg_a, _reg_b) = cross_source_project();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review"])
+        .assert()
+        .success();
+    fs::write(
+        reg_a.join("pack.bundle.yaml"),
+        "schema: 1\nname: pack\ndescription: d\nitems:\n  agents: [code-review]\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(args)
+        .assert()
+        .success();
+    required_by(&read_lock(tmp.path()), "skill", "sarif")
+}
+
+/// #504 review: a bundle install reads no item `requires`, so it keeps the
+/// recorded requirers.
+#[test]
+fn bundle_add_by_name_keeps_required_by() {
+    assert_eq!(
+        required_by_after_a_second_add(&["add", "./reg-a", "pack"]),
+        vec!["agent:code-review".to_string()]
+    );
+}
+
+/// #504 review: as above, for a bundle file source (another source label,
+/// so `--force`).
+#[test]
+fn bundle_file_add_keeps_required_by() {
+    assert_eq!(
+        required_by_after_a_second_add(&["add", "./reg-a/pack.bundle.yaml", "--force"]),
+        vec!["agent:code-review".to_string()]
+    );
+}
+
+/// #504 review: an excluded dependency is still required by its requirer.
+#[test]
+fn add_with_an_excluded_dependency_keeps_required_by() {
+    assert_eq!(
+        required_by_after_a_second_add(&["add", "./reg-a", "code-review", "--exclude", "sarif"]),
+        vec!["agent:code-review".to_string()]
+    );
+}
+
+/// #504 review: a request that names a bundle and an item goes through
+/// name resolution, without a closure; it keeps the recorded requirers.
+#[test]
+fn add_through_name_resolution_keeps_required_by() {
+    assert_eq!(
+        required_by_after_a_second_add(&["add", "./reg-a", "code-review", "pack"]),
+        vec!["agent:code-review".to_string()]
+    );
+}
+
+/// #504 review: `update` refreshes `required_by` of an item whose update is
+/// skipped (its installed file was edited and its source changed).
+#[test]
+fn update_refreshes_required_by_of_a_skipped_item() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let reg = tmp.path().join("reg");
+    write_item(
+        &reg,
+        "AGENT.md",
+        "code-review",
+        "requires:\n  skills: [sarif]\n",
+    );
+    write_item(&reg, "SKILL.md", "sarif", "");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg", "code-review", "--claude"])
+        .assert()
+        .success();
+    let before = read_lock(tmp.path());
+
+    let installed = tmp.path().join(".claude/skills/sarif/SKILL.md");
+    let edited = fs::read_to_string(&installed).unwrap() + "\nmy edit\n";
+    fs::write(&installed, &edited).unwrap();
+    // The source of `sarif` changes too, so its update is skipped.
+    write_item(&reg, "SKILL.md", "sarif", "version: changed\n");
+    write_item(&reg, "AGENT.md", "code-review", "");
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes"])
+        .assert()
+        .code(1);
+
+    let after = read_lock(tmp.path());
+    assert!(
+        required_by(&after, "skill", "sarif").is_empty(),
+        "required_by of the skipped item must be refreshed: {after}"
+    );
+    assert_eq!(
+        entry(&before, "skill", "sarif")["hash"],
+        entry(&after, "skill", "sarif")["hash"],
+        "{after}"
+    );
+    assert_eq!(fs::read_to_string(&installed).unwrap(), edited);
+}
+
+/// #504 review: the refresh matches a requirer by its installed (`--as`)
+/// name.
+#[test]
+fn update_refreshes_required_by_of_an_aliased_requirer() {
+    let (tmp, home, reg_a, _reg_b) = cross_source_project();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review", "--as", "code-review=cr"])
+        .assert()
+        .success();
+    assert_eq!(
+        required_by(&read_lock(tmp.path()), "skill", "sarif"),
+        vec!["agent:cr".to_string()]
+    );
+    write_item(&reg_a, "AGENT.md", "code-review", "");
+
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes"])
+        .assert()
+        .success();
+
+    let lock = read_lock(tmp.path());
+    assert!(
+        required_by(&lock, "skill", "sarif").is_empty(),
+        "required_by of sarif must be refreshed: {lock}"
     );
 }

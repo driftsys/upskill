@@ -145,8 +145,9 @@ hand-shake file that cannot be updated (for example an `opencode.json` whose
 `instructions` is not an array), also fail the source before any file of that
 source is written, in every mode. Without `--force`, an item with at least one
 conflict is skipped as a whole: none of its files is written or deleted and its
-lockfile entry is not changed. The other items are written. `add` then prints
-one line per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
+lockfile entry is not changed, except its `required_by` (§2.2). The other items
+are written. `add` then prints one line per conflict to stderr,
+`skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces
@@ -194,19 +195,19 @@ kept, as the pruning rule of §2.3 states.
 
 `update` applies the conflict rules of `add` (§2.1). An item with a modified or
 unowned destination is not written and keeps its lockfile entry (with its
-recorded commit, except under the rule that follows). When a source hash is
-recorded for the item and equals the source hash of the item (an item with no
-recorded hash is skipped), the item has an empty `pending` record, every such
-destination is modified (none is unowned), applying the item would write or
-delete no other file, the item has no recorded file that the new version no
-longer produces (present or absent), and its lockfile entry would not change in
-any field other than `files`, `pending`, `required_by` and `commit` (for example
-`clients`), nothing is withheld: `update` reports `kept modified file: <path>`
-for each modified destination (in a terminal and with `--dry-run`, in the block
-of its source; with `--yes` or without a terminal, on stderr), and this note
-does not change the exit code. Otherwise the item is reported as skipped (in a
-terminal and with `--dry-run`, as a `skip` line of its block; with `--yes` or
-without a terminal, as
+recorded commit, except under the rule that follows), except its `required_by`.
+When a source hash is recorded for the item and equals the source hash of the
+item (an item with no recorded hash is skipped), the item has an empty `pending`
+record, every such destination is modified (none is unowned), applying the item
+would write or delete no other file, the item has no recorded file that the new
+version no longer produces (present or absent), and its lockfile entry would not
+change in any field other than `files`, `pending`, `required_by` and `commit`
+(for example `clients`), nothing is withheld: `update` reports
+`kept modified file: <path>` for each modified destination (in a terminal and
+with `--dry-run`, in the block of its source; with `--yes` or without a
+terminal, on stderr), and this note does not change the exit code. Otherwise the
+item is reported as skipped (in a terminal and with `--dry-run`, as a `skip`
+line of its block; with `--yes` or without a terminal, as
 `skipped <kind> <name>: <path> was modified or is not managed by upskill` on
 stderr). A skipped item of an applied source, or of a source whose preview
 changes nothing, makes `update` print `Use --force to replace.` on stderr and
@@ -328,11 +329,18 @@ preview changes nothing (`doctor` reports it, `update --yes` repairs it). A
 change of only `required_by` in an item record is not shown and does not cause a
 question; it is saved when the source is applied, and also when the preview of
 the source changes nothing, but not with `--dry-run` or for a declined source.
-Each `add` and each source of `update` refreshes `required_by` of every lockfile
-entry: an item of the run is removed as a requirer from every entry and added
-back where it still requires the item, and a requirer that is not an item of the
-run is kept, also when it is not installed. The result does not depend on the
-order of the sources or of two `add` commands.
+`required_by` is refreshed when `add` writes its install, when `update` applies
+a source, and when `update` does not apply a source whose preview changes
+nothing; a dry run, a declined source and a source at which the run stops
+refresh nothing. A refresh changes `required_by` of every lockfile entry. A
+requirer is evaluated by the run when the run resolved its `requires`: every
+item of an install by item names, or of a whole directory source, and every item
+that such an item requires. A bundle install, and a request that also names a
+bundle (resolved by name), evaluate no requirer. An evaluated requirer is
+removed from every entry and added back where it still requires the item (also
+an item that `--exclude` leaves out). Every other requirer is kept, also when it
+is not installed. The result does not depend on the order of the sources or of
+two `add` commands.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,

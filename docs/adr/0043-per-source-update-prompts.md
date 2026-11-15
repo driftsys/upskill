@@ -112,7 +112,7 @@ failed until `update --force`.
     cause a question: it is provenance, not a change of the item. The change is
     saved when the source is applied, and also when the preview of the source
     changes nothing; it is not saved with `--dry-run` or for a declined source.
-    Each run keeps the requirers that are not items of the run (#504).
+    Each run keeps the requirers whose `requires` it did not resolve (#504).
   - When a new version of upskill renders an unchanged source to different bytes
     in an edited file only, the new rendering is not written and only the note
     is printed, until `update --force`. `doctor` lists the modified files.

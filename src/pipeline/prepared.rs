@@ -46,6 +46,14 @@ pub(super) struct PreparedInstall {
     _tmp_guard: Option<tempfile::TempDir>,
 }
 
+/// The `requires` provenance of one run; see
+/// [`PreparedInstall::requires_provenance`].
+#[derive(Debug, Default)]
+struct RequiresProvenance {
+    evaluated: BTreeSet<String>,
+    required_by: BTreeMap<(ItemKind, String), Vec<String>>,
+}
+
 /// What [`PreparedInstall::commit`] would do now. Computed without any
 /// change on disk or in the lockfile.
 pub(super) struct InstallPreview {
@@ -342,7 +350,7 @@ impl PreparedInstall {
         selected: &BTreeSet<(ItemKind, String)>,
     ) -> Result<()> {
         let mut lock = Lockfile::load(target)?;
-        let mut changed = refresh_required_by(&mut lock, &self.new_items());
+        let mut changed = refresh_required_by(&mut lock, &self.requires_provenance());
         if let Some(commit) = &self.commit {
             for item in lock
                 .items
@@ -367,11 +375,9 @@ impl PreparedInstall {
         self.report.items.iter().any(|i| i.kind == ItemKind::Rule)
     }
 
-    /// The lockfile entry of each planned item, with an empty `files`
-    /// record. Used by `preview` and `commit`.
-    fn new_items(&self) -> Vec<LockedItem> {
-        // Aliases were applied at plan time; map each alias to its source
-        // name for the lockfile `source_name` and the provenance below.
+    /// `alias -> source name` of every planned item installed under an
+    /// `--as` alias.
+    fn aliased_names(&self) -> HashMap<String, String> {
         let mut aliased_names: HashMap<String, String> = HashMap::new();
         for planned in &self.report.planned {
             if let Some(original) = &planned.source_name {
@@ -380,8 +386,19 @@ impl PreparedInstall {
                     .or_insert_with(|| original.clone());
             }
         }
+        aliased_names
+    }
 
-        let hashes = self.planned_hashes();
+    /// The `requires` provenance of this run, with installed (post-alias)
+    /// names.
+    ///
+    /// `evaluated` holds the label `"kind:name"` of each item whose
+    /// `requires` this run resolved: every item of the item closure. A
+    /// bundle install and a name-resolution install resolve no item
+    /// `requires`, so their `evaluated` set is empty. `required_by` maps each
+    /// dependency that the closure reached, also an excluded one, to its
+    /// requirers.
+    fn requires_provenance(&self) -> RequiresProvenance {
         // Translate `requires` provenance through any applied `--as` aliases so
         // the recorded `required_by` is consistent with the post-alias names that
         // `doctor` matches against (#205). The closure keys dependencies and labels
@@ -389,37 +406,57 @@ impl PreparedInstall {
         // items under their alias. `aliased_names` maps `alias ->
         // original`; invert it to `original -> alias` and rewrite (a) each
         // dependency key's name and (b) each `"{kind}:{name}"` requirer label.
+        let aliased_names = self.aliased_names();
         let original_to_alias: HashMap<&str, &str> = aliased_names
             .iter()
             .map(|(alias, original)| (original.as_str(), alias.as_str()))
             .collect();
+        let alias_name = |name: &str| -> String {
+            original_to_alias
+                .get(name)
+                .map(|a| a.to_string())
+                .unwrap_or_else(|| name.to_string())
+        };
         let alias_label = |label: &str| -> String {
             match label.split_once(':') {
-                Some((kind, name)) => match original_to_alias.get(name) {
-                    Some(alias) => format!("{kind}:{alias}"),
-                    None => label.to_string(),
-                },
+                Some((kind, name)) => format!("{kind}:{}", alias_name(name)),
                 None => label.to_string(),
             }
         };
-        let provenance: BTreeMap<(ItemKind, String), Vec<String>> =
-            if let Some(closure) = &self.closure {
-                closure
-                    .required_by
-                    .iter()
-                    .map(|((kind, name), requirers)| {
-                        let aliased_name = original_to_alias
-                            .get(name.as_str())
-                            .map(|a| a.to_string())
-                            .unwrap_or_else(|| name.clone());
-                        let aliased_requirers =
-                            requirers.iter().map(|r| alias_label(r)).collect::<Vec<_>>();
-                        ((*kind, aliased_name), aliased_requirers)
-                    })
-                    .collect()
-            } else {
-                BTreeMap::new()
-            };
+        let mut provenance = RequiresProvenance::default();
+        // A bundle closure has resolved bundles and reads no item `requires`.
+        let Some(closure) = self
+            .closure
+            .as_ref()
+            .filter(|_| self.resolved_bundles.is_empty())
+        else {
+            return provenance;
+        };
+        provenance.evaluated = closure
+            .item_source
+            .keys()
+            .map(|(kind, name)| format!("{kind}:{}", alias_name(name)))
+            .collect();
+        provenance.required_by = closure
+            .required_by
+            .iter()
+            .map(|((kind, name), requirers)| {
+                let aliased_requirers =
+                    requirers.iter().map(|r| alias_label(r)).collect::<Vec<_>>();
+                ((*kind, alias_name(name)), aliased_requirers)
+            })
+            .collect();
+        provenance
+    }
+
+    /// The lockfile entry of each planned item, with an empty `files`
+    /// record. Used by `preview` and `commit`.
+    fn new_items(&self) -> Vec<LockedItem> {
+        // Aliases were applied at plan time; map each alias to its source
+        // name for the lockfile `source_name`.
+        let aliased_names = self.aliased_names();
+        let hashes = self.planned_hashes();
+        let provenance = self.requires_provenance().required_by;
         let item_source_lookup = |kind: ItemKind, name: &str| -> SourceStamp {
             if let Some(closure) = &self.closure {
                 if let Some(src_label) = closure.item_source.get(&(kind, name.to_string())) {
@@ -508,6 +545,7 @@ impl PreparedInstall {
         adopted: Option<Vec<String>>,
     ) -> Result<InstallReport> {
         let new_items = self.new_items();
+        let provenance = self.requires_provenance();
         let has_rules = self.has_rules();
         let PreparedInstall {
             label,
@@ -544,9 +582,9 @@ impl PreparedInstall {
         report.conflicts = outcome.skipped;
         report.forced = outcome.forced;
         report.changed = outcome.changed;
-        // A skipped item keeps its lockfile entry unchanged, or gets none. An
-        // item kept for its modified files keeps its lockfile entry unchanged,
-        // except for its commit. Both get the refreshed `required_by` below.
+        // A skipped item keeps its lockfile entry, or gets none. An item kept
+        // for its modified files keeps its lockfile entry, except for its
+        // commit. In both, only `required_by` can change, by the refresh below.
         let skipped: BTreeSet<(ItemKind, String)> = report
             .conflicts
             .iter()
@@ -573,7 +611,7 @@ impl PreparedInstall {
 
         // `required_by` of every entry, also of a skipped or kept item, gets
         // the provenance of this run (#504).
-        refresh_required_by(&mut lock, &new_items);
+        refresh_required_by(&mut lock, &provenance);
         // An item that keeps its modified files has an equal record
         // (`apply::same_record`), so only its commit is brought up to date.
         let kept_edits: BTreeSet<(ItemKind, String)> = outcome
@@ -708,31 +746,24 @@ impl PreparedInstall {
 /// Refreshes `required_by` of every entry of `lock` with the provenance of
 /// one run, and returns whether a value changed (#504).
 ///
-/// `new_items` are the lockfile entries that the run plans, each with the
-/// `required_by` that the run's closure computed. The run read the
-/// `requires` of each of its items, so a requirer label (`"kind:name"`) of
-/// an item in `new_items` is removed from every entry and added back only
-/// where `new_items` records it. A requirer that is not an item of the run
-/// is kept, whether or not it is installed. The result is sorted and has no
-/// duplicates.
-fn refresh_required_by(lock: &mut Lockfile, new_items: &[LockedItem]) -> bool {
-    let evaluated: BTreeSet<String> = new_items
-        .iter()
-        .map(|i| format!("{}:{}", i.kind, i.name))
-        .collect();
+/// A requirer label (`"kind:name"`) in `provenance.evaluated` is removed
+/// from every entry and added back where `provenance.required_by` records
+/// it. Every other requirer is kept, whether or not it is installed. The
+/// result is sorted and has no duplicates.
+fn refresh_required_by(lock: &mut Lockfile, provenance: &RequiresProvenance) -> bool {
     let mut changed = false;
     for entry in &mut lock.items {
         let mut merged: BTreeSet<String> = entry
             .required_by
             .iter()
-            .filter(|r| !evaluated.contains(*r))
+            .filter(|r| !provenance.evaluated.contains(*r))
             .cloned()
             .collect();
-        if let Some(new) = new_items
-            .iter()
-            .find(|i| i.kind == entry.kind && i.name == entry.name)
+        if let Some(new) = provenance
+            .required_by
+            .get(&(entry.kind, entry.name.clone()))
         {
-            merged.extend(new.required_by.iter().cloned());
+            merged.extend(new.iter().cloned());
         }
         let merged: Vec<String> = merged.into_iter().collect();
         if merged != entry.required_by {
@@ -1423,6 +1454,34 @@ mod tests {
         item
     }
 
+    /// The provenance of a run that resolved the `requires` of each item of
+    /// `items`, with the `required_by` of each item.
+    fn provenance_of(items: &[LockedItem]) -> RequiresProvenance {
+        RequiresProvenance {
+            evaluated: items
+                .iter()
+                .map(|i| format!("{}:{}", i.kind, i.name))
+                .collect(),
+            required_by: items
+                .iter()
+                .filter(|i| !i.required_by.is_empty())
+                .map(|i| ((i.kind, i.name.clone()), i.required_by.clone()))
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn refresh_required_by_keeps_every_requirer_when_the_run_resolved_no_requires() {
+        // A bundle install: `agent:a` is installed again, its `requires`
+        // were not read.
+        let mut lock = lock_of(vec![requirement(ItemKind::Skill, "x", &["agent:a"])]);
+        assert!(!refresh_required_by(
+            &mut lock,
+            &RequiresProvenance::default()
+        ));
+        assert_eq!(lock.items[0].required_by, vec!["agent:a"]);
+    }
+
     #[test]
     fn refresh_required_by_sets_the_new_requirers_on_an_empty_entry() {
         let mut lock = lock_of(vec![requirement(ItemKind::Skill, "x", &[])]);
@@ -1430,7 +1489,7 @@ mod tests {
             requirement(ItemKind::Agent, "a", &[]),
             requirement(ItemKind::Skill, "x", &["agent:a"]),
         ];
-        assert!(refresh_required_by(&mut lock, &new));
+        assert!(refresh_required_by(&mut lock, &provenance_of(&new)));
         assert_eq!(lock.items[0].required_by, vec!["agent:a"]);
     }
 
@@ -1440,7 +1499,7 @@ mod tests {
         // installs `x` alone.
         let mut lock = lock_of(vec![requirement(ItemKind::Skill, "x", &["agent:a"])]);
         let new = vec![requirement(ItemKind::Skill, "x", &[])];
-        assert!(!refresh_required_by(&mut lock, &new));
+        assert!(!refresh_required_by(&mut lock, &provenance_of(&new)));
         assert_eq!(lock.items[0].required_by, vec!["agent:a"]);
     }
 
@@ -1452,7 +1511,7 @@ mod tests {
             requirement(ItemKind::Skill, "x", &["agent:a", "agent:other"]),
         ]);
         let new = vec![requirement(ItemKind::Agent, "a", &[])];
-        assert!(refresh_required_by(&mut lock, &new));
+        assert!(refresh_required_by(&mut lock, &provenance_of(&new)));
         assert_eq!(lock.items[1].required_by, vec!["agent:other"]);
     }
 
@@ -1467,7 +1526,7 @@ mod tests {
             requirement(ItemKind::Agent, "a", &[]),
             requirement(ItemKind::Skill, "x", &["agent:a", "agent:b"]),
         ];
-        refresh_required_by(&mut lock, &new);
+        refresh_required_by(&mut lock, &provenance_of(&new));
         assert_eq!(
             lock.items[0].required_by,
             vec!["agent:a", "agent:b", "skill:z"]
