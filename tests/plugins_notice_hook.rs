@@ -88,6 +88,13 @@ impl Plugin {
             Plugin::Claude => {
                 assert_eq!(out["hookSpecificOutput"]["hookEventName"], "SessionStart");
                 assert_eq!(out.as_object().unwrap().len(), 2);
+                let mut keys: Vec<&String> = out["hookSpecificOutput"]
+                    .as_object()
+                    .unwrap()
+                    .keys()
+                    .collect();
+                keys.sort();
+                assert_eq!(keys, ["additionalContext", "hookEventName"]);
                 vec![
                     get(&out["systemMessage"]),
                     get(&out["hookSpecificOutput"]["additionalContext"]),
@@ -102,7 +109,7 @@ impl Plugin {
 }
 
 /// Runs the plugin command with a fake `upskill` whose body is `script`.
-/// Returns the output and the file that holds the recorded arguments.
+/// Returns the output and the recorded arguments of the fake, as text.
 fn run_with_fake(plugin: Plugin, script: &str) -> (Output, String) {
     let tmp = tempfile::tempdir().unwrap();
     let bin = tmp.path().join("bin");
@@ -280,6 +287,9 @@ fn each_plugin_holds_exactly_two_files() {
 fn collect_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
     for entry in fs::read_dir(dir).expect("plugin directory is readable") {
         let path = entry.unwrap().path();
+        if path.file_name().is_some_and(|n| n == ".DS_Store") {
+            continue;
+        }
         if path.is_dir() {
             collect_files(root, &path, out);
         } else {
@@ -298,6 +308,15 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
 /// is the value of `COPILOT_PROJECT_DIR`, if any. Returns the output and the
 /// recorded directory, or `None` when the fake was not called.
 fn run_copilot_in_dirs(run_dir: &Path, project: Option<&Path>) -> (Output, Option<PathBuf>) {
+    run_copilot_with_env(run_dir, project, &[])
+}
+
+/// Like `run_copilot_in_dirs`, with extra environment variables.
+fn run_copilot_with_env(
+    run_dir: &Path,
+    project: Option<&Path>,
+    extra_env: &[(&str, &Path)],
+) -> (Output, Option<PathBuf>) {
     let tmp = tempfile::tempdir().unwrap();
     let bin = tmp.path().join("bin");
     fs::create_dir(&bin).unwrap();
@@ -320,6 +339,9 @@ fn run_copilot_in_dirs(run_dir: &Path, project: Option<&Path>) -> (Output, Optio
         .current_dir(run_dir);
     if let Some(p) = project {
         cmd.env("COPILOT_PROJECT_DIR", p);
+    }
+    for (key, value) in extra_env {
+        cmd.env(key, value);
     }
     let out = cmd.output().expect("sh runs");
     let recorded = fs::read_to_string(&cwd_file)
@@ -402,4 +424,70 @@ fn copilot_hook_enters_a_directory_whose_name_holds_a_space() {
             .unwrap(),
         target.canonicalize().unwrap()
     );
+}
+
+#[test]
+fn copilot_hook_prints_only_json_when_cdpath_resolves_the_directory() {
+    // With CDPATH set, `cd` prints the new directory on stdout. That text
+    // must not reach the output of the hook.
+    let base = tempfile::tempdir().unwrap();
+    fs::create_dir(base.path().join("proj")).unwrap();
+    let run_dir = tempfile::tempdir().unwrap();
+    let (out, recorded) = run_copilot_with_env(
+        run_dir.path(),
+        Some(Path::new("proj")),
+        &[("CDPATH", base.path())],
+    );
+    assert!(out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        "{\"additionalContext\":\"upskill: notice\"}\n"
+    );
+    assert_eq!(
+        recorded
+            .expect("upskill must be called")
+            .canonicalize()
+            .unwrap(),
+        base.path().join("proj").canonicalize().unwrap()
+    );
+}
+
+#[test]
+fn control_characters_in_the_notice_keep_the_output_valid_json() {
+    for plugin in PLUGINS {
+        let (out, _) = run_with_fake(plugin, "printf 'a\\tb\\rc\\001d\\n'");
+        for f in parse_notice(plugin, &out) {
+            assert_eq!(f, "a b c d");
+        }
+    }
+}
+
+#[test]
+fn hook_runs_upskill_in_the_directory_it_was_started_in() {
+    for plugin in PLUGINS {
+        let tmp = tempfile::tempdir().unwrap();
+        let bin = tmp.path().join("bin");
+        let start = tmp.path().join("start");
+        fs::create_dir(&bin).unwrap();
+        fs::create_dir(&start).unwrap();
+        let cwd_file = tmp.path().join("cwd");
+        let fake = bin.join("upskill");
+        fs::write(
+            &fake,
+            format!(
+                "#!/bin/sh\npwd -P > '{}'\necho 'upskill: notice'\n",
+                cwd_file.display()
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&fake, fs::Permissions::from_mode(0o755)).unwrap();
+        let path = format!("{}:/usr/bin:/bin", bin.display());
+        let out = run(plugin, &path, &start);
+        assert!(out.status.success());
+        let recorded = fs::read_to_string(&cwd_file).expect("upskill must be called");
+        assert_eq!(
+            PathBuf::from(recorded.trim_end()),
+            start.canonicalize().unwrap()
+        );
+    }
 }
