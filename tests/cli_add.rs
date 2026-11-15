@@ -664,6 +664,120 @@ fn add_checks_an_aliased_item_only_under_its_alias() {
     );
 }
 
+/// Run `add` with `args` in a project whose `files` are staged first, and
+/// assert that a cross-item overlap is refused with exit code 1: the source
+/// directory of skill `inner` is inside the output path of skill `outer`.
+/// Every file stays unchanged, `unwritten` is not created and no lockfile
+/// is written.
+fn assert_cross_item_overlap_refused(
+    files: &[(&str, &str)],
+    args: &[&str],
+    inner: &str,
+    outer: &str,
+    unwritten: &str,
+) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    write_files(&proj, files);
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(args)
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains(&format!("the source directory of skill '{inner}' ("))
+            && stderr.contains(") is inside the output path")
+            && stderr.contains(&format!("of skill '{outer}'; installing would delete")),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    for (rel, content) in files {
+        assert_eq!(
+            fs::read_to_string(proj.join(rel)).unwrap(),
+            *content,
+            "{rel} changed"
+        );
+    }
+    assert!(!proj.join(unwritten).exists(), "{unwritten} written");
+    assert!(!proj.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_refuses_source_item_inside_the_output_path_of_another_item() {
+    // `q` installs at `.claude/skills/q`, which holds the source of `y`.
+    assert_cross_item_overlap_refused(
+        &[
+            (
+                ".claude/skills/grp/q/SKILL.md",
+                "---\nname: q\ndescription: d\n---\nBody\n",
+            ),
+            (
+                ".claude/skills/q/y/SKILL.md",
+                "---\nname: y\ndescription: d\n---\nBody\n",
+            ),
+        ],
+        &["add", "./.claude/skills", "--claude", "--project"],
+        "y",
+        "q",
+        ".claude/skills/q/SKILL.md",
+    );
+}
+
+#[test]
+fn add_refuses_source_item_inside_the_output_path_of_an_aliased_item() {
+    // `p` installs as `bar` at `.claude/skills/bar`, which holds the source
+    // of `y`.
+    assert_cross_item_overlap_refused(
+        &[
+            (
+                ".claude/skills/p/SKILL.md",
+                "---\nname: p\ndescription: d\n---\nBody\n",
+            ),
+            (
+                ".claude/skills/bar/y/SKILL.md",
+                "---\nname: y\ndescription: d\n---\nBody\n",
+            ),
+        ],
+        &[
+            "add",
+            "./.claude/skills",
+            "--as",
+            "p=bar",
+            "--claude",
+            "--project",
+        ],
+        "y",
+        "bar",
+        ".claude/skills/bar/SKILL.md",
+    );
+}
+
+#[test]
+fn add_refuses_overlap_with_a_source_item_that_is_not_installed() {
+    // Only `q` is requested. The source of `y` is not installed, but `q`
+    // would write into it, so the install is refused.
+    assert_cross_item_overlap_refused(
+        &[
+            (
+                ".claude/skills/grp/q/SKILL.md",
+                "---\nname: q\ndescription: d\n---\nBody\n",
+            ),
+            (
+                ".claude/skills/q/y/SKILL.md",
+                "---\nname: y\ndescription: d\n---\nBody\n",
+            ),
+        ],
+        &["add", "./.claude/skills", "q", "--claude", "--project"],
+        "y",
+        "q",
+        ".claude/skills/q/SKILL.md",
+    );
+}
+
 #[test]
 fn add_refuses_source_inside_copilot_skills_dir() {
     assert_source_overlap_refused(".github/skills", &["--copilot", "--project"]);

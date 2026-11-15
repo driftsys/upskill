@@ -21,13 +21,13 @@ use super::discovery::{
     is_bundle_file, iter_item_dirs, iter_item_resources, probe_effective_name,
 };
 use super::hash::hash_item_dir;
-use super::output::{check_source_outside_outputs, is_dir_backed, output_path, resource_base_path};
+use super::output::{SourceItem, is_dir_backed, output_path, resource_base_path};
 use super::plan::{PlanNames, PlannedFile, PlannedItem};
 use super::{ALL_CLIENTS, InstallReport, InstalledItem, ItemKind, McpResult, PluginResult};
 use crate::generate::{self, Client};
 use crate::model::{Agent, Audience, RequireRef, Rule, Skill};
 use crate::parse::frontmatter;
-use crate::scope::{Scope, ScopeRoot};
+use crate::scope::Scope;
 use crate::select::ClientSelection;
 use crate::source::{InstallSource, parse_install_source};
 
@@ -91,19 +91,19 @@ pub(super) fn install_from_local_path_selective(
     Ok(report)
 }
 
-/// Run [`check_source_outside_outputs`] for every item under `source` that
-/// `filter` selects (all items when `filter` is `None`). The item `audience`
-/// is not applied, so an item that the install skips for the selected
-/// clients is still checked. An item that `names` renames (`--as`, through
-/// [`PlanNames::alias_for`], the mapping the plan uses) is checked only under
-/// its installed name, because the plan writes nothing under its source
-/// name. Called before the first deletion or write of an
-/// install for one source.
-pub(super) fn check_sources_outside_outputs(
+/// Push to `out` every item directory under `source` (see
+/// [`SourceItem`]). An item that `filter` selects (all items when `filter`
+/// is `None`) gets its installed name: the alias that `names` gives
+/// (`--as`, through [`PlanNames::alias_for`], the mapping the plan uses),
+/// else its source name. An item that `filter` does not select is pushed
+/// without an installed name, so that its directory is still protected. The
+/// item `audience` is not applied, so an item that the install skips for
+/// the selected clients is still checked as installed.
+pub(super) fn collect_source_items(
     source: &Path,
-    at: &ScopeRoot,
     filter: Option<&crate::bundle::ResolvedItems>,
     names: &PlanNames,
+    out: &mut Vec<SourceItem>,
 ) -> Result<()> {
     for kind in [ItemKind::Skill, ItemKind::Rule, ItemKind::Agent] {
         for (folder, dir) in iter_item_dirs(source)? {
@@ -112,11 +112,18 @@ pub(super) fn check_sources_outside_outputs(
                 continue;
             }
             let name = probe_effective_name(&entry_path, kind, &folder);
-            if filter.is_some_and(|items| !items.contains(kind, &name)) {
-                continue;
-            }
-            let installed = names.alias_for(&name).unwrap_or(&name);
-            check_source_outside_outputs(at, kind, installed, &dir, source)?;
+            let installed = if filter.is_some_and(|items| !items.contains(kind, &name)) {
+                None
+            } else {
+                Some(names.alias_for(&name).unwrap_or(&name).clone())
+            };
+            out.push(SourceItem {
+                kind,
+                name,
+                installed,
+                dir,
+                root: source.to_path_buf(),
+            });
         }
     }
     Ok(())
@@ -179,21 +186,20 @@ pub(super) fn install_bundle_file(
     Ok(report)
 }
 
-/// Run [`check_sources_outside_outputs`] for the items that
-/// [`install_with_name_resolution_from_local`] installs for `names`: the
-/// items of each named bundle and each named item. Called before the first
-/// deletion or write.
-pub(super) fn check_name_resolution_outside_outputs(
+/// Run [`collect_source_items`] for the sources that
+/// [`install_with_name_resolution_from_local`] reads for `names`, with the
+/// items of each named bundle and each named item as installed items.
+pub(super) fn collect_name_resolution_items(
     local_source: &Path,
-    at: &ScopeRoot,
     names: &[String],
     plan_names: &PlanNames,
+    out: &mut Vec<SourceItem>,
 ) -> Result<()> {
     let mut item_names = Vec::new();
     for name in names {
         if let Some(bundle_path) = find_bundle_by_name(local_source, name) {
             let (registry_root, resolved) = resolve_bundle_file(&bundle_path)?;
-            check_sources_outside_outputs(&registry_root, at, Some(&resolved.items), plan_names)?;
+            collect_source_items(&registry_root, Some(&resolved.items), plan_names, out)?;
         } else {
             item_names.push(name.clone());
         }
@@ -203,7 +209,7 @@ pub(super) fn check_name_resolution_outside_outputs(
         skills: item_names.clone(),
         agents: item_names,
     };
-    check_sources_outside_outputs(local_source, at, Some(&filter), plan_names)
+    collect_source_items(local_source, Some(&filter), plan_names, out)
 }
 
 /// The name-resolution branch of `prepared::prepare_install`: resolves

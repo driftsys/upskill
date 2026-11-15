@@ -168,6 +168,15 @@ that source are refused with a message that names the source root and the client
 directory. Move the source items to a directory outside the client directories
 and add them from there.
 
+`add`, and `update` for each source that it updates, refuse a source item
+directory that is the same as, is inside, or contains a path that the install of
+that source deletes or writes: the output paths of the item itself, or the
+output paths of another item installed with it, also an item of a dependency
+source. A source item that is not installed (not named, excluded, or not in the
+bundle) is checked as well. The error names the item, and for an overlap with
+another item also that item. The command fails with exit code 1 before any file
+or lockfile of that source is written.
+
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those
 client-native plugins by shelling out to each client's own CLI
@@ -1066,7 +1075,7 @@ item that were already missing before adoption. The adopted paths are printed
 also when the command fails after the adoption was saved. `update --dry-run` and
 `doctor` do not adopt, and neither does a `remove` that fails because a name is
 not in the lockfile. An `add` does not adopt when it is refused because a source
-item overlaps its own output paths, because an item conflicts with an item
+item overlaps an output path of the run, because an item conflicts with an item
 installed from another source, because two items would install under one name,
 or because an installed name contains a path separator. An `update` refused for
 one of these reasons does not adopt when the refused source is the first source
