@@ -631,6 +631,40 @@ fn add_refuses_alias_whose_resource_dir_is_the_source() {
 }
 
 #[test]
+fn add_checks_an_aliased_item_only_under_its_alias() {
+    // The item `foo` lives at `.claude/skills/foo`, the Claude output path of
+    // the name `foo`. The alias `foo=bar` installs it at `.claude/skills/bar`,
+    // which does not overlap the source item. This test covers the first
+    // `add` only: the source then holds upskill's output, which the next
+    // `add` refuses (see the unsupported source layout in commands.md).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let body = "---\nname: foo\ndescription: d\n---\nBody\n";
+    write_files(&proj, &[(".claude/skills/foo/SKILL.md", body)]);
+
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args([
+            "add",
+            "./.claude/skills",
+            "--as",
+            "foo=bar",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    assert!(proj.join(".claude/skills/bar/SKILL.md").is_file());
+    assert_eq!(
+        fs::read_to_string(proj.join(".claude/skills/foo/SKILL.md")).unwrap(),
+        body
+    );
+}
+
+#[test]
 fn add_refuses_source_inside_copilot_skills_dir() {
     assert_source_overlap_refused(".github/skills", &["--copilot", "--project"]);
 }

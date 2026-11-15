@@ -95,8 +95,9 @@ pub(super) fn install_from_local_path_selective(
 /// `filter` selects (all items when `filter` is `None`). The item `audience`
 /// is not applied, so an item that the install skips for the selected
 /// clients is still checked. An item that `names` renames (`--as`, through
-/// [`PlanNames::alias_for`], the mapping the plan uses) is also checked under
-/// its installed name. Called before the first deletion or write of an
+/// [`PlanNames::alias_for`], the mapping the plan uses) is checked only under
+/// its installed name, because the plan writes nothing under its source
+/// name. Called before the first deletion or write of an
 /// install for one source.
 pub(super) fn check_sources_outside_outputs(
     source: &Path,
@@ -114,10 +115,8 @@ pub(super) fn check_sources_outside_outputs(
             if filter.is_some_and(|items| !items.contains(kind, &name)) {
                 continue;
             }
-            check_source_outside_outputs(at, kind, &name, &dir, source)?;
-            if let Some(alias) = names.alias_for(&name) {
-                check_source_outside_outputs(at, kind, alias, &dir, source)?;
-            }
+            let installed = names.alias_for(&name).unwrap_or(&name);
+            check_source_outside_outputs(at, kind, installed, &dir, source)?;
         }
     }
     Ok(())
