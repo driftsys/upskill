@@ -1935,3 +1935,54 @@ fn update_keeps_a_non_executable_mode_set_by_the_user() {
     let mode = fs::metadata(&dest).unwrap().permissions().mode();
     assert_eq!(mode & 0o7777, 0o600);
 }
+
+#[test]
+fn update_refuses_a_source_item_inside_the_output_path_of_another_item() {
+    // The source `.agents/skills` holds `grp/q`. After the first `add` (for
+    // Claude only), the item `y` is added at `.agents/skills/q/y`, inside the
+    // OpenCode output path of `q`. Every client is checked, because an update
+    // can delete recorded files of any client, so `update` refuses.
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let skills = proj.join(".agents").join("skills");
+    fs::create_dir_all(skills.join("grp").join("q")).unwrap();
+    fs::write(
+        skills.join("grp").join("q").join("SKILL.md"),
+        "---\nname: q\ndescription: d\n---\nBody\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./.agents/skills", "--claude", "--project"])
+        .assert()
+        .success();
+    let lock_before = fs::read(proj.join(".upskill-lock.json")).unwrap();
+    let y = skills.join("q").join("y").join("SKILL.md");
+    fs::create_dir_all(y.parent().unwrap()).unwrap();
+    fs::write(&y, "---\nname: y\ndescription: d\n---\nBody\n").unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("the source directory of skill 'y' (")
+            && stderr.contains(") is inside the output path")
+            && stderr.contains("of skill 'q'; installing would delete"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(
+        fs::read_to_string(&y).unwrap(),
+        "---\nname: y\ndescription: d\n---\nBody\n"
+    );
+    assert!(!proj.join(".claude").join("skills").join("y").exists());
+    assert_eq!(
+        fs::read(proj.join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}

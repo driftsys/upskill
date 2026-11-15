@@ -174,8 +174,10 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// that contains a path separator, fails before any change.
 ///
 /// Before the adoption and before any write, the overlap check refuses
-/// a source item directory that is, is inside, or contains one of its own
-/// output paths, so that a refused install changes no file.
+/// a source item directory that is, is inside, or contains an output path
+/// of an item that the run installs: its own, or that of another item of a
+/// source that the run reads (also of an item that is not installed), so
+/// that a refused install changes no file.
 ///
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Git `git_ref`); local-path sources record `None`.
