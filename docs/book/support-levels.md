@@ -55,7 +55,7 @@ experimental until its design settles these paths.
 A maintainer runs the smoke test against the real clients. It needs
 authenticated clients and makes paid model calls, so hosted CI does not run it.
 
-Two smoke runs are recorded. On 2026-11-14, on Claude Code 2.1.308, all six
+Three smoke runs are recorded. On 2026-11-14, on Claude Code 2.1.308, all six
 cells passed (rule, skill and agent, each at project and global scope), so the
 three `claude` cells are `supported`. On 2026-11-14, a run on GitHub Copilot CLI
 1.0.110 gave no result because the monthly quota of the signed-in account was
@@ -67,9 +67,12 @@ case, with a note that names the quota. On 2026-11-15, the command
 71baa0a. All six Copilot cells passed (rule, skill and agent, each at project
 and global scope). The smoke mode reported `copilot rule supported`,
 `copilot skill supported` and `copilot agent supported`, so the three `copilot`
-cells are `supported`. The tool names that the smoke mode allows for the skill
-and agent cells (`SMOKE_TOOLS` in the script, `skill` and `task`) are confirmed
-for Claude Code 2.1.308 and for Copilot CLI 1.0.112.
+cells are `supported`. After the run with `--allow-real-home`,
+`upskill list --global` showed no item whose name starts with `upskill-smoke-`;
+this was checked on 2026-11-15. The tool names that the smoke mode allows for
+the skill and agent cells (`SMOKE_TOOLS` in the script) are `Skill` and `Agent`
+for Claude Code 2.1.308, and `skill` and `task` for Copilot CLI 1.0.112. Each
+name is confirmed for the client version that is named here.
 
 ```bash
 just smoke                  # print the cells; no model call

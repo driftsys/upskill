@@ -262,7 +262,9 @@ new prompt-mode session only, without saved trust.
 Observed:
 
 - A repository hook did not run in a folder that Copilot CLI did not trust.
-- The hook ran with the repository root as its working directory.
+- The hook ran with the repository root as its working directory. Each hook
+  script appended `ran cwd=$(pwd)` to a log file, and the logged path was the
+  path of the temporary repository.
 - Every request exited with code 0.
 
 Not observed:
@@ -281,8 +283,9 @@ What follows for the Copilot plugin:
 - The model receives the notice and does not report it without being asked. No
   form that shows the line to the user was found in prompt mode.
 - A hook declared in `.claude/settings.json` runs in Copilot CLI too, so a
-  project that declares the hook for both clients runs it twice in Copilot CLI.
-  The effect of two runs is described in the Copilot CLI section above.
+  project that declares the hook for both clients would run it twice in Copilot
+  CLI. This is an inference: the trial declared the hook in one place only. The
+  effect of two runs is described in the Copilot CLI section above.
 - A repository hook does not run in a folder that Copilot CLI does not trust.
 
 ## What the trial must record

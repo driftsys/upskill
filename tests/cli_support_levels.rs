@@ -197,10 +197,13 @@ fn doctor_json_holds_the_support_table() {
     assert_eq!(support[0]["level"], "supported");
     assert_eq!(support[0]["client_version"], "2.1.308");
     assert_eq!(support[0]["checked"], "2026-11-14");
-    assert_eq!(support[3]["client"], "copilot");
-    assert_eq!(support[3]["level"], "supported");
-    assert_eq!(support[3]["client_version"], "1.0.112");
-    assert_eq!(support[3]["checked"], "2026-11-15");
+    for (cell, kind) in support[3..6].iter().zip(["rule", "skill", "agent"]) {
+        assert_eq!(cell["client"], "copilot");
+        assert_eq!(cell["kind"], kind);
+        assert_eq!(cell["level"], "supported");
+        assert_eq!(cell["client_version"], "1.0.112");
+        assert_eq!(cell["checked"], "2026-11-15");
+    }
 }
 
 #[test]
