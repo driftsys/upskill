@@ -788,11 +788,11 @@ fn reselect_from_entries(
 /// a dry run and not stopped, a git source or a local path, also gets
 /// `required_by` of every entry refreshed by `record_commit`; on that path
 /// the lockfile is saved only when a commit value or a `required_by` value
-/// differs. This write is not in
-/// [`UpdateReport::changed`] and does not make the source a source with
-/// changes. A declined source and a dry run write no commit. In an applied
-/// source, an item whose modified destinations are kept
-/// (`kept_modified`, see above) also gets the fetched commit.
+/// differs. This write is not in [`UpdateReport::changed`] and does not
+/// make the source a source with changes. A declined source and a dry run
+/// write no commit. In an applied source, an item whose modified
+/// destinations are kept (`kept_modified`, see above) also gets the
+/// fetched commit.
 ///
 /// In a source that is not applied, an entry without a preview item is
 /// [`UpdateStatus::UpToDate`], and an entry with a preview item is
@@ -1501,10 +1501,12 @@ mod tests {
         assert_eq!(lock_bytes(&target), before);
     }
 
-    /// #504: a source without changes that is not applied does not save the
-    /// lockfile when no commit value and no `required_by` value differs.
+    /// #504: a local source without changes that is not applied does not
+    /// save the lockfile when no `required_by` value differs. A local source
+    /// has no commit; the commit comparison is pinned with a git source in
+    /// `tests/cli_update_check.rs`.
     #[test]
-    fn a_source_without_changes_saves_no_lockfile_when_nothing_differs() {
+    fn a_local_source_without_changes_saves_no_lockfile_when_required_by_is_current() {
         let tmp = tempfile::tempdir().unwrap();
         let (_src, target) = install_a_requiring_x(tmp.path());
         // A compact form that a save would rewrite as pretty-printed JSON.
@@ -1516,6 +1518,44 @@ mod tests {
         run(&target, &mut observer).unwrap();
 
         assert_eq!(lock_bytes(&target), compact.as_bytes());
+    }
+
+    /// Installs `a` requiring `x`, clears `required_by` in the lockfile and
+    /// returns `(src, target, lockfile bytes)`.
+    fn install_with_an_empty_required_by(tmp: &Path) -> (PathBuf, PathBuf, Vec<u8>) {
+        let (src, target) = install_a_requiring_x(tmp);
+        let mut lock = crate::lockfile::Lockfile::load(&target).unwrap();
+        for item in &mut lock.items {
+            item.required_by.clear();
+        }
+        lock.save(&target).unwrap();
+        let bytes = lock_bytes(&target);
+        (src, target, bytes)
+    }
+
+    /// #504: a dry run refreshes no `required_by`.
+    #[test]
+    fn a_dry_run_refreshes_no_required_by() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (_src, target, before) = install_with_an_empty_required_by(tmp.path());
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        run_with(&target, false, true, &mut observer).unwrap();
+        assert_eq!(lock_bytes(&target), before);
+    }
+
+    /// #504: a source with changes that the answer does not apply refreshes
+    /// no `required_by`.
+    #[test]
+    fn a_declined_source_refreshes_no_required_by() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (src, target, before) = install_with_an_empty_required_by(tmp.path());
+        skill(&src, "x", "changed");
+        let mut observer = Recorder::new(|preview: &SourcePreview| {
+            assert!(preview.has_changes(), "{preview:?}");
+            SourceDecision::Skip
+        });
+        run(&target, &mut observer).unwrap();
+        assert_eq!(lock_bytes(&target), before);
     }
 
     #[test]

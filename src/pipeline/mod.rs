@@ -160,11 +160,11 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// item), and again after its last one, so that
 /// running the same command again completes a failed install (see
 /// `apply::execute_plan`); the bundles, plugins and MCP servers are saved
-/// after that. Existing
-/// lockfile entries for the same `(kind, name)` are replaced, except that
-/// their `required_by` is refreshed (`prepared::refresh_required_by`), as
-/// is `required_by` of every other entry; entries installed from a
-/// different source are otherwise left in place.
+/// after that. Existing lockfile entries for the same `(kind, name)` are
+/// replaced, except that their `required_by` is refreshed
+/// (`prepared::refresh_required_by`), as is `required_by` of every other
+/// entry; entries installed from a different source are otherwise left in
+/// place.
 ///
 /// Unless `options.overwrite` is true, an item with a modified or unowned
 /// file at one of its destinations is not written, its lockfile entry is

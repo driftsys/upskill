@@ -97,10 +97,11 @@ pub struct LockedItem {
     /// `doctor`'s orphaned-dependency check; never triggers auto-removal
     /// (#196). Each `add`, each source that `update` applies, and each
     /// source without changes that `update` does not apply (not in a dry
-    /// run, not stopped) refreshes the field of every entry: a requirer whose `requires` the run resolved is kept only where
-    /// the run's closure records it, and every other requirer is kept, also
-    /// when it is not installed (#504; `prepared::refresh_required_by`).
-    /// Sorted, without duplicates.
+    /// run, not stopped) refreshes the field of every entry: a requirer
+    /// whose `requires` the run resolved is kept only where the run's
+    /// closure records it, and every other requirer is kept, also when it
+    /// is not installed (#504; `prepared::refresh_required_by`). Sorted,
+    /// without duplicates.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_by: Vec<String>,
     /// Source folder this item was discovered in — the co-location
