@@ -79,8 +79,10 @@ snapshot; a stable name does not imply that external research remains current.
   trial T2; documentation of both clients read on 2026-11-14; Claude Code
   2.1.308 in non-interactive mode: the model receives a plain line and
   `additionalContext`, does not mention them without being asked, and does not
-  receive `systemMessage` (observed); the interactive display and the Copilot
-  CLI part are not run.
+  receive `systemMessage` (observed); Copilot CLI 1.0.112 in prompt mode: the
+  hook runs only in a trusted folder, ignores a plain line, and gives the model
+  `additionalContext` (observed); the interactive display of both clients is not
+  run.
 - [Copilot visibility of duplicate installs](t1-copilot-duplicate-visibility.md):
   T1, Copilot 1.0.109; a rule installed for Claude and Copilot is listed twice
   (observed); that it is applied twice rests on the model's own statement; the

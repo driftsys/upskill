@@ -47,9 +47,9 @@ fn doctor_prints_one_level_for_each_client_and_kind() {
         ("claude", "rule", "supported"),
         ("claude", "skill", "supported"),
         ("claude", "agent", "supported"),
-        ("copilot", "rule", "experimental"),
-        ("copilot", "skill", "experimental"),
-        ("copilot", "agent", "experimental"),
+        ("copilot", "rule", "supported"),
+        ("copilot", "skill", "supported"),
+        ("copilot", "agent", "supported"),
         ("opencode", "rule", "experimental"),
         ("opencode", "skill", "experimental"),
         ("opencode", "agent", "experimental"),
@@ -70,7 +70,13 @@ fn doctor_prints_one_level_for_each_client_and_kind() {
             "{text}"
         );
     }
-    for row in &rows[3..] {
+    for row in &rows[3..6] {
+        assert!(
+            row.ends_with(" supported (copilot 1.0.112, 2026-11-15)"),
+            "{text}"
+        );
+    }
+    for row in &rows[6..] {
         assert_eq!(row.split_whitespace().count(), 3, "{text}");
     }
     for (row, cell) in rows.iter().zip(SUPPORT) {
@@ -191,10 +197,13 @@ fn doctor_json_holds_the_support_table() {
     assert_eq!(support[0]["level"], "supported");
     assert_eq!(support[0]["client_version"], "2.1.308");
     assert_eq!(support[0]["checked"], "2026-11-14");
-    assert_eq!(support[3]["client"], "copilot");
-    assert_eq!(support[3]["level"], "experimental");
-    assert!(support[3]["client_version"].is_null());
-    assert!(support[3]["checked"].is_null());
+    for (cell, kind) in support[3..6].iter().zip(["rule", "skill", "agent"]) {
+        assert_eq!(cell["client"], "copilot");
+        assert_eq!(cell["kind"], kind);
+        assert_eq!(cell["level"], "supported");
+        assert_eq!(cell["client_version"], "1.0.112");
+        assert_eq!(cell["checked"], "2026-11-15");
+    }
 }
 
 #[test]
