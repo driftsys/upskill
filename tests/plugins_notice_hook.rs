@@ -454,12 +454,32 @@ fn copilot_hook_prints_only_json_when_cdpath_resolves_the_directory() {
 
 #[test]
 fn control_characters_in_the_notice_keep_the_output_valid_json() {
+    // Every control character from \001 to \037 except newline (\012), one
+    // per line, between two letters.
+    let codes: Vec<u8> = (1..=0o37).filter(|c| *c != 0o12).collect();
+    let script = codes
+        .iter()
+        .map(|c| format!("a\\{c:03o}b\\n"))
+        .collect::<String>();
+    let expected = vec!["a b"; codes.len()].join("\n");
     for plugin in PLUGINS {
-        let (out, _) = run_with_fake(plugin, "printf 'a\\tb\\rc\\001d\\n'");
+        let (out, _) = run_with_fake(plugin, &format!("printf '{script}'"));
         for f in parse_notice(plugin, &out) {
-            assert_eq!(f, "a b c d");
+            assert_eq!(f, expected);
         }
     }
+}
+
+#[test]
+fn plugins_directory_holds_exactly_the_two_plugin_directories() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("plugins");
+    let mut names: Vec<String> = fs::read_dir(root)
+        .expect("plugins directory is readable")
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|n| n != ".DS_Store")
+        .collect();
+    names.sort();
+    assert_eq!(names, ["upskill-claude", "upskill-copilot"]);
 }
 
 #[test]

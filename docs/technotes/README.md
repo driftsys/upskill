@@ -80,12 +80,14 @@ snapshot; a stable name does not imply that external research remains current.
   2.1.308 in non-interactive mode: the model receives a plain line and
   `additionalContext`, does not mention them without being asked, and does not
   receive `systemMessage` (observed); Copilot CLI 1.0.112 in prompt mode: the
-  hook runs only in a trusted folder, ignores a plain line, and gives the model
-  `additionalContext` (observed); Claude Code 2.1.308 interactive terminal: only
-  `systemMessage` is displayed (observed by the maintainer); both session-notice
-  plugins loaded from a directory print a set once; a Copilot CLI plugin hook
-  loads from `hooks.json` at the plugin root, starts in the plugin root and runs
-  in an untrusted folder; the interactive display of Copilot CLI is not run.
+  repository hook runs only in a trusted folder, ignores a plain line, and gives
+  the model `additionalContext` (observed); Claude Code 2.1.308 interactive
+  terminal: only `systemMessage` is displayed (observed by the maintainer); both
+  session-notice plugins loaded from a directory print a set once (runs made
+  before the rename and the last changes to the hook commands); a Copilot CLI
+  plugin hook loads from `hooks.json` at the plugin root, starts in the plugin
+  root and runs in an untrusted folder; the interactive display of Copilot CLI
+  is not run.
 - [Copilot visibility of duplicate installs](t1-copilot-duplicate-visibility.md):
   T1, Copilot 1.0.109; a rule installed for Claude and Copilot is listed twice
   (observed); that it is applied twice rests on the model's own statement; the
