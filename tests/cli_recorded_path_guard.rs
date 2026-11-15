@@ -339,3 +339,63 @@ fn update_refuses_a_record_in_the_global_scope() {
     );
     assert_eq!(snapshot(&home), before);
 }
+
+/// The items `create-api-endpoint` and `security-reviewer` installed; the
+/// item `security-reviewer` gets a record outside its layout.
+fn two_items_with_a_bad_record() -> (tempfile::TempDir, std::path::PathBuf) {
+    let (tmp, home) = installed();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "security-reviewer",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    fs::create_dir_all(tmp.path().join(".github")).unwrap();
+    fs::write(tmp.path().join(".github/x.yml"), b"x\n").unwrap();
+    add_record_to(
+        tmp.path(),
+        "security-reviewer",
+        "files",
+        "claude",
+        ".github/x.yml",
+        &sha256_hex(b"x\n"),
+    );
+    (tmp, home)
+}
+
+#[test]
+fn add_of_a_new_item_is_refused_for_a_bad_record_of_an_unrelated_item() {
+    let (tmp, home) = two_items_with_a_bad_record();
+    let before = snapshot(tmp.path());
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            "./source",
+            "api-conventions",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .code(1);
+    assert!(stderr_of(&assert).contains(".github/x.yml"));
+    assert_eq!(snapshot(tmp.path()), before, "nothing may change");
+}
+
+#[test]
+fn remove_of_one_item_is_refused_for_a_bad_record_of_an_unrelated_item() {
+    let (tmp, home) = two_items_with_a_bad_record();
+    let before = snapshot(tmp.path());
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["remove", ITEM, "--project"])
+        .assert()
+        .code(1);
+    assert!(stderr_of(&assert).contains(".github/x.yml"));
+    assert_eq!(snapshot(tmp.path()), before, "nothing may change");
+}
