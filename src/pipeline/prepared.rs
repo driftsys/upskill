@@ -229,7 +229,10 @@ pub(super) fn prepare_install(
     };
     let mut source_items = Vec::new();
     if let Some(closure) = &closure {
-        let no_aliases = plan::PlanNames::default();
+        let no_aliases = plan::PlanNames {
+            excludes: options.excludes.clone(),
+            ..plan::PlanNames::default()
+        };
         for (src_label, si) in &closure.by_source {
             let names = if *src_label == label {
                 &entry_names

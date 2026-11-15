@@ -213,6 +213,9 @@ pub(super) struct SourceItem {
     /// The installed name when the run installs the item, `None` when the
     /// run does not select it.
     pub installed: Option<String>,
+    /// Whether `--exclude` names the item. The plan writes nothing for an
+    /// excluded item, so its paths are not compared with other items.
+    pub excluded: bool,
     /// The item directory.
     pub dir: PathBuf,
     /// The root of the source that holds the item.
@@ -223,10 +226,10 @@ pub(super) struct SourceItem {
 /// the run deletes or writes. `items` holds every item directory of every
 /// source of the run, also the items that the run does not install.
 ///
-/// First, every installed item is checked against its own paths with
-/// [`check_source_outside_outputs`]. Then the directory of every item,
-/// installed or not, is compared with the paths of every other installed
-/// item (all clients, as in [`check_source_outside_outputs`]): the item
+/// First, every selected item is checked against its own paths with
+/// [`check_source_outside_outputs`], also an excluded one. Then the
+/// directory of every item, selected or not, is compared with the paths of
+/// every other selected item that is not excluded (all clients, as in [`check_source_outside_outputs`]): the item
 /// directory must not be inside such a path or contain one. Two entries
 /// with the same item directory are one directory, which the first step
 /// already checked. Called before the first deletion or write of the run.
@@ -240,7 +243,7 @@ pub(super) fn check_run_outside_outputs(at: &ScopeRoot, items: &[SourceItem]) ->
     let target = canonical(&at.root);
     let dirs: Vec<PathBuf> = items.iter().map(|item| canonical(&item.dir)).collect();
     for (outer, outer_dir) in items.iter().zip(&dirs) {
-        let Some(outer_name) = &outer.installed else {
+        let Some(outer_name) = outer.installed.as_ref().filter(|_| !outer.excluded) else {
             continue;
         };
         for client in ALL_CLIENTS {
@@ -382,6 +385,7 @@ mod tests {
             kind: ItemKind::Skill,
             name: name.to_string(),
             installed: installed.map(str::to_string),
+            excluded: false,
             dir: dir.to_path_buf(),
             root: dir.parent().unwrap().to_path_buf(),
         }
@@ -473,6 +477,17 @@ mod tests {
             &[source_item("q", None, &q), source_item("y", Some("y"), &y)],
         )
         .unwrap();
+    }
+
+    #[test]
+    fn run_check_ignores_the_paths_of_an_excluded_item() {
+        let (tmp, target) = target_with_dir(".claude/skills/q/y");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let y = target.join(".claude/skills/q/y");
+        let mut excluded = source_item("q", Some("q"), &q);
+        excluded.excluded = true;
+        run_check(&target, &[excluded, source_item("y", Some("y"), &y)]).unwrap();
     }
 
     #[test]

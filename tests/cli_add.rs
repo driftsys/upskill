@@ -779,6 +779,83 @@ fn add_refuses_overlap_with_a_source_item_that_is_not_installed() {
 }
 
 #[test]
+fn add_ignores_the_output_paths_of_an_excluded_item() {
+    // `q` is excluded, so nothing is written at `.claude/skills/q`, which
+    // holds the source of `y`. `y` installs. Without names, `add` uses the
+    // item closure, which already drops `q`; with the bundle name `pack`,
+    // the bundle lists `q`, and only `--exclude` drops it.
+    for names in [&[][..], &["pack"][..]] {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        fs::create_dir_all(&home).unwrap();
+        let proj = tmp.path().join("proj");
+        fs::create_dir_all(proj.join(".git")).unwrap();
+        write_files(
+            &proj,
+            &[
+                (
+                    ".claude/skills/grp/q/SKILL.md",
+                    "---\nname: q\ndescription: d\n---\nBody\n",
+                ),
+                (
+                    ".claude/skills/q/y/SKILL.md",
+                    "---\nname: y\ndescription: d\n---\nBody\n",
+                ),
+                (
+                    ".claude/skills/pack.bundle.yaml",
+                    "schema: 1\nname: pack\ndescription: d\nitems:\n  skills: [q, y]\n",
+                ),
+            ],
+        );
+
+        common::upskill_cmd(&home)
+            .current_dir(&proj)
+            .arg("add")
+            .arg("./.claude/skills")
+            .args(names)
+            .args(["--exclude", "q", "--claude", "--project"])
+            .assert()
+            .success();
+        assert!(
+            proj.join(".claude/skills/y/SKILL.md").is_file(),
+            "{names:?}"
+        );
+        assert!(
+            !proj.join(".claude/skills/q/SKILL.md").exists(),
+            "{names:?}"
+        );
+    }
+}
+
+#[test]
+fn add_refuses_overlap_with_an_excluded_source_item() {
+    // `y` is excluded, but `q` would write into the source of `y`.
+    assert_cross_item_overlap_refused(
+        &[
+            (
+                ".claude/skills/grp/q/SKILL.md",
+                "---\nname: q\ndescription: d\n---\nBody\n",
+            ),
+            (
+                ".claude/skills/q/y/SKILL.md",
+                "---\nname: y\ndescription: d\n---\nBody\n",
+            ),
+        ],
+        &[
+            "add",
+            "./.claude/skills",
+            "--exclude",
+            "y",
+            "--claude",
+            "--project",
+        ],
+        "y",
+        "q",
+        ".claude/skills/q/SKILL.md",
+    );
+}
+
+#[test]
 fn add_refuses_source_inside_copilot_skills_dir() {
     assert_source_overlap_refused(".github/skills", &["--copilot", "--project"]);
 }

@@ -173,9 +173,11 @@ directory that is the same as, is inside, or contains a path that the install of
 that source deletes or writes: the output paths of the item itself, or the
 output paths of another item installed with it, also an item of a dependency
 source. A source item that is not installed (not named, excluded, or not in the
-bundle) is checked as well. The error names the item, and for an overlap with
-another item also that item. The command fails with exit code 1 before any file
-or lockfile of that source is written.
+bundle) is checked as well: no installed item may write into its directory. The
+output paths of an item that is not installed are not compared with other items,
+but an excluded item is still compared with its own output paths. The error
+names the item, and for an overlap with another item also that item. The command
+fails with exit code 1 before any file or lockfile of that source is written.
 
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those

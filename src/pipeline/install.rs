@@ -98,7 +98,9 @@ pub(super) fn install_from_local_path_selective(
 /// else its source name. An item that `filter` does not select is pushed
 /// without an installed name, so that its directory is still protected. The
 /// item `audience` is not applied, so an item that the install skips for
-/// the selected clients is still checked as installed.
+/// the selected clients is still checked as installed. An item whose source
+/// name is in `names.excludes` is marked as excluded (the plan matches
+/// `--exclude` the same way).
 pub(super) fn collect_source_items(
     source: &Path,
     filter: Option<&crate::bundle::ResolvedItems>,
@@ -119,6 +121,7 @@ pub(super) fn collect_source_items(
             };
             out.push(SourceItem {
                 kind,
+                excluded: names.excludes.contains(&name),
                 name,
                 installed,
                 dir,
