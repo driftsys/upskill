@@ -13,7 +13,10 @@ use std::path::{Path, PathBuf};
 
 use crate::scope::{Scope, ScopeRoot};
 
-use super::apply::{check_no_item_symlink_above, deletable, delete_recorded, prune_empty_parents};
+use super::apply::{
+    check_no_item_symlink_above, check_recorded_in_layout, deletable, delete_recorded,
+    prune_empty_parents,
+};
 use super::output::{output_path, released_output_path};
 use super::owned::{FileState, adopt_schema1, adopt_schema1_in_memory, classify};
 use super::prepared::prepare_install;
@@ -36,7 +39,9 @@ use super::{
 /// Only the files in an item's `files` and `pending` records are
 /// considered; a file is owned when it matches a hash of either record.
 /// Before any change on disk, every recorded path is checked: a path that
-/// is not accepted by `deletable` is skipped, and a symbolic link in the
+/// is outside the layout of its item is an error (see
+/// `check_recorded_in_layout`), a path that is not accepted by `deletable`
+/// is skipped, and a symbolic link in the
 /// item part of a path's parent directories is an error. Then, per
 /// recorded file: an unchanged regular file is deleted; a modified file is
 /// kept and reported in `kept_modified`, or deleted when `force` is true
@@ -153,6 +158,7 @@ fn plan_removal(
     // The `pending` files of an operation that did not complete are
     // recorded files too: a failed run may have written them.
     for file in entry.files.iter().chain(&entry.pending) {
+        check_recorded_in_layout(entry.kind, &entry.name, &file.path)?;
         let Some(rel) = deletable(&file.path) else {
             continue;
         };
