@@ -12,16 +12,6 @@ references must be reconciled as part of that feature's review.
 
 ## Active proposals
 
-- [Customization MVP re-steer design](specs/2026-11-11-customization-resteer-design.md)
-  and
-  [implementation plan, part 1](plans/2026-11-11-customization-resteer-part1.md)
-  — approved by the user on 2026-11-11. Replaces the gated delivery approach
-  with an ownership record in the lockfile, repeatable operations and support
-  levels. Part 1 covers delivery steps 0 to 4. Step 0, which removes the
-  unreachable lifecycle code, is the first change.
-  [Part 2](plans/2026-11-13-customization-resteer-part2.md) covers delivery
-  steps 6 to 8 and was approved by the user on 2026-11-13.
-
 - [Copilot-local plugin exclusion profile](../technotes/copilot-project-plugin-overlay-profile.md)
   : proposed under [#446](https://github.com/driftsys/upskill/issues/446).
   Primary references and Copilot 1.0.103 help support investigating one owned
@@ -68,7 +58,7 @@ references must be reconciled as part of that feature's review.
 - [Shared updater design](specs/2026-10-14-shared-updater-design.md) and
   [implementation plan](plans/2026-10-14-shared-updater.md) — proposed
   `upskill maintain` command; superseded in part by section 4 of the
-  [re-steer design](specs/2026-11-11-customization-resteer-design.md).
+  [re-steer design](../archive/specs/2026-11-11-customization-resteer-design.md).
   Implementation waits for delivery step 6 and design review.
 
 - [Agent customization foundation design](specs/2026-10-11-agent-customization-foundation-design.md)
@@ -82,7 +72,8 @@ references must be reconciled as part of that feature's review.
 
 ## Superseded on 2026-11-11
 
-The [re-steer design](specs/2026-11-11-customization-resteer-design.md)
+The
+[re-steer design](../archive/specs/2026-11-11-customization-resteer-design.md)
 superseded the following work. The library code that the Gate 4 and Gate 5 work
 added was removed from `main` and is kept on the branch
 `archive/lifecycle-2026-11`.
@@ -114,8 +105,8 @@ added was removed from `main` and is kept on the branch
 
 The draft `specs/2026-10-23-customization-storage-delivery-candidates.md` is
 superseded on 2026-11-11 by the
-[re-steer design](specs/2026-11-11-customization-resteer-design.md). A byte copy
-is kept as an
+[re-steer design](../archive/specs/2026-11-11-customization-resteer-design.md).
+A byte copy is kept as an
 [unapproved archived comparison](../archive/specs/2026-10-23-customization-storage-delivery-candidates.md).
 It was registered as retained comparison context only. It is not an active
 proposal or an adopted route. The

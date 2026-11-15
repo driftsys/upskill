@@ -993,7 +993,7 @@ The
 draft is a byte copy of a file that existed only as an untracked file in another
 checkout. It is an unapproved comparison. It was never adopted, and it is
 superseded by the
-[re-steer design](../wip/specs/2026-11-11-customization-resteer-design.md) of
+[re-steer design](specs/2026-11-11-customization-resteer-design.md) of
 2026-11-11. Its relative links are not updated for this location.
 
 ## Customization adapter model and delivery roadmap
@@ -1001,7 +1001,7 @@ superseded by the
 Source path: `docs/wip/specs/2026-10-14-customization-adapter-roadmap.md`. The
 [adapter roadmap](specs/2026-10-14-customization-adapter-roadmap.md) was moved
 with only its relative links updated for this location. It is superseded by the
-[re-steer design](../wip/specs/2026-11-11-customization-resteer-design.md) of
+[re-steer design](specs/2026-11-11-customization-resteer-design.md) of
 2026-11-11, which replaces its four-client MVP sequencing and its proposed
 qualification gates.
 
@@ -1011,8 +1011,8 @@ Source paths: `docs/wip/specs/2026-11-12-per-source-update-prompts-design.md`
 and `docs/wip/plans/2026-11-12-per-source-update-prompts.md`. The archived
 [spec](specs/2026-11-12-per-source-update-prompts-design.md) and
 [plan](plans/2026-11-12-per-source-update-prompts.md) retain the working
-material; the spec's link to the re-steer design follows its active WIP
-destination.
+material; the spec's link to the re-steer design points to the archived copy of
+that design.
 
 Delivered by PR #502 (commit `dbb6504`, keep an edited file of an unchanged item
 on update) and PR #503 (commit `b727999`, one question per source in a terminal
@@ -1023,3 +1023,38 @@ Durable successors: [AD-0043](../adr/0043-per-source-update-prompts.md),
 [specification §2.2](../specification/specification.md#22-update) and the
 [command guide](../book/commands.md#upskill-update-name). The archived spec
 records the review decisions made during implementation as "Author's call".
+
+## Customization MVP re-steer
+
+Source paths: `docs/wip/specs/2026-11-11-customization-resteer-design.md` and
+the plans `docs/wip/plans/2026-11-11-customization-resteer-part1.md` (delivery
+steps 0 to 4), `docs/wip/plans/2026-11-13-customization-resteer-step5.md` (step
+5) and `docs/wip/plans/2026-11-13-customization-resteer-part2.md` (steps 6 to
+8). The archived [design](specs/2026-11-11-customization-resteer-design.md) and
+plans ([part 1](plans/2026-11-11-customization-resteer-part1.md),
+[step 5](plans/2026-11-13-customization-resteer-step5.md),
+[part 2](plans/2026-11-13-customization-resteer-part2.md)) are retained
+unchanged. The approved plan names the three plan files as one set.
+
+Delivered on `main` by these pull requests: step 0 #466 (remove the unreachable
+lifecycle library), step 1 #467 (fix #465), step 2 #468 (ownership record,
+`remove` by recorded files), step 3 #489 (`update` keeps modified files and
+refuses unowned destinations), step 4 #490 (interrupted install or update
+completes on the next run), step 5 #523 (scope in every command, global Copilot
+paths), step 6 #524 (recorded commits, `update --check`), step 7 #525, #529 and
+#531 (support levels, smoke test, first smoke runs), step 8 #526
+(`update
+--notice`), #528 (session-start hook trial) and #532 (sources of the
+hook plugins). Completion evidence: the tests of these pull requests passed in
+hosted CI, and the smoke runs of 2026-11-14 and 2026-11-15 are recorded in the
+[support levels](../book/support-levels.md). No release holds this work yet; the
+last release is v0.8.1, and the release is a separate step.
+
+Durable successors: [AD-0042](../adr/0042-resteer-customization-delivery.md),
+the [command guide](../book/commands.md),
+[support levels](../book/support-levels.md), the
+[recipes](../book/recipes.md#report-available-updates-when-a-session-starts),
+[specification](../specification/specification.md) §2 to §4, and the technotes
+[T1](../technotes/t1-copilot-duplicate-visibility.md) and
+[T2](../technotes/t2-session-notice-display.md). The design's section 7 (parking
+unused code) is recorded in AD-0042 Decision 5.

@@ -1,12 +1,12 @@
 # How Claude Code and Copilot CLI handle the output of a session-start hook
 
-This note belongs to trial T2 of the customization re-steer (plan Task 9). It
-records what the documentation of each client states about a hook that runs when
-a session starts, and the results of the trial: Claude Code in non-interactive
-mode and in the interactive terminal, Copilot CLI in prompt mode, and the
-session-notice plugins of both clients loaded from a directory and installed
-through a marketplace. The interactive display of Copilot CLI has not been
-observed. This note is informative.
+This note belongs to trial T2 of the customization re-steer (delivery step 8).
+It records what the documentation of each client states about a hook that runs
+when a session starts, and the results of the trial: Claude Code in
+non-interactive mode and in the interactive terminal, Copilot CLI in prompt
+mode, and the session-notice plugins of both clients loaded from a directory and
+installed through a marketplace. The interactive display of Copilot CLI has not
+been observed. This note is informative.
 
 `upskill update --notice` prints one plain line on standard output for each
 scope that has available updates (the project scope, then the global scope), for

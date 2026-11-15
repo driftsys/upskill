@@ -1,6 +1,6 @@
 # Upskill roadmap
 
-Updated: **2026-11-11**. Status: **planned delivery scope**. This roadmap
+Updated: **2026-11-15**. Status: **planned delivery scope**. This roadmap
 describes upcoming work, not implemented support. Release numbers and dates will
 be assigned separately.
 
@@ -37,7 +37,7 @@ The
 of 2026-11-11 replaces the earlier gate sequence. The MVP makes install, update
 and removal reliable for Claude Code and Copilot first. Codex and OpenCode come
 next. The
-[re-steer design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-11-11-customization-resteer-design.md)
+[re-steer design](https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-11-11-customization-resteer-design.md)
 holds the full requirements.
 
 ### Implementation dependencies
@@ -58,6 +58,9 @@ acceptance test.
 | 8    | Notice mode; Claude Code plugin; Copilot CLI plugin (section 4). Release.          |
 | Next | Codex, then OpenCode, each with its own short design.                              |
 | Next | Plugin and catalog generation from a bundle, with its own design.                  |
+
+Steps 0 to 8 are delivered on `main` as of 2026-11-15, except the release named
+in step 8.
 
 Section numbers refer to the re-steer design. Bundles and plugins need no
 separate step. Bundle items are ordinary items and receive the ownership
