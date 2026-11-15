@@ -407,6 +407,31 @@ fn add_bundle_refuses_cross_source_dependency_inside_an_output_path() {
 }
 
 #[test]
+fn add_bundle_refuses_dependency_item_inside_the_output_path_of_an_entry_item() {
+    // The dependency rule `dep-rule` lives at `.claude/rules/meta-rule/dep-rule/`,
+    // inside the Claude resource base of the entry rule `meta-rule`.
+    let (_tmp, home, target, bundle, dep_rule) =
+        stage_dep_source_in_claude_rules("meta-rule/dep-rule");
+    let before = fs::read_to_string(&dep_rule).unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", bundle.to_str().unwrap(), "--claude", "--project"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("the source directory of rule 'dep-rule' (")
+            && stderr.contains(") is inside the output path")
+            && stderr.contains("of rule 'meta-rule'; installing would delete"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(fs::read_to_string(&dep_rule).unwrap(), before);
+    assert!(!target.join(".claude/rules/meta-rule.md").exists());
+    assert!(!target.join(".upskill-lock.json").exists());
+}
+
+#[test]
 fn add_bundle_alias_does_not_apply_to_cross_source_dependency_items() {
     // The dependency rule `dep-rule` lives at `.claude/rules/x/`, the Claude
     // resource base of a rule named `x`. `--as dep-rule=x` names an entry

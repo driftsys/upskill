@@ -154,17 +154,7 @@ pub(super) fn check_source_outside_outputs(
     let source = canonical(source_dir);
     let root = canonical(source_root);
     let target = canonical(&at.root);
-    let rels = |client| {
-        let mut rels = vec![
-            output_path(at.scope, kind, client, name),
-            resource_base_path(at.scope, kind, client, name),
-        ];
-        if at.scope == Scope::Global {
-            rels.push(released_output_path(kind, client, name));
-            rels.push(released_resource_base_path(kind, client, name));
-        }
-        rels
-    };
+    let rels = |client| checked_output_paths(at.scope, kind, client, name);
     for client in ALL_CLIENTS {
         for rel in rels(client) {
             let out = canonical(&target.join(&rel));
@@ -191,6 +181,97 @@ pub(super) fn check_source_outside_outputs(
                     "{prefix} Copy the item to a directory outside the client output directories \
                      and add it from there"
                 );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// The per-item paths, relative to the scope root, that an install in
+/// `scope` deletes or writes for `(kind, name)` and `client`: the entrypoint
+/// and the resource base, and for [`Scope::Global`] the same paths of
+/// released versions.
+fn checked_output_paths(scope: Scope, kind: ItemKind, client: Client, name: &str) -> Vec<PathBuf> {
+    let mut rels = vec![
+        output_path(scope, kind, client, name),
+        resource_base_path(scope, kind, client, name),
+    ];
+    if scope == Scope::Global {
+        rels.push(released_output_path(kind, client, name));
+        rels.push(released_resource_base_path(kind, client, name));
+    }
+    rels
+}
+
+/// One item directory in a source of an install run, for
+/// [`check_run_outside_outputs`].
+#[derive(Debug, Clone)]
+pub(super) struct SourceItem {
+    pub kind: ItemKind,
+    /// The name of the item in its source.
+    pub name: String,
+    /// The installed name when the run installs the item, `None` when the
+    /// run does not select it.
+    pub installed: Option<String>,
+    /// Whether `--exclude` names the item. The plan writes nothing for an
+    /// excluded item, so its paths are not compared with other items.
+    pub excluded: bool,
+    /// The item directory.
+    pub dir: PathBuf,
+    /// The root of the source that holds the item.
+    pub root: PathBuf,
+}
+
+/// Refuse an install run when a source item directory overlaps a path that
+/// the run deletes or writes. `items` holds every item directory of every
+/// source of the run, also the items that the run does not install.
+///
+/// First, every selected item is checked against its own paths with
+/// [`check_source_outside_outputs`], also an excluded one. Then the
+/// directory of every item, selected or not, is compared with the paths of
+/// every other selected item that is not excluded (all clients, as in [`check_source_outside_outputs`]): the item
+/// directory must not be inside such a path or contain one. Two entries
+/// with the same item directory are one directory, which the first step
+/// already checked. Called before the first deletion or write of the run.
+pub(super) fn check_run_outside_outputs(at: &ScopeRoot, items: &[SourceItem]) -> Result<()> {
+    for item in items {
+        if let Some(installed) = &item.installed {
+            check_source_outside_outputs(at, item.kind, installed, &item.dir, &item.root)?;
+        }
+    }
+    let canonical = |p: &Path| fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    let target = canonical(&at.root);
+    let dirs: Vec<PathBuf> = items.iter().map(|item| canonical(&item.dir)).collect();
+    for (outer, outer_dir) in items.iter().zip(&dirs) {
+        let Some(outer_name) = outer.installed.as_ref().filter(|_| !outer.excluded) else {
+            continue;
+        };
+        for client in ALL_CLIENTS {
+            for rel in checked_output_paths(at.scope, outer.kind, client, outer_name) {
+                let out = canonical(&target.join(&rel));
+                for (inner, inner_dir) in items.iter().zip(&dirs) {
+                    if inner_dir == outer_dir {
+                        continue;
+                    }
+                    let relation = if inner_dir.starts_with(&out) {
+                        "is inside"
+                    } else if out.starts_with(inner_dir) {
+                        "contains"
+                    } else {
+                        continue;
+                    };
+                    let inner_name = inner.installed.as_ref().unwrap_or(&inner.name);
+                    anyhow::bail!(
+                        "the source directory of {} '{inner_name}' ({}) {relation} the output \
+                         path {} of {} '{outer_name}'; installing would delete or overwrite the \
+                         source. Copy the items to a directory outside the client output \
+                         directories and add them from there",
+                        inner.kind,
+                        inner.dir.display(),
+                        out.display(),
+                        outer.kind
+                    );
+                }
             }
         }
     }
@@ -297,6 +378,141 @@ mod tests {
             &source,
         )
         .unwrap();
+    }
+
+    fn source_item(name: &str, installed: Option<&str>, dir: &Path) -> SourceItem {
+        SourceItem {
+            kind: ItemKind::Skill,
+            name: name.to_string(),
+            installed: installed.map(str::to_string),
+            excluded: false,
+            dir: dir.to_path_buf(),
+            root: dir.parent().unwrap().to_path_buf(),
+        }
+    }
+
+    fn run_check(target: &Path, items: &[SourceItem]) -> Result<()> {
+        check_run_outside_outputs(&at(Scope::Project, target), items)
+    }
+
+    #[test]
+    fn run_check_refuses_a_source_item_inside_the_output_path_of_another_item() {
+        let (tmp, target) = target_with_dir(".claude/skills/q/y");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let y = target.join(".claude/skills/q/y");
+        let err = run_check(
+            &target,
+            &[
+                source_item("q", Some("q"), &q),
+                source_item("y", Some("y"), &y),
+            ],
+        )
+        .expect_err("cross-item overlap must be refused");
+        let msg = err.to_string();
+        assert!(msg.contains("source directory of skill 'y'"), "{msg}");
+        assert!(msg.contains(") is inside the output path"), "{msg}");
+        assert!(msg.contains("of skill 'q';"), "{msg}");
+    }
+
+    #[test]
+    fn run_check_refuses_a_source_item_that_contains_the_output_path_of_another_item() {
+        let (tmp, target) = target_with_dir(".claude/skills/q");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let skills = target.join(".claude/skills");
+        let err = run_check(
+            &target,
+            &[
+                source_item("q", Some("q"), &q),
+                source_item("all", None, &skills),
+            ],
+        )
+        .expect_err("cross-item overlap must be refused");
+        assert!(
+            err.to_string().contains(") contains the output path"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn run_check_protects_an_item_that_is_not_installed() {
+        let (tmp, target) = target_with_dir(".claude/skills/q/y");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let y = target.join(".claude/skills/q/y");
+        let err = run_check(
+            &target,
+            &[source_item("q", Some("q"), &q), source_item("y", None, &y)],
+        )
+        .expect_err("a source item that is not installed is still protected");
+        assert!(err.to_string().contains("skill 'y'"), "{err}");
+    }
+
+    #[test]
+    fn run_check_uses_the_installed_name_of_the_outer_item() {
+        let (tmp, target) = target_with_dir(".claude/skills/q/y");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let y = target.join(".claude/skills/q/y");
+        // `q` installs as `bar`, so nothing is written at `.claude/skills/q`.
+        run_check(
+            &target,
+            &[
+                source_item("q", Some("bar"), &q),
+                source_item("y", Some("y"), &y),
+            ],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn run_check_ignores_the_paths_of_an_item_that_is_not_installed() {
+        let (tmp, target) = target_with_dir(".claude/skills/q/y");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let y = target.join(".claude/skills/q/y");
+        run_check(
+            &target,
+            &[source_item("q", None, &q), source_item("y", Some("y"), &y)],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn run_check_ignores_the_paths_of_an_excluded_item() {
+        let (tmp, target) = target_with_dir(".claude/skills/q/y");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let y = target.join(".claude/skills/q/y");
+        let mut excluded = source_item("q", Some("q"), &q);
+        excluded.excluded = true;
+        run_check(&target, &[excluded, source_item("y", Some("y"), &y)]).unwrap();
+    }
+
+    #[test]
+    fn run_check_treats_entries_with_one_directory_as_one_item() {
+        // The name-resolution path can collect one source twice.
+        let (tmp, target) = target_with_dir(".claude/skills");
+        let x = tmp.path().join("source/x");
+        fs::create_dir_all(&x).unwrap();
+        run_check(
+            &target,
+            &[source_item("x", Some("x"), &x), source_item("x", None, &x)],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn run_check_keeps_the_same_item_refusal() {
+        let (_tmp, target) = target_with_dir(".claude/skills/x/nested");
+        let source = target.join(".claude/skills/x/nested");
+        let err = run_check(&target, &[source_item("x", Some("x"), &source)])
+            .expect_err("same-item overlap must be refused");
+        assert!(
+            err.to_string().starts_with("skill 'x': source directory "),
+            "{err}"
+        );
     }
 
     #[test]

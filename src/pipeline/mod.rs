@@ -169,8 +169,9 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// Unless `options.overwrite` is true, an item with a modified or unowned
 /// file at one of its destinations is not written, its lockfile entry is
 /// unchanged except its `required_by`, and its conflicts are in
-/// [`InstallReport::conflicts`]; the other items are written (see `apply::decide_plan`). An installed name
-/// that contains a path separator fails before any change.
+/// [`InstallReport::conflicts`]; the other items are written (see
+/// `apply::decide_plan`). An installed name that is empty, `.` or `..`, or
+/// that contains a path separator, fails before any change.
 ///
 /// Before the adoption and before any write, the overlap check refuses
 /// a source item directory that is, is inside, or contains one of its own

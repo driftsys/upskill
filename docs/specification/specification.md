@@ -153,8 +153,9 @@ by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces
 items installed from another source; it then lists these files after
 `Replaced or deleted <n> modified or unmanaged file(s) (--force)`, unless
-`-q/--quiet` is given. An installed name or an `--as` alias that contains `/` or
-`\` is refused before any change, with an error that names the item.
+`-q/--quiet` is given. An installed name or an `--as` alias that is empty, `.`
+or `..`, or that contains `/` or `\`, is refused before any change, with an
+error that names the item.
 
 ### 2.2 `update`
 
@@ -188,10 +189,17 @@ earlier global Copilot paths (`.github/skills`, `.github/instructions` and
 `.github/agents` under `$HOME`): it writes the item at the path of §3.1 and
 deletes the file at the earlier path when it is unchanged. An edited file at the
 earlier path is kept and named in the output. The item of such a run is reported
-as up to date when its source did not change; the line
-`Changed N file(s) written or deleted` counts the moved files. The empty client
-root and kind directories that remain (for example `$HOME/.github/skills`) are
-kept, as the pruning rule of §2.3 states.
+as up to date when its source did not change, and the last line counts the moved
+files. For one skill, the output is:
+
+```text
+Updated 0 of 1 item(s)
+  skill foo                              up to date
+Changed 2 file(s) written or deleted
+```
+
+The empty client root and kind directories that remain (for example
+`$HOME/.github/skills`) are kept, as the pruning rule of §2.3 states.
 
 `update` applies the conflict rules of `add` (§2.1). An item with a modified or
 unowned destination is not written and keeps its lockfile entry (with its
@@ -724,13 +732,14 @@ was killed is not deleted by upskill. Two upskill processes that change one
 scope at the same time are not supported. `add`, `update` and `remove` (not
 `update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
 not an `add`, or an `update` for its first source, that is refused for a source
-item that overlaps its own output paths, for a conflict with another source, for
-two items with one installed name, or for an installed name with a path
-separator, and not an `update` whose first source resolves to no items while the
-lockfile records items from it) adopt a `schema: 1` lockfile: they keep the old
-bytes as `.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept
-and not replaced), record each existing file at the items' output paths with its
-current hash, save `schema: 2`, and print the adopted paths to stderr.
+item that overlaps an output path of the run, for a conflict with another
+source, for two items with one installed name, or for an installed name that is
+empty, `.` or `..` or that has a path separator, and not an `update` whose first
+source resolves to no items while the lockfile records items from it) adopt a
+`schema: 1` lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an
+existing `.upskill-lock.json.v1` is kept and not replaced), record each existing
+file at the items' output paths with its current hash, save `schema: 2`, and
+print the adopted paths to stderr.
 
 Two possible locations:
 

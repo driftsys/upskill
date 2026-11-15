@@ -227,30 +227,40 @@ pub(super) fn prepare_install(
     }
     drop(lock);
 
-    // -- Refuse a source item that overlaps its own output paths --
+    // -- Refuse a source item that overlaps an output path of the run --
     // Runs before the adoption and before any write, so a refused install
     // changes no file. Aliases apply to entry-source items only, as in the
-    // plan below.
+    // plan below. The items of every source are compared with each other.
     let at = crate::scope::ScopeRoot {
         scope: options.scope,
         root: target.to_path_buf(),
     };
+    let mut source_items = Vec::new();
     if let Some(closure) = &closure {
-        let no_aliases = plan::PlanNames::default();
+        let no_aliases = plan::PlanNames {
+            excludes: options.excludes.clone(),
+            ..plan::PlanNames::default()
+        };
         for (src_label, si) in &closure.by_source {
             let names = if *src_label == label {
                 &entry_names
             } else {
                 &no_aliases
             };
-            install::check_sources_outside_outputs(&si.root, &at, Some(&si.items), names)?;
+            install::collect_source_items(&si.root, Some(&si.items), names, &mut source_items)?;
         }
     } else {
         // Without a closure, `items` is not empty: a bundle-file source always
         // gets a closure, and only a request with names defers to name
         // resolution.
-        install::check_name_resolution_outside_outputs(&local_source, &at, items, &entry_names)?;
+        install::collect_name_resolution_items(
+            &local_source,
+            items,
+            &entry_names,
+            &mut source_items,
+        )?;
     }
+    super::output::check_run_outside_outputs(&at, &source_items)?;
 
     // -- Plan every output; nothing is written until `commit` --
     // With a closure, plan each source's resolved items from that
@@ -311,6 +321,17 @@ pub(super) fn prepare_install(
     // and also a member of a named bundle) is kept once. Two items with one
     // installed name fail here, before the adoption.
     plan::merge_duplicates(&mut report.planned);
+    // The same item reaches `report.items` once for the bundle and once for
+    // the name, so the summary would count it twice.
+    let mut seen = std::collections::BTreeSet::new();
+    report.items.retain(|i| {
+        seen.insert((
+            i.kind,
+            i.name.clone(),
+            i.client.name(),
+            i.output_path.clone(),
+        ))
+    });
     apply::check_installed_names(&report.planned)?;
 
     Ok(PreparedInstall {

@@ -158,9 +158,9 @@ then lists the replaced or deleted files after
 `Replaced or deleted <n> modified or unmanaged file(s) (--force)`; `-q/--quiet`
 hides this list.
 
-An installed name, or an `--as` alias, must not contain a path separator (`/` or
-`\`). `add` refuses such a name before it changes any file and names the item in
-the error.
+An installed name, or an `--as` alias, must not be empty, `.` or `..`, and must
+not contain a path separator (`/` or `\`). `add` refuses such a name before it
+changes any file and names the item in the error.
 
 A source rooted in a client directory (for example `~/.claude`) or one that
 contains a client output directory is not supported. The first `add` succeeds,
@@ -168,6 +168,17 @@ but its output is inside the source, so the next `add` and every `update` of
 that source are refused with a message that names the source root and the client
 directory. Move the source items to a directory outside the client directories
 and add them from there.
+
+`add`, and `update` for each source that it updates, refuse a source item
+directory that is the same as, is inside, or contains a path that the install of
+that source deletes or writes: the output paths of the item itself, or the
+output paths of another item installed with it, also an item of a dependency
+source. A source item that is not installed (not named, excluded, or not in the
+bundle) is checked as well: no installed item may write into its directory. The
+output paths of an item that is not installed are not compared with other items,
+but an excluded item is still compared with its own output paths. The error
+names the item, and for an overlap with another item also that item. The command
+fails with exit code 1 before any file or lockfile of that source is written.
 
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those
@@ -225,10 +236,17 @@ content to `.github/skills`, `.github/instructions` and `.github/agents` under
 [global paths](#per-client-output-paths): it writes the new file and deletes the
 file at the earlier path when that file is unchanged. An edited file at the
 earlier path is kept and named in the output. The items of such a run are
-reported as up to date when their source did not change; the line
-`Changed N file(s) written or deleted` counts the moved files. The empty client
-root and kind directories that remain, for example `$HOME/.github/skills`, are
-kept.
+reported as up to date when their source did not change, and the last line
+counts the moved files. For one skill, the output is:
+
+```text
+Updated 0 of 1 item(s)
+  skill foo                              up to date
+Changed 2 file(s) written or deleted
+```
+
+The empty client root and kind directories that remain, for example
+`$HOME/.github/skills`, are kept.
 
 `update` honours the same [client-selection](#upskill-add-source-items) flags
 and `clients:` config as `add` (`--claude`, `--copilot`, `--vscode`,
@@ -622,10 +640,13 @@ and the global scope outside one. When the current directory is the home
 directory, the project scope is refused with exit code 2 and a message that asks
 for `--global`. When a named item is not in the lockfile of that scope but the
 other scope records it, `remove` fails with `not in lockfile` and prints one
-line for each such name,
-`hint: '<name>' is installed in the <scope> scope (<root>); pass
---<scope>`, to
-stderr. A name that the current scope also holds gets no such line. When no name
+line for each such name, to stderr:
+
+```text
+hint: '<name>' is installed in the <scope> scope (<root>); pass --<scope>
+```
+
+A name that the current scope also holds gets no such line. When no name
 qualifies, `remove` prints the `upskill doctor` hint instead. `update <name>`
 does the same.
 
@@ -674,7 +695,7 @@ Unregister an MCP server that a bundle install configured (see the `mcps:` note
 under [`upskill add`](#upskill-add-source-items)).
 
 ```bash
-upskill remove-mcp drawio            # remove from the current project
+upskill remove-mcp drawio            # in a git repository: the project scope
 upskill remove-mcp drawio --global   # remove from the $HOME scope
 ```
 
@@ -1081,12 +1102,12 @@ item that were already missing before adoption. The adopted paths are printed
 also when the command fails after the adoption was saved. `update --dry-run` and
 `doctor` do not adopt, and neither does a `remove` that fails because a name is
 not in the lockfile. An `add` does not adopt when it is refused because a source
-item overlaps its own output paths, because an item conflicts with an item
+item overlaps an output path of the run, because an item conflicts with an item
 installed from another source, because two items would install under one name,
-or because an installed name contains a path separator. An `update` refused for
-one of these reasons does not adopt when the refused source is the first source
-it updates, and neither does an `update` whose first source resolves to no items
-while the lockfile records items from it.
+or because an installed name is empty, `.` or `..` or contains a path separator.
+An `update` refused for one of these reasons does not adopt when the refused
+source is the first source it updates, and neither does an `update` whose first
+source resolves to no items while the lockfile records items from it.
 
 ## Per-client output paths
 

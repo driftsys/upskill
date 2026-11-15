@@ -298,3 +298,48 @@ fn bundle_install_sibling_layout_discovers_items_in_peer_directories() {
         "lockfile records installed item: {items:?}"
     );
 }
+
+/// A bundle and one of its items named together install the item once, so
+/// the summary counts the files written and lists each client once.
+#[test]
+fn summary_counts_an_item_named_with_its_bundle_once() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let registry = tmp.path().join("reg");
+    for name in ["s1", "s2"] {
+        fs::create_dir_all(registry.join(name)).unwrap();
+        fs::write(
+            registry.join(name).join("SKILL.md"),
+            format!("---\nschema: 1\nname: {name}\ndescription: Use for {name}\n---\nBody.\n"),
+        )
+        .unwrap();
+    }
+    fs::write(
+        registry.join("pack.bundle.yaml"),
+        "schema: 1\nname: pack\ndescription: Two skills\nlicense: MIT\n\nitems:\n  skills:\n    - s1\n    - s2\n",
+    )
+    .unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg", "pack", "s1", "--claude", "--project"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    assert!(
+        stdout.contains("Installed 2 files from"),
+        "stdout: {stdout}"
+    );
+    assert!(!stdout.contains("claude, claude"), "stdout: {stdout}");
+    assert_eq!(stdout.matches("→ claude").count(), 2, "stdout: {stdout}");
+    for name in ["s1", "s2"] {
+        assert!(
+            tmp.path()
+                .join(format!(".claude/skills/{name}/SKILL.md"))
+                .exists()
+        );
+    }
+}
