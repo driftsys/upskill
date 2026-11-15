@@ -24,8 +24,8 @@ const PLUGINS: [Plugin; 2] = [Plugin::Claude, Plugin::Copilot];
 impl Plugin {
     fn dir(self) -> PathBuf {
         let name = match self {
-            Plugin::Claude => "upskill-notice-claude",
-            Plugin::Copilot => "upskill-notice-copilot",
+            Plugin::Claude => "upskill-claude",
+            Plugin::Copilot => "upskill-copilot",
         };
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("plugins")
@@ -244,13 +244,10 @@ fn static_shape_of_hooks_and_manifests() {
     assert_eq!(copilot["type"], "command");
     assert_eq!(copilot["timeoutSec"], 30);
 
-    for (plugin, name) in [
-        (Plugin::Claude, "upskill-notice-claude"),
-        (Plugin::Copilot, "upskill-notice-copilot"),
-    ] {
+    for plugin in PLUGINS {
         let text = fs::read_to_string(plugin.manifest_path()).unwrap();
         let manifest: Value = serde_json::from_str(&text).unwrap();
-        assert_eq!(manifest["name"], name);
+        assert_eq!(manifest["name"], "upskill");
         assert!(manifest.get("version").is_none());
     }
 }
