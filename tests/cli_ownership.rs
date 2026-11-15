@@ -962,6 +962,45 @@ fn add_replaces_a_read_only_installed_file() {
     );
 }
 
+/// An installed name that is empty, `.` or `..` is refused when the install
+/// is planned, before any write. The error names the item and the alias.
+#[test]
+fn an_alias_that_is_empty_dot_or_dot_dot_is_refused_before_any_write() {
+    for alias in ["", ".", ".."] {
+        let (tmp, home) = project();
+        let src = tmp.path().join("ab");
+        write_skill(&src, "foo", "Foo body.");
+
+        let out = common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args([
+                "add",
+                "./ab",
+                "--as",
+                &format!("foo={alias}"),
+                "--claude",
+                "--project",
+            ])
+            .assert()
+            .code(1);
+
+        let stderr = stderr_of(&out);
+        assert!(
+            stderr.contains(&format!("the skill `foo` as `{alias}`"))
+                && stderr.contains("must not be empty, `.` or `..`"),
+            "alias {alias:?}: {stderr}"
+        );
+        assert!(
+            !tmp.path().join(".claude").exists(),
+            "alias {alias:?}: a client directory was created"
+        );
+        assert!(
+            !tmp.path().join(".upskill-lock.json").exists(),
+            "alias {alias:?}: a lockfile was written"
+        );
+    }
+}
+
 /// The fixture items staged under `source/`, with the fixture bundles
 /// under `source/bundles/`.
 fn project_with_bundles() -> (tempfile::TempDir, std::path::PathBuf) {
