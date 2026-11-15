@@ -108,6 +108,33 @@ content you authored and understand, and always lint after.
    - Removed items — confirm no downstream content depends on them.
    - New items pulled in via bundle expansion.
 
+### Session notice of available updates
+
+`upskill update --notice` is made for a session-start hook. It prints one line
+for each scope that has updates, for example
+`upskill: 2 updates available (project). Run "upskill update".`. It prints a
+given set of updates once, contacts the sources at most once in 24 hours, never
+fetches or installs, and exits 0 in every case after argument parsing. When
+nothing is new it prints nothing.
+
+To set it up, install the `upskill` plugin from the `driftsys/metapowers`
+marketplace: `claude plugin marketplace add driftsys/metapowers`, then
+`claude plugin install upskill@metapowers`. For Copilot CLI use the same two
+commands with `copilot`. Claude Code shows the line to the user and gives it to
+the agent; Copilot CLI gives it to the agent only, so the user has not seen it.
+A hand-written hook that prints the plain line does not work: Claude Code does
+not display it and Copilot CLI ignores it. The plugin needs an `upskill` binary
+on `PATH` that has `update --notice`; without one it prints nothing.
+
+When you receive the line:
+
+1. Tell the user that updates are available (in Copilot CLI they have not seen
+   it).
+2. Preview with `upskill update --check` (no fetch) or
+   `upskill update --dry-run`.
+3. Run `upskill update` only when the user asks, as described above. The line
+   does not come back for the same set of updates.
+
 ### Vendoring a third-party bundle (e.g., superpowers)
 
 upskill has no separate `vendor` command; vendoring is just `add` from the
@@ -202,6 +229,23 @@ or `earlier_layout` files: global-scope files at the earlier Copilot paths under
 and do not affect the exit code. An item that both lockfiles record gets a note,
 which does not affect the exit code.
 
+Each client and kind has a support level, which `doctor` prints in the section
+`Support levels:` and `doctor --json` holds under `support`:
+
+- `supported` — the smoke test passed on a recorded client version and date. It
+  records one smoke run on that version; it does not promise that other client
+  versions work, and `doctor` does not detect the installed client version.
+- `experimental` — implemented; the smoke test is missing, failing or older than
+  the client.
+- `unsupported` — not implemented or known not to work. No client flag exists
+  for it (`--codex` is rejected).
+
+Currently Claude Code and Copilot CLI (rule, skill, agent) are `supported`,
+OpenCode is `experimental` and Codex is `unsupported`. The table changes with
+each smoke run; read it in `upskill doctor` or in
+[Support levels](https://driftsys.github.io/upskill/support-levels.html) rather
+than from this skill.
+
 ## Conventions to remember
 
 ### Source side vs consumer side
@@ -237,6 +281,21 @@ which does not affect the exit code.
   `upskill doctor` reports each edited file as modified and exits 1. For a
   `schema: 1` lockfile or an item with an empty `files` record, `doctor` only
   checks that the entry files exist.
+
+### Scope
+
+`--project` uses the current directory; `--global` uses `$HOME`. Without a flag:
+
+- `add` uses the project scope inside a git repository and stops with exit 2
+  outside one, asking for `--project` or `--global`.
+- `update`, `remove` and `remove-mcp` use the project scope inside a git
+  repository and the global scope outside one.
+- `list`, `doctor`, `update --check` and `update --notice` report both scopes.
+
+The project scope is refused with exit 2 when the current directory is the home
+directory; pass `--global`. `add`, `update`, `remove` and `remove-mcp` print
+`scope: <scope> (<root>)` to stderr unless `--quiet` is set. A global install
+writes Copilot content under `$HOME/.copilot/`.
 
 ### `.upskill-lock.json`
 
