@@ -83,12 +83,43 @@ is compared by content and has no commit).
 prints a given set of updates once, contacts the sources at most once in 24
 hours, and exits with code 0 in every case after the arguments are parsed (also
 when it is interrupted), so that it cannot make a hook fail. When it has nothing
-to report it prints nothing. Call it from a session-start hook that you write
-for your AI client:
+to report it prints nothing.
+
+The recommended way to call it from a session-start hook is the `upskill`
+plugin, which the `driftsys/metapowers` marketplace publishes. Install it for
+Claude Code:
 
 ```bash
-upskill update --notice
+claude plugin marketplace add driftsys/metapowers
+claude plugin install upskill@metapowers
 ```
+
+or for Copilot CLI:
+
+```bash
+copilot plugin marketplace add driftsys/metapowers
+copilot plugin install upskill@metapowers
+```
+
+What you get depends on the client:
+
+- Claude Code shows one line at session start. You see it, and the agent
+  receives it.
+- Copilot CLI gives the notice to the agent. You do not see it, because Copilot
+  CLI shows no hook output (issue
+  [#530](https://github.com/driftsys/upskill/issues/530) tracks this).
+
+A given set of updates is announced once.
+
+The plugin needs an `upskill` binary on `PATH` that has `update --notice`. When
+the binary is missing or older, the hook prints nothing.
+
+A hand-written hook that runs `upskill update --notice` does not work in either
+client. Claude Code gives a plain line to the agent only and does not display
+it. Copilot CLI ignores a plain line: it reads only a JSON object with
+`additionalContext`. To write your own hook, start from the plugin sources in
+`plugins/` of the upskill repository, which wrap the line in the JSON that each
+client reads.
 
 See [`update --notice`](commands.md#update---notice) for the output, the cache
 file and the exit codes. A session without network access records the attempt
