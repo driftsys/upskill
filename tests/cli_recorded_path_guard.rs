@@ -49,8 +49,9 @@ fn installed() -> (tempfile::TempDir, std::path::PathBuf) {
     (tmp, home)
 }
 
-/// Appends a `files` record for `path` with `sha256` to the item.
-fn add_record(root: &Path, path: &str, sha256: &str) -> Vec<u8> {
+/// Appends a record for `path` with `sha256` to the list `list` (`files` or
+/// `pending`) of the item `name` in the lockfile under `root`.
+fn add_record_to(root: &Path, name: &str, list: &str, client: &str, path: &str, sha256: &str) {
     let lock_path = root.join(".upskill-lock.json");
     let mut lock: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(&lock_path).unwrap()).unwrap();
@@ -58,14 +59,20 @@ fn add_record(root: &Path, path: &str, sha256: &str) -> Vec<u8> {
         .as_array_mut()
         .unwrap()
         .iter_mut()
-        .find(|i| i["name"] == ITEM)
+        .find(|i| i["name"] == name)
         .unwrap();
-    item["files"]
+    if item.get(list).is_none() {
+        item[list] = serde_json::json!([]);
+    }
+    item[list]
         .as_array_mut()
         .unwrap()
-        .push(serde_json::json!({"client": "claude", "path": path, "sha256": sha256}));
+        .push(serde_json::json!({"client": client, "path": path, "sha256": sha256}));
     fs::write(&lock_path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
-    fs::read(&lock_path).unwrap()
+}
+
+fn add_record(root: &Path, path: &str, sha256: &str) {
+    add_record_to(root, ITEM, "files", "claude", path, sha256);
 }
 
 fn snapshot(root: &Path) -> Vec<(String, Vec<u8>)> {
@@ -183,4 +190,152 @@ fn a_record_of_a_resource_file_in_the_item_directory_is_still_deleted() {
         .assert()
         .success();
     assert!(!stale.exists());
+}
+
+fn stderr_of(assert: &assert_cmd::assert::Assert) -> String {
+    String::from_utf8_lossy(&assert.get_output().stderr).to_string()
+}
+
+#[test]
+fn a_multi_source_update_refuses_before_it_writes_anything() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let items = Path::new(FIXTURES).join("items");
+    copy_dir_all(&items.join(ITEM), &tmp.path().join("a").join(ITEM));
+    copy_dir_all(
+        &items.join("security-reviewer"),
+        &tmp.path().join("b").join("security-reviewer"),
+    );
+    for source in ["./a", "./b"] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["add", source, "--claude", "--project"])
+            .assert()
+            .success();
+    }
+    // A changes in its source; B gets a record outside its layout.
+    let skill = tmp.path().join("a").join(ITEM).join("SKILL.md");
+    let mut text = fs::read_to_string(&skill).unwrap();
+    text.push_str("\nA new line.\n");
+    fs::write(&skill, text).unwrap();
+    fs::create_dir_all(tmp.path().join(".github")).unwrap();
+    fs::write(tmp.path().join(".github/x.yml"), b"x\n").unwrap();
+    add_record_to(
+        tmp.path(),
+        "security-reviewer",
+        "files",
+        "claude",
+        ".github/x.yml",
+        &sha256_hex(b"x\n"),
+    );
+    let before = snapshot(tmp.path());
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    assert!(stderr_of(&assert).contains(".github/x.yml"));
+    assert_eq!(snapshot(tmp.path()), before, "nothing may change");
+}
+
+#[test]
+fn update_refuses_a_pending_record_outside_the_item_layout() {
+    let (tmp, home) = installed();
+    fs::create_dir_all(tmp.path().join(".github/workflows")).unwrap();
+    fs::write(tmp.path().join(".github/workflows/ci.yml"), b"ci\n").unwrap();
+    add_record_to(
+        tmp.path(),
+        ITEM,
+        "pending",
+        "claude",
+        ".github/workflows/ci.yml",
+        &sha256_hex(b"ci\n"),
+    );
+    let before = snapshot(tmp.path());
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    let stderr = stderr_of(&assert);
+    assert!(stderr.contains(".github/workflows/ci.yml"), "{stderr}");
+    assert!(stderr.contains("pending"), "{stderr}");
+    assert_eq!(snapshot(tmp.path()), before);
+}
+
+#[test]
+fn update_refuses_a_record_of_another_client() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    copy_dir_all(
+        &Path::new(FIXTURES).join("items"),
+        &tmp.path().join("source"),
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", ITEM, "--copilot", "--project"])
+        .assert()
+        .success();
+    fs::create_dir_all(tmp.path().join(".github/workflows")).unwrap();
+    fs::write(tmp.path().join(".github/workflows/ci.yml"), b"ci\n").unwrap();
+    add_record_to(
+        tmp.path(),
+        ITEM,
+        "files",
+        "copilot",
+        ".github/workflows/ci.yml",
+        &sha256_hex(b"ci\n"),
+    );
+    let before = snapshot(tmp.path());
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    assert!(stderr_of(&assert).contains(".github/workflows/ci.yml"));
+    assert_eq!(snapshot(tmp.path()), before);
+}
+
+#[test]
+fn update_refuses_a_record_in_the_global_scope() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    copy_dir_all(
+        &Path::new(FIXTURES).join("items"),
+        &tmp.path().join("source"),
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./source", ITEM, "--claude", "--global"])
+        .assert()
+        .success();
+    fs::create_dir_all(home.join(".github/workflows")).unwrap();
+    fs::write(home.join(".github/workflows/ci.yml"), b"ci\n").unwrap();
+    add_record_to(
+        &home,
+        ITEM,
+        "files",
+        "claude",
+        ".github/workflows/ci.yml",
+        &sha256_hex(b"ci\n"),
+    );
+    let before = snapshot(&home);
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--yes", "--global"])
+        .assert()
+        .code(1);
+    let stderr = stderr_of(&assert);
+    assert!(stderr.contains(".github/workflows/ci.yml"), "{stderr}");
+    assert!(
+        stderr.contains(&home.join(".upskill-lock.json").display().to_string()),
+        "{stderr}"
+    );
+    assert_eq!(snapshot(&home), before);
 }

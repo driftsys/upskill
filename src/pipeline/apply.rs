@@ -271,13 +271,16 @@ pub(super) fn decide_plan(
         let kept_paths: BTreeSet<&str> = files.iter().map(|f| f.path.as_str()).collect();
         let mut stale = Vec::new();
         if let Some(entry) = entry {
+            // `update` and `add` check the whole lockfile before the first
+            // write; this check is the second line of defence for a caller
+            // of `decide_plan` that did not.
+            check_item_records(target, entry)?;
             // A `pending` path is a recorded path too: a failed run may have
             // written it, and this plan may no longer contain it.
             for old in entry.files.iter().chain(&entry.pending) {
                 if kept_paths.contains(old.path.as_str()) {
                     continue;
                 }
-                check_recorded_in_layout(item.kind, &item.name, &old.path)?;
                 if let Some(rel) = deletable(&old.path) {
                     if all_planned.contains(rel.as_path()) || stale.contains(&rel) {
                         continue;
@@ -1006,24 +1009,48 @@ fn check_item_components(target: &Path, rel: &Path, skip_last: bool) -> Result<(
     Ok(())
 }
 
-/// Refuses a recorded path that is outside the layout of the item: the
-/// error names the lockfile, the item and the path. A hand-edited record
-/// could otherwise make `update` or `remove` delete a file that upskill
-/// never wrote. See [`in_item_layout`].
-pub(super) fn check_recorded_in_layout(kind: ItemKind, name: &str, path: &str) -> Result<()> {
-    if in_item_layout(kind, name, path) {
-        return Ok(());
+/// Refuses every recorded path, in the `files` and in the `pending` list of
+/// `entry`, that is outside the layout of the item: the error names the
+/// lockfile under `target`, the list, the item and the path. A hand-edited
+/// record could otherwise make `update` or `remove` delete a file that
+/// upskill never wrote. Reads nothing on disk. See [`in_item_layout`].
+pub(super) fn check_item_records(target: &Path, entry: &LockedItem) -> Result<()> {
+    for (list, files) in [("files", &entry.files), ("pending", &entry.pending)] {
+        for file in files {
+            if !in_item_layout(entry.kind, &entry.name, &file.path) {
+                anyhow::bail!(
+                    "{} records the path {} in the `{list}` list of the {} `{}`, which is \
+                     outside the layout of that item; fix or remove the record. No file \
+                     was written or deleted",
+                    target.join(crate::lockfile::LOCKFILE_NAME).display(),
+                    file.path,
+                    entry.kind,
+                    entry.name
+                );
+            }
+        }
     }
-    anyhow::bail!(
-        "{} records the path {path} for the {kind} `{name}`, which is outside the layout \
-         of that item; fix or remove the record. Nothing was changed",
-        crate::lockfile::LOCKFILE_NAME
-    )
+    Ok(())
+}
+
+/// [`check_item_records`] for every item of `lock`, whether or not the
+/// running command selects it. `add`, `update` and `remove` call it before
+/// their first write, so that a bad record stops the whole run.
+pub(super) fn check_lockfile_records(target: &Path, lock: &Lockfile) -> Result<()> {
+    lock.items
+        .iter()
+        .try_for_each(|entry| check_item_records(target, entry))
 }
 
 /// The recorded path `rel` as a relative path, when it may be deleted: only
 /// plain components, at least three of them, and a first component that is
-/// a client root. `None` for any other recorded path, which is skipped.
+/// a client root. `None` for any other recorded path.
+///
+/// `add`, `update` and `remove` refuse a record outside the item layout
+/// before they call this function, and every path inside that layout is
+/// accepted here, so for them the `None` branch is not reached. It stays
+/// for `doctor`, which does not refuse a bad record and skips the paths
+/// that this function rejects.
 pub(super) fn deletable(rel: &str) -> Option<PathBuf> {
     let path = PathBuf::from(rel);
     let parts: Vec<Component> = path.components().collect();
