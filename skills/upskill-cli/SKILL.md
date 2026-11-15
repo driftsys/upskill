@@ -119,21 +119,27 @@ nothing is new it prints nothing.
 
 To set it up, install the `upskill` plugin from the `driftsys/metapowers`
 marketplace: `claude plugin marketplace add driftsys/metapowers`, then
-`claude plugin install upskill@metapowers`. For Copilot CLI use the same two
-commands with `copilot`. Claude Code shows the line to the user and gives it to
-the agent; Copilot CLI gives it to the agent only, so the user has not seen it.
-A hand-written hook that prints the plain line does not work: Claude Code does
-not display it and Copilot CLI ignores it. The plugin needs an `upskill` binary
-on `PATH` that has `update --notice`; without one it prints nothing.
+`claude plugin install upskill@metapowers`. For Copilot CLI run
+`copilot plugin marketplace add driftsys/metapowers`, then
+`copilot plugin install upskill@metapowers`. Claude Code shows the line to the
+user and gives it to the agent; Copilot CLI gives it to the agent and does not
+display it, so the user may not have seen it. A hand-written hook that prints
+the plain line does not work: Claude Code does not display it and Copilot CLI
+ignores it. The plugin needs an `upskill` binary on `PATH` that has
+`update --notice`; without one it prints nothing.
 
 When you receive the line:
 
-1. Tell the user that updates are available (in Copilot CLI they have not seen
-   it).
+1. Tell the user that updates are available (in Copilot CLI they may not have
+   seen the line).
 2. Preview with `upskill update --check` (no fetch) or
-   `upskill update --dry-run`.
-3. Run `upskill update` only when the user asks, as described above. The line
-   does not come back for the same set of updates.
+   `upskill update --dry-run` (fetches, writes nothing).
+3. When the user asks for the update, run the command that the line names:
+   `upskill update`, or `upskill update --global` for the global scope. Follow
+   "Updating installed content" above.
+
+The line is not printed again for the same set of updates, also when the user
+does not update.
 
 ### Vendoring a third-party bundle (e.g., superpowers)
 
@@ -291,6 +297,7 @@ than from this skill.
 - `update`, `remove` and `remove-mcp` use the project scope inside a git
   repository and the global scope outside one.
 - `list`, `doctor`, `update --check` and `update --notice` report both scopes.
+  In the home directory they report the global scope only.
 
 The project scope is refused with exit 2 when the current directory is the home
 directory; pass `--global`. `add`, `update`, `remove` and `remove-mcp` print
