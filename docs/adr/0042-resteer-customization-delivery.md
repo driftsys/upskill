@@ -179,7 +179,7 @@ OpenCode experimental and Codex unsupported (Decisions 3 and 4).
 - Client trials no longer gate a release. Their results set support levels.
 - Two upskill processes that change the same scope at the same time are not
   supported.
-- Shared files that upskill edits in place (`CLAUDE.md`,
+- Shared files that upskill creates or edits (`CLAUDE.md`,
   `.vscode/settings.json`, `opencode.json`) are outside the ownership record.
 - The decision records and design notes for the removed code are kept as history
   and marked withdrawn. The trial results stay in `docs/technotes/` as research.
