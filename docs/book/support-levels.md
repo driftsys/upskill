@@ -63,13 +63,13 @@ used up (HTTP 402). The script of that run, before it handled the quota, printed
 `fail` for every Copilot cell. The script now prints `unavailable` for that
 case, with a note that names the quota. On 2026-11-15, the command
 `just smoke --run --clients copilot --allow-real-home` ran on GitHub Copilot CLI
-1.0.112 with an account that had quota left, built from commit 71baa0a. All six
-Copilot cells passed (rule, skill and agent, each at project and global scope).
-The smoke mode reported `copilot rule supported`, `copilot skill supported` and
-`copilot agent supported`, so the three `copilot` cells are `supported`. The
-tool names that the smoke mode allows for the skill and agent cells
-(`SMOKE_TOOLS` in the script, `skill` and `task`) are confirmed for Claude Code
-2.1.308 and for Copilot CLI 1.0.112.
+1.0.112 with an account that had quota left, with upskill built from commit
+71baa0a. All six Copilot cells passed (rule, skill and agent, each at project
+and global scope). The smoke mode reported `copilot rule supported`,
+`copilot skill supported` and `copilot agent supported`, so the three `copilot`
+cells are `supported`. The tool names that the smoke mode allows for the skill
+and agent cells (`SMOKE_TOOLS` in the script, `skill` and `task`) are confirmed
+for Claude Code 2.1.308 and for Copilot CLI 1.0.112.
 
 ```bash
 just smoke                  # print the cells; no model call

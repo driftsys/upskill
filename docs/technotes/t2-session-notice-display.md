@@ -3,8 +3,8 @@
 This note belongs to trial T2 of the customization re-steer (plan Task 9). It
 records what the documentation of each client states about a hook that runs when
 a session starts, and the result of the Claude Code part of the trial in
-non-interactive mode. The Copilot CLI part has not been run, and the interactive
-display of Claude Code has not been observed. This note is informative.
+non-interactive mode and of the Copilot CLI part in prompt mode. The interactive
+display of both clients has not been observed. This note is informative.
 
 `upskill update --notice` prints one plain line on standard output for each
 scope that has available updates (the project scope, then the global scope), for
@@ -115,12 +115,15 @@ The documented shape of a hook file (not run):
 - Claude Code documents the plain output of the hook as context for the model,
   not as a message to the user. Copilot CLI documents that it consumes
   `additionalContext` and does not state whether the user or the model receives
-  it. Whether the user sees the line, and whether the agent tells the user, are
-  the main questions of the trial.
+  it. The Copilot CLI trial in prompt mode showed that the model receives
+  `additionalContext` and does not mention it without being asked. Whether the
+  user sees the line in the interactive terminal is not observed for either
+  client.
 - Copilot CLI documents only a JSON object with `additionalContext`. A plain
   line may be ignored. If the trial confirms that, the hook command of the
   Copilot plugin must wrap the line in that object. The binary keeps printing a
-  plain line, as the plan states.
+  plain line, as the plan states. The trial confirmed that Copilot CLI ignores a
+  plain line in prompt mode (see the Copilot CLI trial result below).
 - For Claude Code, a line that the user must see may need the `systemMessage`
   field, which the hook command would also have to build.
 - Both clients document that the session continues when the hook fails. Copilot
@@ -201,6 +204,87 @@ model would print JSON with both `systemMessage` and `additionalContext`. The
 display of `systemMessage` in the interactive terminal has to be confirmed by a
 person before the plugin is published.
 
+## Trial result: Copilot CLI, non-interactive mode
+
+Run on 2026-11-15 with GitHub Copilot CLI 1.0.112, in prompt mode, in temporary
+git repositories. No plugin was installed: the hook was declared in the
+repository (the plan asked for a plugin). Each hook script first appended a line
+to a log file, to show that it ran, and then printed its text. Each request used
+this command, with `--trust-folder` only in the second series. The standard
+output and the standard error were captured to separate files:
+
+```text
+copilot --no-auto-update --disable-builtin-mcps --available-tools= --no-ask-user [--trust-folder] -p "<prompt>"
+```
+
+Prompt 1 was `Reply with the single word READY.` Prompt 2 asked whether the
+context holds a notice about upskill updates and asked for an exact quote, or
+`NONE`. The printed line was
+`upskill: 1 update available (project). Run "upskill update". [ref <marker>]`.
+
+Forms A and B used the file `.github/hooks/notice.json`, with `<repository>`
+replaced by the path of the temporary repository:
+
+```json
+{"version":1,"hooks":{"sessionStart":[{"type":"command","bash":"sh \"<repository>/hook.sh\"","timeoutSec":30}]}}
+```
+
+- Form A: the script prints the plain line.
+- Form B: the script prints `{"additionalContext":"<line>"}`.
+- Form E: no `.github/hooks` file. The hook was declared only in
+  `.claude/settings.json`, in the Claude Code shape below, and the script prints
+  the plain line:
+
+```json
+{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"sh \"<repository>/hook.sh\""}]}]}}
+```
+
+First series, without `--trust-folder` (5 requests: A prompt 1, A prompt 2, B
+prompt 1, B prompt 2, E prompt 2):
+
+- No hook ran: every log file stayed empty.
+- The standard error held, for A and B,
+  `Warning: Skipped repository hooks (.github/hooks) because the folder "<path>" is not trusted.`
+  The Copilot log held, for E, the same warning with `(repository settings)` in
+  place of `(.github/hooks)`.
+- Every request exited with code 0.
+
+Second series, with `--trust-folder` (the same 5 requests). The help text of the
+option says that it trusts the configuration of the working directory for one
+new prompt-mode session only, without saved trust.
+
+| Form                                              | Hook ran | Model quoted the line (prompt 2) | Model mentioned it without being asked (prompt 1) | Line in standard output or standard error |
+| ------------------------------------------------- | -------- | -------------------------------- | ------------------------------------------------- | ----------------------------------------- |
+| A: plain line, `.github/hooks`                    | yes      | no (answered `NONE`)             | no (answered `READY`)                             | no                                        |
+| B: JSON with `additionalContext`, `.github/hooks` | yes      | yes                              | no (answered `READY`)                             | only as the model's answer to prompt 2    |
+| E: plain line, hook in `.claude/settings.json`    | yes      | no (answered `NONE`)             | not run                                           | no                                        |
+
+Observed:
+
+- A repository hook did not run in a folder that Copilot CLI did not trust.
+- The hook ran with the repository root as its working directory.
+- Every request exited with code 0.
+
+Not observed:
+
+- The interactive terminal: whether any form is displayed to the user there, and
+  how the trust question is asked there.
+- A hook that a plugin declares: the trust rule for a plugin hook is not known.
+- Form B declared in `.claude/settings.json`.
+- A hook declared for the user in `~/.copilot/hooks/`.
+
+What follows for the Copilot plugin:
+
+- Copilot CLI ignores a plain line. The hook command of the Copilot plugin must
+  wrap the line of `upskill update --notice` in a JSON object with
+  `additionalContext`, and print nothing when the binary prints nothing.
+- The model receives the notice and does not report it without being asked. No
+  form that shows the line to the user was found in prompt mode.
+- A hook declared in `.claude/settings.json` runs in Copilot CLI too, so a
+  project that declares the hook for both clients runs it twice in Copilot CLI.
+  The effect of two runs is described in the Copilot CLI section above.
+- A repository hook does not run in a folder that Copilot CLI does not trust.
+
 ## What the trial must record
 
 With the client version for each point. The Claude Code part above answered
@@ -215,10 +299,18 @@ these points for non-interactive mode only:
 3. The same two points for the JSON form of that client. Answered for
    `claude -p` (forms B, C and D above). Open for the interactive display.
 
-Open for Copilot CLI, every point:
+Copilot CLI 1.0.112, answered for prompt mode only:
 
 1. Whether the user sees the plain line, and whether the agent receives it and
-   mentions it.
-2. The same points for its JSON form.
-3. Whether a plain line is ignored.
-4. Whether a hook declared in `.claude/settings.json` also runs.
+   mentions it. The plain line was ignored and did not reach the model. It did
+   not appear in the standard output or the standard error. Open for the
+   interactive terminal.
+2. The same points for its JSON form. The model received `additionalContext` and
+   did not mention it without being asked. The line appeared in the output only
+   as the model's answer to prompt 2. Open for the interactive terminal.
+3. Whether a plain line is ignored. Yes, in prompt mode.
+4. Whether a hook declared in `.claude/settings.json` also runs. Yes, in a
+   trusted folder, for the plain line (form E). Form B in that file was not run.
+
+Open for Copilot CLI: the interactive terminal, a hook that a plugin declares,
+and a hook declared in `~/.copilot/hooks/`.
