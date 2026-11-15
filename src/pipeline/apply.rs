@@ -166,8 +166,9 @@ pub(super) fn apply_plan(
 /// any item when `overwrite` is true, is written ([`Disposition::Write`]):
 /// a conflicting regular file is replaced. When `overwrite` is false, an
 /// item with at least one conflict is not written: none of its files is
-/// written or deleted, and its lockfile record is unchanged (a `KeepEdits`
-/// item below receives the commit of the fetched source). It is
+/// written or deleted, and its lockfile record is unchanged here (a
+/// `KeepEdits` item below receives the commit of the fetched source, and
+/// `prepared::refresh_required_by` can change `required_by` of any entry). It is
 /// [`Disposition::KeepEdits`] (nothing is withheld from it) when all of
 /// these hold, and [`Disposition::Skip`] otherwise:
 ///

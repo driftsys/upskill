@@ -398,10 +398,11 @@ keeps its recorded commit. With names, an entry that the names did not select
 keeps its commit when the source is not applied. In an applied source, the
 reinstall covers the named items, the items that a named item requires, and
 every member of a bundle source; each reinstalled entry gets the commit of its
-own source, unless its update is skipped, and any other entry keeps its commit
-(only a changed commit value, or a changed `required_by` value, causes a
-lockfile write). This write is not a change: it does not count in the output
-above, and `update --dry-run` and a declined source record no commit.
+own source, unless its update is skipped, and any other entry keeps its commit.
+For a source that is not applied, only a changed commit value, or a changed
+`required_by` value, causes a lockfile write. This write is not a change: it
+does not count in the output above, and `update --dry-run` and a declined source
+record no commit.
 
 `update --dry-run` prints the blocks, then
 `Dry-run: would update <n> of <m> item(s)` and the line
@@ -422,15 +423,15 @@ It is not saved with `--dry-run` or for a source that the answer did not apply.
 `required_by` is refreshed when `add` writes its install, when `update` applies
 a source, and when `update` does not apply a source whose preview changes
 nothing; a dry run, a declined source and a source at which the run stops
-refresh nothing. A refresh changes `required_by` of every lockfile entry. A
-requirer is evaluated by the run when the run resolved its `requires`: every
-item of an install by item names, or of a whole directory source, and every item
-that such an item requires. A bundle install, and a request that also names a
-bundle (resolved by name), evaluate no requirer. An evaluated requirer is
-removed from every entry and added back where it still requires the item (also
-an item that `--exclude` leaves out). Every other requirer is kept, also when it
-is not installed. The result does not depend on the order of the sources or of
-two `add` commands.
+refresh nothing. A refresh computes `required_by` of every lockfile entry again,
+and rewrites an entry only where the new value differs. A requirer is evaluated
+by the run when the run resolved its `requires`: every item of an install by
+item names, or of a whole directory source, and every item that such an item
+requires. A bundle install, and a request that also names a bundle (resolved by
+name), evaluate no requirer. An evaluated requirer is removed from every entry
+and added back where it still requires the item (also an item that `--exclude`
+leaves out). Every other requirer is kept, also when it is not installed. The
+result does not depend on the order of the sources or of two `add` commands.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.

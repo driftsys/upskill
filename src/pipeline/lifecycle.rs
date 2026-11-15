@@ -784,9 +784,11 @@ fn reselect_from_entries(
 /// requires (from this source or from another one), and every member for a
 /// bundle source. Each reinstalled entry gets the commit of its own source,
 /// unless its update is skipped; any other entry keeps its recorded commit.
-/// For such a source, git or local path, `record_commit` also refreshes
-/// `required_by` of every entry, and the lockfile is saved only when a
-/// commit value or a `required_by` value differs. This write is not in
+/// Every source without changes that is not applied, in a run that is not
+/// a dry run and not stopped, a git source or a local path, also gets
+/// `required_by` of every entry refreshed by `record_commit`; on that path
+/// the lockfile is saved only when a commit value or a `required_by` value
+/// differs. This write is not in
 /// [`UpdateReport::changed`] and does not make the source a source with
 /// changes. A declined source and a dry run write no commit. In an applied
 /// source, an item whose modified destinations are kept
@@ -1463,6 +1465,57 @@ mod tests {
         let lock = crate::lockfile::Lockfile::load(&target).unwrap();
         let x = lock.items.iter().find(|i| i.name == "x").unwrap();
         assert_eq!(x.required_by, vec!["agent:a".to_string()]);
+    }
+
+    /// Installs agent `a`, which requires skill `x`, from a new source in
+    /// `tmp`, and returns `(src, target)`.
+    fn install_a_requiring_x(tmp: &Path) -> (PathBuf, PathBuf) {
+        let src = tmp.join("src");
+        let target = tmp.join("t");
+        fs::create_dir_all(&target).unwrap();
+        write(
+            &src,
+            "a/AGENT.md",
+            b"---\nschema: 1\nname: a\ndescription: test a\nrequires:\n  skills: [x]\n---\nbody\n",
+        );
+        skill(&src, "x", "body");
+        install(&src, &target);
+        (src, target)
+    }
+
+    /// #504: a source at which the run stops gets no `required_by` refresh.
+    #[test]
+    fn a_source_at_which_the_run_stops_refreshes_no_required_by() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (_src, target) = install_a_requiring_x(tmp.path());
+        let mut lock = crate::lockfile::Lockfile::load(&target).unwrap();
+        for item in &mut lock.items {
+            item.required_by.clear();
+        }
+        lock.save(&target).unwrap();
+        let before = lock_bytes(&target);
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Stop);
+        run(&target, &mut observer).unwrap();
+
+        assert_eq!(lock_bytes(&target), before);
+    }
+
+    /// #504: a source without changes that is not applied does not save the
+    /// lockfile when no commit value and no `required_by` value differs.
+    #[test]
+    fn a_source_without_changes_saves_no_lockfile_when_nothing_differs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (_src, target) = install_a_requiring_x(tmp.path());
+        // A compact form that a save would rewrite as pretty-printed JSON.
+        let lock = crate::lockfile::Lockfile::load(&target).unwrap();
+        let compact = serde_json::to_string(&lock).unwrap();
+        fs::write(target.join(".upskill-lock.json"), &compact).unwrap();
+
+        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Skip);
+        run(&target, &mut observer).unwrap();
+
+        assert_eq!(lock_bytes(&target), compact.as_bytes());
     }
 
     #[test]

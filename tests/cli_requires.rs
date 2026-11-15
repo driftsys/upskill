@@ -919,3 +919,71 @@ fn update_refreshes_required_by_of_an_aliased_requirer() {
         "required_by of sarif must be refreshed: {lock}"
     );
 }
+
+/// A chain across three sources: agent `a` of `reg-a` requires skill `x` of
+/// `reg-b`, which requires skill `y` of `reg-c`. Installs `a`, then makes
+/// `x` stop requiring `y`. Returns `(tmp, home)`.
+fn chain_where_x_stops_requiring_y() -> (tempfile::TempDir, std::path::PathBuf) {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let reg_c = tmp.path().join("reg-c");
+    write_item(&reg_c, "SKILL.md", "y", "");
+    let reg_b = tmp.path().join("reg-b");
+    let x_requires = format!(
+        "requires:\n  skills: [{{ name: y, source: {} }}]\n",
+        reg_c.display()
+    );
+    write_item(&reg_b, "SKILL.md", "x", &x_requires);
+    let reg_a = tmp.path().join("reg-a");
+    write_item(
+        &reg_a,
+        "AGENT.md",
+        "a",
+        &format!(
+            "requires:\n  skills: [{{ name: x, source: {} }}]\n",
+            reg_b.display()
+        ),
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "a"])
+        .assert()
+        .success();
+    assert_eq!(
+        required_by(&read_lock(tmp.path()), "skill", "y"),
+        vec!["skill:x".to_string()]
+    );
+    write_item(&reg_b, "SKILL.md", "x", "");
+    (tmp, home)
+}
+
+/// #504 review: a transitive dependency from another source, which the
+/// run does not request directly, counts as an evaluated requirer: the
+/// install of `a` alone removes `skill:x` from `required_by` of `y`.
+#[test]
+fn add_evaluates_a_transitive_cross_source_requirer() {
+    let (tmp, home) = chain_where_x_stops_requiring_y();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "a"])
+        .assert()
+        .success();
+    let lock = read_lock(tmp.path());
+    assert!(required_by(&lock, "skill", "y").is_empty(), "{lock}");
+}
+
+/// #504 review: the `requires` of a dependency that `--exclude` leaves out
+/// are still evaluated.
+#[test]
+fn add_evaluates_the_requires_of_an_excluded_dependency() {
+    let (tmp, home) = chain_where_x_stops_requiring_y();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "a", "--exclude", "x"])
+        .assert()
+        .success();
+    let lock = read_lock(tmp.path());
+    assert!(required_by(&lock, "skill", "y").is_empty(), "{lock}");
+}

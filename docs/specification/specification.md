@@ -332,15 +332,15 @@ the source changes nothing, but not with `--dry-run` or for a declined source.
 `required_by` is refreshed when `add` writes its install, when `update` applies
 a source, and when `update` does not apply a source whose preview changes
 nothing; a dry run, a declined source and a source at which the run stops
-refresh nothing. A refresh changes `required_by` of every lockfile entry. A
-requirer is evaluated by the run when the run resolved its `requires`: every
-item of an install by item names, or of a whole directory source, and every item
-that such an item requires. A bundle install, and a request that also names a
-bundle (resolved by name), evaluate no requirer. An evaluated requirer is
-removed from every entry and added back where it still requires the item (also
-an item that `--exclude` leaves out). Every other requirer is kept, also when it
-is not installed. The result does not depend on the order of the sources or of
-two `add` commands.
+refresh nothing. A refresh computes `required_by` of every lockfile entry again,
+and rewrites an entry only where the new value differs. A requirer is evaluated
+by the run when the run resolved its `requires`: every item of an install by
+item names, or of a whole directory source, and every item that such an item
+requires. A bundle install, and a request that also names a bundle (resolved by
+name), evaluate no requirer. An evaluated requirer is removed from every entry
+and added back where it still requires the item (also an item that `--exclude`
+leaves out). Every other requirer is kept, also when it is not installed. The
+result does not depend on the order of the sources or of two `add` commands.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,

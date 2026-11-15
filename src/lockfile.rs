@@ -95,8 +95,9 @@ pub struct LockedItem {
     /// `"kind:name"` of every installed item that pulled this one in as a
     /// dependency. Empty for an item that no installed item requires. Drives
     /// `doctor`'s orphaned-dependency check; never triggers auto-removal
-    /// (#196). A run that writes the lockfile refreshes the field of every
-    /// entry: a requirer whose `requires` the run resolved is kept only where
+    /// (#196). Each `add`, each source that `update` applies, and each
+    /// source without changes that `update` does not apply (not in a dry
+    /// run, not stopped) refreshes the field of every entry: a requirer whose `requires` the run resolved is kept only where
     /// the run's closure records it, and every other requirer is kept, also
     /// when it is not installed (#504; `prepared::refresh_required_by`).
     /// Sorted, without duplicates.
