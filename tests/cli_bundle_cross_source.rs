@@ -460,7 +460,7 @@ fn add_bundle_alias_does_not_apply_to_cross_source_dependency_items() {
 /// with the resource `y/SKILL.md` and the rule `dep-rule`, both in `dep`.
 /// Installing `q` would write `.claude/skills/q/y/SKILL.md`, the entrypoint
 /// of the entry-source item `y`. Returns `(tmp, home, target, y, y content)`.
-fn stage_entry_source_without_items() -> (
+fn stage_entry_source_whose_bundle_selects_no_item() -> (
     tempfile::TempDir,
     std::path::PathBuf,
     std::path::PathBuf,
@@ -507,7 +507,7 @@ fn stage_entry_source_without_items() -> (
 
 #[test]
 fn add_bundle_refuses_overlap_with_an_item_of_an_entry_source_whose_bundle_selects_no_item() {
-    let (_tmp, home, target, y, before) = stage_entry_source_without_items();
+    let (_tmp, home, target, y, before) = stage_entry_source_whose_bundle_selects_no_item();
 
     let assert = common::upskill_cmd(&home)
         .current_dir(&target)
@@ -536,7 +536,7 @@ fn add_bundle_refuses_overlap_with_an_item_of_an_entry_source_whose_bundle_selec
 fn add_bundle_ignores_the_output_paths_of_an_excluded_dependency_item() {
     // `--exclude q` applies to the dependency source too, so nothing is
     // written for `q` and the source of `y` does not overlap the run.
-    let (_tmp, home, target, y, before) = stage_entry_source_without_items();
+    let (_tmp, home, target, y, before) = stage_entry_source_whose_bundle_selects_no_item();
 
     common::upskill_cmd(&home)
         .current_dir(&target)
@@ -668,4 +668,93 @@ fn add_bundle_refuses_overlap_with_an_item_of_a_pass_through_dependency_source()
     assert_eq!(fs::read_to_string(&y).unwrap(), before);
     assert!(!target.join(".claude/skills/q/SKILL.md").exists());
     assert!(!target.join(".upskill-lock.json").exists());
+}
+
+/// Stage the source `<tmp>/target/.claude/skills` as a dependency source that
+/// holds the unlisted skill `x` at its own Claude output path
+/// `.claude/skills/x`. When `pass_through` is false, the source also holds
+/// the bundle `dep` with the skill `q` (in the folder `grp/q`). When it is
+/// true, the source holds the bundle `mid`, which selects no item and
+/// requires `dep` (rule `dep-rule`) from a third source. The entry bundle
+/// `meta` at `<tmp>/reg-meta` requires `dep` or `mid` from that source.
+/// Returns `(tmp, home, target, meta bundle path, x path, x content)`.
+fn stage_unselected_item_in_a_dependency_source(
+    pass_through: bool,
+) -> (
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    &'static str,
+) {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let reg = target.join(".claude/skills");
+    let x = reg.join("x/SKILL.md");
+    fs::create_dir_all(x.parent().unwrap()).unwrap();
+    let before = "---\nschema: 1\nname: x\ndescription: d\n---\n# x\n";
+    fs::write(&x, before).unwrap();
+    let required = if pass_through {
+        let reg_dep = tmp.path().join("reg-dep");
+        write_rule(&reg_dep, "dep-rule");
+        write_bundle(&reg_dep, "dep", "items:\n  rules:\n  - dep-rule\n");
+        write_bundle(
+            &reg,
+            "mid",
+            &format!(
+                "items: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
+                reg_dep.display()
+            ),
+        );
+        "mid"
+    } else {
+        let q = reg.join("grp/q");
+        fs::create_dir_all(&q).unwrap();
+        fs::write(
+            q.join("SKILL.md"),
+            "---\nschema: 1\nname: q\ndescription: d\n---\n# q\n",
+        )
+        .unwrap();
+        write_bundle(&reg, "dep", "items:\n  skills:\n  - q\n");
+        "dep"
+    };
+
+    let reg_meta = tmp.path().join("reg-meta");
+    write_rule(&reg_meta, "meta-rule");
+    write_bundle(
+        &reg_meta,
+        "meta",
+        &format!(
+            "items:\n  rules:\n  - meta-rule\nrequires:\n  - {{ name: {required}, source: {} }}\n",
+            reg.display()
+        ),
+    );
+    let bundle = reg_meta.join("bundles/meta.bundle.yaml");
+    (tmp, home, target, bundle, x, before)
+}
+
+#[test]
+fn add_bundle_does_not_install_an_unselected_item_of_a_dependency_source() {
+    // `x` is not selected by the `requires` closure, so it has no paths in
+    // the overlap check, although it is at its own output path.
+    for pass_through in [false, true] {
+        let (_tmp, home, target, bundle, x, before) =
+            stage_unselected_item_in_a_dependency_source(pass_through);
+
+        common::upskill_cmd(&home)
+            .current_dir(&target)
+            .args(["add", bundle.to_str().unwrap(), "--claude", "--project"])
+            .assert()
+            .success();
+        assert_eq!(fs::read_to_string(&x).unwrap(), before, "{pass_through}");
+        assert!(
+            target.join(".claude/rules/meta-rule.md").is_file(),
+            "{pass_through}"
+        );
+    }
 }

@@ -232,7 +232,8 @@ pub(super) fn prepare_install(
     // changes no file. Aliases apply to entry-source items only, as in the
     // plan below. The items of every source that this call reads are compared
     // with each other: for `update`, one lockfile source and the dependency
-    // sources read for it, not the other lockfile sources.
+    // sources read for it. Sources that are not read in this call are not
+    // compared.
     let at = crate::scope::ScopeRoot {
         scope: options.scope,
         root: target.to_path_buf(),

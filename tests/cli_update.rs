@@ -1960,6 +1960,18 @@ fn update_refuses_a_source_item_inside_the_output_path_of_another_item() {
         .assert()
         .success();
     let lock_before = fs::read(proj.join(".upskill-lock.json")).unwrap();
+    let output = proj
+        .join(".claude")
+        .join("skills")
+        .join("q")
+        .join("SKILL.md");
+    let output_before = fs::read(&output).unwrap();
+    // Change `q`, so that an update that is not refused would write.
+    fs::write(
+        skills.join("grp").join("q").join("SKILL.md"),
+        "---\nname: q\ndescription: d\n---\nNew body\n",
+    )
+    .unwrap();
     let y = skills.join("q").join("y").join("SKILL.md");
     fs::create_dir_all(y.parent().unwrap()).unwrap();
     fs::write(&y, "---\nname: y\ndescription: d\n---\nBody\n").unwrap();
@@ -1981,6 +1993,7 @@ fn update_refuses_a_source_item_inside_the_output_path_of_another_item() {
         "---\nname: y\ndescription: d\n---\nBody\n"
     );
     assert!(!proj.join(".claude").join("skills").join("y").exists());
+    assert_eq!(fs::read(&output).unwrap(), output_before);
     assert_eq!(
         fs::read(proj.join(".upskill-lock.json")).unwrap(),
         lock_before
@@ -2011,6 +2024,18 @@ fn update_refuses_a_source_item_that_contains_the_output_path_of_another_item() 
         .assert()
         .success();
     let lock_before = fs::read(proj.join(".upskill-lock.json")).unwrap();
+    let output = proj
+        .join(".claude")
+        .join("skills")
+        .join("q")
+        .join("SKILL.md");
+    let output_before = fs::read(&output).unwrap();
+    // Change `q`, so that an update that is not refused would write.
+    fs::write(
+        q.join("SKILL.md"),
+        "---\nname: q\ndescription: d\n---\nNew body\n",
+    )
+    .unwrap();
     let agents = proj.join(".agents");
     fs::create_dir_all(&agents).unwrap();
     let body = "---\nname: a\ndescription: d\n---\nBody\n";
@@ -2030,6 +2055,7 @@ fn update_refuses_a_source_item_that_contains_the_output_path_of_another_item() 
     );
     assert_eq!(fs::read_to_string(agents.join("SKILL.md")).unwrap(), body);
     assert!(!agents.join("skills").exists());
+    assert_eq!(fs::read(&output).unwrap(), output_before);
     assert_eq!(
         fs::read(proj.join(".upskill-lock.json")).unwrap(),
         lock_before

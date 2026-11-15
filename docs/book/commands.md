@@ -133,9 +133,9 @@ aliases, but it installs each lockfile source again on its own and checks it
 just before it updates that source: it compares the items of that source and of
 the dependency sources that it reads for that source. It does not read the
 source of the bundle that pulled a dependency item into the lockfile, and it
-does not compare the items of two lockfile sources with each other. The refusal
-comes before any change for that source, and an `update` over several sources
-may have updated earlier sources before it stops.
+compares the items of two sources only when it reads both for the same lockfile
+source. The refusal comes before any change for that source, and an `update`
+over several sources may have updated earlier sources before it stops.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
 destination of every item against the item's `files` and `pending` records (see
