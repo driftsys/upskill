@@ -848,6 +848,34 @@ pub(super) fn resolve_bundle_closure(
     Ok((closure, resolver.order))
 }
 
+/// The registry root of the entry bundle file `bundle_path`: the directory
+/// whose items and sibling bundles the bundle resolves against.
+///
+/// This is [`find_registry_root`], unless bundle discovery from that root
+/// cannot reach `bundle_path` because a directory between them starts with a
+/// dot (discovery skips such directories). This happens when the directory
+/// of the bundle holds no item, so that the search continued into a parent
+/// directory. A bundle that selects no item and only declares `requires` is
+/// valid there, so the root is then the parent of the `bundles` directory
+/// that holds the bundle file, or the directory of the bundle file.
+pub(super) fn bundle_file_root(bundle_path: &Path) -> Result<PathBuf> {
+    let root = find_registry_root(bundle_path)?;
+    let reachable = bundle_path.strip_prefix(&root).is_ok_and(|rel| {
+        !rel.components()
+            .any(|c| c.as_os_str().to_string_lossy().starts_with('.'))
+    });
+    if reachable {
+        return Ok(root);
+    }
+    let parent = bundle_path.parent().unwrap_or(bundle_path);
+    Ok(match parent.parent() {
+        Some(grandparent) if parent.file_name().is_some_and(|n| n == "bundles") => {
+            grandparent.to_path_buf()
+        }
+        _ => parent.to_path_buf(),
+    })
+}
+
 /// Detect a bundle-shaped `add` — a `*.bundle.yaml` source, or positional
 /// `names` that all resolve to bundles — and resolve its cross-source closure.
 /// Returns `None` when the request is not bundle-shaped (the caller keeps the
@@ -861,7 +889,7 @@ pub(super) fn resolve_bundle_request(
     names: &[String],
 ) -> Result<Option<(DependencyClosure, Vec<ResolvedBundle>)>> {
     if is_bundle_file(local_source) {
-        let registry_root = find_registry_root(local_source)?;
+        let registry_root = bundle_file_root(local_source)?;
         let entry = crate::parse::bundle::load(local_source)?;
         return resolve_bundle_closure(
             label,

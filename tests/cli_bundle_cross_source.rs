@@ -756,5 +756,47 @@ fn add_bundle_does_not_install_an_unselected_item_of_a_dependency_source() {
             target.join(".claude/rules/meta-rule.md").is_file(),
             "{pass_through}"
         );
+        // The selected dependency item: `q` from the dependency source, or
+        // `dep-rule` from the third source.
+        let dependency = if pass_through {
+            ".claude/rules/dep-rule.md"
+        } else {
+            ".claude/skills/q/SKILL.md"
+        };
+        assert!(target.join(dependency).is_file(), "{pass_through}");
     }
+}
+
+#[test]
+fn add_bundle_refuses_a_selected_output_path_that_covers_an_unselected_item_of_a_dependency_source()
+{
+    // The dependency source `.claude/skills` supplies the selected skill `q`
+    // (in the folder `grp/q`) and holds the unselected skill `u` at
+    // `.claude/skills/q/u`, inside the Claude output path of `q`.
+    let (_tmp, home, target, bundle, _x, _) = stage_unselected_item_in_a_dependency_source(false);
+    let u = target.join(".claude/skills/q/u/SKILL.md");
+    fs::create_dir_all(u.parent().unwrap()).unwrap();
+    let before = "---\nschema: 1\nname: u\ndescription: d\n---\n# u\n";
+    fs::write(&u, before).unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            bundle.to_str().unwrap(),
+            "--claude",
+            "--project",
+            "--force",
+        ])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("the source directory of skill 'u' (")
+            && stderr.contains("of skill 'q'; installing would delete"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(fs::read_to_string(&u).unwrap(), before);
+    assert!(!target.join(".claude/skills/q/SKILL.md").exists());
+    assert!(!target.join(".upskill-lock.json").exists());
 }

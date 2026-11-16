@@ -42,6 +42,10 @@ pub(super) struct PreparedInstall {
     /// Holds the clone guards of the cross-source fetches.
     closure: Option<DependencyClosure>,
     resolved_bundles: Vec<ResolvedBundle>,
+    /// Every item directory of every source that this install reads, as given
+    /// to the overlap check. `update` checks the items of all its sources
+    /// together with [`PreparedInstall::source_items`].
+    source_items: Vec<super::output::SourceItem>,
     /// Deletes the clone of the entry source when dropped.
     _tmp_guard: Option<tempfile::TempDir>,
 }
@@ -231,9 +235,9 @@ pub(super) fn prepare_install(
     // Runs before the adoption and before any write, so a refused install
     // changes no file. Aliases apply to entry-source items only, as in the
     // plan below. The items of every source that this call reads are compared
-    // with each other: for `update`, one lockfile source and the dependency
-    // sources read for it. Sources that are not read in this call are not
-    // compared.
+    // with each other. `update` calls this function once for each lockfile
+    // source, and then checks the items of all these calls together, before
+    // its first write.
     let at = crate::scope::ScopeRoot {
         scope: options.scope,
         root: target.to_path_buf(),
@@ -352,11 +356,18 @@ pub(super) fn prepare_install(
         report,
         closure,
         resolved_bundles,
+        source_items,
         _tmp_guard: tmp_guard,
     })
 }
 
 impl PreparedInstall {
+    /// Every item directory of every source that this install reads, as given
+    /// to the overlap check of [`prepare_install`].
+    pub fn source_items(&self) -> &[super::output::SourceItem] {
+        &self.source_items
+    }
+
     /// `(kind, installed name) -> source hash` of every planned item.
     pub fn planned_hashes(&self) -> BTreeMap<(ItemKind, String), Option<String>> {
         self.report
@@ -586,6 +597,7 @@ impl PreparedInstall {
             mut report,
             closure: _closure,
             resolved_bundles,
+            source_items: _,
             _tmp_guard,
         } = self;
         report.adopted = adopted;

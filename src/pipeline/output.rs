@@ -227,7 +227,8 @@ pub(super) struct SourceItem {
 /// Refuse an install run when a source item directory overlaps a path that
 /// the run deletes or writes. `items` holds every item directory of every
 /// source that the run reads, also the items that the run does not install.
-/// A run is one `prepare_install` call: for `update`, one lockfile source.
+/// A run is one `prepare_install` call, or for `update` all its sources
+/// together.
 ///
 /// Only a selected item that is not excluded has output paths here; an
 /// excluded item writes nothing. First, each such item is checked against
