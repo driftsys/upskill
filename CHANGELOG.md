@@ -1,5 +1,390 @@
 # Changelog
 
+## [0.9.0] (2026-11-16)
+
+### Bug Fixes
+
+- **update:** check source overlap across all lockfile sources before the first
+  write ([#547]) ([#549]) ([67ec09f])
+- protect every source of the run in the overlap check and drop the check of
+  excluded items ([#546]) ([5fa6354])
+- keep and refresh required_by across sources and for kept items ([#544])
+  ([289d8c3])
+- check source directories against the output paths of every item of the run
+  ([#542]) ([1bc4cc2])
+- refuse the installed names ., .. and empty, and count each installed item once
+  ([#541]) ([36066f1]), fixes [#495], [#477]
+- refuse a recorded file path outside the item layout ([#538]) ([4f0fd92]),
+  fixes [#480]
+- compare only the executable bits of an unchanged file on update ([#516])
+  ([34502cb]), refs [#509], [#509], [#509], [#509]
+- **add:** accept items without a schema field ([#467]) ([091c58d])
+- restore clean Rust CodeQL extraction ([#462]) ([d49bc35])
+- restore updates for historical GitLab source labels ([#257]) ([a58da21])
+- restore Rust 1.85 compatibility and enforce MSRV in CI ([#256]) ([a02082e])
+
+### Documentation
+
+- bring AGENTS.md, README.md and the roadmap up to date ([#534]) ([#548])
+  ([455c612])
+- correct the documentation leftovers of scope reporting ([#543]) ([49569fc])
+- **skills:** teach upskill-cli the session notice, support levels and scope
+  rules ([#537]) ([9689ddb])
+- garden the customization re-steer and add the plugin install recipe ([#535])
+  ([50d674c])
+- record the documented session-start hook behaviour of Claude Code and Copilot
+  CLI ([#528]) ([90286db])
+- remove the raw evidence of 28 obsolete trials from main ([#517]) ([84d92cd])
+- garden the per-source update prompts design into the records ([#515])
+  ([7ea10a6])
+- clarify reconciled CodeQL plan archival ([#464]) ([8cc8f04])
+- accept the customization architecture baseline ([#455]) ([1a291a7])
+- propose separate client representations as the design baseline ([#454])
+  ([447f8e6])
+- propose a Copilot-local plugin exclusion profile ([#447]) ([70ba65e])
+- compare customization delivery policies after Q11b ([#444]) ([438a4e4])
+- reconcile Q11 isolation failure and follow-up control ([#427]) ([8869e6a])
+- design preflight discovery inventory ([#418]) ([b75454f])
+- propose per-client package preservation contract ([#416]) ([69c2e41])
+- retain Claude package scope overlap controls ([#414]) ([f6b9c8f])
+- reconcile delivery records after slice 1 ([#413]) ([31e3f66])
+- retain Codex resume-only attribution ([#411]) ([2ae7a0e])
+- retain OpenCode explicit-path free-limit retry ([#408]) ([3db2c5c])
+- retain Codex package agent boundary controls ([#407]) ([cb72b2d])
+- retain Codex plugin skill update controls ([#406]) ([8a9600c])
+- retain Codex resume-only failed positive ([#405]) ([e1a5d1d])
+- retain OpenCode explicit-path failed positive ([#404]) ([7adfd65])
+- retain OpenCode current-route failures ([#396]) ([2c713db])
+- retain bounded Claude rule-hook controls ([#392]) ([8e24629])
+- retain Codex reopen and compaction observations ([#389]) ([6a9db90])
+- retain Copilot plugin component controls ([#394]) ([3047539])
+- retain Claude managed-root controls ([#387]) ([bb986ea])
+- retain Q2 Copilot Claude agent reader controls ([#386]) ([78f24f8])
+- retain Q1 Copilot Claude rules reader controls ([#385]) ([c4f1329])
+- adopt native-first always-on rules delivery ([#398]) ([a9a8ba8])
+- propose managed-package customization delivery ([#381]) ([50b7450])
+- retain Codex user session lifecycle failures ([#380]) ([a494b82])
+- retain OpenCode user configuration rule controls ([#378]) ([8bd7ab7])
+- retain Codex user plugin rule controls ([#376]) ([1310939])
+- retain four-client shared skill coexistence controls ([#373]) ([d652e7e])
+- retain Codex shared skill resource controls ([#371]) ([c26b68b])
+- retain Codex native compaction observations ([#370]) ([46f5887])
+- retain OpenCode shared skill resource controls ([#367]) ([0f8569e])
+- retain unchanged-policy OpenCode path controls ([#365]) ([ae5bf7d])
+- retain native OpenCode child permission controls ([#361]) ([b1ef8cc])
+- clarify override boundaries and shared skill procedures ([#359]) ([285457d])
+- retain native skill coexistence controls ([#357]) ([9bf2888])
+- retain native Claude skill-route controls ([#354]) ([f7421eb])
+- retain native shared-skill and exclusion controls ([#352]) ([77a594e])
+- reconcile shared roots and native capability gates ([#350]) ([2d06a09])
+- retain authenticated project plugin controls ([#347]) ([893d714])
+- pin Gate 6 profiles and customization reader inventory ([#338]) ([e39c659])
+- reconcile customization delivery before Gate 6 activation ([#334]) ([44a5e2f])
+- consolidate reference documentation by concern ([#307]) ([f61afbf])
+- preserve and reconcile roadmap and updater drafts ([#304]) ([5c628dd])
+- decide versioned agent model mappings ([#254]) ([ab6795c])
+- plan prioritized agent customization support ([#251]) ([72e198c])
+- refactor documentation and add agent customization research ([#250])
+  ([b866f5e])
+
+### Features
+
+- add the sources of the upskill hook plugins ([#532]) ([d1e733c])
+- **doctor:** mark the Copilot CLI cells as supported after the smoke run
+  ([#531]) ([ce58438])
+- **doctor:** mark the Claude Code cells as supported after the first smoke run
+  ([#529]) ([71baa0a])
+- **update:** print a session notice of available updates once ([#526])
+  ([2ef9558])
+- **doctor:** publish a support level for each client and kind, with a smoke
+  test mode ([#525]) ([fa00e33])
+- **update:** record source commits and report available updates with --check
+  ([#524]) ([0648f02])
+- state the scope in every command and write global Copilot content to the
+  personal directories ([#523]) ([2f47e42])
+- ask one question per source in a terminal update ([#503]) ([b727999])
+- keep an edited file of an unchanged item on update ([#502]) ([dbb6504])
+- complete an interrupted install or update on the next run ([#490]) ([ac0225e])
+- **update:** keep modified files and refuse unowned destinations ([#489])
+  ([4a07ca0])
+- record owned files in the lockfile and remove only recorded files ([#468])
+  ([88e03c4])
+- report complete lifecycle preflight conflicts ([#331]) ([4d26d64])
+- connect source-backed Codex instruction lifecycle ([#326]) ([eba3dae])
+- compile captured Codex instructions with reader contracts ([#323]) ([2c64620])
+- complete inactive Gate 5 lifecycle orchestration ([#318]) ([26ab826])
+- prepare guarded lifecycle command operations ([#317]) ([6e2978b])
+- resolve retained lifecycle rule sources ([#315]) ([01fbe9a])
+- bind lifecycle origin and initialize fresh state ([#314]) ([77181b9])
+- preview captured lifecycle changes without effects ([#312]) ([aeb9225])
+- inspect lifecycle state without effects ([#310]) ([a74350e])
+- add guarded lifecycle application ([#305]) ([9843abe])
+- guard original-state backups with checkpointed recovery ([#303]) ([faae298])
+- reconcile shared outputs with explicit owner contracts ([#302]) ([f54c457])
+- record per-owner content and target contracts ([#301]) ([939f808])
+- plan complete lifecycle installation upserts ([#300]) ([5cdcd06])
+- preflight captured lifecycle selections ([#299]) ([ed4ab8d])
+- plan reference-driven shared-owner retirement ([#298]) ([0a9ea99])
+- reconcile authoritative lifecycle references ([#297]) ([67326f3])
+- bind captured rules to complete lifecycle desired sets ([#296]) ([b01a67d])
+- add combined lifecycle state foundation ([#295]) ([ff4671f])
+- apply and recover qualified file operations ([#293]) ([a5e28b8])
+- model ordered recovery checkpoints ([#280]) ([1367021])
+- select explicit file permission policy ([#277]) ([879c077])
+- capture qualified source tree evidence ([#275]) ([0b2f60b])
+- capture qualified destination observations ([#272]) ([714c4c3]), refs [#269],
+  [#270], [#270], [#271], [#269], [#270]
+- qualify scope roots and lock independent writers ([#267]) ([8298386])
+- compose complete mixed owned artifact plans ([#265]) ([e2ce18e])
+- compile captured item outputs ([#262]) ([d886873])
+- plan owned whole-file changes ([#261]) ([2964dc3])
+- capture strict source manifests ([#260]) ([d170f2b])
+- plan owned instruction contribution changes ([#259]) ([2a3c3b5])
+- project legacy state without adoption ([#258]) ([f7d36bf])
+- **state:** add validated owned artifact records ([#255]) ([250c6ae])
+- add owned instruction contribution editor ([#253]) ([4d778ff])
+- add customization target profiles and fail-closed capability checks ([#252])
+  ([1d86a7b])
+
+### Refactoring
+
+- remove the lifecycle library that no command can reach ([#466]) ([2a4b29e])
+
+[0.9.0]: https://github.com/driftsys/upskill/compare/v0.8.1...v0.9.0
+[67ec09f]: https://github.com/driftsys/upskill/commit/67ec09f
+[#547]: https://github.com/driftsys/upskill/issues/547
+[#549]: https://github.com/driftsys/upskill/issues/549
+[5fa6354]: https://github.com/driftsys/upskill/commit/5fa6354
+[#546]: https://github.com/driftsys/upskill/issues/546
+[289d8c3]: https://github.com/driftsys/upskill/commit/289d8c3
+[#544]: https://github.com/driftsys/upskill/issues/544
+[1bc4cc2]: https://github.com/driftsys/upskill/commit/1bc4cc2
+[#542]: https://github.com/driftsys/upskill/issues/542
+[36066f1]: https://github.com/driftsys/upskill/commit/36066f1
+[#541]: https://github.com/driftsys/upskill/issues/541
+[#495]: https://github.com/driftsys/upskill/issues/495
+[#477]: https://github.com/driftsys/upskill/issues/477
+[4f0fd92]: https://github.com/driftsys/upskill/commit/4f0fd92
+[#538]: https://github.com/driftsys/upskill/issues/538
+[#480]: https://github.com/driftsys/upskill/issues/480
+[34502cb]: https://github.com/driftsys/upskill/commit/34502cb
+[#516]: https://github.com/driftsys/upskill/issues/516
+[#509]: https://github.com/driftsys/upskill/issues/509
+[091c58d]: https://github.com/driftsys/upskill/commit/091c58d
+[#467]: https://github.com/driftsys/upskill/issues/467
+[d49bc35]: https://github.com/driftsys/upskill/commit/d49bc35
+[#462]: https://github.com/driftsys/upskill/issues/462
+[a58da21]: https://github.com/driftsys/upskill/commit/a58da21
+[#257]: https://github.com/driftsys/upskill/issues/257
+[a02082e]: https://github.com/driftsys/upskill/commit/a02082e
+[#256]: https://github.com/driftsys/upskill/issues/256
+[455c612]: https://github.com/driftsys/upskill/commit/455c612
+[#534]: https://github.com/driftsys/upskill/issues/534
+[#548]: https://github.com/driftsys/upskill/issues/548
+[49569fc]: https://github.com/driftsys/upskill/commit/49569fc
+[#543]: https://github.com/driftsys/upskill/issues/543
+[9689ddb]: https://github.com/driftsys/upskill/commit/9689ddb
+[#537]: https://github.com/driftsys/upskill/issues/537
+[50d674c]: https://github.com/driftsys/upskill/commit/50d674c
+[#535]: https://github.com/driftsys/upskill/issues/535
+[90286db]: https://github.com/driftsys/upskill/commit/90286db
+[#528]: https://github.com/driftsys/upskill/issues/528
+[84d92cd]: https://github.com/driftsys/upskill/commit/84d92cd
+[#517]: https://github.com/driftsys/upskill/issues/517
+[7ea10a6]: https://github.com/driftsys/upskill/commit/7ea10a6
+[#515]: https://github.com/driftsys/upskill/issues/515
+[8cc8f04]: https://github.com/driftsys/upskill/commit/8cc8f04
+[#464]: https://github.com/driftsys/upskill/issues/464
+[1a291a7]: https://github.com/driftsys/upskill/commit/1a291a7
+[#455]: https://github.com/driftsys/upskill/issues/455
+[447f8e6]: https://github.com/driftsys/upskill/commit/447f8e6
+[#454]: https://github.com/driftsys/upskill/issues/454
+[70ba65e]: https://github.com/driftsys/upskill/commit/70ba65e
+[#447]: https://github.com/driftsys/upskill/issues/447
+[438a4e4]: https://github.com/driftsys/upskill/commit/438a4e4
+[#444]: https://github.com/driftsys/upskill/issues/444
+[8869e6a]: https://github.com/driftsys/upskill/commit/8869e6a
+[#427]: https://github.com/driftsys/upskill/issues/427
+[b75454f]: https://github.com/driftsys/upskill/commit/b75454f
+[#418]: https://github.com/driftsys/upskill/issues/418
+[69c2e41]: https://github.com/driftsys/upskill/commit/69c2e41
+[#416]: https://github.com/driftsys/upskill/issues/416
+[f6b9c8f]: https://github.com/driftsys/upskill/commit/f6b9c8f
+[#414]: https://github.com/driftsys/upskill/issues/414
+[31e3f66]: https://github.com/driftsys/upskill/commit/31e3f66
+[#413]: https://github.com/driftsys/upskill/issues/413
+[2ae7a0e]: https://github.com/driftsys/upskill/commit/2ae7a0e
+[#411]: https://github.com/driftsys/upskill/issues/411
+[3db2c5c]: https://github.com/driftsys/upskill/commit/3db2c5c
+[#408]: https://github.com/driftsys/upskill/issues/408
+[cb72b2d]: https://github.com/driftsys/upskill/commit/cb72b2d
+[#407]: https://github.com/driftsys/upskill/issues/407
+[8a9600c]: https://github.com/driftsys/upskill/commit/8a9600c
+[#406]: https://github.com/driftsys/upskill/issues/406
+[e1a5d1d]: https://github.com/driftsys/upskill/commit/e1a5d1d
+[#405]: https://github.com/driftsys/upskill/issues/405
+[7adfd65]: https://github.com/driftsys/upskill/commit/7adfd65
+[#404]: https://github.com/driftsys/upskill/issues/404
+[2c713db]: https://github.com/driftsys/upskill/commit/2c713db
+[#396]: https://github.com/driftsys/upskill/issues/396
+[8e24629]: https://github.com/driftsys/upskill/commit/8e24629
+[#392]: https://github.com/driftsys/upskill/issues/392
+[6a9db90]: https://github.com/driftsys/upskill/commit/6a9db90
+[#389]: https://github.com/driftsys/upskill/issues/389
+[3047539]: https://github.com/driftsys/upskill/commit/3047539
+[#394]: https://github.com/driftsys/upskill/issues/394
+[bb986ea]: https://github.com/driftsys/upskill/commit/bb986ea
+[#387]: https://github.com/driftsys/upskill/issues/387
+[78f24f8]: https://github.com/driftsys/upskill/commit/78f24f8
+[#386]: https://github.com/driftsys/upskill/issues/386
+[c4f1329]: https://github.com/driftsys/upskill/commit/c4f1329
+[#385]: https://github.com/driftsys/upskill/issues/385
+[a9a8ba8]: https://github.com/driftsys/upskill/commit/a9a8ba8
+[#398]: https://github.com/driftsys/upskill/issues/398
+[50b7450]: https://github.com/driftsys/upskill/commit/50b7450
+[#381]: https://github.com/driftsys/upskill/issues/381
+[a494b82]: https://github.com/driftsys/upskill/commit/a494b82
+[#380]: https://github.com/driftsys/upskill/issues/380
+[8bd7ab7]: https://github.com/driftsys/upskill/commit/8bd7ab7
+[#378]: https://github.com/driftsys/upskill/issues/378
+[1310939]: https://github.com/driftsys/upskill/commit/1310939
+[#376]: https://github.com/driftsys/upskill/issues/376
+[d652e7e]: https://github.com/driftsys/upskill/commit/d652e7e
+[#373]: https://github.com/driftsys/upskill/issues/373
+[c26b68b]: https://github.com/driftsys/upskill/commit/c26b68b
+[#371]: https://github.com/driftsys/upskill/issues/371
+[46f5887]: https://github.com/driftsys/upskill/commit/46f5887
+[#370]: https://github.com/driftsys/upskill/issues/370
+[0f8569e]: https://github.com/driftsys/upskill/commit/0f8569e
+[#367]: https://github.com/driftsys/upskill/issues/367
+[ae5bf7d]: https://github.com/driftsys/upskill/commit/ae5bf7d
+[#365]: https://github.com/driftsys/upskill/issues/365
+[b1ef8cc]: https://github.com/driftsys/upskill/commit/b1ef8cc
+[#361]: https://github.com/driftsys/upskill/issues/361
+[285457d]: https://github.com/driftsys/upskill/commit/285457d
+[#359]: https://github.com/driftsys/upskill/issues/359
+[9bf2888]: https://github.com/driftsys/upskill/commit/9bf2888
+[#357]: https://github.com/driftsys/upskill/issues/357
+[f7421eb]: https://github.com/driftsys/upskill/commit/f7421eb
+[#354]: https://github.com/driftsys/upskill/issues/354
+[77a594e]: https://github.com/driftsys/upskill/commit/77a594e
+[#352]: https://github.com/driftsys/upskill/issues/352
+[2d06a09]: https://github.com/driftsys/upskill/commit/2d06a09
+[#350]: https://github.com/driftsys/upskill/issues/350
+[893d714]: https://github.com/driftsys/upskill/commit/893d714
+[#347]: https://github.com/driftsys/upskill/issues/347
+[e39c659]: https://github.com/driftsys/upskill/commit/e39c659
+[#338]: https://github.com/driftsys/upskill/issues/338
+[44a5e2f]: https://github.com/driftsys/upskill/commit/44a5e2f
+[#334]: https://github.com/driftsys/upskill/issues/334
+[f61afbf]: https://github.com/driftsys/upskill/commit/f61afbf
+[#307]: https://github.com/driftsys/upskill/issues/307
+[5c628dd]: https://github.com/driftsys/upskill/commit/5c628dd
+[#304]: https://github.com/driftsys/upskill/issues/304
+[ab6795c]: https://github.com/driftsys/upskill/commit/ab6795c
+[#254]: https://github.com/driftsys/upskill/issues/254
+[72e198c]: https://github.com/driftsys/upskill/commit/72e198c
+[#251]: https://github.com/driftsys/upskill/issues/251
+[b866f5e]: https://github.com/driftsys/upskill/commit/b866f5e
+[#250]: https://github.com/driftsys/upskill/issues/250
+[d1e733c]: https://github.com/driftsys/upskill/commit/d1e733c
+[#532]: https://github.com/driftsys/upskill/issues/532
+[ce58438]: https://github.com/driftsys/upskill/commit/ce58438
+[#531]: https://github.com/driftsys/upskill/issues/531
+[71baa0a]: https://github.com/driftsys/upskill/commit/71baa0a
+[#529]: https://github.com/driftsys/upskill/issues/529
+[2ef9558]: https://github.com/driftsys/upskill/commit/2ef9558
+[#526]: https://github.com/driftsys/upskill/issues/526
+[fa00e33]: https://github.com/driftsys/upskill/commit/fa00e33
+[#525]: https://github.com/driftsys/upskill/issues/525
+[0648f02]: https://github.com/driftsys/upskill/commit/0648f02
+[#524]: https://github.com/driftsys/upskill/issues/524
+[2f47e42]: https://github.com/driftsys/upskill/commit/2f47e42
+[#523]: https://github.com/driftsys/upskill/issues/523
+[b727999]: https://github.com/driftsys/upskill/commit/b727999
+[#503]: https://github.com/driftsys/upskill/issues/503
+[dbb6504]: https://github.com/driftsys/upskill/commit/dbb6504
+[#502]: https://github.com/driftsys/upskill/issues/502
+[ac0225e]: https://github.com/driftsys/upskill/commit/ac0225e
+[#490]: https://github.com/driftsys/upskill/issues/490
+[4a07ca0]: https://github.com/driftsys/upskill/commit/4a07ca0
+[#489]: https://github.com/driftsys/upskill/issues/489
+[88e03c4]: https://github.com/driftsys/upskill/commit/88e03c4
+[#468]: https://github.com/driftsys/upskill/issues/468
+[4d26d64]: https://github.com/driftsys/upskill/commit/4d26d64
+[#331]: https://github.com/driftsys/upskill/issues/331
+[eba3dae]: https://github.com/driftsys/upskill/commit/eba3dae
+[#326]: https://github.com/driftsys/upskill/issues/326
+[2c64620]: https://github.com/driftsys/upskill/commit/2c64620
+[#323]: https://github.com/driftsys/upskill/issues/323
+[26ab826]: https://github.com/driftsys/upskill/commit/26ab826
+[#318]: https://github.com/driftsys/upskill/issues/318
+[6e2978b]: https://github.com/driftsys/upskill/commit/6e2978b
+[#317]: https://github.com/driftsys/upskill/issues/317
+[01fbe9a]: https://github.com/driftsys/upskill/commit/01fbe9a
+[#315]: https://github.com/driftsys/upskill/issues/315
+[77181b9]: https://github.com/driftsys/upskill/commit/77181b9
+[#314]: https://github.com/driftsys/upskill/issues/314
+[aeb9225]: https://github.com/driftsys/upskill/commit/aeb9225
+[#312]: https://github.com/driftsys/upskill/issues/312
+[a74350e]: https://github.com/driftsys/upskill/commit/a74350e
+[#310]: https://github.com/driftsys/upskill/issues/310
+[9843abe]: https://github.com/driftsys/upskill/commit/9843abe
+[#305]: https://github.com/driftsys/upskill/issues/305
+[faae298]: https://github.com/driftsys/upskill/commit/faae298
+[#303]: https://github.com/driftsys/upskill/issues/303
+[f54c457]: https://github.com/driftsys/upskill/commit/f54c457
+[#302]: https://github.com/driftsys/upskill/issues/302
+[939f808]: https://github.com/driftsys/upskill/commit/939f808
+[#301]: https://github.com/driftsys/upskill/issues/301
+[5cdcd06]: https://github.com/driftsys/upskill/commit/5cdcd06
+[#300]: https://github.com/driftsys/upskill/issues/300
+[ed4ab8d]: https://github.com/driftsys/upskill/commit/ed4ab8d
+[#299]: https://github.com/driftsys/upskill/issues/299
+[0a9ea99]: https://github.com/driftsys/upskill/commit/0a9ea99
+[#298]: https://github.com/driftsys/upskill/issues/298
+[67326f3]: https://github.com/driftsys/upskill/commit/67326f3
+[#297]: https://github.com/driftsys/upskill/issues/297
+[b01a67d]: https://github.com/driftsys/upskill/commit/b01a67d
+[#296]: https://github.com/driftsys/upskill/issues/296
+[ff4671f]: https://github.com/driftsys/upskill/commit/ff4671f
+[#295]: https://github.com/driftsys/upskill/issues/295
+[a5e28b8]: https://github.com/driftsys/upskill/commit/a5e28b8
+[#293]: https://github.com/driftsys/upskill/issues/293
+[1367021]: https://github.com/driftsys/upskill/commit/1367021
+[#280]: https://github.com/driftsys/upskill/issues/280
+[879c077]: https://github.com/driftsys/upskill/commit/879c077
+[#277]: https://github.com/driftsys/upskill/issues/277
+[0b2f60b]: https://github.com/driftsys/upskill/commit/0b2f60b
+[#275]: https://github.com/driftsys/upskill/issues/275
+[714c4c3]: https://github.com/driftsys/upskill/commit/714c4c3
+[#272]: https://github.com/driftsys/upskill/issues/272
+[#269]: https://github.com/driftsys/upskill/issues/269
+[#270]: https://github.com/driftsys/upskill/issues/270
+[#271]: https://github.com/driftsys/upskill/issues/271
+[8298386]: https://github.com/driftsys/upskill/commit/8298386
+[#267]: https://github.com/driftsys/upskill/issues/267
+[e2ce18e]: https://github.com/driftsys/upskill/commit/e2ce18e
+[#265]: https://github.com/driftsys/upskill/issues/265
+[d886873]: https://github.com/driftsys/upskill/commit/d886873
+[#262]: https://github.com/driftsys/upskill/issues/262
+[2964dc3]: https://github.com/driftsys/upskill/commit/2964dc3
+[#261]: https://github.com/driftsys/upskill/issues/261
+[d170f2b]: https://github.com/driftsys/upskill/commit/d170f2b
+[#260]: https://github.com/driftsys/upskill/issues/260
+[2a3c3b5]: https://github.com/driftsys/upskill/commit/2a3c3b5
+[#259]: https://github.com/driftsys/upskill/issues/259
+[f7d36bf]: https://github.com/driftsys/upskill/commit/f7d36bf
+[#258]: https://github.com/driftsys/upskill/issues/258
+[250c6ae]: https://github.com/driftsys/upskill/commit/250c6ae
+[#255]: https://github.com/driftsys/upskill/issues/255
+[4d778ff]: https://github.com/driftsys/upskill/commit/4d778ff
+[#253]: https://github.com/driftsys/upskill/issues/253
+[1d86a7b]: https://github.com/driftsys/upskill/commit/1d86a7b
+[#252]: https://github.com/driftsys/upskill/issues/252
+[2a4b29e]: https://github.com/driftsys/upskill/commit/2a4b29e
+[#466]: https://github.com/driftsys/upskill/issues/466
+
 ## [0.8.1] (2026-07-05)
 
 ### Documentation
