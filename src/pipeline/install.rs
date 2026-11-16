@@ -851,13 +851,20 @@ pub(super) fn resolve_bundle_closure(
 /// The registry root of the entry bundle file `bundle_path`: the directory
 /// whose items and sibling bundles the bundle resolves against.
 ///
-/// This is [`find_registry_root`], unless bundle discovery from that root
-/// cannot reach `bundle_path` because a directory between them starts with a
-/// dot (discovery skips such directories). This happens when the directory
-/// of the bundle holds no item, so that the search continued into a parent
-/// directory. A bundle that selects no item and only declares `requires` is
-/// valid there, so the root is then the parent of the `bundles` directory
-/// that holds the bundle file, or the directory of the bundle file.
+/// This is [`find_registry_root`], also when that search went up to an
+/// ancestor directory that holds items, unless bundle discovery from that
+/// root cannot reach `bundle_path` because a directory between them starts
+/// with a dot (discovery skips such directories). This happens, for example,
+/// when the directory tree of the bundle holds no item, so that the search
+/// continued into a parent directory. A bundle that selects no item and only
+/// declares `requires` is valid there, so the root is then the parent of the
+/// `bundles` directory that holds the bundle file, or the directory of the
+/// bundle file when that directory is not named `bundles`.
+///
+/// The search result is kept when it is reachable, because an ancestor that
+/// holds items can be the intended registry root (items in `<root>/skills/`
+/// and the bundle in `<root>/<group>/bundles/`), and this function cannot
+/// tell that layout from an unrelated ancestor.
 pub(super) fn bundle_file_root(bundle_path: &Path) -> Result<PathBuf> {
     let root = find_registry_root(bundle_path)?;
     let reachable = bundle_path.strip_prefix(&root).is_ok_and(|rel| {
@@ -1783,5 +1790,53 @@ mod tests {
                 .required_by
                 .contains_key(&(ItemKind::Skill, "missing-skill".to_string()))
         );
+    }
+
+    fn write_root_item(dir: &Path) {
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(dir.join("SKILL.md"), "---\nschema: 1\nname: x\n---\n").unwrap();
+    }
+
+    fn write_bundle_file(path: &Path) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, "schema: 1\nname: m\ndescription: d\nitems: {}\n").unwrap();
+    }
+
+    #[test]
+    fn bundle_file_root_keeps_a_reachable_registry_root() {
+        // `<base>/skills/x` and `<base>/grp/bundles/m.bundle.yaml`: the
+        // search goes up past `<base>/grp` to `<base>`, from which discovery
+        // reaches the bundle file, so `<base>` is kept.
+        let tmp = tempfile::tempdir().unwrap();
+        let base = tmp.path().join("base");
+        write_root_item(&base.join("skills/x"));
+        let bundle = base.join("grp/bundles/m.bundle.yaml");
+        write_bundle_file(&bundle);
+        assert_eq!(bundle_file_root(&bundle).unwrap(), base);
+    }
+
+    #[test]
+    fn bundle_file_root_uses_the_parent_of_bundles_when_the_root_is_not_reachable() {
+        // `.agents/skills` holds no item: the search goes up to `<base>`,
+        // which holds `x`, but discovery from `<base>` skips `.agents`.
+        let tmp = tempfile::tempdir().unwrap();
+        let base = tmp.path().join("base");
+        write_root_item(&base.join("x"));
+        let bundle = base.join(".agents/skills/bundles/m.bundle.yaml");
+        write_bundle_file(&bundle);
+        assert_eq!(
+            bundle_file_root(&bundle).unwrap(),
+            base.join(".agents/skills")
+        );
+    }
+
+    #[test]
+    fn bundle_file_root_uses_the_bundle_directory_when_it_is_not_named_bundles() {
+        let tmp = tempfile::tempdir().unwrap();
+        let base = tmp.path().join("base");
+        write_root_item(&base.join("x"));
+        let bundle = base.join(".hidden/m.bundle.yaml");
+        write_bundle_file(&bundle);
+        assert_eq!(bundle_file_root(&bundle).unwrap(), base.join(".hidden"));
     }
 }

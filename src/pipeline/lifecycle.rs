@@ -959,7 +959,12 @@ pub fn update(
             .filter(|label| !prepared_sources.iter().any(|(l, _, _)| l == label))
             .collect();
         for label in recorded {
-            collect_recorded_local_items(label, &mut source_items)?;
+            collect_recorded_local_items(label, &mut source_items).with_context(|| {
+                format!(
+                    "read the recorded source `{label}` for the overlap check; restore it, \
+                     or remove its items with `upskill remove --source`"
+                )
+            })?;
         }
         super::output::check_run_outside_outputs(&at_check, &source_items)?;
 
@@ -1280,11 +1285,15 @@ fn removal_preview(plan: RemovalPlan) -> PreviewItem {
 }
 
 /// Push to `out` the item directories of the source recorded as `label`,
-/// for the overlap check of [`update`], when `label` is a local path that
-/// exists. Every item is pushed without an installed name, so that its
-/// directory is protected. For a bundle file, the items are those of its
-/// registry root, as `add` resolves it. A git source is not fetched: its clone is a temporary
-/// directory, which cannot overlap an output path.
+/// for the overlap check of [`update`], when `label` is a local path. Every
+/// item is pushed without an installed name, so that its directory is
+/// protected. A path that does not exist holds no item and pushes nothing.
+/// For a bundle file, the items are those of its registry root, as `add`
+/// resolves it ([`super::install::bundle_file_root`]). A git source is not
+/// fetched: its clone is a temporary directory, which cannot overlap an
+/// output path. A path that exists and cannot be read as a directory (for
+/// example a plain file that is not a bundle file) is an error that names
+/// `label`.
 fn collect_recorded_local_items(
     label: &str,
     out: &mut Vec<super::output::SourceItem>,
@@ -1294,9 +1303,6 @@ fn collect_recorded_local_items(
     else {
         return Ok(());
     };
-    if !path.exists() {
-        return Ok(());
-    }
     let root = if super::discovery::is_bundle_file(&path) {
         super::install::bundle_file_root(&path)?
     } else {
@@ -1678,13 +1684,27 @@ mod tests {
         skill(&second, "b", "b");
         install(&first, &target);
         install(&second, &target);
+        skill(&first, "a", "a changed");
+        skill(&second, "b", "b changed");
+        let b_before = fs::read(target.join(claude_skill("b"))).unwrap();
 
         // Every source is fetched before the first preview; a stop at the
-        // first source previews and applies no later source.
-        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Stop);
+        // first source previews and applies no later source. A later
+        // preview would get `Apply`, so a later source that is still
+        // handled after the stop is written.
+        let mut calls = 0;
+        let mut observer = Recorder::new(move |_: &SourcePreview| {
+            calls += 1;
+            if calls == 1 {
+                SourceDecision::Stop
+            } else {
+                SourceDecision::Apply
+            }
+        });
         let report = run(&target, &mut observer).unwrap();
         assert!(report.stopped);
         assert_eq!(observer.previews.len(), 1);
+        assert_eq!(fs::read(target.join(claude_skill("b"))).unwrap(), b_before);
         assert!(observer.results.is_empty());
         assert_eq!(report.sources_considered, 1);
         assert_eq!(report.sources_applied, 0);

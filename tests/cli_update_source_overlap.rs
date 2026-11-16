@@ -2,10 +2,11 @@
 //! of the lockfile (issue #547).
 //!
 //! `update` refuses a run, before its first write, when the source directory
-//! of an item is, is inside, or contains an output path of an item of the
-//! run. The check compares every source that the run reads with each other,
-//! and also the local-path sources recorded in the lockfile that the run does
-//! not otherwise read.
+//! of an item is, is inside, or contains a path that the run writes for an
+//! item that it installs. The check compares every source that the run reads
+//! with each other, and also the local-path sources recorded in the lockfile
+//! that the run does not otherwise read. The deletion of the files of an item
+//! that its source no longer contains is not part of this check.
 
 mod common;
 
@@ -263,4 +264,143 @@ fn add_accepts_a_bundle_file_whose_source_holds_no_item() {
     // source directory `.agents/skills` holds no item.
     let (_tmp, _home, proj) = stage_issue_layout(false);
     assert!(proj.join(".claude/skills/q/SKILL.md").is_file());
+}
+
+#[test]
+fn update_reads_a_recorded_bundle_source_that_holds_no_item_from_the_same_root_as_add() {
+    // The issue layout without `z` and without `y`: the recorded bundle
+    // source `.agents/skills` holds no item. The project directory holds the
+    // directory `.claude` with a `SKILL.md`, which a registry root search
+    // from the bundle file finds first. `add` resolves the bundle against
+    // `.agents/skills`, so `update` protects the items of `.agents/skills`
+    // only, and the directory `.claude`, which contains the output path of
+    // `q`, is not compared.
+    let (_tmp, home, proj) = stage_issue_layout(false);
+    fs::remove_dir_all(proj.join(".agents/skills/q")).unwrap();
+    write_skill(&proj.join(".claude"), "c", "# c");
+
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .success();
+    let q = fs::read_to_string(proj.join(".claude/skills/q/SKILL.md")).unwrap();
+    assert!(q.contains("New body"), "{q}");
+}
+
+#[test]
+fn update_of_a_name_protects_a_lockfile_source_that_it_does_not_update() {
+    // `update a` reads only the source of `a`; the source of `b` is a
+    // recorded local-path source that the run does not read.
+    for a_dir in ["../aaa", "./src-a"] {
+        let (_tmp, home, proj) = stage_two_sources(a_dir);
+        assert_update_refused(
+            &home,
+            &proj,
+            &["a"],
+            &["the source directory of skill 'b' (", "of skill 'a';"],
+        );
+    }
+}
+
+#[test]
+fn update_refuses_an_overlap_before_it_applies_an_earlier_source_with_changes() {
+    // The source of `a` sorts first and has a change; the overlap is found
+    // with the source of `b`, which sorts after it.
+    let (tmp, home, proj) = stage_two_sources("../aaa");
+    write_skill(&tmp.path().join("aaa/a"), "a", "Changed");
+    assert_update_refused(
+        &home,
+        &proj,
+        &[],
+        &["the source directory of skill 'b' (", "of skill 'a';"],
+    );
+}
+
+#[test]
+fn update_refuses_an_overlap_with_an_unselected_item_of_another_source() {
+    // The source `.agents/skills` holds the installed skill `b` (folder
+    // `grp/b`) and the skill `u` (folder `a/u`), which is not installed. The
+    // OpenCode output path `.agents/skills/a` of the skill `a` of another
+    // source contains the directory of `u` only.
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    write_skill(&proj.join(".agents/skills/grp/b"), "b", "# b");
+    write_skill(&proj.join(".agents/skills/a/u"), "u", "# u");
+    write_skill(&tmp.path().join("aaa/a"), "a", "# a");
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./.agents/skills", "b", "--claude", "--project"])
+        .assert()
+        .success();
+    add(&home, &proj, "../aaa");
+    assert!(!proj.join(".claude/skills/u").exists());
+
+    assert_update_refused(
+        &home,
+        &proj,
+        &[],
+        &["the source directory of skill 'u' (", "of skill 'a';"],
+    );
+}
+
+#[test]
+fn update_skips_a_recorded_directory_source_that_no_longer_exists() {
+    let (_tmp, home, proj) = stage_two_sources("../aaa");
+    fs::remove_dir_all(proj.join(".agents")).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes", "a"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn update_fails_when_a_recorded_source_that_it_does_not_update_cannot_be_read() {
+    // The recorded directory source of `b` is now a plain file.
+    let (_tmp, home, proj) = stage_two_sources("../aaa");
+    let source_b = proj.join(".agents/skills/a");
+    fs::remove_dir_all(&source_b).unwrap();
+    fs::write(&source_b, "a file\n").unwrap();
+    let before = files_under(&proj);
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes", "a"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("read the recorded source `local:")
+            && stderr.contains(".agents/skills/a` for the overlap check"),
+        "{stderr}"
+    );
+    assert_eq!(files_under(&proj), before);
+}
+
+#[test]
+fn update_refused_by_the_whole_run_check_does_not_adopt_a_schema_1_lockfile() {
+    let (_tmp, home, proj) = stage_two_sources("../aaa");
+    let path = proj.join(".upskill-lock.json");
+    let mut lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    lock["schema"] = 1.into();
+    for entry in lock["items"].as_array_mut().unwrap() {
+        let entry = entry.as_object_mut().unwrap();
+        entry.remove("files");
+        entry.remove("pending");
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+
+    assert_update_refused(
+        &home,
+        &proj,
+        &[],
+        &["the source directory of skill 'b' (", "of skill 'a';"],
+    );
+    assert!(!proj.join(".upskill-lock.json.v1").exists());
 }

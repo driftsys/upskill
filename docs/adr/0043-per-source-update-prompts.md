@@ -35,14 +35,26 @@ failed until `update --force`.
 
 ## Decision
 
-1. **One preview per source, computed just before the source is applied.**
-   `update` handles the sources one at a time, sorted by source label. It
-   fetches each source once and computes its preview from the fetched content,
-   the files on disk and the lockfile. A source of a cross-source dependency
-   (named in `requires` of an item of another source) is fetched again when the
-   reinstall of that other source resolves the dependency. The preview and the
-   apply come from the same planning and classification code. The apply
-   classifies the files again and does not rely on the preview.
+1. **Prepare every source, check the whole run, then one preview per source,
+   computed just before the source is applied.** `update` first fetches every
+   source once, sorted by source label, and resolves, checks and plans it
+   without any change. A source of a cross-source dependency (named in
+   `requires` of an item of another source) is fetched again when the source
+   that requires it is prepared. Then the source overlap check runs once on the
+   items of all these sources together and on the item directories of every
+   local-path source recorded in the lockfile that the run does not otherwise
+   read (#547). An error in this phase stops the run before any adoption and
+   before any source is applied. The prepare phase does not check for an
+   interrupt: a Ctrl-C during it sets the interrupt flag and the phase goes on,
+   unless the interrupt also ends a `git` fetch, which then fails the run before
+   any source is applied. After the phase, a terminal run and a `--yes` run stop
+   at the first source, after its adoption step and before its preview is shown,
+   so no source is applied; a `--dry-run` still prints every block. The run
+   exits with code 130. Then `update` handles the sources one at a time, in the
+   same order, and computes the preview of each source from its fetched content,
+   the files on disk and the lockfile. The preview and the apply come from the
+   same planning and classification code. The apply classifies the files again
+   and does not rely on the preview.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
    when applying the source writes or deletes a file (also a file whose bytes
@@ -78,8 +90,9 @@ failed until `update --force`.
    terminal, every source is applied without a question, also a source whose
    preview changes nothing, so its plugin and MCP steps run. `--dry-run` prints
    the same blocks and applies nothing.
-6. **A `schema: 1` lockfile is adopted once per run, without a question**, for
-   the first source that passes its checks, before the preview of that source is
+6. **A `schema: 1` lockfile is adopted once per run, without a question**, after
+   every source passed the checks of the prepare phase, for the first source
+   that also passes the empty-source check, before the preview of that source is
    computed.
 
 ## Consequences
@@ -118,7 +131,9 @@ failed until `update --force`.
     is printed, until `update --force`. `doctor` lists the modified files.
   - With `--quiet`, a terminal run does not print the blocks, the notes, the
     result lines or the closing summary. The question names the source.
-- A run can still stop after earlier sources were applied (#471).
+- A run can still stop after earlier sources were applied (#471): after a `q`
+  answer, an interrupt, or an error in the apply phase of a later source. An
+  error in the prepare phase applies no source.
 
 ## Alternatives considered
 
