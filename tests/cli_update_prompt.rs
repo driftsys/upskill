@@ -543,8 +543,11 @@ fn a_run_that_only_adopts_does_not_print_nothing_to_do() {
 fn an_error_after_a_printed_adoption_notice_prints_the_notice_once() {
     let (tmp, home) = two_sources(&["--claude"]);
     downgrade_to_schema_1(tmp.path());
-    // The source `b` cannot be fetched: the run fails after `a` adopted.
-    fs::remove_dir_all(tmp.path().join("b")).unwrap();
+    // The installed directory of `two` is now a file: the preview of the
+    // source `b` fails, after `a` adopted.
+    let two = tmp.path().join(".claude").join("skills").join("two");
+    fs::remove_dir_all(&two).unwrap();
+    fs::write(&two, b"a file\n").unwrap();
     let result = common::update_in_terminal_merged(tmp.path(), &home, &["--project"], "");
     assert_eq!(result["returncode"], 1, "{result}");
     assert_eq!(

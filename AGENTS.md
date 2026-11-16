@@ -238,7 +238,8 @@ the way you would for any manual `git clone`.
     `cli_repeatable`, `cli_requires`, `cli_resources`, `cli_scope`,
     `cli_search`, `cli_smoke_source`, `cli_stdio_discipline`,
     `cli_support_levels`, `cli_update`, `cli_update_bundle`, `cli_update_check`,
-    `cli_update_notice`, `cli_update_prompt`, `cli_ux_polish`.
+    `cli_update_notice`, `cli_update_prompt`, `cli_update_source_overlap`,
+    `cli_ux_polish`.
   - **Pipeline:** `pipeline_ignore`, `pipeline_local`, `pipeline_lockfile`,
     `pipeline_mcp`, `pipeline_source`.
   - **Generation (v0.2 pipeline):** `generate_skills`, `generate_rules`,

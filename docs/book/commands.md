@@ -118,24 +118,43 @@ written under its source name. The paths of each installed item are compared
 with the directory of that item and with the directory of every other item of
 every source that the install reads: the source given to `add`, also the source
 of a bundle file whose bundle selects no item and only declares `requires`, and
-each dependency source. The directory of an item that is not installed (not
-named, excluded with `--exclude`, not in the bundle, or an item of a dependency
-source that the `requires` closure does not select) is protected in the same
-way, but such an item has no paths in the check, also when it is at its own
-output path. The `audience` field and the client selection are not applied: an
-item whose `audience` shares no client with the selected clients is still
-treated as installed, its paths for every client are compared, and it can cause
-a refusal although nothing would be installed for the item. The error names the
-item, the source directory and the output path, and for an overlap with another
-item also that item. `add` fails with exit code 1 before any file or lockfile is
-changed. `upskill update` is refused in the same way, including for recorded
-aliases, but it installs each lockfile source again on its own and checks it
-just before it updates that source: it compares the items of that source and of
-the dependency sources that it reads for that source. It does not read the
-source of the bundle that pulled a dependency item into the lockfile, and it
-compares the items of two sources only when it reads both for the same lockfile
-source. The refusal comes before any change for that source, and an `update`
-over several sources may have updated earlier sources before it stops.
+each dependency source. The source of a bundle file is the registry root that a
+search upward from the bundle file finds: the first directory that holds an item
+in a child or grandchild directory. When bundle discovery from that directory
+cannot reach the bundle file because a directory between them starts with a dot
+(for example a bundle file in `.agents/skills/bundles/` whose directory tree
+holds no item), the source is the directory that holds its `bundles` directory,
+or the directory of the bundle file when that directory is not named `bundles`.
+When no directory above the bundle file holds an item, the source is the
+directory of the bundle file. A bundle file whose bundle selects no item and
+only declares `requires` is valid also when its source holds no item. The
+directory of an item that is not installed (not named, excluded with
+`--exclude`, not in the bundle, or an item of a dependency source that the
+`requires` closure does not select) is protected in the same way, but such an
+item has no paths in the check, also when it is at its own output path. The
+`audience` field and the client selection are not applied: an item whose
+`audience` shares no client with the selected clients is still treated as
+installed, its paths for every client are compared, and it can cause a refusal
+although nothing would be installed for the item. The error names the item, the
+source directory and the output path, and for an overlap with another item also
+that item. `add` fails with exit code 1 before any file or lockfile is changed.
+`upskill update` is refused in the same way, including for recorded aliases. It
+compares the items of all the sources that it reads with each other: every
+lockfile source of the entries that it updates and the dependency sources that
+it reads for them. It also protects the item directories of every local-path
+source recorded in the lockfile that it does not otherwise read, for example the
+source of the bundle that pulled a dependency item into the lockfile. A recorded
+directory source that no longer exists is skipped. For a recorded bundle file,
+also one that no longer exists, `update` protects the items of the same source
+directory that `add` resolves for it (see above); when that directory does not
+exist, nothing is protected for it. A git source is not fetched for this check.
+Such a source that exists but cannot be read as a directory (for example a plain
+file that is not a bundle file) fails the `update` with exit code 1 and an error
+that names its source label; the error suggests
+`upskill remove --source <label>` only when a lockfile item has that source. The
+refusal comes before any file or lockfile is changed, also with `--force` and
+`--dry-run`. The deletion of the files of an item that its source no longer
+contains is not part of this check.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
 destination of every item against the item's `files` and `pending` records (see
@@ -302,13 +321,14 @@ run names each of these files in the block, as `replaces <path> (--force)` or
 `deletes <path> (--force)`. A run with `--yes` or without a terminal lists them
 after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
 
-`update` handles the sources one at a time, sorted by source label. For each
-source it fetches the source once (a source of a cross-source dependency is
-fetched again when the source that requires it is reinstalled), checks it, and
-computes a preview: what applying this source now does to the files on disk and
-to the lockfile. The preview is computed just before the source is applied, so
-it includes the effect of the sources applied before it. The modes differ in
-what they do with the preview:
+`update` first fetches every source once (a source of a cross-source dependency
+is fetched again when the source that requires it is reinstalled), checks it and
+plans it, without any change; an error in this step stops the run before any
+source is applied. Then it handles the sources one at a time, sorted by source
+label. For each source it computes a preview: what applying this source now does
+to the files on disk and to the lockfile. The preview is computed just before
+the source is applied, so it includes the effect of the sources applied before
+it. The modes differ in what they do with the preview:
 
 | Mode                                | Behaviour                                                                                                                                    |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -392,15 +412,15 @@ A terminal run exits with code 1 when an item is skipped in a source that was
 applied or in a source whose preview changes nothing, or when a step fails.
 Answers `n` and `q` do not change the exit code, and a `skip` line in a source
 that was not applied does not cause exit code 1. Sources applied before a
-failure stay applied. With `--quiet`, a terminal run does not print the blocks,
-the `kept modified file` notes, the result lines or the closing summary. The
-question names the source (`Apply changes from <source>? [y/N/q]`). The
-`skipped` lines of the skipped items that cause exit code 1,
-`Use --force to replace.` and the adoption notice of a `schema: 1` lockfile are
-printed on stderr; without `--quiet`, a terminal run prints no `skipped` line,
-because the blocks name these files. `update --dry-run --quiet` prints nothing.
-A terminal run prints the adoption notice before the block of the source that
-adopted the lockfile.
+failure in the apply of a later source stay applied. With `--quiet`, a terminal
+run does not print the blocks, the `kept modified file` notes, the result lines
+or the closing summary. The question names the source
+(`Apply changes from <source>? [y/N/q]`). The `skipped` lines of the skipped
+items that cause exit code 1, `Use --force to replace.` and the adoption notice
+of a `schema: 1` lockfile are printed on stderr; without `--quiet`, a terminal
+run prints no `skipped` line, because the blocks name these files.
+`update --dry-run --quiet` prints nothing. A terminal run prints the adoption
+notice before the block of the source that adopted the lockfile.
 
 A run with `--yes`, or without a terminal, prints `Updated <n> of <m> item(s)`
 and one status line per item when an item changed or was skipped, files were
@@ -1111,9 +1131,9 @@ not in the lockfile. An `add` does not adopt when it is refused because a source
 item overlaps an output path of the run, because an item conflicts with an item
 installed from another source, because two items would install under one name,
 or because an installed name is empty, `.` or `..` or contains a path separator.
-An `update` refused for one of these reasons does not adopt when the refused
-source is the first source it updates, and neither does an `update` whose first
-source resolves to no items while the lockfile records items from it.
+An `update` refused for one of these reasons does not adopt, because it checks
+every source before it adopts, and neither does an `update` whose first source
+resolves to no items while the lockfile records items from it.
 
 ## Per-client output paths
 

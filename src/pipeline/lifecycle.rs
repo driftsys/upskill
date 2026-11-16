@@ -730,11 +730,26 @@ fn reselect_from_entries(
 /// same source (the pipeline always reinstalls a source as a unit).
 /// Names that match no lockfile entry are an error.
 ///
-/// For each source, in this order:
+/// First, every source is fetched once (a source of a cross-source
+/// dependency is fetched again when the reinstall of the source that
+/// requires it resolves it), resolved, checked (conflict check and overlap
+/// check) and planned, without any write (`prepare_install`), in the order
+/// of the sources. Then the overlap check runs once more on the items of all
+/// these sources together, and on the item directories of every local-path
+/// source recorded in the lockfile (`lock.bundles` and `lock.items`) that the
+/// run does not otherwise read (see `collect_recorded_local_items`): a
+/// recorded directory that does not exist is skipped, a recorded bundle file,
+/// also one that does not exist, protects the registry root that `add`
+/// resolves for it when that root exists, a recorded source that exists and
+/// cannot be read as a directory is an error that names its label (its hint
+/// names `upskill remove --source` only when a lockfile item has that
+/// source), and a git source is not
+/// fetched for this check. An error in this step stops the run before the
+/// adoption and before any source is applied.
 ///
-/// 1. The source is fetched once (a source of a cross-source dependency is
-///    fetched again when the reinstall of this source resolves it), resolved, checked (conflict check and
-///    overlap check) and planned, without any write (`prepare_install`).
+/// Then, for each source, in this order:
+///
+/// 1. The prepared install of the source is taken from the first step.
 /// 2. A source that resolves to no items while the lockfile records items
 ///    from it is an error (`guard_against_empty_source`), before any write
 ///    of the source.
@@ -753,7 +768,7 @@ fn reselect_from_entries(
 ///    planned again from the saved lockfile and deleted with the rules of
 ///    [`remove`], then `observer.applied` receives the counts. On
 ///    [`SourceDecision::Stop`]: [`UpdateReport::stopped`] is set and no
-///    later source is fetched.
+///    later source is previewed or applied.
 ///
 /// In an applied source, `overwrite` (`update --force`) replaces modified
 /// and unowned files. Without it, an item with such a file at one of its
@@ -811,7 +826,8 @@ fn reselect_from_entries(
 /// unchanged files at the old paths are deleted through the ownership record.
 ///
 /// An error after an adoption carries the adopted paths as
-/// [`AdoptedBeforeFailure`]. Sources applied before an error stay applied.
+/// [`AdoptedBeforeFailure`]. An error while one source is applied leaves the
+/// sources applied before it applied.
 pub fn update(
     at: &crate::scope::ScopeRoot,
     names: &[String],
@@ -864,7 +880,12 @@ pub fn update(
     // still carry the adopted paths for the adoption notice.
     let result = (|| -> Result<()> {
         let total_sources = by_source.len();
-        for (index, (source_label, source_entries)) in by_source.into_iter().enumerate() {
+        // Prepare phase: fetch, resolve, check and plan every source, in the
+        // order of the apply phase, without any write. A failure here (for
+        // example the overlap check of one source) happens before the
+        // adoption and before any source is applied.
+        let mut prepared_sources = Vec::with_capacity(total_sources);
+        for (source_label, source_entries) in by_source {
             let source = crate::source::parse_install_source_label(&source_label)
                 .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
 
@@ -924,9 +945,47 @@ pub fn update(
                     .collect()
             };
 
-            // Fetch, resolve, check and plan. A failure here (for example
-            // the overlap check) happens before the adoption.
             let prepared = prepare_install(&source, target, &item_filter, &options)?;
+            prepared_sources.push((source_label, source_entries, prepared));
+        }
+
+        // The overlap check of `add`, applied to the items of every source
+        // that the run reads and to the items of every recorded local-path
+        // source that the run does not read, before the first write.
+        let at_check = crate::scope::ScopeRoot {
+            scope: at.scope,
+            root: target.to_path_buf(),
+        };
+        let mut source_items: Vec<super::output::SourceItem> = prepared_sources
+            .iter()
+            .flat_map(|(_, _, prepared)| prepared.source_items().iter().cloned())
+            .collect();
+        let recorded: std::collections::BTreeSet<&str> = lock
+            .bundles
+            .iter()
+            .map(|b| b.source.as_str())
+            .chain(lock.items.iter().map(|i| i.source.as_str()))
+            .filter(|label| !prepared_sources.iter().any(|(l, _, _)| l == label))
+            .collect();
+        for label in recorded {
+            collect_recorded_local_items(label, &mut source_items).with_context(|| {
+                // `remove --source` matches the sources of items only.
+                if lock.items.iter().any(|i| i.source == label) {
+                    format!(
+                        "read the recorded source `{label}` for the overlap check; restore it, \
+                         or remove its items with `upskill remove --source {label}`"
+                    )
+                } else {
+                    format!("read the recorded source `{label}` for the overlap check; restore it")
+                }
+            })?;
+        }
+        super::output::check_run_outside_outputs(&at_check, &source_items)?;
+
+        // Apply phase: preview, decide and commit each source in turn.
+        for (index, (source_label, source_entries, prepared)) in
+            prepared_sources.into_iter().enumerate()
+        {
             let new_hashes = prepared.planned_hashes();
             guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
 
@@ -1237,6 +1296,49 @@ fn removal_preview(plan: RemovalPlan) -> PreviewItem {
         blocking: Vec::new(),
         record_only: false,
     }
+}
+
+/// Push to `out` the item directories of the source recorded as `label`,
+/// for the overlap check of [`update`], when `label` is a local path. Every
+/// item is pushed without an installed name, so that its directory is
+/// protected. A directory that does not exist holds no item and pushes
+/// nothing. For a bundle-file label, whether or not the bundle file still
+/// exists, the items are those of the registry root that `add` resolves for
+/// it ([`super::install::bundle_file_root`]); a root that does not exist
+/// pushes nothing. A git source is not
+/// fetched: its clone is a temporary directory, which cannot overlap an
+/// output path. A path that exists and cannot be read as a directory (for
+/// example a plain file that is not a bundle file) is an error that names
+/// `label`.
+fn collect_recorded_local_items(
+    label: &str,
+    out: &mut Vec<super::output::SourceItem>,
+) -> Result<()> {
+    let Ok(crate::source::InstallSource::LocalPath(path)) =
+        crate::source::parse_install_source_label(label)
+    else {
+        return Ok(());
+    };
+    // A bundle-file label, whether or not the file still exists: the root
+    // that `add` resolves for it. A path that is a directory is a directory
+    // source, whatever its name.
+    let is_bundle_label = !path.is_dir()
+        && path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX));
+    let root = if is_bundle_label {
+        super::install::bundle_file_root(&path)?
+    } else {
+        path
+    };
+    let none = crate::bundle::ResolvedItems::default();
+    super::install::collect_source_items(
+        &root,
+        Some(&none),
+        &super::plan::PlanNames::default(),
+        out,
+    )
 }
 
 /// Guard against the data-loss footgun in issue #196: when re-resolving a
@@ -1596,7 +1698,7 @@ mod tests {
     }
 
     #[test]
-    fn stop_does_not_fetch_later_sources() {
+    fn stop_does_not_preview_or_apply_later_sources() {
         let tmp = tempfile::tempdir().unwrap();
         let first = tmp.path().join("s1");
         let second = tmp.path().join("s2");
@@ -1606,12 +1708,29 @@ mod tests {
         skill(&second, "b", "b");
         install(&first, &target);
         install(&second, &target);
-        fs::remove_dir_all(&second).unwrap();
+        skill(&first, "a", "a changed");
+        skill(&second, "b", "b changed");
+        let a_before = fs::read(target.join(claude_skill("a"))).unwrap();
+        let b_before = fs::read(target.join(claude_skill("b"))).unwrap();
 
-        let mut observer = Recorder::new(|_: &SourcePreview| SourceDecision::Stop);
+        // Every source is fetched before the first preview; a stop at the
+        // first source previews and applies no later source. A later
+        // preview would get `Apply`, so a later source that is still
+        // handled after the stop is written.
+        let mut calls = 0;
+        let mut observer = Recorder::new(move |_: &SourcePreview| {
+            calls += 1;
+            if calls == 1 {
+                SourceDecision::Stop
+            } else {
+                SourceDecision::Apply
+            }
+        });
         let report = run(&target, &mut observer).unwrap();
         assert!(report.stopped);
         assert_eq!(observer.previews.len(), 1);
+        assert_eq!(fs::read(target.join(claude_skill("a"))).unwrap(), a_before);
+        assert_eq!(fs::read(target.join(claude_skill("b"))).unwrap(), b_before);
         assert!(observer.results.is_empty());
         assert_eq!(report.sources_considered, 1);
         assert_eq!(report.sources_applied, 0);

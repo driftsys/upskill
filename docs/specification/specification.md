@@ -113,6 +113,19 @@ change anything, `scope: <scope> (<root>)`. `--quiet` hides it. `update --check`
 prints no such line; the block of each scope names the scope and its root.
 `update --notice` prints no such line either.
 
+**Source overlap.** Before any write, `add` refuses the install, with exit code
+1 and without any change to a file or the lockfile, when the directory of an
+item in a source that it reads is the same as, is inside, or contains a path
+that it deletes or writes for an item that it installs: the entrypoint or the
+resource directory of that item for any client in the target scope, and in the
+global scope also the paths that released versions wrote. An item that is not
+selected or that `--exclude` names has no such paths, but its directory is
+compared too. The sources that `add` reads are the given source and every
+dependency source of a `requires` closure. An `--as` alias is used as the
+installed name of an item of the given source. The `audience` field and the
+client selection are not applied. The error names the item, its directory, the
+output path and the item of that output path.
+
 Before any write, `add` classifies every destination of every item against the
 item's `files` and `pending` records (§4). A destination is a conflict when it
 is **modified** (a recorded regular file with other content) or **unowned** (a
@@ -237,21 +250,33 @@ files as `replaces <path> (--force)` or `deletes <path> (--force)`; a run with
 `--yes` or without a terminal lists them after
 `Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
 
-`update` handles the sources one at a time, sorted by source label. For each
-source it fetches the source once (a source of a cross-source dependency is
-fetched again when the source that requires it is reinstalled), runs the checks
-of §2.1, and computes a preview from the fetched content, the files on disk and
-the lockfile, just before the source is applied. A preview **changes something**
-when applying the source writes or deletes a file, changes the lockfile record
-of an item (any field except `pending`, `required_by` and `commit`), completes
-an interrupted item (a non-empty `pending` record, §4), removes an item, or
-creates or changes a hand-shake file (§3.4). A write of a file that already
-holds the planned bytes is not a change, unless the executable bits (`0o111`) of
-the file differ from the target executable bits (Unix only): each executable bit
-of the source resource for which the file has the matching read bit (owner,
-group, other). The apply sets the executable bits to the target, so the file is
-a change. A difference in the other permission bits is not a change. A `skip`
-item and a `kept modified file` note are not changes.
+In the **prepare step**, `update` fetches every source once (a source of a
+cross-source dependency is fetched again when the source that requires it is
+reinstalled), runs the checks of §2.1 and plans it, without any change. The
+source overlap check of §2.1 is then applied to the items of all these sources
+together, and also protects the item directories of every local-path source
+recorded in the lockfile that the run does not otherwise read. A recorded
+directory source that no longer exists is skipped. For a recorded bundle file,
+also one that no longer exists, the items of the source directory that `add`
+resolves for it (§2.6) are protected; when that directory does not exist,
+nothing is protected for it. A recorded source that exists and cannot be read as
+a directory fails the step with an error that names its source label; the error
+suggests `upskill remove --source <label>` only when a lockfile item has that
+source. A git source is not fetched for this check. An error in the prepare step
+stops the run before any source is applied. Then `update` handles the sources
+one at a time, sorted by source label. For each source it computes a preview
+from the fetched content, the files on disk and the lockfile, just before the
+source is applied. A preview **changes something** when applying the source
+writes or deletes a file, changes the lockfile record of an item (any field
+except `pending`, `required_by` and `commit`), completes an interrupted item (a
+non-empty `pending` record, §4), removes an item, or creates or changes a
+hand-shake file (§3.4). A write of a file that already holds the planned bytes
+is not a change, unless the executable bits (`0o111`) of the file differ from
+the target executable bits (Unix only): each executable bit of the source
+resource for which the file has the matching read bit (owner, group, other). The
+apply sets the executable bits to the target, so the file is a change. A
+difference in the other permission bits is not a change. A `skip` item and a
+`kept modified file` note are not changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action
@@ -325,10 +350,10 @@ item and a `kept modified file` note are not changes.
   nothing. Because nothing is applied, a later block does not include the effect
   of applying an earlier source.
 
-A `schema: 1` lockfile is adopted once per run, without a question, for the
-first source that passes its checks (§4); in a terminal the adoption notice is
-printed before the block of that source. The adoption stays when the run fails
-or is stopped.
+A `schema: 1` lockfile is adopted once per run, without a question, after every
+source passed the checks of the prepare step, for the first source that also
+resolves to items (§4); in a terminal the adoption notice is printed before the
+block of that source. The adoption stays when the run fails or is stopped.
 
 Known limits: the plugin and MCP steps of a bundle source run when the source is
 applied, are not part of the preview and are not a reason to ask, so a terminal
@@ -585,7 +610,15 @@ behaviour:
 
 - **Items.** Every entry in `items.rules`, `items.skills`, `items.agents` is
   resolved against the same source repository and installed. Unresolved names
-  error out before any write.
+  error out before any write. The source of a bundle file is the registry root
+  found upward from it: the first directory, starting at the directory of the
+  bundle file, that holds an item in a child or grandchild directory, or the
+  directory of the bundle file when no such directory exists. When bundle
+  discovery from that root cannot reach the file (a directory between them
+  starts with a dot), the source is the directory that holds its `bundles`
+  directory, or the directory of the bundle file when that directory is not
+  named `bundles`. A bundle that selects no item and only declares `requires:`
+  is valid also when that source holds no item.
 - **Transitive `requires:`.** When the bundle declares `requires:`, every bundle
   in the transitive closure is installed. A bare `{ name }` entry is resolved
   against the same source; a `{ name, source }` entry is resolved cross-source
@@ -734,15 +767,15 @@ deleted. `doctor` does not apply this check. A stage file left by a process that
 was killed is not deleted by upskill. Two upskill processes that change one
 scope at the same time are not supported. `add`, `update` and `remove` (not
 `update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
-not an `add`, or an `update` for its first source, that is refused for a source
-item that overlaps an output path of the run, for a conflict with another
-source, for two items with one installed name, or for an installed name that is
-empty, `.` or `..` or that has a path separator, and not an `update` whose first
-source resolves to no items while the lockfile records items from it) adopt a
-`schema: 1` lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an
-existing `.upskill-lock.json.v1` is kept and not replaced), record each existing
-file at the items' output paths with its current hash, save `schema: 2`, and
-print the adopted paths to stderr.
+not an `add` or an `update` that is refused for a source item that overlaps an
+output path of the run, for a conflict with another source, for two items with
+one installed name, or for an installed name that is empty, `.` or `..` or that
+has a path separator, and not an `update` whose first source resolves to no
+items while the lockfile records items from it) adopt a `schema: 1` lockfile:
+they keep the old bytes as `.upskill-lock.json.v1` (an existing
+`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
+the items' output paths with its current hash, save `schema: 2`, and print the
+adopted paths to stderr.
 
 Two possible locations:
 
