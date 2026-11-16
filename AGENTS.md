@@ -9,8 +9,8 @@ upskill is a Rust CLI for authoring and distributing AI-assistance content
 opencode) from a single source of truth. The central abstraction is
 **generation** — SSOT in, per-client output out.
 
-**v0.2.0 shipped.** The redesign around the SSOT-to-client generation pipeline
-is complete and released. See
+**Released.** The redesign around the SSOT-to-client generation pipeline shipped
+in v0.2.0, and later releases extend it. See
 [ADR-0001](docs/adr/0001-multi-kind-compiler-architecture.md) for the umbrella
 decision and the rest of `docs/adr/` for concern-specific design.
 
@@ -76,6 +76,15 @@ src/
 ├── source.rs            Source URL parsing and classification (typed errors)
 ├── fetch.rs             Git clone, shallow clone, local path resolution
 ├── search.rs            skills.sh API search
+├── index.rs             Registry index: scan, cache, HEAD-based freshness check
+├── config.rs            User and project configuration loading and merging
+├── scope.rs             The two install scopes (project, global) and their roots
+├── select.rs            Consumer-side client selection (`--claude`, `--copilot`, ...)
+├── target.rs            Stable identities for client configuration surfaces
+├── conflict.rs          Item conflict detection for `upskill add`
+├── plugin.rs            Client CLI shell-out for plugin installation
+├── mcp.rs               Client-native MCP server configuration
+├── style.rs             Output styling and the color disable chain
 │
 ├── pipeline/            Local + git → per-client install pipeline,
 │                        git-config clone URLs, SSOT hashing,
@@ -143,7 +152,8 @@ possible locations: `<cwd>/` (project scope, committed) or `$HOME/` (global
 scope, not committed). Per-client output paths and ancillary files (`CLAUDE.md`,
 `.vscode/settings.json`, `opencode.json`) are specified in
 [ADR-0003](docs/adr/0003-generation-pipeline.md) and
-[format-spec §7](docs/specification/format-spec.md).
+[format-spec §7](docs/specification/format-spec.md); the global Copilot paths
+are in [specification §3.1](docs/specification/specification.md).
 
 Without a scope flag, `add` stops outside a git repo (exit 2); `update`,
 `remove` and `remove-mcp` use the global scope there; `list`, `doctor`,
@@ -218,12 +228,25 @@ the way you would for any manual `git clone`.
   ```
 
 - Existing test files:
-  - **CLI:** `cli_add`, `cli_ci_mode`, `cli_exit_codes`, `cli_search`,
-    `cli_support_levels`, `cli_smoke_source`, `cli_update_check`,
-    `cli_update_notice`.
-  - **Pipeline:** `pipeline_local`, `pipeline_source`, `pipeline_lockfile`.
+  - **CLI:** `cli_add`, `cli_alias_requires`, `cli_bundle_cross_source`,
+    `cli_bundle_install`, `cli_ci_mode`, `cli_client_filtering`,
+    `cli_colocation_remove`, `cli_conflict`, `cli_doctor`, `cli_doctor_orphan`,
+    `cli_doctor_source_lookup`, `cli_exit_codes`, `cli_fmt`, `cli_global_scope`,
+    `cli_install`, `cli_interrupted`, `cli_legacy_source_labels`, `cli_lint`,
+    `cli_list`, `cli_mangen`, `cli_mcp`, `cli_misc`, `cli_new`, `cli_ownership`,
+    `cli_quiet`, `cli_recorded_path_guard`, `cli_relaxed_naming`, `cli_remove`,
+    `cli_repeatable`, `cli_requires`, `cli_resources`, `cli_scope`,
+    `cli_search`, `cli_smoke_source`, `cli_stdio_discipline`,
+    `cli_support_levels`, `cli_update`, `cli_update_bundle`, `cli_update_check`,
+    `cli_update_notice`, `cli_update_prompt`, `cli_ux_polish`.
+  - **Pipeline:** `pipeline_ignore`, `pipeline_local`, `pipeline_lockfile`,
+    `pipeline_mcp`, `pipeline_source`.
   - **Generation (v0.2 pipeline):** `generate_skills`, `generate_rules`,
-    `generate_agents`. Golden fixtures in `tests/fixtures/`.
+    `generate_agents`, `generate_strip_ssot_fields`. Golden fixtures in
+    `tests/fixtures/`.
+  - **Parsing:** `parse_bundles`.
+  - **Plugins:** `plugins_notice_hook` (the `upskill` hook plugins in
+    `plugins/`).
   - **Harness:** `tests/common/mod.rs` (`upskill_cmd`) and
     `cli_test_harness_guard` (enforces the fake-`$HOME` convention).
   - When adding behavior, prefer extending the matching file or creating a new

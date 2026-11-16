@@ -1,8 +1,9 @@
 # Upskill roadmap
 
 Updated: **2026-11-15**. Status: **planned delivery scope**. This roadmap
-describes upcoming work, not implemented support. Release numbers and dates will
-be assigned separately.
+describes delivered and upcoming work: steps 0 to 8 are delivered on `main`,
+except the release named in step 8, and the steps marked Next are not
+implemented. Release numbers and dates will be assigned separately.
 
 ## Direction
 

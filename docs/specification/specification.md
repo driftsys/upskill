@@ -490,7 +490,10 @@ gets no such line. When no name qualifies, `remove` prints the `upskill doctor`
 hint instead; `update <name>` does the same. Either name one or more items, or
 pass `--source <label>` to remove every item that came from a single source.
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
-`opencode.json`, `.vscode/settings.json`) are not touched.
+`opencode.json`, `.vscode/settings.json`) are not touched, except that removing
+an item of a bundle, or the source of a bundle with `--source`, deletes the
+installed opencode plugin entry of that bundle from the `plugin` array of
+`opencode.json`.
 
 `remove` deletes only files listed in the item's `files` or `pending` record
 (§4). A recorded file is **owned** when it is a regular file with the recorded
