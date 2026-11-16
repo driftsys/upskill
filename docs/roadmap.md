@@ -3,7 +3,7 @@
 Updated: **2026-11-16**. Status: **planned delivery scope**. This roadmap
 describes delivered and upcoming work: steps 0 to 8 are delivered and released
 in 0.9.0, and the steps marked Next are not implemented. Release numbers and
-dates will be assigned separately.
+dates of the Next steps will be assigned separately.
 
 ## Direction
 
