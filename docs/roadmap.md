@@ -1,9 +1,9 @@
 # Upskill roadmap
 
-Updated: **2026-11-15**. Status: **planned delivery scope**. This roadmap
-describes delivered and upcoming work: steps 0 to 8 are delivered on `main`,
-except the release named in step 8, and the steps marked Next are not
-implemented. Release numbers and dates will be assigned separately.
+Updated: **2026-11-16**. Status: **planned delivery scope**. This roadmap
+describes delivered and upcoming work: steps 0 to 8 are delivered and released
+in 0.9.0, and the steps marked Next are not implemented. Release numbers and
+dates will be assigned separately.
 
 ## Direction
 
@@ -60,8 +60,7 @@ acceptance test.
 | Next | Codex, then OpenCode, each with its own short design.                              |
 | Next | Plugin and catalog generation from a bundle, with its own design.                  |
 
-Steps 0 to 8 are delivered on `main` as of 2026-11-15, except the release named
-in step 8.
+Steps 0 to 8 are delivered on `main` and released in 0.9.0 on 2026-11-16.
 
 Section numbers refer to the re-steer design. Bundles and plugins need no
 separate step. Bundle items are ordinary items and receive the ownership
