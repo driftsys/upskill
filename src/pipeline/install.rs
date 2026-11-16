@@ -851,7 +851,8 @@ pub(super) fn resolve_bundle_closure(
 /// The registry root of the entry bundle file `bundle_path`: the directory
 /// whose items and sibling bundles the bundle resolves against.
 ///
-/// This is [`find_registry_root`], also when that search went up to an
+/// This is [`find_registry_root`] (the directory of the bundle file when no
+/// directory above it holds an item), also when that search went up to an
 /// ancestor directory that holds items, unless bundle discovery from that
 /// root cannot reach `bundle_path` because a directory between them starts
 /// with a dot (discovery skips such directories). This happens, for example,
@@ -874,13 +875,20 @@ pub(super) fn bundle_file_root(bundle_path: &Path) -> Result<PathBuf> {
     if reachable {
         return Ok(root);
     }
+    Ok(bundle_file_dir(bundle_path))
+}
+
+/// The directory that holds the bundle file `bundle_path` without a search:
+/// the parent of its `bundles` directory when it is in one, else the
+/// directory of the bundle file. The file does not need to exist.
+pub(super) fn bundle_file_dir(bundle_path: &Path) -> PathBuf {
     let parent = bundle_path.parent().unwrap_or(bundle_path);
-    Ok(match parent.parent() {
+    match parent.parent() {
         Some(grandparent) if parent.file_name().is_some_and(|n| n == "bundles") => {
             grandparent.to_path_buf()
         }
         _ => parent.to_path_buf(),
-    })
+    }
 }
 
 /// Detect a bundle-shaped `add` — a `*.bundle.yaml` source, or positional
@@ -1838,5 +1846,17 @@ mod tests {
         let bundle = base.join(".hidden/m.bundle.yaml");
         write_bundle_file(&bundle);
         assert_eq!(bundle_file_root(&bundle).unwrap(), base.join(".hidden"));
+    }
+
+    #[test]
+    fn bundle_file_root_finds_a_dot_directory_after_the_first_component() {
+        // `<base>/skills/x` and `<base>/grp/.hidden/bundles/m.bundle.yaml`:
+        // the search returns `<base>`, and discovery skips `.hidden`.
+        let tmp = tempfile::tempdir().unwrap();
+        let base = tmp.path().join("base");
+        write_root_item(&base.join("skills/x"));
+        let bundle = base.join("grp/.hidden/bundles/m.bundle.yaml");
+        write_bundle_file(&bundle);
+        assert_eq!(bundle_file_root(&bundle).unwrap(), base.join("grp/.hidden"));
     }
 }

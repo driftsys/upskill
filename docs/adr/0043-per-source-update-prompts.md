@@ -44,17 +44,18 @@ failed until `update --force`.
    items of all these sources together and on the item directories of every
    local-path source recorded in the lockfile that the run does not otherwise
    read (#547). An error in this phase stops the run before any adoption and
-   before any source is applied. The prepare phase does not check for an
-   interrupt: a Ctrl-C during it sets the interrupt flag and the phase goes on,
-   unless the interrupt also ends a `git` fetch, which then fails the run before
-   any source is applied. After the phase, a terminal run and a `--yes` run stop
-   at the first source, after its adoption step and before its preview is shown,
-   so no source is applied; a `--dry-run` still prints every block. The run
-   exits with code 130. Then `update` handles the sources one at a time, in the
-   same order, and computes the preview of each source from its fetched content,
-   the files on disk and the lockfile. The preview and the apply come from the
-   same planning and classification code. The apply classifies the files again
-   and does not rely on the preview.
+   before any source is applied. As built, the prepare phase does not read the
+   interrupt flag: the Ctrl-C handler sets the flag and returns, and the phase
+   goes on. After such an interrupt, when the phase completes, the observer of a
+   terminal run and of a `--yes` run returns a stop for the first source, after
+   the empty-source check and the adoption step of that source and before its
+   preview is shown, so no source is applied; the `--dry-run` observer does not
+   read the flag and prints every block. The process exits with code 130 when
+   the flag is set. Then `update` handles the sources one at a time, in the same
+   order, and computes the preview of each source from its fetched content, the
+   files on disk and the lockfile. The preview and the apply come from the same
+   planning and classification code. The apply classifies the files again and
+   does not rely on the preview.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
    when applying the source writes or deletes a file (also a file whose bytes
@@ -132,8 +133,9 @@ failed until `update --force`.
   - With `--quiet`, a terminal run does not print the blocks, the notes, the
     result lines or the closing summary. The question names the source.
 - A run can still stop after earlier sources were applied (#471): after a `q`
-  answer, an interrupt, or an error in the apply phase of a later source. An
-  error in the prepare phase applies no source.
+  answer, end of input or a read error at the question, an interrupt, or an
+  error in the apply phase of a later source. An error in the prepare phase
+  applies no source.
 
 ## Alternatives considered
 

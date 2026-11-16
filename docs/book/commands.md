@@ -124,8 +124,10 @@ in a child or grandchild directory. When bundle discovery from that directory
 cannot reach the bundle file because a directory between them starts with a dot
 (for example a bundle file in `.agents/skills/bundles/` whose directory tree
 holds no item), the source is the directory that holds its `bundles` directory,
-or the directory of the bundle file. A bundle file whose bundle selects no item
-and only declares `requires` is valid also when its source holds no item. The
+or the directory of the bundle file when that directory is not named `bundles`.
+When no directory above the bundle file holds an item, the source is the
+directory of the bundle file. A bundle file whose bundle selects no item and
+only declares `requires` is valid also when its source holds no item. The
 directory of an item that is not installed (not named, excluded with
 `--exclude`, not in the bundle, or an item of a dependency source that the
 `requires` closure does not select) is protected in the same way, but such an
@@ -141,14 +143,18 @@ compares the items of all the sources that it reads with each other: every
 lockfile source of the entries that it updates and the dependency sources that
 it reads for them. It also protects the item directories of every local-path
 source recorded in the lockfile that it does not otherwise read, for example the
-source of the bundle that pulled a dependency item into the lockfile; such a
-source that no longer exists is skipped, and a git source is not fetched for
-this check. Such a source that exists but cannot be read as a directory (for
-example a plain file that is not a bundle file) fails the `update` with exit
-code 1 and an error that names its source label. The refusal comes before any
-file or lockfile is changed, also with `--force` and `--dry-run`. The deletion
-of the files of an item that its source no longer contains is not part of this
-check.
+source of the bundle that pulled a dependency item into the lockfile. A recorded
+directory source that no longer exists is skipped. For a recorded bundle file
+that no longer exists, `update` protects the items of the directory that held it
+(the directory that holds its `bundles` directory when the file was in one, else
+the directory of the file), when that directory exists, without a search upward;
+when that directory does not exist either, the source is skipped. A git source
+is not fetched for this check. Such a source that exists but cannot be read as a
+directory (for example a plain file that is not a bundle file) fails the
+`update` with exit code 1 and an error that names its source label. The refusal
+comes before any file or lockfile is changed, also with `--force` and
+`--dry-run`. The deletion of the files of an item that its source no longer
+contains is not part of this check.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
 destination of every item against the item's `files` and `pending` records (see

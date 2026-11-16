@@ -376,7 +376,9 @@ fn update_fails_when_a_recorded_source_that_it_does_not_update_cannot_be_read() 
     let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
     assert!(
         stderr.contains("read the recorded source `local:")
-            && stderr.contains(".agents/skills/a` for the overlap check"),
+            && stderr.contains(".agents/skills/a` for the overlap check; restore it, or remove")
+            && stderr.contains("its items with `upskill remove --source local:")
+            && stderr.contains(".agents/skills/a`"),
         "{stderr}"
     );
     assert_eq!(files_under(&proj), before);
@@ -403,4 +405,53 @@ fn update_refused_by_the_whole_run_check_does_not_adopt_a_schema_1_lockfile() {
         &["the source directory of skill 'b' (", "of skill 'a';"],
     );
     assert!(!proj.join(".upskill-lock.json.v1").exists());
+}
+
+#[test]
+fn update_protects_the_root_of_a_recorded_bundle_file_that_was_deleted() {
+    // Only the bundle file `meta` is deleted; its registry root
+    // `.agents/skills` still holds `z` and the skill `y`, whose directory is
+    // inside the OpenCode output path of `q`.
+    for extra in [&[][..], &["--force"][..]] {
+        let (_tmp, home, proj) = stage_issue_layout(true);
+        fs::remove_file(proj.join(".agents/skills/bundles/meta.bundle.yaml")).unwrap();
+        assert_update_refused(
+            &home,
+            &proj,
+            extra,
+            &["the source directory of skill 'y' (", "of skill 'q';"],
+        );
+    }
+}
+
+#[test]
+fn update_does_not_check_the_deletion_of_an_item_that_its_source_no_longer_contains() {
+    // A stated limit, which issue #550 will change. The skill `a` has the
+    // resource `y/SKILL.md`, written for OpenCode at
+    // `.agents/skills/a/y/SKILL.md`. That directory is the source of the
+    // installed skill `y`. When the source of `a` no longer contains `a`,
+    // `update` removes `a` and deletes the source of `y`.
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let src_a = tmp.path().join("src-a");
+    write_skill(&src_a.join("a"), "a", "# a");
+    write_skill(&src_a.join("a/y"), "y", "# y");
+    write_skill(&src_a.join("other"), "other", "# other");
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "../src-a", "--project", "--opencode", "--claude"])
+        .assert()
+        .success();
+    add(&home, &proj, "./.agents/skills/a");
+    fs::remove_dir_all(src_a.join("a")).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .success();
+    assert!(!proj.join(".agents/skills/a/y/SKILL.md").exists());
 }
