@@ -31,13 +31,30 @@ upskill add driftsys/bundles:platform-baseline.bundle.yaml
 # Pull latest and regenerate
 upskill update
 
-# Inspect installed state
+# Inspect installed state (both scopes: project, then global)
 upskill list
 upskill doctor
+
+# Report sources that have a newer version, without a fetch
+upskill update --check
 ```
 
 `.upskill-lock.json` records what was installed at which ref and hash — commit
 it alongside the project.
+
+## Updates in a session
+
+`upskill update --notice` prints one line for each scope that has updates. The
+`upskill` plugin for Claude Code and Copilot CLI, published by the
+`driftsys/metapowers` marketplace, runs it when a session starts. See
+[Recipes](docs/book/recipes.md) for the install commands and what each client
+shows.
+
+## Support levels
+
+Each client and kind has a support level (supported, experimental or
+unsupported). `upskill doctor` prints the table; see
+[Support levels](docs/book/support-levels.md).
 
 ## Author
 

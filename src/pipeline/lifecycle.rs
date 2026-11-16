@@ -53,8 +53,11 @@ use super::{
 /// `.claude/skills`).
 ///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
-/// `.vscode/settings.json`) are deliberately left alone — they are
-/// user-owned after creation per ADR-0003.
+/// `.vscode/settings.json`) are user-owned after creation per ADR-0003, so
+/// they are left alone with one exception: for each bundle that lists a
+/// removed item (or has the removed source), the installed opencode plugin
+/// entry of that bundle is deleted from the `plugin` array of
+/// `opencode.json` (`remove_opencode_plugin_uri`; an error is ignored).
 pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
     let mut lock = crate::lockfile::Lockfile::load(target)?;
     check_lockfile_records(target, &lock)?;
