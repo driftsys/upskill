@@ -311,6 +311,11 @@ pub(super) struct DependencyClosure {
     /// `(kind, name)` is globally unique within a valid closure (a clash
     /// across sources is a conflict error), so this maps cleanly.
     pub item_source: BTreeMap<(ItemKind, String), String>,
+    /// Per canonical source label: the fetched root of every source that the
+    /// resolution visited, also a source that contributes no item (for
+    /// example an entry source that only declares `requires`). The overlap
+    /// check protects the item directories of all of them.
+    pub source_roots: BTreeMap<String, PathBuf>,
     /// `(kind, name) -> { "<requirer-kind>:<requirer-name>", .. }`. Empty
     /// for directly-requested items. Drives the lockfile's `required_by`.
     pub required_by: BTreeMap<(ItemKind, String), BTreeSet<String>>,
@@ -577,9 +582,15 @@ pub(super) fn resolve_requires_closure(
         item_source.insert(node.clone(), label);
     }
 
+    let source_roots = resolver
+        .sources
+        .iter()
+        .map(|(label, fs)| (label.clone(), fs.root.clone()))
+        .collect();
     Ok(DependencyClosure {
         by_source,
         item_source,
+        source_roots,
         required_by: resolver.required_by,
         guards: resolver.guards,
     })
@@ -820,9 +831,15 @@ pub(super) fn resolve_bundle_closure(
             },
         );
     }
+    let source_roots = resolver
+        .sources
+        .iter()
+        .map(|(label, fs)| (label.clone(), fs.root.clone()))
+        .collect();
     let closure = DependencyClosure {
         by_source,
         item_source: resolver.item_source,
+        source_roots,
         // Bundle items carry no item-level `required_by`; each bundle's own
         // lockfile entry records which items it provides.
         required_by: BTreeMap::new(),

@@ -1,5 +1,6 @@
-//! Per-client output path computation and the check that a source item does
-//! not overlap its own output paths. Nothing here deletes files: `add`,
+//! Per-client output path computation and the check that no source item
+//! directory of an install run overlaps an output path of an item that the
+//! run installs (its own or another item's). Nothing here deletes files: `add`,
 //! `update` and `remove` delete only the files in an item's ownership
 //! record.
 //!
@@ -214,7 +215,8 @@ pub(super) struct SourceItem {
     /// run does not select it.
     pub installed: Option<String>,
     /// Whether `--exclude` names the item. The plan writes nothing for an
-    /// excluded item, so its paths are not compared with other items.
+    /// excluded item, so it has no paths in the check; its directory is
+    /// still protected.
     pub excluded: bool,
     /// The item directory.
     pub dir: PathBuf,
@@ -224,35 +226,36 @@ pub(super) struct SourceItem {
 
 /// Refuse an install run when a source item directory overlaps a path that
 /// the run deletes or writes. `items` holds every item directory of every
-/// source of the run, also the items that the run does not install.
+/// source that the run reads, also the items that the run does not install.
+/// A run is one `prepare_install` call: for `update`, one lockfile source.
 ///
-/// First, every selected item is checked against its own paths with
-/// [`check_source_outside_outputs`], also an excluded one. Then the
-/// directory of every item, selected or not, is compared with the paths of
-/// every other selected item that is not excluded (all clients, as in [`check_source_outside_outputs`]): the item
-/// directory must not be inside such a path or contain one. Two entries
-/// with the same item directory are one directory, which the first step
-/// already checked. Called before the first deletion or write of the run.
+/// Only a selected item that is not excluded has output paths here; an
+/// excluded item writes nothing. First, each such item is checked against
+/// its own paths with [`check_source_outside_outputs`]. Then the directory
+/// of every item, selected, excluded or not selected, is compared with the
+/// paths of every such item, its own included, which gives the result of
+/// the first step again (all clients, as in
+/// [`check_source_outside_outputs`]): the item directory must not be inside
+/// such a path or contain one. Called before the first deletion or write of
+/// the run.
 pub(super) fn check_run_outside_outputs(at: &ScopeRoot, items: &[SourceItem]) -> Result<()> {
+    let written = |item: &SourceItem| item.installed.clone().filter(|_| !item.excluded);
     for item in items {
-        if let Some(installed) = &item.installed {
-            check_source_outside_outputs(at, item.kind, installed, &item.dir, &item.root)?;
+        if let Some(installed) = written(item) {
+            check_source_outside_outputs(at, item.kind, &installed, &item.dir, &item.root)?;
         }
     }
     let canonical = |p: &Path| fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
     let target = canonical(&at.root);
     let dirs: Vec<PathBuf> = items.iter().map(|item| canonical(&item.dir)).collect();
-    for (outer, outer_dir) in items.iter().zip(&dirs) {
-        let Some(outer_name) = outer.installed.as_ref().filter(|_| !outer.excluded) else {
+    for outer in items {
+        let Some(outer_name) = written(outer) else {
             continue;
         };
         for client in ALL_CLIENTS {
-            for rel in checked_output_paths(at.scope, outer.kind, client, outer_name) {
+            for rel in checked_output_paths(at.scope, outer.kind, client, &outer_name) {
                 let out = canonical(&target.join(&rel));
                 for (inner, inner_dir) in items.iter().zip(&dirs) {
-                    if inner_dir == outer_dir {
-                        continue;
-                    }
                     let relation = if inner_dir.starts_with(&out) {
                         "is inside"
                     } else if out.starts_with(inner_dir) {
@@ -491,16 +494,79 @@ mod tests {
     }
 
     #[test]
-    fn run_check_treats_entries_with_one_directory_as_one_item() {
-        // The name-resolution path can collect one source twice.
-        let (tmp, target) = target_with_dir(".claude/skills");
-        let x = tmp.path().join("source/x");
-        fs::create_dir_all(&x).unwrap();
-        run_check(
+    fn run_check_does_not_check_an_excluded_item_against_its_own_paths() {
+        let (_tmp, target) = target_with_dir(".claude/skills/x");
+        let x = target.join(".claude/skills/x");
+        let mut excluded = source_item("x", Some("x"), &x);
+        excluded.excluded = true;
+        run_check(&target, &[excluded]).unwrap();
+    }
+
+    #[test]
+    fn run_check_compares_the_paths_of_every_client() {
+        // `.agents/skills/q` is the OpenCode output path of `q`.
+        let (tmp, target) = target_with_dir(".agents/skills/q/y");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let y = target.join(".agents/skills/q/y");
+        let err = run_check(
             &target,
-            &[source_item("x", Some("x"), &x), source_item("x", None, &x)],
+            &[source_item("q", Some("q"), &q), source_item("y", None, &y)],
         )
-        .unwrap();
+        .expect_err("an overlap with an OpenCode path must be refused");
+        assert!(err.to_string().contains("of skill 'q';"), "{err}");
+    }
+
+    #[test]
+    fn run_check_compares_the_released_paths_in_the_global_scope() {
+        // In the global scope, Copilot writes under `.copilot`; released
+        // versions wrote `.github/skills/q`, which an update deletes.
+        let (tmp, target) = target_with_dir(".github/skills/q/y");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let y = target.join(".github/skills/q/y");
+        let err = check_run_outside_outputs(
+            &at(Scope::Global, &target),
+            &[source_item("q", Some("q"), &q), source_item("y", None, &y)],
+        )
+        .expect_err("an overlap with a released path must be refused");
+        assert!(err.to_string().contains("of skill 'q';"), "{err}");
+    }
+
+    #[test]
+    fn run_check_compares_the_entrypoint_of_a_rule() {
+        // A Claude rule `r` renders to `.claude/rules/r.md`, a sibling of its
+        // resource base `.claude/rules/r`. A directory named `r.md` overlaps
+        // only the entrypoint.
+        let (tmp, target) = target_with_dir(".claude/rules/r.md/y");
+        let r = tmp.path().join("source/r");
+        fs::create_dir_all(&r).unwrap();
+        let y = target.join(".claude/rules/r.md/y");
+        let mut rule = source_item("r", Some("r"), &r);
+        rule.kind = ItemKind::Rule;
+        let err = run_check(&target, &[rule, source_item("y", None, &y)])
+            .expect_err("an overlap with a rule entrypoint must be refused");
+        assert!(err.to_string().contains("of rule 'r';"), "{err}");
+    }
+
+    #[test]
+    fn run_check_names_the_inner_item_by_its_installed_name() {
+        let (tmp, target) = target_with_dir(".claude/skills/q/y");
+        let q = tmp.path().join("source/q");
+        fs::create_dir_all(&q).unwrap();
+        let y = target.join(".claude/skills/q/y");
+        let err = run_check(
+            &target,
+            &[
+                source_item("q", Some("q"), &q),
+                source_item("y", Some("z"), &y),
+            ],
+        )
+        .expect_err("cross-item overlap must be refused");
+        assert!(
+            err.to_string().contains("source directory of skill 'z' ("),
+            "{err}"
+        );
     }
 
     #[test]

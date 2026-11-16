@@ -856,6 +856,131 @@ fn add_refuses_overlap_with_an_excluded_source_item() {
 }
 
 #[test]
+fn add_does_not_check_an_excluded_item_against_its_own_output_paths() {
+    // `foo` lives at `.claude/skills/foo`, its own Claude output path, and is
+    // excluded, so nothing is written for it and it is not refused. Without
+    // names, `add` uses the item closure; with the bundle name `pack`, `add`
+    // uses the bundle closure, which lists `foo`.
+    for names in [&[][..], &["pack"][..]] {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        fs::create_dir_all(&home).unwrap();
+        let proj = tmp.path().join("proj");
+        fs::create_dir_all(proj.join(".git")).unwrap();
+        let foo = "---\nname: foo\ndescription: d\n---\nBody\n";
+        write_files(
+            &proj,
+            &[
+                (".claude/skills/foo/SKILL.md", foo),
+                (
+                    ".claude/skills/grp/bar/SKILL.md",
+                    "---\nname: bar\ndescription: d\n---\nBody\n",
+                ),
+                (
+                    ".claude/skills/pack.bundle.yaml",
+                    "schema: 1\nname: pack\ndescription: d\nitems:\n  skills: [foo, bar]\n",
+                ),
+            ],
+        );
+
+        common::upskill_cmd(&home)
+            .current_dir(&proj)
+            .arg("add")
+            .arg("./.claude/skills")
+            .args(names)
+            .args(["--exclude", "foo", "--claude", "--project"])
+            .assert()
+            .success();
+        assert!(
+            proj.join(".claude/skills/bar/SKILL.md").is_file(),
+            "{names:?}"
+        );
+        assert_eq!(
+            fs::read_to_string(proj.join(".claude/skills/foo/SKILL.md")).unwrap(),
+            foo,
+            "{names:?}"
+        );
+        // The lockfile records no item `foo` (a bundle entry may list it).
+        let lock: serde_json::Value =
+            serde_json::from_slice(&fs::read(proj.join(".upskill-lock.json")).unwrap()).unwrap();
+        assert!(
+            lock["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|item| item["name"] != "foo"),
+            "{names:?}: {lock}"
+        );
+    }
+}
+
+#[test]
+fn add_refuses_a_source_item_that_contains_the_output_path_of_another_item() {
+    // The source is the project. Its skill in the folder `.claude` (a skill
+    // is named after its folder; not requested) contains `.claude/skills/q`,
+    // the output path of `q`.
+    let c = "---\nname: c\ndescription: d\n---\nBody\n";
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    write_files(
+        &proj,
+        &[
+            (".claude/SKILL.md", c),
+            (
+                "src/q/SKILL.md",
+                "---\nname: q\ndescription: d\n---\nBody\n",
+            ),
+        ],
+    );
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./", "q", "--claude", "--project"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("the source directory of skill '.claude' (")
+            && stderr.contains(") contains the output path")
+            && stderr.contains("of skill 'q'; installing would delete"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(
+        fs::read_to_string(proj.join(".claude/SKILL.md")).unwrap(),
+        c
+    );
+    assert!(!proj.join(".claude/skills/q").exists());
+    assert!(!proj.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_checks_an_item_that_its_audience_skips_as_installed() {
+    // `q` lists only Copilot in `audience`, so `--claude` installs nothing
+    // for it. The overlap check does not apply `audience`: the Claude output
+    // path `.claude/skills/q` of `q` holds the source of `y`, and the install
+    // is refused.
+    assert_cross_item_overlap_refused(
+        &[
+            (
+                ".claude/skills/grp/q/SKILL.md",
+                "---\nname: q\ndescription: d\naudience:\n  - copilot\n---\nBody\n",
+            ),
+            (
+                ".claude/skills/q/y/SKILL.md",
+                "---\nname: y\ndescription: d\n---\nBody\n",
+            ),
+        ],
+        &["add", "./.claude/skills", "--claude", "--project"],
+        "y",
+        "q",
+        ".claude/skills/y/SKILL.md",
+    );
+}
+
+#[test]
 fn add_refuses_source_inside_copilot_skills_dir() {
     assert_source_overlap_refused(".github/skills", &["--copilot", "--project"]);
 }

@@ -453,3 +453,308 @@ fn add_bundle_alias_does_not_apply_to_cross_source_dependency_items() {
     assert!(target.join(".claude/rules/dep-rule.md").exists());
     assert!(dep_rule.exists());
 }
+
+/// Stage the entry source `<tmp>/target/.claude/skills`, which holds only the
+/// bundle `meta` (it requires `dep` from another source) and the item folder
+/// `q/y` that no bundle lists. The dependency source holds the skill `q`
+/// with the resource `y/SKILL.md` and the rule `dep-rule`, both in `dep`.
+/// Installing `q` would write `.claude/skills/q/y/SKILL.md`, the entrypoint
+/// of the entry-source item `y`. Returns `(tmp, home, target, y, y content)`.
+fn stage_entry_source_whose_bundle_selects_no_item() -> (
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    &'static str,
+) {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let reg_dep = tmp.path().join("reg-dep");
+    let q = reg_dep.join("q");
+    fs::create_dir_all(q.join("y")).unwrap();
+    fs::write(
+        q.join("SKILL.md"),
+        "---\nschema: 1\nname: q\ndescription: d\n---\n# q\n",
+    )
+    .unwrap();
+    fs::write(q.join("y/SKILL.md"), "resource of q\n").unwrap();
+    write_rule(&reg_dep, "dep-rule");
+    write_bundle(
+        &reg_dep,
+        "dep",
+        "items:\n  skills:\n  - q\n  rules:\n  - dep-rule\n",
+    );
+
+    let reg_entry = target.join(".claude/skills");
+    let y = reg_entry.join("q/y/SKILL.md");
+    fs::create_dir_all(y.parent().unwrap()).unwrap();
+    let before = "---\nschema: 1\nname: y\ndescription: d\n---\n# y\n";
+    fs::write(&y, before).unwrap();
+    write_bundle(
+        &reg_entry,
+        "meta",
+        &format!(
+            "items: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
+            reg_dep.display()
+        ),
+    );
+    (tmp, home, target, y, before)
+}
+
+#[test]
+fn add_bundle_refuses_overlap_with_an_item_of_an_entry_source_whose_bundle_selects_no_item() {
+    let (_tmp, home, target, y, before) = stage_entry_source_whose_bundle_selects_no_item();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            "./.claude/skills/bundles/meta.bundle.yaml",
+            "--claude",
+            "--project",
+            "--force",
+        ])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("the source directory of skill 'y' (")
+            && stderr.contains("of skill 'q'; installing would delete"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(fs::read_to_string(&y).unwrap(), before);
+    assert!(!target.join(".claude/skills/q/SKILL.md").exists());
+    assert!(!target.join(".claude/rules/dep-rule.md").exists());
+    assert!(!target.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_bundle_ignores_the_output_paths_of_an_excluded_dependency_item() {
+    // `--exclude q` applies to the dependency source too, so nothing is
+    // written for `q` and the source of `y` does not overlap the run.
+    let (_tmp, home, target, y, before) = stage_entry_source_whose_bundle_selects_no_item();
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            "./.claude/skills/bundles/meta.bundle.yaml",
+            "--exclude",
+            "q",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    assert_eq!(fs::read_to_string(&y).unwrap(), before);
+    assert!(!target.join(".claude/skills/q/SKILL.md").exists());
+    assert!(target.join(".claude/rules/dep-rule.md").is_file());
+}
+
+#[test]
+fn add_bundle_does_not_install_the_items_of_an_entry_source_whose_bundle_selects_no_item() {
+    // The entry source `.claude/skills` holds the bundle `meta`, which selects
+    // no item and requires `dep`, and the unlisted skill `x` at its own
+    // Claude output path `.claude/skills/x`. `x` is not installed, so it has
+    // no paths in the overlap check and the install succeeds.
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let reg_dep = tmp.path().join("reg-dep");
+    write_rule(&reg_dep, "dep-rule");
+    write_bundle(&reg_dep, "dep", "items:\n  rules:\n  - dep-rule\n");
+
+    let reg_entry = target.join(".claude/skills");
+    let x = reg_entry.join("x/SKILL.md");
+    fs::create_dir_all(x.parent().unwrap()).unwrap();
+    let before = "---\nschema: 1\nname: x\ndescription: d\n---\n# x\n";
+    fs::write(&x, before).unwrap();
+    write_bundle(
+        &reg_entry,
+        "meta",
+        &format!(
+            "items: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
+            reg_dep.display()
+        ),
+    );
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            "./.claude/skills/bundles/meta.bundle.yaml",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    assert_eq!(fs::read_to_string(&x).unwrap(), before);
+    assert!(target.join(".claude/rules/dep-rule.md").is_file());
+}
+
+#[test]
+fn add_bundle_refuses_overlap_with_an_item_of_a_pass_through_dependency_source() {
+    // Three sources: the entry bundle `meta` requires `mid` from the source
+    // `.claude/skills`; `mid` selects no item and requires `dep` from a third
+    // source. `.claude/skills` also holds the unlisted item folder `q/y`. The
+    // dependency skill `q` would write `.claude/skills/q/y/SKILL.md`.
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let reg_dep = tmp.path().join("reg-dep");
+    let q = reg_dep.join("q");
+    fs::create_dir_all(q.join("y")).unwrap();
+    fs::write(
+        q.join("SKILL.md"),
+        "---\nschema: 1\nname: q\ndescription: d\n---\n# q\n",
+    )
+    .unwrap();
+    fs::write(q.join("y/SKILL.md"), "resource of q\n").unwrap();
+    write_bundle(&reg_dep, "dep", "items:\n  skills:\n  - q\n");
+
+    let reg_mid = target.join(".claude/skills");
+    let y = reg_mid.join("q/y/SKILL.md");
+    fs::create_dir_all(y.parent().unwrap()).unwrap();
+    let before = "---\nschema: 1\nname: y\ndescription: d\n---\n# y\n";
+    fs::write(&y, before).unwrap();
+    write_bundle(
+        &reg_mid,
+        "mid",
+        &format!(
+            "items: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
+            reg_dep.display()
+        ),
+    );
+
+    let reg_meta = tmp.path().join("reg-meta");
+    write_rule(&reg_meta, "meta-rule");
+    write_bundle(
+        &reg_meta,
+        "meta",
+        &format!(
+            "items:\n  rules:\n  - meta-rule\nrequires:\n  - {{ name: mid, source: {} }}\n",
+            reg_mid.display()
+        ),
+    );
+    let bundle = reg_meta.join("bundles/meta.bundle.yaml");
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            bundle.to_str().unwrap(),
+            "--claude",
+            "--project",
+            "--force",
+        ])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("the source directory of skill 'y' (")
+            && stderr.contains("of skill 'q'; installing would delete"),
+        "stderr does not explain the refusal: {stderr}"
+    );
+    assert_eq!(fs::read_to_string(&y).unwrap(), before);
+    assert!(!target.join(".claude/skills/q/SKILL.md").exists());
+    assert!(!target.join(".upskill-lock.json").exists());
+}
+
+/// Stage the source `<tmp>/target/.claude/skills` as a dependency source that
+/// holds the unlisted skill `x` at its own Claude output path
+/// `.claude/skills/x`. When `pass_through` is false, the source also holds
+/// the bundle `dep` with the skill `q` (in the folder `grp/q`). When it is
+/// true, the source holds the bundle `mid`, which selects no item and
+/// requires `dep` (rule `dep-rule`) from a third source. The entry bundle
+/// `meta` at `<tmp>/reg-meta` requires `dep` or `mid` from that source.
+/// Returns `(tmp, home, target, meta bundle path, x path, x content)`.
+fn stage_unselected_item_in_a_dependency_source(
+    pass_through: bool,
+) -> (
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    &'static str,
+) {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let reg = target.join(".claude/skills");
+    let x = reg.join("x/SKILL.md");
+    fs::create_dir_all(x.parent().unwrap()).unwrap();
+    let before = "---\nschema: 1\nname: x\ndescription: d\n---\n# x\n";
+    fs::write(&x, before).unwrap();
+    let required = if pass_through {
+        let reg_dep = tmp.path().join("reg-dep");
+        write_rule(&reg_dep, "dep-rule");
+        write_bundle(&reg_dep, "dep", "items:\n  rules:\n  - dep-rule\n");
+        write_bundle(
+            &reg,
+            "mid",
+            &format!(
+                "items: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
+                reg_dep.display()
+            ),
+        );
+        "mid"
+    } else {
+        let q = reg.join("grp/q");
+        fs::create_dir_all(&q).unwrap();
+        fs::write(
+            q.join("SKILL.md"),
+            "---\nschema: 1\nname: q\ndescription: d\n---\n# q\n",
+        )
+        .unwrap();
+        write_bundle(&reg, "dep", "items:\n  skills:\n  - q\n");
+        "dep"
+    };
+
+    let reg_meta = tmp.path().join("reg-meta");
+    write_rule(&reg_meta, "meta-rule");
+    write_bundle(
+        &reg_meta,
+        "meta",
+        &format!(
+            "items:\n  rules:\n  - meta-rule\nrequires:\n  - {{ name: {required}, source: {} }}\n",
+            reg.display()
+        ),
+    );
+    let bundle = reg_meta.join("bundles/meta.bundle.yaml");
+    (tmp, home, target, bundle, x, before)
+}
+
+#[test]
+fn add_bundle_does_not_install_an_unselected_item_of_a_dependency_source() {
+    // `x` is not selected by the `requires` closure, so it has no paths in
+    // the overlap check, although it is at its own output path.
+    for pass_through in [false, true] {
+        let (_tmp, home, target, bundle, x, before) =
+            stage_unselected_item_in_a_dependency_source(pass_through);
+
+        common::upskill_cmd(&home)
+            .current_dir(&target)
+            .args(["add", bundle.to_str().unwrap(), "--claude", "--project"])
+            .assert()
+            .success();
+        assert_eq!(fs::read_to_string(&x).unwrap(), before, "{pass_through}");
+        assert!(
+            target.join(".claude/rules/meta-rule.md").is_file(),
+            "{pass_through}"
+        );
+    }
+}

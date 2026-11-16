@@ -108,20 +108,34 @@ agents that render to a flat file (Claude Code, GitHub Copilot), resources go
 into a sibling `<name>/` directory and the body's relative links are rewritten
 to match. See [format-spec §2.4](format-spec.md).
 
-`add` refuses a source item that it installs when the item's directory is the
-same as, is inside, or contains one of that item's output paths for any client
-in the target scope (for example `upskill add ./.claude/skills`). With `--as`,
-the output paths of the installed (alias) name are checked as well. The check
-covers the items that the run selects from the source, the positional names, the
-bundles and their `requires` dependencies; other items of the source are not
-checked. The `audience` field is not applied to the check: an item whose
-`audience` shares no client with the selected clients is still checked and can
-cause a refusal, although nothing would be installed for the item. The refusal
-names the item, the source directory and the output path. `add` fails before any
-file is changed. `upskill update` is refused in the same way, including for
-recorded aliases, but it checks each source just before it updates that source:
-the refusal comes before any change for that source, and an `update` over
-several sources may have updated earlier sources before it stops.
+`add` refuses an install when a source item directory is the same as, is inside,
+or contains a path that the install deletes or writes for an item that it
+installs: the entrypoint or the resource directory of that item for any client
+in the target scope, and in the global scope also the paths that released
+versions wrote (for example `upskill add ./.claude/skills`). An item renamed
+with `--as` is checked only under its installed (alias) name, because nothing is
+written under its source name. The paths of each installed item are compared
+with the directory of that item and with the directory of every other item of
+every source that the install reads: the source given to `add`, also the source
+of a bundle file whose bundle selects no item and only declares `requires`, and
+each dependency source. The directory of an item that is not installed (not
+named, excluded with `--exclude`, not in the bundle, or an item of a dependency
+source that the `requires` closure does not select) is protected in the same
+way, but such an item has no paths in the check, also when it is at its own
+output path. The `audience` field and the client selection are not applied: an
+item whose `audience` shares no client with the selected clients is still
+treated as installed, its paths for every client are compared, and it can cause
+a refusal although nothing would be installed for the item. The error names the
+item, the source directory and the output path, and for an overlap with another
+item also that item. `add` fails with exit code 1 before any file or lockfile is
+changed. `upskill update` is refused in the same way, including for recorded
+aliases, but it installs each lockfile source again on its own and checks it
+just before it updates that source: it compares the items of that source and of
+the dependency sources that it reads for that source. It does not read the
+source of the bundle that pulled a dependency item into the lockfile, and it
+compares the items of two sources only when it reads both for the same lockfile
+source. The refusal comes before any change for that source, and an `update`
+over several sources may have updated earlier sources before it stops.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
 destination of every item against the item's `files` and `pending` records (see
@@ -168,17 +182,6 @@ but its output is inside the source, so the next `add` and every `update` of
 that source are refused with a message that names the source root and the client
 directory. Move the source items to a directory outside the client directories
 and add them from there.
-
-`add`, and `update` for each source that it updates, refuse a source item
-directory that is the same as, is inside, or contains a path that the install of
-that source deletes or writes: the output paths of the item itself, or the
-output paths of another item installed with it, also an item of a dependency
-source. A source item that is not installed (not named, excluded, or not in the
-bundle) is checked as well: no installed item may write into its directory. The
-output paths of an item that is not installed are not compared with other items,
-but an excluded item is still compared with its own output paths. The error
-names the item, and for an overlap with another item also that item. The command
-fails with exit code 1 before any file or lockfile of that source is written.
 
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those
