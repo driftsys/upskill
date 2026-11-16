@@ -144,15 +144,15 @@ lockfile source of the entries that it updates and the dependency sources that
 it reads for them. It also protects the item directories of every local-path
 source recorded in the lockfile that it does not otherwise read, for example the
 source of the bundle that pulled a dependency item into the lockfile. A recorded
-directory source that no longer exists is skipped. For a recorded bundle file
-that no longer exists, `update` protects the items of the directory that held it
-(the directory that holds its `bundles` directory when the file was in one, else
-the directory of the file), when that directory exists, without a search upward;
-when that directory does not exist either, the source is skipped. A git source
-is not fetched for this check. Such a source that exists but cannot be read as a
-directory (for example a plain file that is not a bundle file) fails the
-`update` with exit code 1 and an error that names its source label. The refusal
-comes before any file or lockfile is changed, also with `--force` and
+directory source that no longer exists is skipped. For a recorded bundle file,
+also one that no longer exists, `update` protects the items of the same source
+directory that `add` resolves for it (see above); when that directory does not
+exist, nothing is protected for it. A git source is not fetched for this check.
+Such a source that exists but cannot be read as a directory (for example a plain
+file that is not a bundle file) fails the `update` with exit code 1 and an error
+that names its source label; the error suggests
+`upskill remove --source <label>` only when a lockfile item has that source. The
+refusal comes before any file or lockfile is changed, also with `--force` and
 `--dry-run`. The deletion of the files of an item that its source no longer
 contains is not part of this check.
 

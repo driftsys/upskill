@@ -735,10 +735,12 @@ fn reselect_from_entries(
 /// these sources together, and on the item directories of every local-path
 /// source recorded in the lockfile (`lock.bundles` and `lock.items`) that the
 /// run does not otherwise read (see `collect_recorded_local_items`): a
-/// recorded directory that does not exist is skipped, a recorded bundle file
-/// that does not exist protects the directory that held it when that
-/// directory exists, a recorded source that exists and cannot be read as a
-/// directory is an error that names its label, and a git source is not
+/// recorded directory that does not exist is skipped, a recorded bundle file,
+/// also one that does not exist, protects the registry root that `add`
+/// resolves for it when that root exists, a recorded source that exists and
+/// cannot be read as a directory is an error that names its label (its hint
+/// names `upskill remove --source` only when a lockfile item has that
+/// source), and a git source is not
 /// fetched for this check. An error in this step stops the run before the
 /// adoption and before any source is applied.
 ///
@@ -964,10 +966,15 @@ pub fn update(
             .collect();
         for label in recorded {
             collect_recorded_local_items(label, &mut source_items).with_context(|| {
-                format!(
-                    "read the recorded source `{label}` for the overlap check; restore it, \
-                     or remove its items with `upskill remove --source {label}`"
-                )
+                // `remove --source` matches the sources of items only.
+                if lock.items.iter().any(|i| i.source == label) {
+                    format!(
+                        "read the recorded source `{label}` for the overlap check; restore it, \
+                         or remove its items with `upskill remove --source {label}`"
+                    )
+                } else {
+                    format!("read the recorded source `{label}` for the overlap check; restore it")
+                }
             })?;
         }
         super::output::check_run_outside_outputs(&at_check, &source_items)?;
@@ -1292,11 +1299,10 @@ fn removal_preview(plan: RemovalPlan) -> PreviewItem {
 /// for the overlap check of [`update`], when `label` is a local path. Every
 /// item is pushed without an installed name, so that its directory is
 /// protected. A directory that does not exist holds no item and pushes
-/// nothing. For a bundle file that does not exist, the items are those of
-/// the parent of its `bundles` directory when it was in one, else of its
-/// directory, when that directory exists; there is no search upward.
-/// For a bundle file, the items are those of its registry root, as `add`
-/// resolves it ([`super::install::bundle_file_root`]). A git source is not
+/// nothing. For a bundle-file label, whether or not the bundle file still
+/// exists, the items are those of the registry root that `add` resolves for
+/// it ([`super::install::bundle_file_root`]); a root that does not exist
+/// pushes nothing. A git source is not
 /// fetched: its clone is a temporary directory, which cannot overlap an
 /// output path. A path that exists and cannot be read as a directory (for
 /// example a plain file that is not a bundle file) is an error that names
@@ -1310,18 +1316,16 @@ fn collect_recorded_local_items(
     else {
         return Ok(());
     };
-    let root = if super::discovery::is_bundle_file(&path) {
-        super::install::bundle_file_root(&path)?
-    } else if !path.exists()
+    // A bundle-file label, whether or not the file still exists: the root
+    // that `add` resolves for it. A path that is a directory is a directory
+    // source, whatever its name.
+    let is_bundle_label = !path.is_dir()
         && path
             .file_name()
             .and_then(|n| n.to_str())
-            .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX))
-    {
-        // A deleted bundle file: protect the directory that held it (the
-        // parent of its `bundles` directory, else its own directory), without
-        // a search upward. A directory that does not exist holds no item.
-        super::install::bundle_file_dir(&path)
+            .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX));
+    let root = if is_bundle_label {
+        super::install::bundle_file_root(&path)?
     } else {
         path
     };

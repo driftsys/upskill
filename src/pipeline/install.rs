@@ -849,7 +849,9 @@ pub(super) fn resolve_bundle_closure(
 }
 
 /// The registry root of the entry bundle file `bundle_path`: the directory
-/// whose items and sibling bundles the bundle resolves against.
+/// whose items and sibling bundles the bundle resolves against. Only the path
+/// and its existing ancestors are read, so `update` also uses it for a
+/// recorded bundle file that no longer exists.
 ///
 /// This is [`find_registry_root`] (the directory of the bundle file when no
 /// directory above it holds an item), also when that search went up to an

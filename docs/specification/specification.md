@@ -256,26 +256,27 @@ reinstalled), runs the checks of §2.1 and plans it, without any change. The
 source overlap check of §2.1 is then applied to the items of all these sources
 together, and also protects the item directories of every local-path source
 recorded in the lockfile that the run does not otherwise read. A recorded
-directory source that no longer exists is skipped. For a recorded bundle file
-that no longer exists, the items of the directory that held it are protected
-(the directory that holds its `bundles` directory when the file was in one, else
-the directory of the file), when that directory exists, without a search upward.
-A recorded source that exists and cannot be read as a directory fails the step
-with an error that names its source label. A git source is not fetched for this
-check. An error in the prepare step stops the run before any source is applied.
-Then `update` handles the sources one at a time, sorted by source label. For
-each source it computes a preview from the fetched content, the files on disk
-and the lockfile, just before the source is applied. A preview **changes
-something** when applying the source writes or deletes a file, changes the
-lockfile record of an item (any field except `pending`, `required_by` and
-`commit`), completes an interrupted item (a non-empty `pending` record, §4),
-removes an item, or creates or changes a hand-shake file (§3.4). A write of a
-file that already holds the planned bytes is not a change, unless the executable
-bits (`0o111`) of the file differ from the target executable bits (Unix only):
-each executable bit of the source resource for which the file has the matching
-read bit (owner, group, other). The apply sets the executable bits to the
-target, so the file is a change. A difference in the other permission bits is
-not a change. A `skip` item and a `kept modified file` note are not changes.
+directory source that no longer exists is skipped. For a recorded bundle file,
+also one that no longer exists, the items of the source directory that `add`
+resolves for it (§2.6) are protected; when that directory does not exist,
+nothing is protected for it. A recorded source that exists and cannot be read as
+a directory fails the step with an error that names its source label; the error
+suggests `upskill remove --source <label>` only when a lockfile item has that
+source. A git source is not fetched for this check. An error in the prepare step
+stops the run before any source is applied. Then `update` handles the sources
+one at a time, sorted by source label. For each source it computes a preview
+from the fetched content, the files on disk and the lockfile, just before the
+source is applied. A preview **changes something** when applying the source
+writes or deletes a file, changes the lockfile record of an item (any field
+except `pending`, `required_by` and `commit`), completes an interrupted item (a
+non-empty `pending` record, §4), removes an item, or creates or changes a
+hand-shake file (§3.4). A write of a file that already holds the planned bytes
+is not a change, unless the executable bits (`0o111`) of the file differ from
+the target executable bits (Unix only): each executable bit of the source
+resource for which the file has the matching read bit (owner, group, other). The
+apply sets the executable bits to the target, so the file is a change. A
+difference in the other permission bits is not a change. A `skip` item and a
+`kept modified file` note are not changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action

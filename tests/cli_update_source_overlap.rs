@@ -91,6 +91,15 @@ fn assert_update_refused(home: &Path, target: &Path, extra: &[&str], parts: &[&s
 /// at `.agents/skills/q/y`, inside the OpenCode output path of `q`, and the
 /// body of `q` changes. Returns `(tmp, home, proj)`.
 fn stage_issue_layout(with_z: bool) -> (tempfile::TempDir, PathBuf, PathBuf) {
+    stage_issue_layout_with_bundle_at(with_z, "bundles/meta.bundle.yaml")
+}
+
+/// As [`stage_issue_layout`], with the bundle file `meta` at `bundle_rel`
+/// under `.agents/skills`.
+fn stage_issue_layout_with_bundle_at(
+    with_z: bool,
+    bundle_rel: &str,
+) -> (tempfile::TempDir, PathBuf, PathBuf) {
     let tmp = tempfile::TempDir::new().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -104,15 +113,17 @@ fn stage_issue_layout(with_z: bool) -> (tempfile::TempDir, PathBuf, PathBuf) {
     if with_z {
         write_skill(&skills.join("z"), "z", "# z");
     }
-    write_bundle(
-        &skills,
-        "meta",
-        &format!(
-            "items: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
+    let bundle = skills.join(bundle_rel);
+    fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+    fs::write(
+        &bundle,
+        format!(
+            "schema: 1\nname: meta\ndescription: d\nitems: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
             reg_dep.display()
         ),
-    );
-    add(&home, &proj, "./.agents/skills/bundles/meta.bundle.yaml");
+    )
+    .unwrap();
+    add(&home, &proj, &format!("./.agents/skills/{bundle_rel}"));
     write_skill(&skills.join("q/y"), "y", "# y");
     write_skill(&reg_dep.join("q"), "q", "New body");
     (tmp, home, proj)
@@ -366,6 +377,7 @@ fn update_fails_when_a_recorded_source_that_it_does_not_update_cannot_be_read() 
     let source_b = proj.join(".agents/skills/a");
     fs::remove_dir_all(&source_b).unwrap();
     fs::write(&source_b, "a file\n").unwrap();
+    let label = recorded_source(&proj, "items", "b");
     let before = files_under(&proj);
 
     let assert = common::upskill_cmd(&home)
@@ -374,14 +386,66 @@ fn update_fails_when_a_recorded_source_that_it_does_not_update_cannot_be_read() 
         .assert()
         .code(1);
     let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
-    assert!(
-        stderr.contains("read the recorded source `local:")
-            && stderr.contains(".agents/skills/a` for the overlap check; restore it, or remove")
-            && stderr.contains("its items with `upskill remove --source local:")
-            && stderr.contains(".agents/skills/a`"),
-        "{stderr}"
+    let hint = format!(
+        "read the recorded source `{label}` for the overlap check; restore it, or remove its \
+         items with `upskill remove --source {label}`"
     );
+    assert!(stderr.contains(&hint), "{stderr}");
     assert_eq!(files_under(&proj), before);
+}
+
+/// The `source` of the entry `name` in the lockfile array `array`
+/// (`items` or `bundles`).
+fn recorded_source(proj: &Path, array: &str, name: &str) -> String {
+    let lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(proj.join(".upskill-lock.json")).unwrap())
+            .unwrap();
+    lock[array]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["name"] == name)
+        .and_then(|e| e["source"].as_str())
+        .unwrap()
+        .to_string()
+}
+
+#[test]
+fn update_hint_for_an_unreadable_bundle_source_without_items_only_asks_to_restore_it() {
+    // The bundle `meta`, added by name from `.agents/skills`, selects no
+    // item: its source is in the lockfile `bundles` only. That source is
+    // now a plain file.
+    let (_tmp, home, proj) = stage_issue_layout(true);
+    let skills = proj.join(".agents/skills");
+    // Record `meta` again, by name from the directory source, without `y`.
+    fs::remove_file(proj.join(".upskill-lock.json")).unwrap();
+    fs::remove_dir_all(skills.join("q")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args([
+            "add",
+            "./.agents/skills",
+            "meta",
+            "--claude",
+            "--project",
+            "--force",
+        ])
+        .assert()
+        .success();
+    let label = recorded_source(&proj, "bundles", "meta");
+    assert!(label.ends_with(".agents/skills"), "{label}");
+    fs::remove_dir_all(&skills).unwrap();
+    fs::write(&skills, "a file\n").unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    let hint = format!("read the recorded source `{label}` for the overlap check; restore it");
+    assert!(stderr.contains(&hint), "{stderr}");
+    assert!(!stderr.contains("remove --source"), "{stderr}");
 }
 
 #[test]
@@ -446,6 +510,14 @@ fn update_does_not_check_the_deletion_of_an_item_that_its_source_no_longer_conta
         .assert()
         .success();
     add(&home, &proj, "./.agents/skills/a");
+    // Preconditions: the resource file of `a` exists, and it is the source
+    // of the installed skill `y`.
+    assert!(proj.join(".agents/skills/a/y/SKILL.md").is_file());
+    assert!(
+        recorded_source(&proj, "items", "y").ends_with(".agents/skills/a"),
+        "{}",
+        recorded_source(&proj, "items", "y")
+    );
     fs::remove_dir_all(src_a.join("a")).unwrap();
 
     common::upskill_cmd(&home)
@@ -454,4 +526,58 @@ fn update_does_not_check_the_deletion_of_an_item_that_its_source_no_longer_conta
         .assert()
         .success();
     assert!(!proj.join(".agents/skills/a/y/SKILL.md").exists());
+}
+
+#[test]
+fn update_protects_the_root_of_a_deleted_bundle_file_in_a_group_layout() {
+    // The bundle file is at `.agents/skills/grp/bundles/meta.bundle.yaml`;
+    // `add` resolves it against `.agents/skills`, which holds `z`. After
+    // only the bundle file is deleted, `update` protects the same root.
+    for extra in [&[][..], &["--force"][..]] {
+        let (_tmp, home, proj) =
+            stage_issue_layout_with_bundle_at(true, "grp/bundles/meta.bundle.yaml");
+        fs::remove_file(proj.join(".agents/skills/grp/bundles/meta.bundle.yaml")).unwrap();
+        assert_update_refused(
+            &home,
+            &proj,
+            extra,
+            &["the source directory of skill 'y' (", "of skill 'q';"],
+        );
+    }
+}
+
+#[test]
+fn update_protects_the_root_of_a_deleted_bundle_file_outside_a_bundles_directory() {
+    let (_tmp, home, proj) = stage_issue_layout_with_bundle_at(true, "meta.bundle.yaml");
+    fs::remove_file(proj.join(".agents/skills/meta.bundle.yaml")).unwrap();
+    assert_update_refused(
+        &home,
+        &proj,
+        &[],
+        &["the source directory of skill 'y' (", "of skill 'q';"],
+    );
+}
+
+#[test]
+fn update_does_not_protect_the_parent_of_a_deleted_recorded_directory_source() {
+    // The recorded directory source `.agents/skills/src-b` is deleted. The
+    // directory `.agents/skills/a`, the OpenCode output path of `a`, holds
+    // a `SKILL.md`; it would be refused if `.agents/skills` were protected.
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    write_skill(&tmp.path().join("aaa/a"), "a", "# a");
+    write_skill(&proj.join(".agents/skills/src-b/b"), "b", "# b");
+    add(&home, &proj, "../aaa");
+    add(&home, &proj, "./.agents/skills/src-b");
+    fs::remove_dir_all(proj.join(".agents/skills/src-b")).unwrap();
+    write_skill(&proj.join(".agents/skills/a"), "c", "# c");
+
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes", "a"])
+        .assert()
+        .success();
 }

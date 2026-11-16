@@ -45,17 +45,20 @@ failed until `update --force`.
    local-path source recorded in the lockfile that the run does not otherwise
    read (#547). An error in this phase stops the run before any adoption and
    before any source is applied. As built, the prepare phase does not read the
-   interrupt flag: the Ctrl-C handler sets the flag and returns, and the phase
-   goes on. After such an interrupt, when the phase completes, the observer of a
-   terminal run and of a `--yes` run returns a stop for the first source, after
-   the empty-source check and the adoption step of that source and before its
-   preview is shown, so no source is applied; the `--dry-run` observer does not
-   read the flag and prints every block. The process exits with code 130 when
-   the flag is set. Then `update` handles the sources one at a time, in the same
-   order, and computes the preview of each source from its fetched content, the
-   files on disk and the lockfile. The preview and the apply come from the same
-   planning and classification code. The apply classifies the files again and
-   does not rely on the preview.
+   interrupt flag: the Ctrl-C handler sets the flag and returns. A Ctrl-C in a
+   terminal also reaches a running `git` child process, because `git` is started
+   without a new process group; when that ends the fetch with an error, the run
+   fails before any source is applied. Otherwise the phase goes on. After such
+   an interrupt, when the phase completes, the observer of a terminal run and of
+   a `--yes` run returns a stop for the first source, after the empty-source
+   check and the adoption step of that source and before its preview is shown,
+   so no source is applied; the `--dry-run` observer does not read the flag and
+   prints every block. The process exits with code 130 when the flag is set.
+   Then `update` handles the sources one at a time, in the same order, and
+   computes the preview of each source from its fetched content, the files on
+   disk and the lockfile. The preview and the apply come from the same planning
+   and classification code. The apply classifies the files again and does not
+   rely on the preview.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
    when applying the source writes or deletes a file (also a file whose bytes
