@@ -433,7 +433,11 @@ fn update_hint_for_an_unreadable_bundle_source_without_items_only_asks_to_restor
         .assert()
         .success();
     let label = recorded_source(&proj, "bundles", "meta");
-    assert!(label.ends_with(".agents/skills"), "{label}");
+    // The label holds the path separators of the operating system.
+    assert!(
+        label.replace('\\', "/").ends_with(".agents/skills"),
+        "{label}"
+    );
     fs::remove_dir_all(&skills).unwrap();
     fs::write(&skills, "a file\n").unwrap();
 
@@ -514,7 +518,9 @@ fn update_does_not_check_the_deletion_of_an_item_that_its_source_no_longer_conta
     // of the installed skill `y`.
     assert!(proj.join(".agents/skills/a/y/SKILL.md").is_file());
     assert!(
-        recorded_source(&proj, "items", "y").ends_with(".agents/skills/a"),
+        recorded_source(&proj, "items", "y")
+            .replace('\\', "/")
+            .ends_with(".agents/skills/a"),
         "{}",
         recorded_source(&proj, "items", "y")
     );
