@@ -113,7 +113,7 @@ What you get depends on the client:
 A given set of updates is announced once.
 
 The plugin needs an `upskill` binary on `PATH` that has `update --notice`.
-Release 0.8.1 and earlier releases do not have it. When the binary is missing or
+Release 0.9.0 is the first release that has it. When the binary is missing or
 older, the hook prints nothing.
 
 A hand-written hook that only runs `upskill update --notice` does not show the
