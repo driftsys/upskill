@@ -636,7 +636,9 @@ upskill remove --force code-review                 # also delete modified files
 ```
 
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
-`opencode.json`, `.vscode/settings.json`) are not touched.
+`opencode.json`, `.vscode/settings.json`) are not touched, except that removing
+an item of a bundle deletes the installed opencode plugin entry of that bundle
+from the `plugin` array of `opencode.json`.
 
 Without a scope flag, `remove` uses the project scope inside a git repository
 and the global scope outside one. When the current directory is the home
