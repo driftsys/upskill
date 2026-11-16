@@ -106,9 +106,9 @@ pub enum Commands {
     /// remove every item that came from a single source. Bare
     /// `upskill remove` is rejected — be explicit. Ancillary files
     /// (`CLAUDE.md`, `opencode.json`, `.vscode/settings.json`) are not
-    /// touched, except that removing an item of a bundle deletes the
-    /// installed opencode plugin entry of that bundle from the `plugin`
-    /// array of `opencode.json`.
+    /// touched, except that removing an item of a bundle, or the source
+    /// of a bundle with `--source`, deletes the installed opencode plugin
+    /// entry of that bundle from the `plugin` array of `opencode.json`.
     #[command(
         display_order = 4,
         after_help = "EXAMPLES:\n  \
