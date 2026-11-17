@@ -134,6 +134,32 @@ impl std::fmt::Display for AdoptedBeforeFailure {
     }
 }
 
+/// The error raised when the content of a source cannot be obtained: a git
+/// clone that fails, or a local-path source whose path does not exist.
+/// `update` finds it in the `anyhow` chain of a prepare error and skips the
+/// source instead of stopping the run. `message` is the text of the error.
+#[derive(Debug, Clone)]
+pub struct FetchFailed {
+    pub message: String,
+}
+
+impl std::fmt::Display for FetchFailed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for FetchFailed {}
+
+/// A source of `update` that was skipped because it could not be fetched.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SkippedSource {
+    /// The source label, as recorded in the lockfile.
+    pub source: String,
+    /// The error, with its causes, joined by `: `.
+    pub error: String,
+}
+
 /// Result of a single plugin install attempt, for reporting to the user.
 #[derive(Debug, Clone)]
 pub struct PluginResult {
@@ -480,6 +506,9 @@ pub enum UpdateStatus {
     /// item; a [`PreviewAction::Skip`] item of such a source is reported
     /// here and does not cause exit code 1.
     NotApplied { action: PreviewAction },
+    /// The source of the item could not be fetched and was skipped (see
+    /// [`UpdateReport::skipped_sources`]). Nothing of the item changed.
+    SkippedUnreachable,
 }
 
 #[derive(Debug, Clone)]
@@ -526,6 +555,9 @@ pub struct UpdateReport {
     /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the
     /// run did not stop.
     pub sources_remaining: usize,
+    /// Sources that could not be fetched and were skipped. They were not
+    /// previewed and are not counted in [`UpdateReport::sources_considered`].
+    pub skipped_sources: Vec<SkippedSource>,
 }
 
 /// What applying one source of `update` would do now, computed after the

@@ -984,6 +984,21 @@ fn print_skipped(report: &UpdateReport) -> bool {
     skipped
 }
 
+/// Print to stderr one line per source of `update` that could not be
+/// fetched, with its label and the cause, also with `--quiet`. Returns true
+/// when a source was skipped; the run then exits with code 1.
+fn print_skipped_sources(report: &UpdateReport) -> bool {
+    for skipped in &report.skipped_sources {
+        eprintln!(
+            "{} source `{}` could not be fetched and was skipped: {}",
+            style::error_label("error:"),
+            skipped.source,
+            skipped.error
+        );
+    }
+    !report.skipped_sources.is_empty()
+}
+
 /// Print `Changed <n> file(s) written or deleted`.
 fn print_changed_files(count: usize) {
     println!(
@@ -1046,15 +1061,22 @@ fn run_update(args: UpdateArgs) -> i32 {
         observer,
     );
     match result {
-        Ok(report) if dry_run => {
-            print_update_report(&report, true);
-            EXIT_SUCCESS
-        }
-        Ok(report) if terminal => finish_terminal_update(&report),
         Ok(report) => {
-            print_update_report(&report, false);
-            print_adoption_notice(report.adopted.as_deref());
-            finish_update(&report)
+            let code = if dry_run {
+                print_update_report(&report, true);
+                EXIT_SUCCESS
+            } else if terminal {
+                finish_terminal_update(&report)
+            } else {
+                print_update_report(&report, false);
+                print_adoption_notice(report.adopted.as_deref());
+                finish_update(&report)
+            };
+            if print_skipped_sources(&report) {
+                EXIT_ERROR
+            } else {
+                code
+            }
         }
         Err(err) => {
             // A terminal run prints the adoption notice before the block of
@@ -1527,7 +1549,8 @@ fn render_result(result: &SourceResult) -> String {
 /// The closing summary of a terminal run: the items updated, completed or
 /// removed out of the items considered, and the sources applied out of the
 /// sources considered, then ` <k> source(s) not applied.` when a source with
-/// changes was not applied, then ` Stopped; <r> source(s) not examined.`
+/// changes was not applied, then ` <s> source(s) not reachable.` when a
+/// source could not be fetched, then ` Stopped; <r> source(s) not examined.`
 /// (or ` Stopped.` when no source remained) after `q` or end of input.
 fn closing_summary(report: &UpdateReport) -> String {
     let changed = report
@@ -1554,6 +1577,12 @@ fn closing_summary(report: &UpdateReport) -> String {
             report.sources_not_applied
         ));
     }
+    if !report.skipped_sources.is_empty() {
+        line.push_str(&format!(
+            " {} source(s) not reachable.",
+            report.skipped_sources.len()
+        ));
+    }
     if report.stopped {
         if report.sources_remaining > 0 {
             line.push_str(&format!(
@@ -1575,7 +1604,7 @@ fn closing_summary(report: &UpdateReport) -> String {
 /// without an empty line before it; after an empty line,
 /// `everything is up to date — nothing to do` when no source was applied,
 /// no source with changes was declined, no file was kept as a note, no item
-/// was skipped and no lockfile was adopted; otherwise the closing summary
+/// was skipped, no source was skipped and no lockfile was adopted; otherwise the closing summary
 /// ([`closing_summary`]), followed by `Changed <n> file(s) written or
 /// deleted` when files changed but no item was updated, completed or
 /// removed. Without `--quiet` the blocks named the kept and the skipped
@@ -1596,6 +1625,7 @@ fn finish_terminal_update(report: &UpdateReport) -> i32 {
         && report.kept_modified.is_empty()
         && !skipped
         && report.adopted.is_none()
+        && report.skipped_sources.is_empty()
     {
         println!();
         println!("everything is up to date — nothing to do");
@@ -1660,6 +1690,7 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
                 UpdateStatus::UpToDate
                     | UpdateStatus::SkippedModified { .. }
                     | UpdateStatus::NotApplied { .. }
+                    | UpdateStatus::SkippedUnreachable
             )
         })
         .count();
@@ -1672,6 +1703,7 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         && report.changed.is_empty()
         && report.adopted.is_none()
         && report.sources_not_applied == 0
+        && report.skipped_sources.is_empty()
     {
         // The `kept modified file` notes are printed by `finish_update`; a
         // run that prints them does not say that there was nothing to do.
@@ -1703,6 +1735,7 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
                 style::warn("skipped — modified or unmanaged files kept")
             }
             UpdateStatus::NotApplied { .. } => style::dim("not applied"),
+            UpdateStatus::SkippedUnreachable => style::warn("skipped — source not reachable"),
         };
         println!(
             "  {} {:<32} {}",
@@ -2893,6 +2926,18 @@ mod tests {
             closing_summary(&report),
             "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied."
         );
+        report
+            .skipped_sources
+            .push(upskill::pipeline::SkippedSource {
+                source: "u".into(),
+                error: "e".into(),
+            });
+        assert_eq!(
+            closing_summary(&report),
+            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
+             1 source(s) not reachable."
+        );
+        report.skipped_sources.clear();
         report.stopped = true;
         assert_eq!(
             closing_summary(&report),

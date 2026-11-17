@@ -22,11 +22,12 @@ use super::owned::{FileState, adopt_schema1, adopt_schema1_in_memory, classify};
 use super::prepared::prepare_install;
 use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, BothScopesItem, DoctorReport, DoctorScopes,
-    EarlierLayoutFile, InterruptedItem, ItemKind, ListReport, ListedBundle, ListedItem,
-    MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry, OrphanReason, OrphanedDependency,
-    PreviewAction, PreviewItem, RemoveFilter, RemoveReport, RemovedItem, ScopedDoctor, ScopedList,
-    SkippedPlugin, SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile,
-    UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
+    EarlierLayoutFile, FetchFailed, InterruptedItem, ItemKind, ListReport, ListedBundle,
+    ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry, OrphanReason,
+    OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport, RemovedItem,
+    ScopedDoctor, ScopedList, SkippedPlugin, SkippedSource, SourceDecision, SourcePreview,
+    SourceResult, StaleHash, UnreadableFile, UpdateObserver, UpdateReport, UpdateStatus,
+    UpdatedItem, hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -744,8 +745,17 @@ fn reselect_from_entries(
 /// cannot be read as a directory is an error that names its label (its hint
 /// names `upskill remove --source` only when a lockfile item has that
 /// source), and a git source is not
-/// fetched for this check. An error in this step stops the run before the
-/// adoption and before any source is applied.
+/// fetched for this check.
+///
+/// A source whose prepare fails with a [`FetchFailed`] in its error chain
+/// (a `git clone` that fails, or a local-path source whose path does not
+/// exist, of the source itself or of a cross-source dependency source that
+/// it requires) is skipped: it is not prepared, nothing of it is written, it
+/// is in [`UpdateReport::skipped_sources`], and each of its selected entries
+/// is reported as [`UpdateStatus::SkippedUnreachable`]. The overlap check
+/// treats it as a recorded source that the run does not read. Any other
+/// error in this step stops the run before the adoption and before any
+/// source is applied.
 ///
 /// Then, for each source, in this order:
 ///
@@ -879,12 +889,12 @@ pub fn update(
     // The adoption of a `schema: 1` lockfile is saved. A later error must
     // still carry the adopted paths for the adoption notice.
     let result = (|| -> Result<()> {
-        let total_sources = by_source.len();
         // Prepare phase: fetch, resolve, check and plan every source, in the
         // order of the apply phase, without any write. A failure here (for
         // example the overlap check of one source) happens before the
-        // adoption and before any source is applied.
-        let mut prepared_sources = Vec::with_capacity(total_sources);
+        // adoption and before any source is applied, except a fetch failure,
+        // which skips the source.
+        let mut prepared_sources = Vec::with_capacity(by_source.len());
         for (source_label, source_entries) in by_source {
             let source = crate::source::parse_install_source_label(&source_label)
                 .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
@@ -945,9 +955,34 @@ pub fn update(
                     .collect()
             };
 
-            let prepared = prepare_install(&source, target, &item_filter, &options)?;
+            // A source that cannot be fetched (a [`FetchFailed`] in the
+            // error chain, also for a dependency source) is skipped: it is
+            // not written, and the other sources are applied. Every other
+            // prepare error stops the run.
+            let prepared = match super::git::check_local_source_exists(&source)
+                .and_then(|()| prepare_install(&source, target, &item_filter, &options))
+            {
+                Ok(prepared) => prepared,
+                Err(err) if err.downcast_ref::<FetchFailed>().is_some() => {
+                    for entry in &source_entries {
+                        report.items.push(UpdatedItem {
+                            kind: entry.kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status: UpdateStatus::SkippedUnreachable,
+                        });
+                    }
+                    report.skipped_sources.push(SkippedSource {
+                        source: source_label,
+                        error: format!("{err:#}"),
+                    });
+                    continue;
+                }
+                Err(err) => return Err(err),
+            };
             prepared_sources.push((source_label, source_entries, prepared));
         }
+        let total_sources = prepared_sources.len();
 
         // The overlap check of `add`, applied to the items of every source
         // that the run reads and to the items of every recorded local-path
@@ -1223,7 +1258,9 @@ pub fn update(
                     UpdateStatus::CompletedInterrupted => result.completed += 1,
                     UpdateStatus::Removed => result.removed += 1,
                     UpdateStatus::SkippedModified { .. } => result.skipped += 1,
-                    UpdateStatus::UpToDate | UpdateStatus::NotApplied { .. } => {}
+                    UpdateStatus::UpToDate
+                    | UpdateStatus::NotApplied { .. }
+                    | UpdateStatus::SkippedUnreachable => {}
                 }
             }
             observer.applied(&result);

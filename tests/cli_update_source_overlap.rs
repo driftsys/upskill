@@ -245,9 +245,10 @@ fn update_refuses_an_overlap_with_a_dependency_source_read_for_a_lockfile_source
 }
 
 #[test]
-fn update_applies_no_source_when_a_later_source_fails_to_prepare() {
+fn update_skips_a_later_source_that_cannot_be_fetched_and_applies_the_first() {
     // The labels sort `../aaa` before `../zzz`. The first source changes;
-    // the second no longer exists, so its fetch fails.
+    // the second no longer exists, so its fetch fails and it is skipped
+    // (issue #551). The first source is applied, and the run exits 1.
     let tmp = tempfile::TempDir::new().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -259,14 +260,22 @@ fn update_applies_no_source_when_a_later_source_fails_to_prepare() {
     add(&home, &proj, "../zzz");
     write_skill(&tmp.path().join("aaa/a"), "a", "Changed");
     fs::remove_dir_all(tmp.path().join("zzz")).unwrap();
-    let before = files_under(&proj);
+    let b_before = fs::read(proj.join(".claude/skills/b/SKILL.md")).unwrap();
 
     common::upskill_cmd(&home)
         .current_dir(&proj)
         .args(["update", "--project", "--yes"])
         .assert()
         .code(1);
-    assert_eq!(files_under(&proj), before, "the first source was applied");
+    let a = fs::read_to_string(proj.join(".claude/skills/a/SKILL.md")).unwrap();
+    assert!(
+        a.contains("Changed"),
+        "the first source was not applied: {a}"
+    );
+    assert_eq!(
+        fs::read(proj.join(".claude/skills/b/SKILL.md")).unwrap(),
+        b_before
+    );
 }
 
 #[test]

@@ -153,6 +153,21 @@ pub fn fetch_ssot(source: &InstallSource) -> Result<FetchedSource> {
     }
 }
 
+/// Fails with a [`super::FetchFailed`] when `source` is a local path that
+/// does not exist; does nothing for any other source. [`fetch_ssot`] does
+/// not check this, so that `add` of a missing path is unchanged; `update`
+/// and the dependency resolvers call this before they fetch.
+pub(super) fn check_local_source_exists(source: &InstallSource) -> Result<()> {
+    if let InstallSource::LocalPath(p) = source
+        && !p.exists()
+    {
+        return Err(anyhow::Error::new(super::FetchFailed {
+            message: format!("source path {} does not exist", p.display()),
+        }));
+    }
+    Ok(())
+}
+
 fn clone_to_tempdir(
     url: &str,
     git_ref: Option<&str>,
@@ -161,10 +176,16 @@ fn clone_to_tempdir(
     name: &str,
 ) -> Result<FetchedSource> {
     let tmp = tempfile::tempdir().context("create temp dir for clone")?;
-    fetch::shallow_clone(url, git_ref, "clone", tmp.path(), subfolder)
-        .map_err(|e| anyhow!("git clone {}: {}", url, e))?;
+    // A failed clone is a [`FetchFailed`], so that `update` can skip the
+    // source. The text is unchanged.
+    let fetch_failed = |e: String| {
+        anyhow::Error::new(super::FetchFailed {
+            message: format!("git clone {url}: {e}"),
+        })
+    };
+    fetch::shallow_clone(url, git_ref, "clone", tmp.path(), subfolder).map_err(fetch_failed)?;
     let clone = tmp.path().join("clone");
-    let commit = fetch::head_commit(&clone).map_err(|e| anyhow!("git clone {}: {}", url, e))?;
+    let commit = fetch::head_commit(&clone).map_err(fetch_failed)?;
     let root =
         fetch::resolve_subfolder(&clone, subfolder, owner, name).map_err(|e| anyhow!("{}", e))?;
     Ok(FetchedSource {
@@ -252,6 +273,33 @@ mod tests {
         assert_eq!(
             repo_display_parts("https://gitlab.com/team/skills"),
             ("https://gitlab.com/team", "skills")
+        );
+    }
+
+    #[test]
+    fn a_missing_local_path_is_a_fetch_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let missing = InstallSource::LocalPath(tmp.path().join("missing"));
+        let err = check_local_source_exists(&missing)
+            .context("fetch requires source `x`")
+            .unwrap_err();
+        assert!(err.downcast_ref::<super::super::FetchFailed>().is_some());
+        assert!(format!("{err:#}").contains("does not exist"), "{err:#}");
+        let present = InstallSource::LocalPath(tmp.path().to_path_buf());
+        assert!(check_local_source_exists(&present).is_ok());
+    }
+
+    #[test]
+    fn a_failed_clone_is_a_fetch_failure_with_the_same_text() {
+        let tmp = tempfile::tempdir().unwrap();
+        let url = format!("file://{}/missing", tmp.path().display());
+        let err = clone_to_tempdir(&url, None, None, "o", "n")
+            .err()
+            .expect("the clone of a missing repository fails");
+        assert!(err.downcast_ref::<super::super::FetchFailed>().is_some());
+        assert!(
+            err.to_string().starts_with(&format!("git clone {url}: ")),
+            "{err}"
         );
     }
 }

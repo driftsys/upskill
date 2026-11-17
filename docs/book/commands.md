@@ -323,18 +323,24 @@ after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
 
 `update` first fetches every source once (a source of a cross-source dependency
 is fetched again when the source that requires it is reinstalled), checks it and
-plans it, without any change; an error in this step stops the run before any
-source is applied. Then it handles the sources one at a time, sorted by source
-label. For each source it computes a preview: what applying this source now does
-to the files on disk and to the lockfile. The preview is computed just before
-the source is applied, so it includes the effect of the sources applied before
-it. The modes differ in what they do with the preview:
+plans it, without any change. A source that cannot be fetched (the `git clone`
+fails, or a local-path source no longer exists), or whose cross-source
+dependency source cannot be fetched, is skipped: nothing of it is written,
+`update` prints on stderr one line that names the source label and gives the
+cause, handles the other sources, and exits with code 1. Any other error in this
+step stops the run before any source is applied. To update only the reachable
+sources without exit code 1, name their items: `update <name>` does not fetch a
+source that the names do not select. Then it handles the sources one at a time,
+sorted by source label. For each source it computes a preview: what applying
+this source now does to the files on disk and to the lockfile. The preview is
+computed just before the source is applied, so it includes the effect of the
+sources applied before it. The modes differ in what they do with the preview:
 
-| Mode                                | Behaviour                                                                                                                                    |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Terminal, no `--yes`                | Prints one block per source. Asks `Apply? [y/N/q]` for each source whose preview changes something. Applies the source only on `y` or `yes`. |
-| `--yes`, or stdin is not a terminal | Prints no block and asks nothing. Applies every source, also a source whose preview changes nothing.                                         |
-| `--dry-run`                         | Prints one block per source. Asks nothing, applies nothing, and does not adopt a `schema: 1` lockfile. Exits with code 0 when no step fails. |
+| Mode                                | Behaviour                                                                                                                                                              |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terminal, no `--yes`                | Prints one block per source. Asks `Apply? [y/N/q]` for each source whose preview changes something. Applies the source only on `y` or `yes`.                           |
+| `--yes`, or stdin is not a terminal | Prints no block and asks nothing. Applies every source, also a source whose preview changes nothing.                                                                   |
+| `--dry-run`                         | Prints one block per source. Asks nothing, applies nothing, and does not adopt a `schema: 1` lockfile. Exits with code 0 when no step fails and no source was skipped. |
 
 A terminal run looks like this:
 
