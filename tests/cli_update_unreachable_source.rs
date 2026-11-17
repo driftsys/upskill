@@ -819,10 +819,18 @@ fn cascade_skill_files(e: &Env) -> Vec<Vec<u8>> {
 
 /// The installed rule `delta`, whatever its file name for Claude.
 fn rule_text(e: &Env) -> String {
+    // Compare path components, not text: on Windows the separator is `\`.
+    let rules = e.proj.join(".claude").join("rules");
     let mut out = String::new();
     for (path, bytes) in files_under(&e.proj) {
-        let p = path.to_string_lossy().to_string();
-        if p.contains(".claude/rules") && p.contains("delta") {
+        let is_delta = path
+            .file_name()
+            .is_some_and(|n| n.to_string_lossy().contains("delta"))
+            || path
+                .parent()
+                .and_then(|p| p.file_name())
+                .is_some_and(|n| n == "delta");
+        if path.starts_with(&rules) && is_delta {
             out.push_str(&String::from_utf8(bytes).unwrap());
         }
     }
@@ -867,9 +875,12 @@ fn a_cascade_two_levels_deep_skips_every_dependent_source() {
     }
     // The rule `delta` shares its name with the skill `delta` of the skipped
     // source `REMOTE`, but it is another item: its source is applied.
+    let rule = rule_text(&e);
     assert!(
-        rule_text(&e).contains("Rule two."),
-        "the rule source was not applied"
+        rule.contains("Rule two."),
+        "the rule source was not applied: rule {rule:?}\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&out.stdout),
+        stderr(&out)
     );
     // Item lines and the item count.
     let stdout = String::from_utf8(out.stdout.clone()).unwrap();
