@@ -521,7 +521,9 @@ pub enum UpdateStatus {
     /// here and does not cause exit code 1.
     NotApplied { action: PreviewAction },
     /// The source of the item could not be fetched and was skipped (see
-    /// [`UpdateReport::skipped_sources`]). Nothing of the item changed.
+    /// [`UpdateReport::skipped_sources`]). None of its files was written, and
+    /// its lockfile entry did not change, except the `files` record that the
+    /// adoption of a `schema: 1` lockfile writes for every entry.
     SkippedUnreachable,
 }
 
@@ -650,6 +652,12 @@ pub trait UpdateObserver {
     fn preview(&mut self, preview: &SourcePreview) -> SourceDecision;
     /// Called after a source was applied.
     fn applied(&mut self, result: &SourceResult);
+    /// True after an interrupt. `update` reads it in the prepare phase: it
+    /// then fetches no further source and fails, and a fetch that failed is
+    /// not reported as a source that could not be fetched.
+    fn interrupted(&self) -> bool {
+        false
+    }
 }
 
 /// One entry in a [`ListReport`] — a single installed item as recorded

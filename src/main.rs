@@ -184,26 +184,32 @@ fn print_error(err: impl std::fmt::Display) {
     eprintln!("{} {err}", style::error_label("error:"));
 }
 
-/// Like [`print_error`] but uses the `:#` formatter to print the full
-/// anyhow context chain (root cause last). The adoption context that
-/// `AdoptedBeforeFailure` adds is left out: `print_adoption_after_error`
-/// prints the adoption notice instead. The context that
-/// `SkippedBeforeFailure` adds (always the outermost layer, directly above
-/// an `AdoptedBeforeFailure` layer when there is one) is left out too.
+/// Like [`print_error`] but prints the full anyhow context chain (root
+/// cause last), as the `:#` formatter does. The marker layers are left out:
+/// the adoption context of `AdoptedBeforeFailure` (`print_adoption_after_error`
+/// prints the adoption notice instead) and the context of
+/// `SkippedBeforeFailure` (the skip lines are printed instead).
 fn print_error_chain(err: &anyhow::Error) {
-    let markers = usize::from(
-        err.downcast_ref::<upskill::pipeline::AdoptedBeforeFailure>()
-            .is_some(),
-    ) + usize::from(
-        err.downcast_ref::<upskill::pipeline::SkippedBeforeFailure>()
-            .is_some(),
-    );
-    if markers > 0 {
-        let rest: Vec<String> = err.chain().skip(markers).map(ToString::to_string).collect();
-        eprintln!("{} {}", style::error_label("error:"), rest.join(": "));
-    } else {
-        eprintln!("{} {err:#}", style::error_label("error:"));
+    eprintln!("{} {}", style::error_label("error:"), error_chain_text(err));
+}
+
+/// The context chain of `err` joined with `: `, without the marker layers.
+/// anyhow hides the type of a context layer in `chain()`, so a layer is
+/// recognised as a marker when `err` holds that marker type and the layer
+/// prints the fixed text of that marker type.
+fn error_chain_text(err: &anyhow::Error) -> String {
+    let mut markers = Vec::new();
+    if let Some(m) = err.downcast_ref::<upskill::pipeline::AdoptedBeforeFailure>() {
+        markers.push(m.to_string());
     }
+    if let Some(m) = err.downcast_ref::<upskill::pipeline::SkippedBeforeFailure>() {
+        markers.push(m.to_string());
+    }
+    err.chain()
+        .map(ToString::to_string)
+        .filter(|layer| !markers.contains(layer))
+        .collect::<Vec<_>>()
+        .join(": ")
 }
 
 fn map_clap_error(err: &clap::Error) -> i32 {
@@ -1312,6 +1318,10 @@ impl UpdateObserver for ApplyAll {
     }
 
     fn applied(&mut self, _result: &SourceResult) {}
+
+    fn interrupted(&self) -> bool {
+        was_interrupted()
+    }
 }
 
 /// The `update` observer for `--dry-run`: prints the block of each source
@@ -1328,6 +1338,10 @@ impl UpdateObserver for DryRunObserver {
     }
 
     fn applied(&mut self, _result: &SourceResult) {}
+
+    fn interrupted(&self) -> bool {
+        was_interrupted()
+    }
 }
 
 /// The `update` observer for a terminal without `--yes`. For each source it
@@ -1402,6 +1416,10 @@ impl UpdateObserver for TerminalObserver {
         if !style::is_quiet() {
             println!("{}", render_result(result));
         }
+    }
+
+    fn interrupted(&self) -> bool {
+        was_interrupted()
     }
 }
 
@@ -1561,7 +1579,7 @@ fn render_result(result: &SourceResult) -> String {
 /// The closing summary of a terminal run: the items updated, completed or
 /// removed out of the items considered, and the sources applied out of the
 /// sources considered, then ` <k> source(s) not applied.` when a source with
-/// changes was not applied, then ` <s> source(s) not reachable.` when a
+/// changes was not applied, then ` <u> source(s) not reachable.` when a
 /// source could not be fetched, then ` Stopped; <r> source(s) not examined.`
 /// (or ` Stopped.` when no source remained) after `q` or end of input.
 fn closing_summary(report: &UpdateReport) -> String {
@@ -1616,8 +1634,8 @@ fn closing_summary(report: &UpdateReport) -> String {
 /// without an empty line before it; after an empty line,
 /// `everything is up to date — nothing to do` when no source was applied,
 /// no source with changes was declined, no file was kept as a note, no item
-/// was skipped, no source was skipped and no lockfile was adopted; otherwise the closing summary
-/// ([`closing_summary`]), followed by `Changed <n> file(s) written or
+/// was skipped, no source was skipped and no lockfile was adopted;
+/// otherwise the closing summary ([`closing_summary`]), followed by `Changed <n> file(s) written or
 /// deleted` when files changed but no item was updated, completed or
 /// removed. Without `--quiet` the blocks named the kept and the skipped
 /// files; with `--quiet` it prints the `skipped` lines of
@@ -2904,6 +2922,21 @@ mod tests {
             ..SourceResult::default()
         };
         assert_eq!(render_result(&both), "  1 updated, 1 file(s) changed");
+    }
+
+    #[test]
+    fn error_chain_text_leaves_out_both_marker_layers() {
+        let err = anyhow::anyhow!("root cause")
+            .context("outer step")
+            .context(upskill::pipeline::AdoptedBeforeFailure {
+                paths: vec!["a".into()],
+            })
+            .context(upskill::pipeline::SkippedBeforeFailure {
+                sources: Vec::new(),
+            });
+        assert_eq!(error_chain_text(&err), "outer step: root cause");
+        let plain = anyhow::anyhow!("root cause").context("outer step");
+        assert_eq!(error_chain_text(&plain), format!("{plain:#}"));
     }
 
     #[test]

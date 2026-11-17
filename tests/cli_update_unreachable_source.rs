@@ -200,6 +200,7 @@ fn update_skips_a_source_that_cannot_be_fetched_and_applies_the_other() {
     let e = stage_two_sources_one_unreachable();
     let beta_before = fs::read(skill_file(&e, "beta")).unwrap();
     let beta_lock_before = lock_item(&e, "beta");
+    let alpha_lock_before = lock_item(&e, "alpha");
 
     let out = run(&e, &["update", "--project", "--yes"]);
 
@@ -207,13 +208,29 @@ fn update_skips_a_source_that_cannot_be_fetched_and_applies_the_other() {
     let err = stderr(&out);
     assert!(err.contains(OTHER_REMOTE), "stderr lacks the source: {err}");
     assert!(err.contains("could not be fetched"), "{err}");
+    // The item of the skipped source has its own status line and is not
+    // counted as changed.
+    let stdout = String::from_utf8(out.stdout.clone()).unwrap();
+    assert!(stdout.contains("Updated 1 of 2 item(s)"), "{stdout}");
+    let beta_line = stdout
+        .lines()
+        .find(|l| l.contains("beta"))
+        .unwrap_or_default();
+    assert!(
+        beta_line.contains("skipped — source not reachable"),
+        "{stdout}"
+    );
+    let alpha_lock = lock_item(&e, "alpha");
+    assert_ne!(
+        alpha_lock["hash"], alpha_lock_before["hash"],
+        "hash unchanged"
+    );
+    assert_ne!(
+        alpha_lock["commit"], alpha_lock_before["commit"],
+        "commit unchanged"
+    );
     let alpha = fs::read_to_string(skill_file(&e, "alpha")).unwrap();
     assert!(alpha.contains("Alpha two."), "{alpha}");
-    assert_ne!(
-        lock_item(&e, "alpha")["hash"],
-        serde_json::Value::Null,
-        "alpha has no hash"
-    );
     assert_eq!(fs::read(skill_file(&e, "beta")).unwrap(), beta_before);
     assert_eq!(lock_item(&e, "beta"), beta_lock_before);
 }
@@ -234,6 +251,11 @@ fn update_quiet_still_reports_the_skipped_source() {
     let out = run(&e, &["update", "--project", "--yes", "--quiet"]);
     assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
     assert!(stderr(&out).contains(OTHER_REMOTE), "{}", stderr(&out));
+    let alpha = fs::read_to_string(skill_file(&e, "alpha")).unwrap();
+    assert!(
+        alpha.contains("Alpha two."),
+        "the other source was not applied"
+    );
 }
 
 #[test]
@@ -354,6 +376,10 @@ fn update_skips_a_source_whose_dependency_source_cannot_be_fetched() {
         err.contains(&format!("fetch requires source `{OTHER_REMOTE}`")),
         "stderr does not name the dependency source: {err}"
     );
+    assert!(
+        err.contains("git clone https://example.invalid/team/other.git"),
+        "stderr lacks the root cause: {err}"
+    );
     assert_eq!(fs::read(skill_file(&e, "alpha")).unwrap(), alpha_before);
     assert_eq!(lock_item(&e, "alpha"), alpha_lock_before);
     let gamma = fs::read_to_string(skill_file(&e, "gamma")).unwrap();
@@ -390,6 +416,16 @@ fn update_reports_a_skipped_source_when_a_later_source_fails() {
         "stderr lacks the skipped source: {err}"
     );
     assert!(err.contains("gamma"), "stderr lacks the later error: {err}");
+    let skip_at = err.find("could not be fetched and was skipped").unwrap();
+    let error_at = err
+        .lines()
+        .position(|l| l.starts_with("error:") && !l.contains("could not be fetched"))
+        .map(|n| err.lines().take(n).map(|l| l.len() + 1).sum::<usize>())
+        .expect("no error line of the later source");
+    assert!(
+        skip_at < error_at,
+        "the skip line is not before the error: {err}"
+    );
     assert!(
         !err.contains("sources were skipped before this error"),
         "the marker text leaked: {err}"
@@ -441,10 +477,154 @@ fn a_schema_1_adoption_with_a_skipped_source_records_its_files_only() {
     assert_eq!(beta_lock, beta_lock_before);
 }
 
-/// The layout of issue #547 (see `tests/cli_update_source_overlap.rs`), with
-/// the git source `REMOTE` installed as well and changed upstream.
+/// An error of `prepare_install` that is not a fetch failure (a source
+/// file that cannot be parsed) still stops the run before any write: the
+/// git source, which sorts first and changed upstream, is not applied.
 #[test]
 fn a_non_fetch_prepare_error_still_stops_the_run_before_any_write() {
+    let e = env();
+    run_ok(&e, &["add", REMOTE, "--claude", "--project"]);
+    let local = e.tmp.path().join("local-reg");
+    write_skill(&local, "gamma", "Gamma one.", "");
+    run_ok(
+        &e,
+        &["add", local.to_str().unwrap(), "--claude", "--project"],
+    );
+    fs::write(
+        local.join("skills/gamma/SKILL.md"),
+        "---\nschema: 1\nname: [gamma\n---\nbody\n",
+    )
+    .unwrap();
+    write_skill(&e.upstream, "alpha", "Alpha two.", "");
+    commit_all(&e, &e.upstream);
+    let before = files_under(&e.proj);
+
+    let out = run(&e, &["update", "--project", "--yes"]);
+
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    let err = stderr(&out);
+    assert!(!err.contains("could not be fetched"), "{err}");
+    assert!(
+        !err.contains("overlap"),
+        "the error is not from the prepare step: {err}"
+    );
+    assert_eq!(files_under(&e.proj), before, "update changed a file");
+}
+
+/// One verdict per source (review of #555): the source `REMOTE` is skipped
+/// because its dependency source `OTHER_REMOTE` cannot be fetched, but the
+/// local source of `charlie` requires `delta` of `REMOTE` and fetches
+/// `REMOTE` itself. That source is skipped too, so that `delta`, an item of
+/// a skipped source, is not written.
+#[test]
+fn a_source_that_requires_an_item_of_a_skipped_source_is_skipped_too() {
+    let e = env();
+    let requires_beta =
+        format!("requires:\n  skills: [{{ name: beta, source: {OTHER_REMOTE} }}]\n");
+    write_skill(&e.upstream, "alpha", "Alpha one.", &requires_beta);
+    write_skill(&e.upstream, "delta", "Delta one.", "");
+    commit_all(&e, &e.upstream);
+    run_ok(&e, &["add", REMOTE, "--claude", "--project"]);
+    let local = e.tmp.path().join("local-reg");
+    write_skill(
+        &local,
+        "charlie",
+        "Charlie one.",
+        &format!("requires:\n  skills: [{{ name: delta, source: {REMOTE} }}]\n"),
+    );
+    run_ok(
+        &e,
+        &["add", local.to_str().unwrap(), "--claude", "--project"],
+    );
+    write_skill(&e.upstream, "delta", "Delta two.", "");
+    commit_all(&e, &e.upstream);
+    fs::rename(&e.other, e.tmp.path().join("other-moved")).unwrap();
+    let before = files_under(&e.proj);
+
+    let out = run(&e, &["update", "--project", "--yes"]);
+
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    assert_eq!(
+        files_under(&e.proj),
+        before,
+        "an item of a skipped source was written"
+    );
+    let err = stderr(&out);
+    assert!(
+        err.contains(&format!("of the source `{REMOTE}`, which was skipped")),
+        "stderr does not name the unreachable source: {err}"
+    );
+    assert!(err.contains("local-reg"), "{err}");
+}
+
+/// A missing local-path source named in `requires` of an item skips the
+/// source that requires it (`Resolver`), and `add` of such an item fails with
+/// the same text.
+#[test]
+fn a_missing_local_dependency_of_an_item_skips_the_requiring_source() {
+    let e = env();
+    let dep = e.tmp.path().join("dep-reg");
+    write_skill(&dep, "gamma", "Gamma one.", "");
+    let requires = format!(
+        "requires:\n  skills: [{{ name: gamma, source: {} }}]\n",
+        dep.display()
+    );
+    write_skill(&e.upstream, "alpha", "Alpha one.", &requires);
+    commit_all(&e, &e.upstream);
+    run_ok(&e, &["add", REMOTE, "--claude", "--project"]);
+    write_skill(&e.upstream, "alpha", "Alpha two.", &requires);
+    commit_all(&e, &e.upstream);
+    fs::remove_dir_all(&dep).unwrap();
+    let before = files_under(&e.proj);
+
+    let out = run(&e, &["update", "alpha", "--project", "--yes"]);
+
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    let err = stderr(&out);
+    assert!(
+        err.contains(&format!("source `{REMOTE}` could not be fetched")),
+        "{err}"
+    );
+    assert!(err.contains("fetch requires source"), "{err}");
+    assert!(
+        err.contains(&format!("source path {} does not exist", dep.display())),
+        "{err}"
+    );
+    assert_eq!(files_under(&e.proj), before, "update changed a file");
+
+    // `add` of an item that requires a missing local-path source fails with
+    // the same cause.
+    let other_proj = e.tmp.path().join("other-proj");
+    fs::create_dir_all(other_proj.join(".git")).unwrap();
+    let mut cmd = common::upskill_cmd(&e.home);
+    let out = cmd
+        .current_dir(&other_proj)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", e.home.join("empty-gitconfig"))
+        .env("GIT_CONFIG_COUNT", "2")
+        .env(
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", e.upstream.display()),
+        )
+        .env("GIT_CONFIG_VALUE_0", format!("{REMOTE}.git"))
+        .env("GIT_CONFIG_KEY_1", "protocol.file.allow")
+        .env("GIT_CONFIG_VALUE_1", "always")
+        .args(["add", REMOTE, "--claude", "--project"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    let err = stderr(&out);
+    assert!(
+        err.contains("fetch requires source")
+            && err.contains(&format!("source path {} does not exist", dep.display())),
+        "{err}"
+    );
+}
+
+/// A missing local-path source named in `requires:` of a bundle skips the
+/// bundle source (`BundleResolver`).
+#[test]
+fn a_missing_local_dependency_of_a_bundle_skips_the_bundle_source() {
     let e = env();
     let reg_dep = e.tmp.path().join("reg-dep");
     let q = reg_dep.join("q");
@@ -460,7 +640,7 @@ fn a_non_fetch_prepare_error_still_stops_the_run_before_any_write() {
         "schema: 1\nname: dep\ndescription: d\nitems:\n  skills:\n  - q\n",
     )
     .unwrap();
-    let skills = e.proj.join(".agents/skills");
+    let skills = e.tmp.path().join("reg-meta");
     fs::create_dir_all(skills.join("z")).unwrap();
     fs::write(
         skills.join("z/SKILL.md"),
@@ -471,29 +651,17 @@ fn a_non_fetch_prepare_error_still_stops_the_run_before_any_write() {
     fs::write(
         skills.join("bundles/meta.bundle.yaml"),
         format!(
-            "schema: 1\nname: meta\ndescription: d\nitems: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
+            "schema: 1\nname: meta\ndescription: d\nitems:\n  skills:\n  - z\nrequires:\n  - {{ name: dep, source: {} }}\n",
             reg_dep.display()
         ),
     )
     .unwrap();
-    run_ok(&e, &["add", REMOTE, "--claude", "--project"]);
+    let bundle = skills.join("bundles/meta.bundle.yaml");
     run_ok(
         &e,
-        &[
-            "add",
-            "./.agents/skills/bundles/meta.bundle.yaml",
-            "--claude",
-            "--project",
-        ],
+        &["add", bundle.to_str().unwrap(), "--claude", "--project"],
     );
-    fs::create_dir_all(skills.join("q/y")).unwrap();
-    fs::write(
-        skills.join("q/y/SKILL.md"),
-        "---\nschema: 1\nname: y\ndescription: d\n---\n# y\n",
-    )
-    .unwrap();
-    write_skill(&e.upstream, "alpha", "Alpha two.", "");
-    commit_all(&e, &e.upstream);
+    fs::remove_dir_all(&reg_dep).unwrap();
     let before = files_under(&e.proj);
 
     let out = run(&e, &["update", "--project", "--yes"]);
@@ -501,9 +669,66 @@ fn a_non_fetch_prepare_error_still_stops_the_run_before_any_write() {
     assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
     let err = stderr(&out);
     assert!(
-        err.contains("installing would delete or overwrite the source"),
+        err.contains("meta.bundle.yaml` could not be fetched"),
         "{err}"
     );
-    assert!(!err.contains("could not be fetched"), "{err}");
+    assert!(err.contains("fetch requires source"), "{err}");
     assert_eq!(files_under(&e.proj), before, "update changed a file");
+}
+
+/// A terminal run with a skipped source: the skip line, exit code 1, the
+/// closing summary counts the prepared sources only and does not say that
+/// everything is up to date.
+#[cfg(unix)]
+#[test]
+fn a_terminal_run_reports_the_skipped_source() {
+    let e = stage_two_sources_one_unreachable();
+    let env = [
+        ("GIT_CONFIG_NOSYSTEM", "1".to_string()),
+        (
+            "GIT_CONFIG_GLOBAL",
+            e.home.join("empty-gitconfig").display().to_string(),
+        ),
+        ("GIT_CONFIG_COUNT", "3".to_string()),
+        (
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", e.upstream.display()),
+        ),
+        ("GIT_CONFIG_VALUE_0", format!("{REMOTE}.git")),
+        (
+            "GIT_CONFIG_KEY_1",
+            format!("url.file://{}.insteadOf", e.other.display()),
+        ),
+        ("GIT_CONFIG_VALUE_1", format!("{OTHER_REMOTE}.git")),
+        ("GIT_CONFIG_KEY_2", "protocol.file.allow".to_string()),
+        ("GIT_CONFIG_VALUE_2", "always".to_string()),
+        ("GIT_ALLOW_PROTOCOL", "file".to_string()),
+        ("GIT_TERMINAL_PROMPT", "0".to_string()),
+    ];
+
+    let result = common::update_in_terminal_with_env(&e.proj, &e.home, &["--project"], "y\n", &env);
+
+    assert_eq!(result["returncode"], 1, "{result}");
+    let stdout = result["stdout"].as_str().unwrap();
+    let stderr = result["stderr"].as_str().unwrap();
+    assert!(
+        stderr.contains(&format!("source `{OTHER_REMOTE}` could not be fetched")),
+        "{stderr}"
+    );
+    assert!(
+        stdout.contains("Updated 1 of 2 item(s) from 1 of 1 source(s). 1 source(s) not reachable."),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("everything is up to date"), "{stdout}");
+    let alpha = fs::read_to_string(skill_file(&e, "alpha")).unwrap();
+    assert!(alpha.contains("Alpha two."), "{alpha}");
+
+    // Every source unreachable: no source is applied, and the run still
+    // does not say that everything is up to date.
+    fs::rename(&e.upstream, e.tmp.path().join("upstream-moved")).unwrap();
+    let result = common::update_in_terminal_with_env(&e.proj, &e.home, &["--project"], "", &env);
+    assert_eq!(result["returncode"], 1, "{result}");
+    let stdout = result["stdout"].as_str().unwrap();
+    assert!(!stdout.contains("everything is up to date"), "{stdout}");
+    assert!(stdout.contains("2 source(s) not reachable."), "{stdout}");
 }

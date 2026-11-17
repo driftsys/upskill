@@ -155,8 +155,12 @@ pub fn fetch_ssot(source: &InstallSource) -> Result<FetchedSource> {
 
 /// Fails with a [`super::FetchFailed`] when `source` is a local path that
 /// does not exist; does nothing for any other source. [`fetch_ssot`] does
-/// not check this, so that `add` of a missing path is unchanged; `update`
-/// and the dependency resolvers call this before they fetch.
+/// not check this, so that `add` of a missing entry path is unchanged;
+/// `update` calls this before it prepares a source, and the dependency
+/// resolvers call it before they fetch a dependency source. So `add` of an
+/// item that requires a missing local-path source fails with
+/// "fetch requires source `<label>`: source path <path> does not exist"
+/// (before: "... is required but not found in source ...").
 pub(super) fn check_local_source_exists(source: &InstallSource) -> Result<()> {
     if let InstallSource::LocalPath(p) = source
         && !p.exists()

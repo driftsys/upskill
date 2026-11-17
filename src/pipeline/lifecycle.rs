@@ -750,9 +750,15 @@ fn reselect_from_entries(
 /// A source whose prepare fails with a [`FetchFailed`] in its error chain
 /// (a `git clone` that fails, or a local-path source whose path does not
 /// exist, of the source itself or of a cross-source dependency source that
-/// it requires) is skipped: it is not prepared, nothing of it is written, it
-/// is in [`UpdateReport::skipped_sources`], and each of its selected entries
-/// is reported as [`UpdateStatus::SkippedUnreachable`]. The overlap check
+/// it requires) is skipped: it is not prepared, none of its files is
+/// written, its lockfile entries do not change except the `files` record
+/// that the whole-lockfile adoption of a `schema: 1` lockfile writes, it is
+/// in [`UpdateReport::skipped_sources`], and each of its selected entries is
+/// reported as [`UpdateStatus::SkippedUnreachable`]. A prepared source whose
+/// plan writes an item that the lockfile records from a skipped source is
+/// skipped too, until no further source is dropped. After
+/// [`UpdateObserver::interrupted`] is true, no further source is fetched,
+/// no skip is recorded, and the run fails. The overlap check
 /// treats it as a recorded source that the run does not read. Any other
 /// error in this step stops the run before the adoption and before any
 /// source is applied.
@@ -898,6 +904,11 @@ pub fn update(
         // which skips the source.
         let mut prepared_sources = Vec::with_capacity(by_source.len());
         for (source_label, source_entries) in by_source {
+            // An interrupt stops the prepare phase at once: no further
+            // source is fetched.
+            if observer.interrupted() {
+                anyhow::bail!("interrupted before the source `{source_label}` was fetched");
+            }
             let source = crate::source::parse_install_source_label(&source_label)
                 .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
 
@@ -965,7 +976,10 @@ pub fn update(
                 .and_then(|()| prepare_install(&source, target, &item_filter, &options))
             {
                 Ok(prepared) => prepared,
-                Err(err) if err.downcast_ref::<FetchFailed>().is_some() => {
+                // A fetch that an interrupt ended is not a fetch failure.
+                Err(err)
+                    if err.downcast_ref::<FetchFailed>().is_some() && !observer.interrupted() =>
+                {
                     for entry in &source_entries {
                         report.items.push(UpdatedItem {
                             kind: entry.kind,
@@ -983,6 +997,45 @@ pub fn update(
                 Err(err) => return Err(err),
             };
             prepared_sources.push((source_label, source_entries, prepared));
+        }
+        // One verdict per source: a prepared source whose plan writes an item
+        // that the lockfile records from a skipped source is skipped too, so
+        // that no item of a skipped source is written. Repeated until no
+        // source is dropped, so that the order of the sources does not
+        // matter.
+        loop {
+            let skipped_items: std::collections::BTreeMap<(ItemKind, String), String> = lock
+                .items
+                .iter()
+                .filter(|i| report.skipped_sources.iter().any(|s| s.source == i.source))
+                .map(|i| ((i.kind, i.name.clone()), i.source.clone()))
+                .collect();
+            let found = prepared_sources
+                .iter()
+                .enumerate()
+                .find_map(|(index, (_, _, p))| {
+                    p.planned_hashes().into_keys().find_map(|key| {
+                        skipped_items.get(&key).map(|src| (index, key, src.clone()))
+                    })
+                });
+            let Some((index, (kind, name), unreachable)) = found else {
+                break;
+            };
+            let (source_label, source_entries, _) = prepared_sources.remove(index);
+            for entry in &source_entries {
+                report.items.push(UpdatedItem {
+                    kind: entry.kind,
+                    name: entry.name.clone(),
+                    source: source_label.clone(),
+                    status: UpdateStatus::SkippedUnreachable,
+                });
+            }
+            report.skipped_sources.push(SkippedSource {
+                source: source_label,
+                error: format!(
+                    "it requires {kind} `{name}` of the source `{unreachable}`, which was skipped"
+                ),
+            });
         }
         let total_sources = prepared_sources.len();
 
@@ -1584,6 +1637,51 @@ mod tests {
             .find(|i| i.name == name)
             .unwrap_or_else(|| panic!("no item {name} in {:?}", report.items))
             .status
+    }
+
+    /// An observer that reports an interrupt.
+    struct Interrupted {
+        previews: usize,
+    }
+
+    impl UpdateObserver for Interrupted {
+        fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
+            self.previews += 1;
+            SourceDecision::Apply
+        }
+
+        fn applied(&mut self, _result: &SourceResult) {}
+
+        fn interrupted(&self) -> bool {
+            true
+        }
+    }
+
+    /// An interrupt stops the prepare phase at once: the source that cannot
+    /// be fetched is not recorded as skipped, and nothing is previewed.
+    #[test]
+    fn an_interrupt_stops_the_prepare_phase_without_a_skip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (a, b) = (tmp.path().join("a"), tmp.path().join("b"));
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&a, "x", "body");
+        skill(&b, "y", "body");
+        install(&a, &target);
+        install(&b, &target);
+        fs::remove_dir_all(&a).unwrap();
+        let lock_before = lock_bytes(&target);
+
+        let mut observer = Interrupted { previews: 0 };
+        let err = run(&target, &mut observer).unwrap_err();
+
+        assert!(
+            err.downcast_ref::<SkippedBeforeFailure>().is_none(),
+            "{err:#}"
+        );
+        assert!(format!("{err:#}").contains("interrupted"), "{err:#}");
+        assert_eq!(observer.previews, 0);
+        assert_eq!(lock_bytes(&target), lock_before);
     }
 
     /// #504: a source whose preview changes nothing and that is not applied

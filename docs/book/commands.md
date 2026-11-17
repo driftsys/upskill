@@ -325,19 +325,27 @@ after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
 is fetched again when the source that requires it is reinstalled), checks it and
 plans it, without any change. A source that cannot be fetched (the `git clone`
 fails, or a local-path source no longer exists), or whose cross-source
-dependency source cannot be fetched, is skipped: nothing of it is written,
-`update` prints on stderr one line that names the label of the skipped source
-and gives the cause, also when a later step fails and also with `--quiet`,
-handles the other sources, and exits with code 1. Each lockfile entry of the
-skipped source that the run selected is counted in the closing summary and has
-the status line `skipped — source not reachable`. Any other error in this step
-stops the run before any source is applied. To update only the reachable sources
-without exit code 1, name their items: `update <name>` does not fetch a source
-that the names do not select. Then `update` handles the sources one at a time,
-sorted by source label. For each source it computes a preview: what applying
-this source now does to the files on disk and to the lockfile. The preview is
-computed just before the source is applied, so it includes the effect of the
-sources applied before it. The modes differ in what they do with the preview:
+dependency source cannot be fetched, is skipped: none of its files is written
+and its lockfile entries do not change, except the `files` record that the
+adoption of a `schema: 1` lockfile writes for every entry. A source that would
+write an item of a skipped source is skipped too. `update` prints on stderr one
+line that names the label of the skipped source and gives the cause, also when a
+later step fails and also with `--quiet`, handles the other sources, and exits
+with code 1. Each lockfile entry of the skipped source that the run selected is
+counted in the closing summary of a terminal run, and has the status line
+`skipped — source not reachable` in the item list of a run with `--yes` or
+without a terminal; a dry run prints no per-item status line. Any other error in
+this step stops the run before any source is applied. To update only the
+reachable sources without exit code 1, name their items: `update <name>` does
+not fetch a source that the names do not select. It still fetches the dependency
+sources of the named items, so a named item whose dependency source cannot be
+fetched is still skipped, with exit code 1. After Ctrl-C during this step, no
+further source is fetched and the run exits with code 130. Then `update` handles
+the sources one at a time, sorted by source label. For each source it computes a
+preview: what applying this source now does to the files on disk and to the
+lockfile. The preview is computed just before the source is applied, so it
+includes the effect of the sources applied before it. The modes differ in what
+they do with the preview:
 
 | Mode                                | Behaviour                                                                                                                                                              |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -408,7 +416,7 @@ an applied source, `update` prints one result line with the non-zero counts of
 count is 0. After the last source, it prints one closing summary:
 `Updated <n> of <m> item(s) from <a> of <s> source(s).`, followed by
 `<k> source(s) not applied.` when a source with changes was not applied, by
-`<s> source(s) not reachable.` when a source was skipped because it could not be
+`<u> source(s) not reachable.` when a source was skipped because it could not be
 fetched (the item count `<m>` includes the items of that source), and by
 `Stopped; <r> source(s) not examined.` (or `Stopped.` when no source remained)
 after `q` or end of input. When no item was updated, completed or removed but
