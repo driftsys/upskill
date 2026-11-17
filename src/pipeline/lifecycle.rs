@@ -754,12 +754,14 @@ fn reselect_from_entries(
 /// written, its lockfile entries do not change except the `files` record
 /// that the whole-lockfile adoption of a `schema: 1` lockfile writes, it is
 /// in [`UpdateReport::skipped_sources`], and each of its selected entries is
-/// reported as [`UpdateStatus::SourceSkipped`] with its [`SkipCause`]. A prepared source whose
-/// plan writes an item that the lockfile records from a skipped source is
-/// skipped too, until no further source is dropped. After
-/// [`UpdateObserver::interrupted`] is true, no further source is fetched,
-/// no skip is recorded, and the run fails. The overlap check
-/// treats it as a recorded source that the run does not read. Any other
+/// reported as [`UpdateStatus::SourceSkipped`] with its [`SkipCause`]. A
+/// prepared source whose plan writes an item that the lockfile records from
+/// a skipped source is skipped too, until no further source is dropped.
+/// [`UpdateObserver::interrupted`] is read before each source, after a fetch
+/// failure and before that comparison; once it is true, no further source
+/// is fetched, no further skip is recorded, and the run fails with the
+/// skips recorded before it in [`SkippedBeforeFailure`]. The overlap check
+/// treats a skipped source as a recorded source that the run does not read. Any other
 /// error in this step stops the run before the adoption and before any
 /// source is applied.
 ///
@@ -1766,7 +1768,8 @@ mod tests {
     }
 
     /// An interrupt after the first source was prepared: the second source
-    /// is not fetched.
+    /// is not fetched. Its path is missing, so a fetch of it would fail with
+    /// the fetch error instead of the interrupt error.
     #[test]
     fn an_interrupt_after_the_first_source_fetches_no_further_source() {
         let tmp = tempfile::tempdir().unwrap();
@@ -1777,6 +1780,7 @@ mod tests {
         skill(&b, "y", "body");
         install(&a, &target);
         install(&b, &target);
+        fs::remove_dir_all(&b).unwrap();
 
         let mut observer = InterruptedAt {
             at: 1,
@@ -1856,15 +1860,23 @@ mod tests {
         };
         let err = run(&target, &mut observer).unwrap_err();
         assert!(format!("{err:#}").contains("interrupted"), "{err:#}");
-        let skipped = err
+        // The skips recorded before the interrupt are still carried: `a`
+        // and `m`, which could not be fetched; `c` is not skipped.
+        let skipped = &err
             .downcast_ref::<SkippedBeforeFailure>()
-            .map(|s| s.sources.clone())
-            .unwrap_or_default();
-        assert!(
-            skipped
-                .iter()
-                .all(|s| s.cause != SkipCause::RequiresSkipped),
-            "{skipped:?}"
+            .expect("the skips before the interrupt are carried")
+            .sources;
+        let got: Vec<(String, SkipCause)> = skipped
+            .iter()
+            .map(|s| (s.source.clone(), s.cause))
+            .collect();
+        let label = |dir: &str| InstallSource::LocalPath(tmp.path().join(dir)).to_string();
+        assert_eq!(
+            got,
+            vec![
+                (label("a"), SkipCause::Unreachable),
+                (label("m"), SkipCause::Unreachable),
+            ]
         );
     }
 

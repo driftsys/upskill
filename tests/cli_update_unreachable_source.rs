@@ -758,9 +758,10 @@ fn a_terminal_run_reports_the_skipped_source() {
 }
 
 /// The cascade layout. `REMOTE` holds `alpha` (requires `beta` of
-/// `OTHER_REMOTE`) and the skill `delta`. `c-reg` holds `charlie` (requires
-/// the skill `delta` of `REMOTE`). `d-reg` holds `dave` (requires `charlie`
-/// of `c-reg`). `e-reg` holds the rule `delta`, which shares its name with
+/// `OTHER_REMOTE`) and the skill `delta`. `c-reg` holds `charlie` (no
+/// requires) and `carl` (requires the skill `delta` of `REMOTE`). `d-reg`
+/// holds `dave` (requires `charlie` of `c-reg` only), so the plan of `d-reg`
+/// holds no item of `REMOTE`: it is a second-level dependent. `e-reg` holds the rule `delta`, which shares its name with
 /// the skill `delta`. Everything changes upstream, then `OTHER_REMOTE` moves
 /// away: `OTHER_REMOTE` and `REMOTE` cannot be fetched, `c-reg` and then
 /// `d-reg` are skipped because they require an item of a skipped source,
@@ -775,7 +776,8 @@ fn stage_cascade() -> (Env, PathBuf, PathBuf, PathBuf) {
     commit_all(&e, &e.upstream);
     let c = e.tmp.path().join("c-reg");
     let requires_delta = format!("requires:\n  skills: [{{ name: delta, source: {REMOTE} }}]\n");
-    write_skill(&c, "charlie", "Charlie one.", &requires_delta);
+    write_skill(&c, "charlie", "Charlie one.", "");
+    write_skill(&c, "carl", "Carl one.", &requires_delta);
     let d = e.tmp.path().join("d-reg");
     let requires_charlie = format!(
         "requires:\n  skills: [{{ name: charlie, source: {} }}]\n",
@@ -799,7 +801,8 @@ fn stage_cascade() -> (Env, PathBuf, PathBuf, PathBuf) {
     }
     write_skill(&e.upstream, "delta", "Delta two.", "");
     commit_all(&e, &e.upstream);
-    write_skill(&c, "charlie", "Charlie two.", &requires_delta);
+    write_skill(&c, "charlie", "Charlie two.", "");
+    write_skill(&c, "carl", "Carl two.", &requires_delta);
     write_skill(&d, "dave", "Dave two.", &requires_charlie);
     write_rule("Rule two.");
     fs::rename(&e.other, e.tmp.path().join("other-moved")).unwrap();
@@ -808,7 +811,7 @@ fn stage_cascade() -> (Env, PathBuf, PathBuf, PathBuf) {
 
 /// The installed files of every skill of the cascade layout.
 fn cascade_skill_files(e: &Env) -> Vec<Vec<u8>> {
-    ["alpha", "beta", "charlie", "dave", "delta"]
+    ["alpha", "beta", "carl", "charlie", "dave", "delta"]
         .iter()
         .map(|n| fs::read(skill_file(e, n)).unwrap())
         .collect()
@@ -831,6 +834,7 @@ fn a_cascade_two_levels_deep_skips_every_dependent_source() {
     let (e, c, d, _r) = stage_cascade();
     let skills_before = cascade_skill_files(&e);
     let charlie_lock = lock_item(&e, "charlie");
+    let carl_lock = lock_item(&e, "carl");
     let dave_lock = lock_item(&e, "dave");
 
     let out = run(&e, &["update", "--project", "--yes"]);
@@ -844,6 +848,7 @@ fn a_cascade_two_levels_deep_skips_every_dependent_source() {
         "a skipped item was written"
     );
     assert_eq!(lock_item(&e, "charlie"), charlie_lock);
+    assert_eq!(lock_item(&e, "carl"), carl_lock);
     assert_eq!(lock_item(&e, "dave"), dave_lock);
     let err = stderr(&out);
     for (dir, item, from) in [
@@ -868,9 +873,10 @@ fn a_cascade_two_levels_deep_skips_every_dependent_source() {
     );
     // Item lines and the item count.
     let stdout = String::from_utf8(out.stdout.clone()).unwrap();
-    assert!(stdout.contains("Updated 1 of 6 item(s)"), "{stdout}");
+    assert!(stdout.contains("Updated 1 of 7 item(s)"), "{stdout}");
     for (name, status) in [
         ("charlie", "skipped — requires a source that was skipped"),
+        ("carl", "skipped — requires a source that was skipped"),
         ("dave", "skipped — requires a source that was skipped"),
         ("alpha", "skipped — source not reachable"),
         ("beta", "skipped — source not reachable"),
@@ -885,17 +891,19 @@ fn a_cascade_two_levels_deep_skips_every_dependent_source() {
 
 #[test]
 fn a_cascade_under_dry_run_writes_nothing_and_exits_1() {
-    let (e, c, _d, _r) = stage_cascade();
+    let (e, c, d, _r) = stage_cascade();
     let before = files_under(&e.proj);
 
     let out = run(&e, &["update", "--project", "--dry-run"]);
 
     assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
-    assert!(
-        stderr(&out).contains(&format!("source `local:{}` was skipped", c.display())),
-        "{}",
-        stderr(&out)
-    );
+    for dir in [&c, &d] {
+        assert!(
+            stderr(&out).contains(&format!("source `local:{}` was skipped", dir.display())),
+            "{}",
+            stderr(&out)
+        );
+    }
     assert_eq!(files_under(&e.proj), before, "a dry run changed a file");
 }
 
@@ -940,4 +948,63 @@ fn a_terminal_run_with_a_cascade_counts_the_sources_after_the_cascade() {
         "{stdout}"
     );
     assert!(!stdout.contains("not examined"), "{stdout}");
+}
+
+/// A later step fails after a cascade skip (the whole-run overlap check, with
+/// the layout of issue #547 added): the error path still prints the
+/// "was skipped: it requires" line.
+#[test]
+fn a_cascade_skip_is_reported_when_a_later_step_fails() {
+    let (e, c, _d, _r) = stage_cascade();
+    let reg_dep = e.tmp.path().join("reg-dep");
+    fs::create_dir_all(reg_dep.join("q")).unwrap();
+    fs::write(
+        reg_dep.join("q/SKILL.md"),
+        "---\nschema: 1\nname: q\ndescription: d\n---\n# q\n",
+    )
+    .unwrap();
+    fs::create_dir_all(reg_dep.join("bundles")).unwrap();
+    fs::write(
+        reg_dep.join("bundles/dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: d\nitems:\n  skills:\n  - q\n",
+    )
+    .unwrap();
+    let skills = e.proj.join(".agents/skills");
+    fs::create_dir_all(skills.join("bundles")).unwrap();
+    fs::write(
+        skills.join("bundles/meta.bundle.yaml"),
+        format!(
+            "schema: 1\nname: meta\ndescription: d\nitems: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
+            reg_dep.display()
+        ),
+    )
+    .unwrap();
+    run_ok(
+        &e,
+        &[
+            "add",
+            "./.agents/skills/bundles/meta.bundle.yaml",
+            "--claude",
+            "--project",
+        ],
+    );
+    fs::create_dir_all(skills.join("q/y")).unwrap();
+    fs::write(
+        skills.join("q/y/SKILL.md"),
+        "---\nschema: 1\nname: y\ndescription: d\n---\n# y\n",
+    )
+    .unwrap();
+    let before = files_under(&e.proj);
+
+    let out = run(&e, &["update", "--project", "--yes"]);
+
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    let err = stderr(&out);
+    assert!(
+        err.contains("installing would delete or overwrite the source"),
+        "{err}"
+    );
+    let cascade = format!("source `local:{}` was skipped: it requires", c.display());
+    assert!(err.contains(&cascade), "{err}");
+    assert_eq!(files_under(&e.proj), before, "update changed a file");
 }

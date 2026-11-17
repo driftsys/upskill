@@ -337,22 +337,30 @@ the source was skipped, and names the item and the skipped source that the item
 comes from. Then `update` handles the other sources, and it exits with code 1.
 Each lockfile entry of the skipped source that the run selected is counted in
 the closing summary of a terminal run, and has a status line in the item list of
-a run with `--yes` or without a terminal: `skipped — source not reachable` for a
-source that could not be fetched, and
-`skipped — requires a source that was
-skipped` for a source that requires an
-item of a skipped source. A dry run prints no per-item status line. Any other
-error in this step stops the run before any source is applied. To update only
-the reachable sources without exit code 1, name their items: `update <name>`
-does not fetch a source that the names do not select. It still fetches the
-dependency sources of the named items, so a named item whose dependency source
-cannot be fetched is still skipped, with exit code 1. After Ctrl-C during this
-step, no further source is fetched and the run exits with code 130. Then
-`update` handles the sources one at a time, sorted by source label. For each
-source it computes a preview: what applying this source now does to the files on
-disk and to the lockfile. The preview is computed just before the source is
-applied, so it includes the effect of the sources applied before it. The modes
-differ in what they do with the preview:
+a run with `--yes` or without a terminal. For a source that could not be
+fetched, the status line is:
+
+```text
+skipped — source not reachable
+```
+
+For a source that requires an item of a skipped source, the status line is:
+
+```text
+skipped — requires a source that was skipped
+```
+
+A dry run prints no per-item status line. Any other error in this step stops the
+run before any source is applied. To update only the reachable sources without
+exit code 1, name their items: `update <name>` does not fetch a source that the
+names do not select. It still fetches the dependency sources of the named items,
+so a named item whose dependency source cannot be fetched is still skipped, with
+exit code 1. After Ctrl-C during this step, no further source is fetched and the
+run exits with code 130. Then `update` handles the sources one at a time, sorted
+by source label. For each source it computes a preview: what applying this
+source now does to the files on disk and to the lockfile. The preview is
+computed just before the source is applied, so it includes the effect of the
+sources applied before it. The modes differ in what they do with the preview:
 
 | Mode                                | Behaviour                                                                                                                                                              |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

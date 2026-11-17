@@ -58,26 +58,27 @@ failed until `update --force`.
    recorded source that the run does not read: a local path that does not exist
    protects nothing, and a git source has its item directories in no directory
    on disk. Any other error in this phase stops the run before any adoption and
-   before any source is applied. The prepare phase reads the interrupt flag
-   before each source: after an interrupt it fetches no further source and the
-   run fails with exit code 130. A Ctrl-C in a terminal also reaches a running
-   `git` child process, because `git` is started without a new process group; a
-   fetch that ends with an error after an interrupt is not a fetch failure: no
-   skip is recorded and the run fails at once. The prepare phase also reads the
-   flag before it compares the prepared sources with the skipped sources, so an
-   interrupted run records no skip of a source that requires an item of a
-   skipped source. When the interrupt comes during the prepare step of the last
-   source and that step succeeds, the phase completes, and the observer of a
-   terminal run and of a `--yes` run returns a stop for the first source, after
-   the empty-source check and the adoption step of that source and before its
-   preview is shown, so no source is applied; the `--dry-run` observer reads the
-   flag only in the prepare phase, and in the preview step it prints every
-   block. The process exits with code 130 when the flag is set. Then `update`
-   handles the sources one at a time, in the same order, and computes the
-   preview of each source from its fetched content, the files on disk and the
-   lockfile. The preview and the apply come from the same planning and
-   classification code. The apply classifies the files again and does not rely
-   on the preview.
+   before any source is applied. The prepare phase reads the interrupt flag at
+   three points: before each source, after a fetch failure, and before the step
+   that compares the prepared sources with the skipped sources. At each point,
+   after an interrupt, it fetches no further source, records no further skip,
+   and the run fails with exit code 130; the skips recorded before the interrupt
+   are still reported. A Ctrl-C in a terminal also reaches a running `git` child
+   process, because `git` is started without a new process group; a fetch that
+   ends with an error after an interrupt is therefore not a fetch failure. An
+   interrupt during the prepare step of a source, also of the last source, is
+   seen at the next of these points, so the phase does not complete. Only an
+   interrupt that arrives after the check before the comparison step reaches the
+   apply phase: there, the observer of a terminal run and of a `--yes` run
+   returns a stop for the first source, after the empty-source check and the
+   adoption step of that source and before its preview is shown, so no source is
+   applied; the `--dry-run` observer does not stop in the preview step and
+   prints every block. The process exits with code 130 when the flag is set.
+   Then `update` handles the sources one at a time, in the same order, and
+   computes the preview of each source from its fetched content, the files on
+   disk and the lockfile. The preview and the apply come from the same planning
+   and classification code. The apply classifies the files again and does not
+   rely on the preview.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
    when applying the source writes or deletes a file (also a file whose bytes

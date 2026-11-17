@@ -279,7 +279,8 @@ says that it was skipped (not that it could not be fetched), and names the item
 and the skipped source that the item comes from; this repeats until no further
 source is skipped. The run then exits with code 1, also when every other source
 was applied and in a dry run. After an interrupt, the prepare step fetches no
-further source, records no skip, and the run exits with code 130. Any other
+further source and records no further skip, and the run exits with code 130; the
+lines of the sources skipped before the interrupt are still printed. Any other
 error in the prepare step stops the run before any source is applied. Then
 `update` handles the sources one at a time, sorted by source label. For each
 source it computes a preview from the fetched content, the files on disk and the

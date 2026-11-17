@@ -2952,8 +2952,9 @@ mod tests {
         assert_eq!(error_chain_text(&plain), format!("{plain:#}"));
     }
 
-    /// A plain context layer above a marker layer is kept: the layers are
-    /// removed by their marker type, not by their position.
+    /// A plain context layer above a marker layer is kept: a layer is removed
+    /// only when the error holds a marker type and the layer prints the text
+    /// of that marker type, whatever the position of the layer.
     #[test]
     fn error_chain_text_keeps_a_plain_layer_above_a_marker() {
         let err = anyhow::anyhow!("root cause")
