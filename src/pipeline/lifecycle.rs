@@ -25,9 +25,9 @@ use super::{
     EarlierLayoutFile, FetchFailed, InterruptedItem, ItemKind, ListReport, ListedBundle,
     ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry, OrphanReason,
     OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport, RemovedItem,
-    ScopedDoctor, ScopedList, SkippedBeforeFailure, SkippedPlugin, SkippedSource, SourceDecision,
-    SourcePreview, SourceResult, StaleHash, UnreadableFile, UpdateObserver, UpdateReport,
-    UpdateStatus, UpdatedItem, hash_item_dir,
+    ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure, SkippedPlugin, SkippedSource,
+    SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile, UpdateObserver,
+    UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -990,6 +990,7 @@ pub fn update(
                     }
                     report.skipped_sources.push(SkippedSource {
                         source: source_label,
+                        cause: SkipCause::Unreachable,
                         error: format!("{err:#}"),
                     });
                     continue;
@@ -1032,6 +1033,7 @@ pub fn update(
             }
             report.skipped_sources.push(SkippedSource {
                 source: source_label,
+                cause: SkipCause::RequiresSkipped,
                 error: format!(
                     "it requires {kind} `{name}` of the source `{unreachable}`, which was skipped"
                 ),
@@ -1681,6 +1683,55 @@ mod tests {
         );
         assert!(format!("{err:#}").contains("interrupted"), "{err:#}");
         assert_eq!(observer.previews, 0);
+        assert_eq!(lock_bytes(&target), lock_before);
+    }
+
+    /// An observer whose interrupt is set after its first query: the check
+    /// before the first source passes, and the interrupt is seen when the
+    /// fetch of that source has failed.
+    struct InterruptedDuringFetch {
+        queries: std::cell::Cell<usize>,
+    }
+
+    impl UpdateObserver for InterruptedDuringFetch {
+        fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
+            SourceDecision::Apply
+        }
+
+        fn applied(&mut self, _result: &SourceResult) {}
+
+        fn interrupted(&self) -> bool {
+            let n = self.queries.get();
+            self.queries.set(n + 1);
+            n > 0
+        }
+    }
+
+    /// A fetch that fails after an interrupt is not a fetch failure: no
+    /// skipped source is recorded and the run stops with the fetch error.
+    #[test]
+    fn a_fetch_failure_after_an_interrupt_records_no_skip_and_stops() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (a, b) = (tmp.path().join("a"), tmp.path().join("b"));
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&a, "x", "body");
+        skill(&b, "y", "body");
+        install(&a, &target);
+        install(&b, &target);
+        fs::remove_dir_all(&a).unwrap();
+        let lock_before = lock_bytes(&target);
+
+        let mut observer = InterruptedDuringFetch {
+            queries: std::cell::Cell::new(0),
+        };
+        let err = run(&target, &mut observer).unwrap_err();
+
+        assert!(err.downcast_ref::<FetchFailed>().is_some(), "{err:#}");
+        assert!(
+            err.downcast_ref::<SkippedBeforeFailure>().is_none(),
+            "{err:#}"
+        );
         assert_eq!(lock_bytes(&target), lock_before);
     }
 

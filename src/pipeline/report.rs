@@ -165,12 +165,27 @@ impl std::fmt::Display for SkippedBeforeFailure {
     }
 }
 
-/// A source of `update` that was skipped because it could not be fetched.
+/// Why `update` skipped a source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkipCause {
+    /// The source, or a dependency source that it requires, could not be
+    /// fetched.
+    Unreachable,
+    /// The source was fetched, but its plan writes an item that the
+    /// lockfile records from another source that was skipped.
+    RequiresSkipped,
+}
+
+/// A source of `update` that was skipped: it could not be fetched, or it
+/// requires an item of a skipped source (see [`SkipCause`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SkippedSource {
     /// The source label, as recorded in the lockfile.
     pub source: String,
-    /// The error, with its causes, joined by `: `.
+    pub cause: SkipCause,
+    /// For [`SkipCause::Unreachable`], the error with its causes, joined by
+    /// `: `; for [`SkipCause::RequiresSkipped`], the item and the skipped
+    /// source that it comes from.
     pub error: String,
 }
 
@@ -520,7 +535,8 @@ pub enum UpdateStatus {
     /// item; a [`PreviewAction::Skip`] item of such a source is reported
     /// here and does not cause exit code 1.
     NotApplied { action: PreviewAction },
-    /// The source of the item could not be fetched and was skipped (see
+    /// The source of the item was skipped: it could not be fetched, or it
+    /// requires an item of a skipped source (see
     /// [`UpdateReport::skipped_sources`]). None of its files was written, and
     /// its lockfile entry did not change, except the `files` record that the
     /// adoption of a `schema: 1` lockfile writes for every entry.

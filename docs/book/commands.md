@@ -329,10 +329,14 @@ dependency source cannot be fetched, is skipped: none of its files is written
 and its lockfile entries do not change, except the `files` record that the
 adoption of a `schema: 1` lockfile writes for every entry. A source that would
 write an item of a skipped source is skipped too. `update` prints on stderr one
-line that names the label of the skipped source and gives the cause, also when a
-later step fails and also with `--quiet`, handles the other sources, and exits
-with code 1. Each lockfile entry of the skipped source that the run selected is
-counted in the closing summary of a terminal run, and has the status line
+line per skipped source, also when a later step fails and also with `--quiet`.
+The line names the label of the source. For a source that could not be fetched
+it says that the source could not be fetched and was skipped, and gives the
+cause. For a source that requires an item of a skipped source it says only that
+the source was skipped, and names the item and the skipped source that the item
+comes from. Then `update` handles the other sources, and it exits with code 1.
+Each lockfile entry of the skipped source that the run selected is counted in
+the closing summary of a terminal run, and has the status line
 `skipped — source not reachable` in the item list of a run with `--yes` or
 without a terminal; a dry run prints no per-item status line. Any other error in
 this step stops the run before any source is applied. To update only the

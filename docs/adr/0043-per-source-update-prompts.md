@@ -51,29 +51,30 @@ failed until `update --force`.
    stderr with its label and the cause, the other sources are handled, and the
    run exits with code 1, also in a dry run. One run gives one verdict per
    source: a prepared source whose plan would write an item that the lockfile
-   records from a skipped source is skipped too, with a message that names the
-   skipped source, until no further source is dropped. A skipped source is not
-   in the prepared set, so the overlap check treats it as a recorded source that
-   the run does not read: a local path that does not exist protects nothing, and
-   a git source has its item directories in no directory on disk. Any other
-   error in this phase stops the run before any adoption and before any source
-   is applied. The prepare phase reads the interrupt flag before each source:
-   after an interrupt it fetches no further source and the run fails with exit
-   code 130. A Ctrl-C in a terminal also reaches a running `git` child process,
-   because `git` is started without a new process group; a fetch that ends with
-   an error after an interrupt is not a fetch failure: no skip is recorded and
-   the run fails at once. When the interrupt comes during the prepare step of
-   the last source and that step succeeds, the phase completes, and the observer
-   of a terminal run and of a `--yes` run returns a stop for the first source,
-   after the empty-source check and the adoption step of that source and before
-   its preview is shown, so no source is applied; the `--dry-run` observer reads
-   the flag only in the prepare phase, and in the preview step it prints every
-   block. The process exits with code 130 when the flag is set. Then `update`
-   handles the sources one at a time, in the same order, and computes the
-   preview of each source from its fetched content, the files on disk and the
-   lockfile. The preview and the apply come from the same planning and
-   classification code. The apply classifies the files again and does not rely
-   on the preview.
+   records from a skipped source is skipped too, with its own message (it was
+   skipped because it requires an item of the named skipped source, not because
+   it could not be fetched), until no further source is dropped. A skipped
+   source is not in the prepared set, so the overlap check treats it as a
+   recorded source that the run does not read: a local path that does not exist
+   protects nothing, and a git source has its item directories in no directory
+   on disk. Any other error in this phase stops the run before any adoption and
+   before any source is applied. The prepare phase reads the interrupt flag
+   before each source: after an interrupt it fetches no further source and the
+   run fails with exit code 130. A Ctrl-C in a terminal also reaches a running
+   `git` child process, because `git` is started without a new process group; a
+   fetch that ends with an error after an interrupt is not a fetch failure: no
+   skip is recorded and the run fails at once. When the interrupt comes during
+   the prepare step of the last source and that step succeeds, the phase
+   completes, and the observer of a terminal run and of a `--yes` run returns a
+   stop for the first source, after the empty-source check and the adoption step
+   of that source and before its preview is shown, so no source is applied; the
+   `--dry-run` observer reads the flag only in the prepare phase, and in the
+   preview step it prints every block. The process exits with code 130 when the
+   flag is set. Then `update` handles the sources one at a time, in the same
+   order, and computes the preview of each source from its fetched content, the
+   files on disk and the lockfile. The preview and the apply come from the same
+   planning and classification code. The apply classifies the files again and
+   does not rely on the preview.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
    when applying the source writes or deletes a file (also a file whose bytes

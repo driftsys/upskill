@@ -554,7 +554,25 @@ fn a_source_that_requires_an_item_of_a_skipped_source_is_skipped_too() {
         err.contains(&format!("of the source `{REMOTE}`, which was skipped")),
         "stderr does not name the unreachable source: {err}"
     );
-    assert!(err.contains("local-reg"), "{err}");
+    assert!(
+        err.contains(&format!(
+            "source `{REMOTE}` could not be fetched and was skipped:"
+        )),
+        "{err}"
+    );
+    // The local source was fetched: its line does not say that it could not
+    // be fetched.
+    let local_line = err
+        .lines()
+        .find(|l| l.contains("local-reg"))
+        .unwrap_or_else(|| panic!("no line for the local source: {err}"));
+    assert!(
+        local_line.contains(&format!(
+            "` was skipped: it requires skill `delta` of the source `{REMOTE}`, which was skipped"
+        )),
+        "{local_line}"
+    );
+    assert!(!local_line.contains("could not be fetched"), "{local_line}");
 }
 
 /// A missing local-path source named in `requires` of an item skips the

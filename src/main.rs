@@ -996,13 +996,20 @@ fn print_skipped(report: &UpdateReport) -> bool {
     skipped
 }
 
-/// Print to stderr one line per source of `update` that could not be
-/// fetched, with its label and the cause, also with `--quiet`. Returns true
-/// when a source was skipped; the run then exits with code 1.
+/// Print to stderr one line per source that `update` skipped, with its
+/// label and the cause, also with `--quiet`: `source `<label>` could not be
+/// fetched and was skipped: <error>` for a source that could not be
+/// fetched, and `source `<label>` was skipped: <reason>` for a source that
+/// requires an item of a skipped source. Returns true when a source was
+/// skipped; the run then exits with code 1.
 fn print_skipped_sources(report: &UpdateReport) -> bool {
     for skipped in &report.skipped_sources {
+        let what = match skipped.cause {
+            upskill::pipeline::SkipCause::Unreachable => "could not be fetched and was skipped",
+            upskill::pipeline::SkipCause::RequiresSkipped => "was skipped",
+        };
         eprintln!(
-            "{} source `{}` could not be fetched and was skipped: {}",
+            "{} source `{}` {what}: {}",
             style::error_label("error:"),
             skipped.source,
             skipped.error
@@ -2974,6 +2981,7 @@ mod tests {
         report
             .skipped_sources
             .push(upskill::pipeline::SkippedSource {
+                cause: upskill::pipeline::SkipCause::Unreachable,
                 source: "u".into(),
                 error: "e".into(),
             });
