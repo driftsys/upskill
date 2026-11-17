@@ -187,13 +187,19 @@ fn print_error(err: impl std::fmt::Display) {
 /// Like [`print_error`] but uses the `:#` formatter to print the full
 /// anyhow context chain (root cause last). The adoption context that
 /// `AdoptedBeforeFailure` adds is left out: `print_adoption_after_error`
-/// prints the adoption notice instead.
+/// prints the adoption notice instead. The context that
+/// `SkippedBeforeFailure` adds (always the outermost layer, directly above
+/// an `AdoptedBeforeFailure` layer when there is one) is left out too.
 fn print_error_chain(err: &anyhow::Error) {
-    if err
-        .downcast_ref::<upskill::pipeline::AdoptedBeforeFailure>()
-        .is_some()
-    {
-        let rest: Vec<String> = err.chain().skip(1).map(ToString::to_string).collect();
+    let markers = usize::from(
+        err.downcast_ref::<upskill::pipeline::AdoptedBeforeFailure>()
+            .is_some(),
+    ) + usize::from(
+        err.downcast_ref::<upskill::pipeline::SkippedBeforeFailure>()
+            .is_some(),
+    );
+    if markers > 0 {
+        let rest: Vec<String> = err.chain().skip(markers).map(ToString::to_string).collect();
         eprintln!("{} {}", style::error_label("error:"), rest.join(": "));
     } else {
         eprintln!("{} {err:#}", style::error_label("error:"));
@@ -1083,6 +1089,12 @@ fn run_update(args: UpdateArgs) -> i32 {
             // the source that adopted; it is not printed a second time.
             if !ask.notice_printed {
                 print_adoption_after_error(&err);
+            }
+            if let Some(skipped) = err.downcast_ref::<upskill::pipeline::SkippedBeforeFailure>() {
+                print_skipped_sources(&UpdateReport {
+                    skipped_sources: skipped.sources.clone(),
+                    ..UpdateReport::default()
+                });
             }
             print_error_chain(&err);
             print_failure_hints(&err, &at, names);

@@ -323,27 +323,26 @@ fn update_skips_a_local_path_source_whose_directory_does_not_exist() {
 #[test]
 fn update_skips_a_source_whose_dependency_source_cannot_be_fetched() {
     let e = env();
-    write_skill(
-        &e.upstream,
-        "alpha",
-        "Alpha one.",
-        &format!("requires:\n  skills: [{{ name: beta, source: {OTHER_REMOTE} }}]\n"),
-    );
+    let requires = format!("requires:\n  skills: [{{ name: beta, source: {OTHER_REMOTE} }}]\n");
+    write_skill(&e.upstream, "alpha", "Alpha one.", &requires);
     commit_all(&e, &e.upstream);
     run_ok(&e, &["add", REMOTE, "--claude", "--project"]);
-    write_skill(
-        &e.upstream,
-        "alpha",
-        "Alpha two.",
-        &format!("requires:\n  skills: [{{ name: beta, source: {OTHER_REMOTE} }}]\n"),
+    let local = e.tmp.path().join("local-reg");
+    write_skill(&local, "gamma", "Gamma one.", "");
+    run_ok(
+        &e,
+        &["add", local.to_str().unwrap(), "--claude", "--project"],
     );
+    write_skill(&e.upstream, "alpha", "Alpha two.", &requires);
     commit_all(&e, &e.upstream);
+    write_skill(&local, "gamma", "Gamma two.", "");
     fs::rename(&e.other, e.tmp.path().join("other-moved")).unwrap();
-    let before = files_under(&e.proj);
+    let alpha_before = fs::read(skill_file(&e, "alpha")).unwrap();
+    let alpha_lock_before = lock_item(&e, "alpha");
 
-    // Only the source of `alpha` is selected; its dependency source cannot
-    // be fetched.
-    let out = run(&e, &["update", "alpha", "--project", "--yes"]);
+    // The source of `alpha` is selected; its dependency source cannot be
+    // fetched. The source of `gamma` is selected too and must be applied.
+    let out = run(&e, &["update", "alpha", "gamma", "--project", "--yes"]);
 
     assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
     let err = stderr(&out);
@@ -355,7 +354,91 @@ fn update_skips_a_source_whose_dependency_source_cannot_be_fetched() {
         err.contains(&format!("fetch requires source `{OTHER_REMOTE}`")),
         "stderr does not name the dependency source: {err}"
     );
+    assert_eq!(fs::read(skill_file(&e, "alpha")).unwrap(), alpha_before);
+    assert_eq!(lock_item(&e, "alpha"), alpha_lock_before);
+    let gamma = fs::read_to_string(skill_file(&e, "gamma")).unwrap();
+    assert!(
+        gamma.contains("Gamma two."),
+        "the run did not continue: {gamma}"
+    );
+}
+
+/// A source is skipped, and a later source fails a check that is not a
+/// fetch: the error path still reports the skipped source.
+#[test]
+fn update_reports_a_skipped_source_when_a_later_source_fails() {
+    let e = env();
+    run_ok(&e, &["add", REMOTE, "--claude", "--project"]);
+    let local = e.tmp.path().join("local-reg");
+    write_skill(&local, "gamma", "Gamma one.", "");
+    run_ok(
+        &e,
+        &["add", local.to_str().unwrap(), "--claude", "--project"],
+    );
+    // The git label sorts before the `local:` label, so it is prepared first.
+    fs::rename(&e.upstream, e.tmp.path().join("upstream-moved")).unwrap();
+    // The local directory still exists, but no longer holds `gamma`.
+    fs::remove_dir_all(local.join("skills")).unwrap();
+    let before = files_under(&e.proj);
+
+    let out = run(&e, &["update", "--project", "--yes"]);
+
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    let err = stderr(&out);
+    assert!(
+        err.contains(&format!("source `{REMOTE}` could not be fetched")),
+        "stderr lacks the skipped source: {err}"
+    );
+    assert!(err.contains("gamma"), "stderr lacks the later error: {err}");
+    assert!(
+        !err.contains("sources were skipped before this error"),
+        "the marker text leaked: {err}"
+    );
     assert_eq!(files_under(&e.proj), before, "update changed a file");
+}
+
+/// Rewrite the lockfile as schema 1 without `files` records.
+fn downgrade_to_schema_1(e: &Env) {
+    let path = e.proj.join(".upskill-lock.json");
+    let mut lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    lock["schema"] = 1.into();
+    for entry in lock["items"].as_array_mut().unwrap() {
+        let entry = entry.as_object_mut().unwrap();
+        entry.remove("files");
+        entry.remove("pending");
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+}
+
+/// The adoption of a `schema: 1` lockfile covers the whole lockfile: the
+/// entry of a skipped source gets its `files` record from the files on
+/// disk, as built. No other field of that entry changes, and its files are
+/// not written.
+#[test]
+fn a_schema_1_adoption_with_a_skipped_source_records_its_files_only() {
+    let e = stage_two_sources_one_unreachable();
+    downgrade_to_schema_1(&e);
+    let beta_before = fs::read(skill_file(&e, "beta")).unwrap();
+    let mut beta_lock_before = lock_item(&e, "beta");
+
+    let out = run(&e, &["update", "--project", "--yes"]);
+
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    assert!(stderr(&out).contains(OTHER_REMOTE), "{}", stderr(&out));
+    assert_eq!(lock(&e)["schema"], 2);
+    let alpha = fs::read_to_string(skill_file(&e, "alpha")).unwrap();
+    assert!(alpha.contains("Alpha two."), "{alpha}");
+    assert_eq!(fs::read(skill_file(&e, "beta")).unwrap(), beta_before);
+    let mut beta_lock = lock_item(&e, "beta");
+    let files = beta_lock.as_object_mut().unwrap().remove("files");
+    assert!(
+        files.is_some_and(|f| f.to_string().contains(".claude/skills/beta/SKILL.md")),
+        "the adoption did not record the files of the skipped source"
+    );
+    beta_lock.as_object_mut().unwrap().remove("pending");
+    beta_lock_before.as_object_mut().unwrap().remove("pending");
+    assert_eq!(beta_lock, beta_lock_before);
 }
 
 /// The layout of issue #547 (see `tests/cli_update_source_overlap.rs`), with

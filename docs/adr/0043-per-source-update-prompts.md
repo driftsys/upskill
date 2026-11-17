@@ -104,9 +104,12 @@ failed until `update --force`.
    preview changes nothing, so its plugin and MCP steps run. `--dry-run` prints
    the same blocks and applies nothing.
 6. **A `schema: 1` lockfile is adopted once per run, without a question**, after
-   every source passed the checks of the prepare phase, for the first source
-   that also passes the empty-source check, before the preview of that source is
-   computed.
+   every source that was not skipped because it could not be fetched passed the
+   checks of the prepare phase, for the first such source that also passes the
+   empty-source check, before the preview of that source is computed. The
+   adoption covers the whole lockfile: an entry of a skipped source gets the
+   `files` record of its files on disk, and no other field of that entry
+   changes. When every source is skipped, nothing is adopted.
 
 ## Consequences
 

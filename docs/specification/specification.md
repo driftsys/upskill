@@ -367,9 +367,15 @@ difference in the other permission bits is not a change. A `skip` item and a
   the effect of applying an earlier source.
 
 A `schema: 1` lockfile is adopted once per run, without a question, after every
-source passed the checks of the prepare step, for the first source that also
-resolves to items (§4); in a terminal the adoption notice is printed before the
-block of that source. The adoption stays when the run fails or is stopped.
+source that was not skipped because it could not be fetched passed the checks of
+the prepare step, for the first such source that also resolves to items (§4); in
+a terminal the adoption notice is printed before the block of that source. The
+adoption stays when the run fails or is stopped. The adoption covers the whole
+lockfile: an entry of a skipped source gets the `files` record of its files on
+disk; no other field of that entry changes and none of its files is written.
+When every source is skipped, nothing is adopted. When a later step fails after
+a source was skipped, the line of the skipped source is still printed, before
+the error.
 
 Known limits: the plugin and MCP steps of a bundle source run when the source is
 applied, are not part of the preview and are not a reason to ask, so a terminal

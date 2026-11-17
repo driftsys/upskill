@@ -25,9 +25,9 @@ use super::{
     EarlierLayoutFile, FetchFailed, InterruptedItem, ItemKind, ListReport, ListedBundle,
     ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry, OrphanReason,
     OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport, RemovedItem,
-    ScopedDoctor, ScopedList, SkippedPlugin, SkippedSource, SourceDecision, SourcePreview,
-    SourceResult, StaleHash, UnreadableFile, UpdateObserver, UpdateReport, UpdateStatus,
-    UpdatedItem, hash_item_dir,
+    ScopedDoctor, ScopedList, SkippedBeforeFailure, SkippedPlugin, SkippedSource, SourceDecision,
+    SourcePreview, SourceResult, StaleHash, UnreadableFile, UpdateObserver, UpdateReport,
+    UpdateStatus, UpdatedItem, hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -836,7 +836,9 @@ fn reselect_from_entries(
 /// unchanged files at the old paths are deleted through the ownership record.
 ///
 /// An error after an adoption carries the adopted paths as
-/// [`AdoptedBeforeFailure`]. An error while one source is applied leaves the
+/// [`AdoptedBeforeFailure`]. An error after a source was skipped carries the
+/// skipped sources as [`SkippedBeforeFailure`], as the outermost context
+/// layer. An error while one source is applied leaves the
 /// sources applied before it applied.
 pub fn update(
     at: &crate::scope::ScopeRoot,
@@ -1283,7 +1285,7 @@ pub fn update(
     report.kept_modified.sort();
     report.kept_modified.dedup();
     if let Err(err) = result {
-        return Err(match &report.adopted {
+        let err = match &report.adopted {
             Some(paths)
                 if !paths.is_empty() && err.downcast_ref::<AdoptedBeforeFailure>().is_none() =>
             {
@@ -1292,6 +1294,14 @@ pub fn update(
                 })
             }
             _ => err,
+        };
+        // The skipped sources are reported also when a later step fails.
+        return Err(if report.skipped_sources.is_empty() {
+            err
+        } else {
+            err.context(SkippedBeforeFailure {
+                sources: report.skipped_sources.clone(),
+            })
         });
     }
 

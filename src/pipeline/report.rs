@@ -151,6 +151,20 @@ impl std::fmt::Display for FetchFailed {
 
 impl std::error::Error for FetchFailed {}
 
+/// Error context attached, as the outermost layer, when `update` fails after
+/// it skipped sources that could not be fetched, so that `main.rs` can print
+/// the skip lines on the error path too.
+#[derive(Debug, Clone)]
+pub struct SkippedBeforeFailure {
+    pub sources: Vec<SkippedSource>,
+}
+
+impl std::fmt::Display for SkippedBeforeFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "sources were skipped before this error")
+    }
+}
+
 /// A source of `update` that was skipped because it could not be fetched.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SkippedSource {
