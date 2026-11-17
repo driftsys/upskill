@@ -1072,6 +1072,9 @@ Delivered by pull request #331, merge commit
 separate spec; it names the
 [Gate 6 activation design](specs/2026-10-18-gate6-activation-design.md).
 
-The plan describes code under `src/lifecycle/`. That directory does not exist on
-`main` at commit `799c42d`. The plan has no durable successor: it is kept for
-provenance only.
+The plan describes code under `src/lifecycle/`. Pull request #466 (commit
+`2a4b29e`) later removed that directory, so the code that #331 delivered is not
+in the current tree. The
+[re-steer entry](#customization-re-steer-withdrawn-lifecycle-working-documents)
+and [AD-0042](../adr/0042-resteer-customization-delivery.md) record that
+removal. The plan has no durable successor: it is kept for provenance only.
