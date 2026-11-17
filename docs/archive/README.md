@@ -1058,3 +1058,20 @@ the [command guide](../book/commands.md),
 [T1](../technotes/t1-copilot-duplicate-visibility.md) and
 [T2](../technotes/t2-session-notice-display.md). The design's section 7 (parking
 unused code) is recorded in AD-0042 Decision 5.
+
+## Gate 6 complete preflight and conflict reporting
+
+Source path: `docs/wip/plans/2026-10-18-gate6-complete-preflight.md`. The file
+was never committed under `docs/wip/`; it was an untracked file in the worktree
+of the branch `docs/gate6-activation-plan`. The raw
+[plan](plans/2026-10-18-gate6-complete-preflight.md) is retained unchanged. Its
+SHA-256 is `05ad05dbb8696a3b420d3d5f57cee270a4481c2fcbba47277fbc321e716f3c0a`.
+
+Delivered by pull request #331, merge commit
+`4d26d640919469febd56b6b6783bbfbbed12dd5b`, on 2026-10-19. The plan has no
+separate spec; it names the
+[Gate 6 activation design](specs/2026-10-18-gate6-activation-design.md).
+
+The plan describes code under `src/lifecycle/`. That directory does not exist on
+`main` at commit `799c42d`. The plan has no durable successor: it is kept for
+provenance only.
