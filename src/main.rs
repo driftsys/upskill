@@ -1586,9 +1586,10 @@ fn render_result(result: &SourceResult) -> String {
 /// The closing summary of a terminal run: the items updated, completed or
 /// removed out of the items considered, and the sources applied out of the
 /// sources considered, then ` <k> source(s) not applied.` when a source with
-/// changes was not applied, then ` <u> source(s) not reachable.` when a
-/// source could not be fetched, then ` Stopped; <r> source(s) not examined.`
-/// (or ` Stopped.` when no source remained) after `q` or end of input.
+/// changes was not applied, then ` <u> source(s) skipped.` when a source
+/// was skipped (for either [`upskill::pipeline::SkipCause`]), then
+/// ` Stopped; <r> source(s) not examined.` (or ` Stopped.` when no source
+/// remained) after `q` or end of input.
 fn closing_summary(report: &UpdateReport) -> String {
     let changed = report
         .items
@@ -1616,7 +1617,7 @@ fn closing_summary(report: &UpdateReport) -> String {
     }
     if !report.skipped_sources.is_empty() {
         line.push_str(&format!(
-            " {} source(s) not reachable.",
+            " {} source(s) skipped.",
             report.skipped_sources.len()
         ));
     }
@@ -1727,7 +1728,7 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
                 UpdateStatus::UpToDate
                     | UpdateStatus::SkippedModified { .. }
                     | UpdateStatus::NotApplied { .. }
-                    | UpdateStatus::SkippedUnreachable
+                    | UpdateStatus::SourceSkipped { .. }
             )
         })
         .count();
@@ -1772,7 +1773,12 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
                 style::warn("skipped — modified or unmanaged files kept")
             }
             UpdateStatus::NotApplied { .. } => style::dim("not applied"),
-            UpdateStatus::SkippedUnreachable => style::warn("skipped — source not reachable"),
+            UpdateStatus::SourceSkipped {
+                cause: upskill::pipeline::SkipCause::Unreachable,
+            } => style::warn("skipped — source not reachable"),
+            UpdateStatus::SourceSkipped {
+                cause: upskill::pipeline::SkipCause::RequiresSkipped,
+            } => style::warn("skipped — requires a source that was skipped"),
         };
         println!(
             "  {} {:<32} {}",
@@ -2946,6 +2952,38 @@ mod tests {
         assert_eq!(error_chain_text(&plain), format!("{plain:#}"));
     }
 
+    /// A plain context layer above a marker layer is kept: the layers are
+    /// removed by their marker type, not by their position.
+    #[test]
+    fn error_chain_text_keeps_a_plain_layer_above_a_marker() {
+        let err = anyhow::anyhow!("root cause")
+            .context(upskill::pipeline::AdoptedBeforeFailure {
+                paths: vec!["a".into()],
+            })
+            .context("plain step");
+        assert_eq!(error_chain_text(&err), "plain step: root cause");
+    }
+
+    /// The prepare phase of `update` reads `interrupted()` of each observer,
+    /// which follows the flag that the signal handler sets. The flag is
+    /// global, so the three observers are checked in one test and the flag
+    /// is cleared again.
+    #[test]
+    fn every_update_observer_reports_the_interrupt_flag() {
+        let observers: [&dyn UpdateObserver; 3] = [
+            &ApplyAll,
+            &DryRunObserver::default(),
+            &TerminalObserver::default(),
+        ];
+        for observer in observers {
+            assert!(!observer.interrupted());
+        }
+        INTERRUPTED.store(true, Ordering::SeqCst);
+        let after: Vec<bool> = observers.iter().map(|o| o.interrupted()).collect();
+        INTERRUPTED.store(false, Ordering::SeqCst);
+        assert_eq!(after, vec![true, true, true]);
+    }
+
     #[test]
     fn closing_summary_counts_items_and_sources() {
         let mut report = UpdateReport {
@@ -2988,7 +3026,7 @@ mod tests {
         assert_eq!(
             closing_summary(&report),
             "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
-             1 source(s) not reachable."
+             1 source(s) skipped."
         );
         report.skipped_sources.clear();
         report.stopped = true;

@@ -63,18 +63,21 @@ failed until `update --force`.
    run fails with exit code 130. A Ctrl-C in a terminal also reaches a running
    `git` child process, because `git` is started without a new process group; a
    fetch that ends with an error after an interrupt is not a fetch failure: no
-   skip is recorded and the run fails at once. When the interrupt comes during
-   the prepare step of the last source and that step succeeds, the phase
-   completes, and the observer of a terminal run and of a `--yes` run returns a
-   stop for the first source, after the empty-source check and the adoption step
-   of that source and before its preview is shown, so no source is applied; the
-   `--dry-run` observer reads the flag only in the prepare phase, and in the
-   preview step it prints every block. The process exits with code 130 when the
-   flag is set. Then `update` handles the sources one at a time, in the same
-   order, and computes the preview of each source from its fetched content, the
-   files on disk and the lockfile. The preview and the apply come from the same
-   planning and classification code. The apply classifies the files again and
-   does not rely on the preview.
+   skip is recorded and the run fails at once. The prepare phase also reads the
+   flag before it compares the prepared sources with the skipped sources, so an
+   interrupted run records no skip of a source that requires an item of a
+   skipped source. When the interrupt comes during the prepare step of the last
+   source and that step succeeds, the phase completes, and the observer of a
+   terminal run and of a `--yes` run returns a stop for the first source, after
+   the empty-source check and the adoption step of that source and before its
+   preview is shown, so no source is applied; the `--dry-run` observer reads the
+   flag only in the prepare phase, and in the preview step it prints every
+   block. The process exits with code 130 when the flag is set. Then `update`
+   handles the sources one at a time, in the same order, and computes the
+   preview of each source from its fetched content, the files on disk and the
+   lockfile. The preview and the apply come from the same planning and
+   classification code. The apply classifies the files again and does not rely
+   on the preview.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
    when applying the source writes or deletes a file (also a file whose bytes
@@ -111,12 +114,13 @@ failed until `update --force`.
    preview changes nothing, so its plugin and MCP steps run. `--dry-run` prints
    the same blocks and applies nothing.
 6. **A `schema: 1` lockfile is adopted once per run, without a question**, after
-   every source that was not skipped because it could not be fetched passed the
-   checks of the prepare phase, for the first such source that also passes the
-   empty-source check, before the preview of that source is computed. The
-   adoption covers the whole lockfile: an entry of a skipped source gets the
-   `files` record of its files on disk, and no other field of that entry
-   changes. When every source is skipped, nothing is adopted.
+   every source that was not skipped (because it could not be fetched, or
+   because it requires an item of a skipped source) passed the checks of the
+   prepare phase, for the first such source that also passes the empty-source
+   check, before the preview of that source is computed. The adoption covers the
+   whole lockfile: an entry of a skipped source gets the `files` record of its
+   files on disk, and no other field of that entry changes. When every source is
+   skipped, nothing is adopted.
 
 ## Consequences
 
@@ -158,7 +162,8 @@ failed until `update --force`.
   answer, end of input or a read error at the question, an interrupt, or an
   error in the apply phase of a later source. An error in the prepare phase,
   other than a source that cannot be fetched, applies no source; a source that
-  cannot be fetched is skipped and the other sources are applied.
+  cannot be fetched, and a source that requires an item of such a source, are
+  skipped and the other sources are applied.
 
 ## Alternatives considered
 

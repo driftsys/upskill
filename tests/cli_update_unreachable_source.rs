@@ -1,9 +1,15 @@
-//! ATDD tests for a source that `upskill update` cannot fetch (issue #551).
+//! ATDD tests for the sources that `upskill update` skips (issue #551).
 //!
 //! `update` skips a source whose content cannot be obtained (a git clone
-//! that fails, or a local path that does not exist), reports it on stderr
-//! with its label and the cause, applies the other sources, and exits 1.
-//! Every other prepare error still stops the run before the first write.
+//! that fails, or a local path that does not exist, of the source or of a
+//! dependency source that it requires), and then every source whose plan
+//! writes an item that the lockfile records from a skipped source, repeated
+//! until no further source is skipped. It reports each skipped source on
+//! stderr with its label and the cause (also on the error path of a later
+//! step), applies the other sources, and exits 1, in every mode. Every other
+//! prepare error still stops the run before the first write. The tests also
+//! pin the status lines, the closing summary, the `schema: 1` adoption with
+//! a skipped source, and that `update <name>` fetches no unselected source.
 
 mod common;
 
@@ -734,7 +740,7 @@ fn a_terminal_run_reports_the_skipped_source() {
         "{stderr}"
     );
     assert!(
-        stdout.contains("Updated 1 of 2 item(s) from 1 of 1 source(s). 1 source(s) not reachable."),
+        stdout.contains("Updated 1 of 2 item(s) from 1 of 1 source(s). 1 source(s) skipped."),
         "{stdout}"
     );
     assert!(!stdout.contains("everything is up to date"), "{stdout}");
@@ -748,5 +754,190 @@ fn a_terminal_run_reports_the_skipped_source() {
     assert_eq!(result["returncode"], 1, "{result}");
     let stdout = result["stdout"].as_str().unwrap();
     assert!(!stdout.contains("everything is up to date"), "{stdout}");
-    assert!(stdout.contains("2 source(s) not reachable."), "{stdout}");
+    assert!(stdout.contains("2 source(s) skipped."), "{stdout}");
+}
+
+/// The cascade layout. `REMOTE` holds `alpha` (requires `beta` of
+/// `OTHER_REMOTE`) and the skill `delta`. `c-reg` holds `charlie` (requires
+/// the skill `delta` of `REMOTE`). `d-reg` holds `dave` (requires `charlie`
+/// of `c-reg`). `e-reg` holds the rule `delta`, which shares its name with
+/// the skill `delta`. Everything changes upstream, then `OTHER_REMOTE` moves
+/// away: `OTHER_REMOTE` and `REMOTE` cannot be fetched, `c-reg` and then
+/// `d-reg` are skipped because they require an item of a skipped source,
+/// and only `e-reg` is applied. Returns the environment and the three local
+/// directories.
+fn stage_cascade() -> (Env, PathBuf, PathBuf, PathBuf) {
+    let e = env();
+    let requires_beta =
+        format!("requires:\n  skills: [{{ name: beta, source: {OTHER_REMOTE} }}]\n");
+    write_skill(&e.upstream, "alpha", "Alpha one.", &requires_beta);
+    write_skill(&e.upstream, "delta", "Delta one.", "");
+    commit_all(&e, &e.upstream);
+    let c = e.tmp.path().join("c-reg");
+    let requires_delta = format!("requires:\n  skills: [{{ name: delta, source: {REMOTE} }}]\n");
+    write_skill(&c, "charlie", "Charlie one.", &requires_delta);
+    let d = e.tmp.path().join("d-reg");
+    let requires_charlie = format!(
+        "requires:\n  skills: [{{ name: charlie, source: {} }}]\n",
+        c.display()
+    );
+    write_skill(&d, "dave", "Dave one.", &requires_charlie);
+    let r = e.tmp.path().join("e-reg");
+    let write_rule = |body: &str| {
+        let path = r.join("rules/delta/RULE.md");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(
+            path,
+            format!("---\nschema: 1\nname: delta\ndescription: d\n---\n\n{body}\n"),
+        )
+        .unwrap();
+    };
+    write_rule("Rule one.");
+    run_ok(&e, &["add", REMOTE, "--claude", "--project"]);
+    for dir in [&c, &d, &r] {
+        run_ok(&e, &["add", dir.to_str().unwrap(), "--claude", "--project"]);
+    }
+    write_skill(&e.upstream, "delta", "Delta two.", "");
+    commit_all(&e, &e.upstream);
+    write_skill(&c, "charlie", "Charlie two.", &requires_delta);
+    write_skill(&d, "dave", "Dave two.", &requires_charlie);
+    write_rule("Rule two.");
+    fs::rename(&e.other, e.tmp.path().join("other-moved")).unwrap();
+    (e, c, d, r)
+}
+
+/// The installed files of every skill of the cascade layout.
+fn cascade_skill_files(e: &Env) -> Vec<Vec<u8>> {
+    ["alpha", "beta", "charlie", "dave", "delta"]
+        .iter()
+        .map(|n| fs::read(skill_file(e, n)).unwrap())
+        .collect()
+}
+
+/// The installed rule `delta`, whatever its file name for Claude.
+fn rule_text(e: &Env) -> String {
+    let mut out = String::new();
+    for (path, bytes) in files_under(&e.proj) {
+        let p = path.to_string_lossy().to_string();
+        if p.contains(".claude/rules") && p.contains("delta") {
+            out.push_str(&String::from_utf8(bytes).unwrap());
+        }
+    }
+    out
+}
+
+#[test]
+fn a_cascade_two_levels_deep_skips_every_dependent_source() {
+    let (e, c, d, _r) = stage_cascade();
+    let skills_before = cascade_skill_files(&e);
+    let charlie_lock = lock_item(&e, "charlie");
+    let dave_lock = lock_item(&e, "dave");
+
+    let out = run(&e, &["update", "--project", "--yes"]);
+
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    // Two levels: `c-reg` requires an item of `REMOTE`, and `d-reg` requires
+    // an item of `c-reg`, which is known only after the first drop.
+    assert_eq!(
+        cascade_skill_files(&e),
+        skills_before,
+        "a skipped item was written"
+    );
+    assert_eq!(lock_item(&e, "charlie"), charlie_lock);
+    assert_eq!(lock_item(&e, "dave"), dave_lock);
+    let err = stderr(&out);
+    for (dir, item, from) in [
+        (&c, "delta", REMOTE.to_string()),
+        (&d, "charlie", format!("{}", c.display())),
+    ] {
+        let line = err
+            .lines()
+            .find(|l| l.contains(&format!("source `local:{}` was skipped", dir.display())))
+            .unwrap_or_else(|| panic!("no cascade line for {}: {err}", dir.display()));
+        assert!(
+            line.contains(&format!("it requires skill `{item}` of the source `")),
+            "{line}"
+        );
+        assert!(line.contains(&from), "{line}");
+    }
+    // The rule `delta` shares its name with the skill `delta` of the skipped
+    // source `REMOTE`, but it is another item: its source is applied.
+    assert!(
+        rule_text(&e).contains("Rule two."),
+        "the rule source was not applied"
+    );
+    // Item lines and the item count.
+    let stdout = String::from_utf8(out.stdout.clone()).unwrap();
+    assert!(stdout.contains("Updated 1 of 6 item(s)"), "{stdout}");
+    for (name, status) in [
+        ("charlie", "skipped — requires a source that was skipped"),
+        ("dave", "skipped — requires a source that was skipped"),
+        ("alpha", "skipped — source not reachable"),
+        ("beta", "skipped — source not reachable"),
+    ] {
+        let line = stdout
+            .lines()
+            .find(|l| l.contains(&format!(" {name} ")))
+            .unwrap_or_else(|| panic!("no line for {name}: {stdout}"));
+        assert!(line.contains(status), "{line}");
+    }
+}
+
+#[test]
+fn a_cascade_under_dry_run_writes_nothing_and_exits_1() {
+    let (e, c, _d, _r) = stage_cascade();
+    let before = files_under(&e.proj);
+
+    let out = run(&e, &["update", "--project", "--dry-run"]);
+
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains(&format!("source `local:{}` was skipped", c.display())),
+        "{}",
+        stderr(&out)
+    );
+    assert_eq!(files_under(&e.proj), before, "a dry run changed a file");
+}
+
+/// A terminal run with a cascade: the summary counts every skipped source as
+/// skipped, and `q` at the only prepared source stops with no source left
+/// (the count of sources is taken after the cascade).
+#[cfg(unix)]
+#[test]
+fn a_terminal_run_with_a_cascade_counts_the_sources_after_the_cascade() {
+    let (e, _c, _d, _r) = stage_cascade();
+    let env = [
+        ("GIT_CONFIG_NOSYSTEM", "1".to_string()),
+        (
+            "GIT_CONFIG_GLOBAL",
+            e.home.join("empty-gitconfig").display().to_string(),
+        ),
+        ("GIT_CONFIG_COUNT", "3".to_string()),
+        (
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", e.upstream.display()),
+        ),
+        ("GIT_CONFIG_VALUE_0", format!("{REMOTE}.git")),
+        (
+            "GIT_CONFIG_KEY_1",
+            format!("url.file://{}.insteadOf", e.other.display()),
+        ),
+        ("GIT_CONFIG_VALUE_1", format!("{OTHER_REMOTE}.git")),
+        ("GIT_CONFIG_KEY_2", "protocol.file.allow".to_string()),
+        ("GIT_CONFIG_VALUE_2", "always".to_string()),
+        ("GIT_ALLOW_PROTOCOL", "file".to_string()),
+        ("GIT_TERMINAL_PROMPT", "0".to_string()),
+    ];
+
+    let result = common::update_in_terminal_with_env(&e.proj, &e.home, &["--project"], "q\n", &env);
+
+    assert_eq!(result["returncode"], 1, "{result}");
+    let stdout = result["stdout"].as_str().unwrap();
+    assert!(
+        stdout.contains(
+            "from 0 of 1 source(s). 1 source(s) not applied. 4 source(s) skipped. Stopped."
+        ),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("not examined"), "{stdout}");
 }

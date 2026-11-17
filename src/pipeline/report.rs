@@ -152,7 +152,7 @@ impl std::fmt::Display for FetchFailed {
 impl std::error::Error for FetchFailed {}
 
 /// Error context attached, as the outermost layer, when `update` fails after
-/// it skipped sources that could not be fetched, so that `main.rs` can print
+/// it skipped sources (for either [`SkipCause`]), so that `main.rs` can print
 /// the skip lines on the error path too.
 #[derive(Debug, Clone)]
 pub struct SkippedBeforeFailure {
@@ -535,12 +535,12 @@ pub enum UpdateStatus {
     /// item; a [`PreviewAction::Skip`] item of such a source is reported
     /// here and does not cause exit code 1.
     NotApplied { action: PreviewAction },
-    /// The source of the item was skipped: it could not be fetched, or it
-    /// requires an item of a skipped source (see
+    /// The source of the item was skipped; `cause` says why: it could not be
+    /// fetched, or it requires an item of a skipped source (see
     /// [`UpdateReport::skipped_sources`]). None of its files was written, and
     /// its lockfile entry did not change, except the `files` record that the
     /// adoption of a `schema: 1` lockfile writes for every entry.
-    SkippedUnreachable,
+    SourceSkipped { cause: SkipCause },
 }
 
 #[derive(Debug, Clone)]
@@ -587,7 +587,7 @@ pub struct UpdateReport {
     /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the
     /// run did not stop.
     pub sources_remaining: usize,
-    /// Sources that could not be fetched and were skipped. They were not
+    /// Sources that were skipped, with their [`SkipCause`]. They were not
     /// previewed and are not counted in [`UpdateReport::sources_considered`].
     pub skipped_sources: Vec<SkippedSource>,
 }

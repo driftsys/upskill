@@ -754,7 +754,7 @@ fn reselect_from_entries(
 /// written, its lockfile entries do not change except the `files` record
 /// that the whole-lockfile adoption of a `schema: 1` lockfile writes, it is
 /// in [`UpdateReport::skipped_sources`], and each of its selected entries is
-/// reported as [`UpdateStatus::SkippedUnreachable`]. A prepared source whose
+/// reported as [`UpdateStatus::SourceSkipped`] with its [`SkipCause`]. A prepared source whose
 /// plan writes an item that the lockfile records from a skipped source is
 /// skipped too, until no further source is dropped. After
 /// [`UpdateObserver::interrupted`] is true, no further source is fetched,
@@ -985,7 +985,9 @@ pub fn update(
                             kind: entry.kind,
                             name: entry.name.clone(),
                             source: source_label.clone(),
-                            status: UpdateStatus::SkippedUnreachable,
+                            status: UpdateStatus::SourceSkipped {
+                                cause: SkipCause::Unreachable,
+                            },
                         });
                     }
                     report.skipped_sources.push(SkippedSource {
@@ -1003,7 +1005,12 @@ pub fn update(
         // that the lockfile records from a skipped source is skipped too, so
         // that no item of a skipped source is written. Repeated until no
         // source is dropped, so that the order of the sources does not
-        // matter.
+        // matter. An interrupted run records no such skip.
+        if observer.interrupted() {
+            anyhow::bail!(
+                "interrupted before the sources were checked against the skipped sources"
+            );
+        }
         loop {
             let skipped_items: std::collections::BTreeMap<(ItemKind, String), String> = lock
                 .items
@@ -1028,7 +1035,9 @@ pub fn update(
                     kind: entry.kind,
                     name: entry.name.clone(),
                     source: source_label.clone(),
-                    status: UpdateStatus::SkippedUnreachable,
+                    status: UpdateStatus::SourceSkipped {
+                        cause: SkipCause::RequiresSkipped,
+                    },
                 });
             }
             report.skipped_sources.push(SkippedSource {
@@ -1317,7 +1326,7 @@ pub fn update(
                     UpdateStatus::SkippedModified { .. } => result.skipped += 1,
                     UpdateStatus::UpToDate
                     | UpdateStatus::NotApplied { .. }
-                    | UpdateStatus::SkippedUnreachable => {}
+                    | UpdateStatus::SourceSkipped { .. } => {}
                 }
             }
             observer.applied(&result);
@@ -1733,6 +1742,130 @@ mod tests {
             "{err:#}"
         );
         assert_eq!(lock_bytes(&target), lock_before);
+    }
+
+    /// An observer whose interrupt is set from query `at` on, and that
+    /// counts its queries.
+    struct InterruptedAt {
+        at: usize,
+        queries: std::cell::Cell<usize>,
+    }
+
+    impl UpdateObserver for InterruptedAt {
+        fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
+            SourceDecision::Skip
+        }
+
+        fn applied(&mut self, _result: &SourceResult) {}
+
+        fn interrupted(&self) -> bool {
+            let n = self.queries.get();
+            self.queries.set(n + 1);
+            n >= self.at
+        }
+    }
+
+    /// An interrupt after the first source was prepared: the second source
+    /// is not fetched.
+    #[test]
+    fn an_interrupt_after_the_first_source_fetches_no_further_source() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (a, b) = (tmp.path().join("a"), tmp.path().join("b"));
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&a, "x", "body");
+        skill(&b, "y", "body");
+        install(&a, &target);
+        install(&b, &target);
+
+        let mut observer = InterruptedAt {
+            at: 1,
+            queries: std::cell::Cell::new(0),
+        };
+        let err = run(&target, &mut observer).unwrap_err();
+
+        let label = InstallSource::LocalPath(b.clone()).to_string();
+        assert_eq!(
+            format!("{err:#}"),
+            format!("interrupted before the source `{label}` was fetched")
+        );
+    }
+
+    /// The cascade layout with local paths: `a` holds `x` (requires `y` of
+    /// the missing directory `m`) and `z`; `c` holds `w` (requires `z` of
+    /// `a`). `m` and `a` cannot be fetched, and `c` requires an item of the
+    /// skipped `a`.
+    fn stage_local_cascade(tmp: &Path) -> PathBuf {
+        let (a, c, m) = (tmp.join("a"), tmp.join("c"), tmp.join("m"));
+        let target = tmp.join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&m, "y", "body");
+        write(
+            &a,
+            "x/SKILL.md",
+            format!(
+                "---\nschema: 1\nname: x\ndescription: test x\nrequires:\n  skills: [{{ name: y, source: {} }}]\n---\nbody\n",
+                m.display()
+            )
+            .as_bytes(),
+        );
+        skill(&a, "z", "body");
+        write(
+            &c,
+            "w/SKILL.md",
+            format!(
+                "---\nschema: 1\nname: w\ndescription: test w\nrequires:\n  skills: [{{ name: z, source: {} }}]\n---\nbody\n",
+                a.display()
+            )
+            .as_bytes(),
+        );
+        install(&a, &target);
+        install(&c, &target);
+        fs::remove_dir_all(&m).unwrap();
+        target
+    }
+
+    /// Without an interrupt the local cascade layout skips `c` for its
+    /// requirement; with an interrupt at the cascade check, no such skip is
+    /// recorded.
+    #[test]
+    fn an_interrupt_before_the_cascade_records_no_cascade_skip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = stage_local_cascade(tmp.path());
+
+        // Count the queries of a run without an interrupt; the last one is
+        // the check before the cascade.
+        let mut counting = InterruptedAt {
+            at: usize::MAX,
+            queries: std::cell::Cell::new(0),
+        };
+        let report = run(&target, &mut counting).unwrap();
+        assert!(
+            report
+                .skipped_sources
+                .iter()
+                .any(|s| s.cause == SkipCause::RequiresSkipped),
+            "{:?}",
+            report.skipped_sources
+        );
+        let last = counting.queries.get() - 1;
+
+        let mut observer = InterruptedAt {
+            at: last,
+            queries: std::cell::Cell::new(0),
+        };
+        let err = run(&target, &mut observer).unwrap_err();
+        assert!(format!("{err:#}").contains("interrupted"), "{err:#}");
+        let skipped = err
+            .downcast_ref::<SkippedBeforeFailure>()
+            .map(|s| s.sources.clone())
+            .unwrap_or_default();
+        assert!(
+            skipped
+                .iter()
+                .all(|s| s.cause != SkipCause::RequiresSkipped),
+            "{skipped:?}"
+        );
     }
 
     /// #504: a source whose preview changes nothing and that is not applied
