@@ -162,14 +162,12 @@ pub fn fetch_ssot(source: &InstallSource) -> Result<FetchedSource> {
 /// "fetch requires source `<label>`: source path <path> does not exist"
 /// (before: "... is required but not found in source ...").
 pub(super) fn check_local_source_exists(source: &InstallSource) -> Result<()> {
-    if let InstallSource::LocalPath(p) = source
-        && !p.exists()
-    {
-        return Err(anyhow::Error::new(super::FetchFailed {
+    match source {
+        InstallSource::LocalPath(p) if !p.exists() => Err(anyhow::Error::new(super::FetchFailed {
             message: format!("source path {} does not exist", p.display()),
-        }));
+        })),
+        _ => Ok(()),
     }
-    Ok(())
 }
 
 fn clone_to_tempdir(
