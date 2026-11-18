@@ -179,7 +179,8 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// protected directories are those of every item of every source that the
 /// run reads, also of an item that is not installed. The item directories of
 /// the run must not contain a file that the lockfile records (`files` or
-/// `pending`) for an item from another source. A refused install changes no file.
+/// `pending`) for an item from another source. A refused install changes no
+/// file.
 ///
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Git `git_ref`); local-path sources record `None`.
@@ -197,13 +198,22 @@ pub fn install_with_lockfile(
     // the adoption and before any write. The records are read after an
     // adoption in memory, which writes nothing: a `schema: 1` lockfile has
     // no `files` record before it.
-    let label = source.to_string();
+    // Two spellings of one local path (a trailing slash, a `..` component,
+    // a symbolic link) are one source: local labels are compared by their
+    // canonical paths, any other label by its text.
+    let same_source_key = |label: &str| match crate::source::parse_install_source_label(label) {
+        Ok(InstallSource::LocalPath(path)) => std::fs::canonicalize(&path)
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|_| label.to_string()),
+        _ => label.to_string(),
+    };
+    let label = same_source_key(&source.to_string());
     let mut lock = crate::lockfile::Lockfile::load(target)?;
     owned::adopt_schema1_in_memory(target, &mut lock)?;
     let recorded: Vec<output::RecordedPath> = lock
         .items
         .iter()
-        .filter(|entry| entry.source != label)
+        .filter(|entry| same_source_key(&entry.source) != label)
         .flat_map(output::recorded_paths)
         .collect();
     output::check_outside_recorded_paths(

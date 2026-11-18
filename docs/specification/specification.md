@@ -127,9 +127,10 @@ client selection are not applied. The error names the item, its directory, the
 output path and the item of that output path. In the same way, also with
 `--force`, `add` refuses a source whose item directory contains a file that the
 lockfile of the scope records (`files` or `pending`, §4) for an item from
-another source; the error names the file and that item. With a `schema: 1`
-lockfile, the recorded files are those that the adoption (§4) would record; the
-check saves nothing.
+another source (two local paths that resolve to the same directory are one
+source); the error names the file and that item. With a `schema: 1` lockfile,
+the recorded files are those that the adoption (§4) would record; the check
+saves nothing.
 
 Before any write, `add` classifies every destination of every item against the
 item's `files` and `pending` records (§4). A destination is a conflict when it

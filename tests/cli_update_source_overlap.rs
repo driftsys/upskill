@@ -936,6 +936,10 @@ fn assert_remove_fails_on_an_unreadable_source(extra: &[&str]) {
     // the test has nothing to check there.
     if fs::read_dir(&dir).is_ok() {
         fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        eprintln!(
+            "skipped: this process can read {} despite mode 0o333",
+            dir.display()
+        );
         return;
     }
     let mut args = vec!["remove", "a", "--project"];
@@ -967,33 +971,67 @@ fn remove_force_fails_when_a_recorded_source_that_exists_cannot_be_read() {
     assert_remove_fails_on_an_unreadable_source(&["--force"]);
 }
 
-#[test]
-fn add_of_the_same_source_ignores_the_recorded_files_of_its_own_items() {
-    // The probe of the review of pull request #560. The project registry
-    // `.agents/skills` holds `q`; `q` is installed for OpenCode as `r`, so
-    // `.agents/skills/r` is both a recorded output of `r` and an item
-    // directory of the same source. The check of recorded files covers the
-    // items of another source only, so the second `add` of that source,
-    // which installs nothing, is not refused by it.
+/// The probe of the review of pull request #560. The project registry
+/// `.agents/skills` holds `q`; `q` is installed for OpenCode as `r`, so
+/// `.agents/skills/r` is both a recorded output of `r` and an item
+/// directory of the same source. Returns `(tmp, home, proj, bytes of r)`.
+fn stage_same_source() -> (tempfile::TempDir, PathBuf, PathBuf, Vec<u8>) {
     let tmp = tempfile::TempDir::new().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
     let proj = tmp.path().join("proj");
     fs::create_dir_all(proj.join(".git")).unwrap();
     write_skill(&proj.join(".agents/skills/q"), "q", "# q");
+    fs::create_dir_all(proj.join(".agents/skills/x")).unwrap();
     common::upskill_cmd(&home)
         .current_dir(&proj)
         .args(["add", "./.agents/skills", "--project", "--opencode"])
         .args(["--as", "r"])
         .assert()
         .success();
-    assert!(proj.join(".agents/skills/r/SKILL.md").is_file());
-    common::upskill_cmd(&home)
-        .current_dir(&proj)
-        .args(["add", "./.agents/skills", "--project", "--claude"])
+    let bytes = fs::read(proj.join(".agents/skills/r/SKILL.md")).unwrap();
+    (tmp, home, proj, bytes)
+}
+
+/// Add the source of [`stage_same_source`] again as `spelling`, excluding
+/// both items, so that the run installs nothing. The check of recorded files
+/// covers the items of another source only, so the run is not refused, and
+/// the recorded output of `r` is unchanged. No item is installed, so the
+/// conflict check does not apply and `--force` is not needed.
+fn assert_same_source_accepted(home: &Path, proj: &Path, spelling: &str, bytes: &[u8]) {
+    common::upskill_cmd(home)
+        .current_dir(proj)
+        .args(["add", spelling, "--project", "--claude"])
         .args(["--exclude", "q", "--exclude", "r"])
         .assert()
         .success();
+    assert_eq!(
+        fs::read(proj.join(".agents/skills/r/SKILL.md")).unwrap(),
+        bytes
+    );
+}
+
+#[test]
+fn add_of_the_same_source_ignores_the_recorded_files_of_its_own_items() {
+    let (_tmp, home, proj, bytes) = stage_same_source();
+    assert_same_source_accepted(&home, &proj, "./.agents/skills", &bytes);
+}
+
+#[test]
+fn add_of_the_same_source_with_another_spelling_ignores_its_own_recorded_files() {
+    for spelling in ["./.agents/skills/", "./.agents/skills/x/.."] {
+        let (_tmp, home, proj, bytes) = stage_same_source();
+        assert_same_source_accepted(&home, &proj, spelling, &bytes);
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn add_of_the_same_source_through_a_symbolic_link_ignores_its_own_recorded_files() {
+    let (tmp, home, proj, bytes) = stage_same_source();
+    let link = tmp.path().join("skills-link");
+    std::os::unix::fs::symlink(proj.join(".agents/skills"), &link).unwrap();
+    assert_same_source_accepted(&home, &proj, &link.display().to_string(), &bytes);
 }
 
 #[test]
@@ -1018,4 +1056,36 @@ fn remove_refuses_also_when_the_recorded_file_inside_the_other_source_is_modifie
     let (_tmp, home, proj, _outer) = stage_layout(ISSUE);
     write_skill(&proj.join(".agents/skills/a/y"), "y", "# y, edited");
     assert_remove_refused(&home, &proj, &[]);
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_does_not_read_the_source_of_the_items_that_it_removes() {
+    use std::os::unix::fs::PermissionsExt;
+    // `remove` reads only the recorded local sources of the items that stay
+    // installed, so an unreadable source of the removed item does not fail.
+    let (tmp, home, proj, _outer) = stage_layout(ISSUE);
+    let src_w = tmp.path().join("src-w");
+    write_skill(&src_w.join("w"), "w", "# w");
+    add(&home, &proj, "../src-w");
+    fs::set_permissions(&src_w, fs::Permissions::from_mode(0o333)).unwrap();
+    // A process that runs as root reads the directory despite the mode, so
+    // the test has nothing to check there.
+    if fs::read_dir(&src_w).is_ok() {
+        fs::set_permissions(&src_w, fs::Permissions::from_mode(0o755)).unwrap();
+        eprintln!(
+            "skipped: this process can read {} despite mode 0o333",
+            src_w.display()
+        );
+        return;
+    }
+    let output = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["remove", "w", "--project"])
+        .output()
+        .unwrap();
+    fs::set_permissions(&src_w, fs::Permissions::from_mode(0o755)).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert_eq!(output.status.code(), Some(0), "{stderr}");
+    assert!(!proj.join(".claude/skills/w").exists());
 }

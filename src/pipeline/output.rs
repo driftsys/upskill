@@ -361,7 +361,7 @@ pub(super) enum RecordedUse {
     /// longer contains.
     UpdateDeletes,
     /// `add` installs from a source that holds recorded files of installed
-    /// items.
+    /// items of another source.
     AddReads,
 }
 
@@ -370,8 +370,8 @@ pub(super) enum RecordedUse {
 /// every recorded file (`files` and `pending`) of every item that the run
 /// removes because its source no longer contains it, also a modified file
 /// that the removal would keep. For [`RecordedUse::AddReads`], `recorded`
-/// holds every recorded file of every lockfile item from another source. Called before
-/// the first deletion or write of the run.
+/// holds every recorded file of every lockfile item from another source.
+/// Called before the first deletion or write of the run.
 pub(super) fn check_outside_recorded_paths(
     target: &Path,
     recorded: &[RecordedPath],
