@@ -164,7 +164,18 @@ the model unchanged. The plugin ships no script. When the `upskill` binary is
 missing, the command fails in the shell and the model reports the error.
 
 This needs one addition to `add`: `--kind <kind>` (repeatable) restricts an
-install to the given kinds. `search` already has a `--kind` filter.
+install to the items of the given kinds. `search` already has a `--kind` filter.
+
+Today the install of a bundle by name also installs the third-party plugins of
+its `plugins:` map through the client's command and registers the MCP servers of
+its `mcps:` map. With `--kind`, `add` installs neither and records neither in
+the lockfile. The init command therefore changes no user setting of the client.
+
+When the bundle or a bundle of its `requires` closure declares third-party
+plugins for the client, `commands/init.md` also lists each plugin name with its
+`install_url`, and tells the model to report the list after the install. A
+plugin without `install_url` is listed by name only. MCP servers are listed by
+name.
 
 A bundle without rules gets no init command.
 
@@ -255,6 +266,8 @@ Decided by the user on 2026-11-18:
 5. **ADR.** ADR-0013 states that a bundle and a native plugin package are
    distinct concepts. This slice keeps them distinct: a plugin is one output of
    a bundle. The implementation adds a decision record that states this.
+6. **Init skips third-party plugins and MCP servers** and lists them for the
+   user (section 4).
 
 ## Alternatives considered
 
@@ -263,6 +276,10 @@ Decided by the user on 2026-11-18:
   registration.
 - **One shared directory for both clients.** Works in the prototype. Rejected
   for the reasons in section 2.
+- **Init installs the third-party plugins and MCP servers of the bundle.**
+  Rejected: a command that adds rules to one repository would change the user's
+  client settings. AD-0042 records that the Claude plugin install rewrites user
+  settings.
 - **Init copies skills and agents into the repository as well.** Rejected: every
   user of the plugin would see each skill twice.
 - **A script in the plugin runs the install.** Rejected: Copilot CLI does not
