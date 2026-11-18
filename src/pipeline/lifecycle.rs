@@ -825,10 +825,10 @@ pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedP
 
 /// Install again every plugin of `bundles` that the lockfile records as
 /// skipped, or as installed when [`plugin_is_missing`] reports it missing,
-/// except the
-/// `(name, client)` pairs in `done`, and record the results in the lockfile.
-/// Only the missing client of a plugin is installed. Returns the results;
-/// empty when nothing is missing, and then nothing is written.
+/// except the `(name, client)` pairs in `done`, and record the results in the
+/// lockfile. Only the missing or skipped client of a plugin is installed.
+/// Returns the results; empty when no plugin is missing or skipped, and then
+/// nothing is written.
 fn repair_missing_plugins(
     target: &Path,
     plugin_scope: crate::plugin::PluginScope,
