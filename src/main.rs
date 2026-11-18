@@ -1695,25 +1695,13 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             "{} {} of {} item(s)",
             style::warn("Dry-run: would update"),
             changes,
-            report.items.len()
+            report.items_in_run
         );
         println!("{DRY_RUN_LAST_LINE}");
         return;
     }
     // An applied run counts the items it changed.
-    let changes = report
-        .items
-        .iter()
-        .filter(|i| {
-            !matches!(
-                i.status,
-                UpdateStatus::UpToDate
-                    | UpdateStatus::SkippedModified { .. }
-                    | UpdateStatus::NotApplied { .. }
-                    | UpdateStatus::SourceSkipped { .. }
-            )
-        })
-        .count();
+    let changes = report.changed_items();
     let skipped = report
         .items
         .iter()
@@ -1736,7 +1724,7 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         "{} {} of {} item(s)",
         style::success("Updated"),
         changes,
-        report.items.len()
+        report.items_in_run
     );
     for item in &report.items {
         let kind_label = match item.kind {

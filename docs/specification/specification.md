@@ -367,12 +367,14 @@ item and a `kept modified file` note are not changes.
   per item when an item changed or was skipped, files were written or deleted,
   or a lockfile was adopted (a run whose only output is `kept modified file`
   notes prints nothing on stdout), and reports a completed interrupted item as
-  `completed — interrupted before`. When no item was updated, completed or
-  removed but files were written or deleted, it prints
-  `Changed <n> file(s) written or deleted`. It prints
-  `everything is up to date — nothing to do` when nothing changed, no item was
-  skipped, no source was skipped, no file was kept with a note and no lockfile
-  was adopted. An item of a skipped source has the status line
+  `completed — interrupted before`. `<n>` and `<m>` have the meaning of the
+  terminal summary above; `<m>` can be larger than the number of status lines,
+  because a dependency that the plan of a source installs unchanged has no
+  status line. When no item was updated, completed or removed but files were
+  written or deleted, it prints `Changed <n> file(s) written or deleted`. It
+  prints `everything is up to date — nothing to do` when nothing changed, no
+  item was skipped, no source was skipped, no file was kept with a note and no
+  lockfile was adopted. An item of a skipped source has the status line
   `skipped — source not reachable` when its source could not be fetched, and
   `skipped — requires a source that was skipped` when its source requires an
   item of a skipped source.
@@ -393,7 +395,9 @@ item and a `kept modified file` note are not changes.
   and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
-  in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
+  in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
+  is the number of items whose source has a change for them, and `<m>` has the
+  meaning of the terminal summary) and
   `Each block is computed for the current state; a later block does not include the effect of an earlier one.`,
   and exits with code 0 when no step fails and no source was skipped, for either
   cause (code 1 otherwise). `update --dry-run --quiet` prints nothing on stdout.

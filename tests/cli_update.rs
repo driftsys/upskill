@@ -2086,3 +2086,24 @@ fn update_lists_a_dependency_updated_through_another_source_once() {
     assert_eq!(lines.len(), 1, "{stdout}");
     assert!(lines[0].contains("updated"), "{stdout}");
 }
+
+#[test]
+fn update_yes_counts_the_items_of_the_run_as_the_terminal_summary_does() {
+    // `update code-review` covers `code-review` and the dependency `sarif`
+    // that its plan installs; `<m>` is 2, as in a terminal run (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let (agent, _sarif) = cross_source_project(tmp.path(), &home);
+    let text = fs::read_to_string(&agent).unwrap();
+    fs::write(&agent, format!("{text}Changed.\n")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "code-review", "--project", "--yes"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(stdout.contains("Updated 1 of 2 item(s)"), "{stdout}");
+}

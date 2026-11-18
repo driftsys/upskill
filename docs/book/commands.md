@@ -485,8 +485,11 @@ A run with `--yes`, or without a terminal, prints `Updated <n> of <m> item(s)`
 and one status line per item when an item changed or was skipped, files were
 written or deleted, or a lockfile was adopted. A run whose only output is
 `kept modified file` notes prints nothing on stdout. It reports a completed
-interrupted item as `completed — interrupted before` and counts it. When no item
-was updated, completed or removed, but files were written or deleted, it prints
+interrupted item as `completed — interrupted before` and counts it. `<n>` and
+`<m>` have the meaning of the terminal closing summary; `<m>` can be larger than
+the number of status lines, because a dependency that the plan of a source
+installs unchanged has no status line. When no item was updated, completed or
+removed, but files were written or deleted, it prints
 `Changed <n> file(s) written or deleted`. It prints
 `everything is up to date — nothing to do` when nothing changed, no item was
 skipped, no source was skipped, no file was kept with a note and no lockfile was
@@ -509,7 +512,8 @@ does not count in the output above, and `update --dry-run` and a declined source
 record no commit.
 
 `update --dry-run` prints the blocks, then
-`Dry-run: would update <n> of <m> item(s)` and the line
+`Dry-run: would update <n> of <m> item(s)` (`<m>` has the meaning of the
+terminal closing summary) and the line
 `Each block is computed for the current state; a later block does not include the effect of an earlier one.`
 Each block is exact for the files on disk, but because nothing is applied, a
 later block does not include the effect of applying an earlier source. With a

@@ -947,11 +947,6 @@ mod tests {
         });
         assert!(report.is_clean());
     }
-}
-
-#[cfg(test)]
-mod update_status_tests {
-    use super::*;
 
     #[test]
     fn is_change_is_true_for_updated_completed_and_removed_only() {

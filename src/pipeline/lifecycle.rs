@@ -1432,10 +1432,6 @@ pub fn update(
                     status,
                 });
             }
-            // A skipped item that is not an entry of this source: a
-            // dependency from another source that the reinstall
-            // planned. It is reported here, because its own source
-            // may not be part of this run.
             // An item that is not an entry of this source and that the
             // commit wrote: a dependency from another source. It is
             // reported here, as for an entry, against the lockfile record
@@ -1469,6 +1465,10 @@ pub fn update(
                     status,
                 });
             }
+            // A skipped item that is not an entry of this source: a
+            // dependency from another source that the reinstall
+            // planned. It is reported here, because its own source
+            // may not be part of this run.
             for ((kind, name), files) in skipped {
                 let source = source_of(&lock, kind, &name, &source_label);
                 report.items.push(UpdatedItem {
