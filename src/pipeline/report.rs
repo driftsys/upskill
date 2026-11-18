@@ -134,6 +134,61 @@ impl std::fmt::Display for AdoptedBeforeFailure {
     }
 }
 
+/// The error raised when the content of a source cannot be obtained: a git
+/// clone that fails, or a local-path source whose path does not exist.
+/// `update` finds it in the `anyhow` chain of a prepare error and skips the
+/// source instead of stopping the run. `message` is the text of the error.
+#[derive(Debug, Clone)]
+pub struct FetchFailed {
+    pub message: String,
+}
+
+impl std::fmt::Display for FetchFailed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for FetchFailed {}
+
+/// Error context attached, as the outermost layer, when `update` fails after
+/// it skipped sources (for either [`SkipCause`]), so that `main.rs` can print
+/// the skip lines on the error path too.
+#[derive(Debug, Clone)]
+pub struct SkippedBeforeFailure {
+    pub sources: Vec<SkippedSource>,
+}
+
+impl std::fmt::Display for SkippedBeforeFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "sources were skipped before this error")
+    }
+}
+
+/// Why `update` skipped a source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkipCause {
+    /// The source, or a dependency source that it requires, could not be
+    /// fetched.
+    Unreachable,
+    /// The source was fetched, but its plan writes an item that the
+    /// lockfile records from another source that was skipped.
+    RequiresSkipped,
+}
+
+/// A source of `update` that was skipped: it could not be fetched, or it
+/// requires an item of a skipped source (see [`SkipCause`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SkippedSource {
+    /// The source label, as recorded in the lockfile.
+    pub source: String,
+    pub cause: SkipCause,
+    /// For [`SkipCause::Unreachable`], the error with its causes, joined by
+    /// `: `; for [`SkipCause::RequiresSkipped`], the item and the skipped
+    /// source that it comes from.
+    pub error: String,
+}
+
 /// Result of a single plugin install attempt, for reporting to the user.
 #[derive(Debug, Clone)]
 pub struct PluginResult {
@@ -480,6 +535,12 @@ pub enum UpdateStatus {
     /// item; a [`PreviewAction::Skip`] item of such a source is reported
     /// here and does not cause exit code 1.
     NotApplied { action: PreviewAction },
+    /// The source of the item was skipped; `cause` says why: it could not be
+    /// fetched, or it requires an item of a skipped source (see
+    /// [`UpdateReport::skipped_sources`]). None of its files was written, and
+    /// its lockfile entry did not change, except the `files` record that the
+    /// adoption of a `schema: 1` lockfile writes for every entry.
+    SourceSkipped { cause: SkipCause },
 }
 
 #[derive(Debug, Clone)]
@@ -526,6 +587,9 @@ pub struct UpdateReport {
     /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the
     /// run did not stop.
     pub sources_remaining: usize,
+    /// Sources that were skipped, with their [`SkipCause`]. They were not
+    /// previewed and are not counted in [`UpdateReport::sources_considered`].
+    pub skipped_sources: Vec<SkippedSource>,
 }
 
 /// What applying one source of `update` would do now, computed after the
@@ -604,6 +668,12 @@ pub trait UpdateObserver {
     fn preview(&mut self, preview: &SourcePreview) -> SourceDecision;
     /// Called after a source was applied.
     fn applied(&mut self, result: &SourceResult);
+    /// True after an interrupt. `update` reads it in the prepare phase: it
+    /// then fetches no further source and fails, and a fetch that failed is
+    /// not reported as a source that could not be fetched.
+    fn interrupted(&self) -> bool {
+        false
+    }
 }
 
 /// One entry in a [`ListReport`] — a single installed item as recorded

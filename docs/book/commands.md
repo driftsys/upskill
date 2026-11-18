@@ -323,18 +323,50 @@ after `Replaced or deleted <n> modified or unmanaged file(s) (--force)`.
 
 `update` first fetches every source once (a source of a cross-source dependency
 is fetched again when the source that requires it is reinstalled), checks it and
-plans it, without any change; an error in this step stops the run before any
-source is applied. Then it handles the sources one at a time, sorted by source
-label. For each source it computes a preview: what applying this source now does
-to the files on disk and to the lockfile. The preview is computed just before
-the source is applied, so it includes the effect of the sources applied before
-it. The modes differ in what they do with the preview:
+plans it, without any change. A source that cannot be fetched (the `git clone`
+fails, or a local-path source no longer exists), or whose cross-source
+dependency source cannot be fetched, is skipped: none of its files is written
+and its lockfile entries do not change, except the `files` record that the
+adoption of a `schema: 1` lockfile writes for every entry. A source that would
+write an item of a skipped source is skipped too. `update` prints on stderr one
+line per skipped source, also when a later step fails and also with `--quiet`.
+The line names the label of the source. For a source that could not be fetched
+it says that the source could not be fetched and was skipped, and gives the
+cause. For a source that requires an item of a skipped source it says only that
+the source was skipped, and names the item and the skipped source that the item
+comes from. Then `update` handles the other sources, and it exits with code 1.
+Each lockfile entry of the skipped source that the run selected is counted in
+the closing summary of a terminal run, and has a status line in the item list of
+a run with `--yes` or without a terminal. For a source that could not be
+fetched, the status line is:
 
-| Mode                                | Behaviour                                                                                                                                    |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Terminal, no `--yes`                | Prints one block per source. Asks `Apply? [y/N/q]` for each source whose preview changes something. Applies the source only on `y` or `yes`. |
-| `--yes`, or stdin is not a terminal | Prints no block and asks nothing. Applies every source, also a source whose preview changes nothing.                                         |
-| `--dry-run`                         | Prints one block per source. Asks nothing, applies nothing, and does not adopt a `schema: 1` lockfile. Exits with code 0 when no step fails. |
+```text
+skipped — source not reachable
+```
+
+For a source that requires an item of a skipped source, the status line is:
+
+```text
+skipped — requires a source that was skipped
+```
+
+A dry run prints no per-item status line. Any other error in this step stops the
+run before any source is applied. To update only the reachable sources without
+exit code 1, name their items: `update <name>` does not fetch a source that the
+names do not select. It still fetches the dependency sources of the named items,
+so a named item whose dependency source cannot be fetched is still skipped, with
+exit code 1. After Ctrl-C during this step, no further source is fetched and the
+run exits with code 130. Then `update` handles the sources one at a time, sorted
+by source label. For each source it computes a preview: what applying this
+source now does to the files on disk and to the lockfile. The preview is
+computed just before the source is applied, so it includes the effect of the
+sources applied before it. The modes differ in what they do with the preview:
+
+| Mode                                | Behaviour                                                                                                                                                              |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terminal, no `--yes`                | Prints one block per source. Asks `Apply? [y/N/q]` for each source whose preview changes something. Applies the source only on `y` or `yes`.                           |
+| `--yes`, or stdin is not a terminal | Prints no block and asks nothing. Applies every source, also a source whose preview changes nothing.                                                                   |
+| `--dry-run`                         | Prints one block per source. Asks nothing, applies nothing, and does not adopt a `schema: 1` lockfile. Exits with code 0 when no step fails and no source was skipped. |
 
 A terminal run looks like this:
 
@@ -398,7 +430,9 @@ an applied source, `update` prints one result line with the non-zero counts of
 `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied` when every
 count is 0. After the last source, it prints one closing summary:
 `Updated <n> of <m> item(s) from <a> of <s> source(s).`, followed by
-`<k> source(s) not applied.` when a source with changes was not applied, and by
+`<k> source(s) not applied.` when a source with changes was not applied, by
+`<u> source(s) skipped.` when sources were skipped, for either cause (the item
+count `<m>` includes the items of these sources), and by
 `Stopped; <r> source(s) not examined.` (or `Stopped.` when no source remained)
 after `q` or end of input. When no item was updated, completed or removed but
 files were written or deleted (for example the files of a client that the flags
@@ -406,21 +440,23 @@ no longer select), the summary is followed by
 `Changed <n> file(s) written or deleted`. The line
 `everything is up to date — nothing to do` replaces the summary when no source
 was applied, no source with changes was declined, no file was kept with a note,
-no item was skipped and no `schema: 1` lockfile was adopted.
+no item was skipped, no source was skipped and no `schema: 1` lockfile was
+adopted.
 
 A terminal run exits with code 1 when an item is skipped in a source that was
-applied or in a source whose preview changes nothing, or when a step fails.
-Answers `n` and `q` do not change the exit code, and a `skip` line in a source
-that was not applied does not cause exit code 1. Sources applied before a
-failure in the apply of a later source stay applied. With `--quiet`, a terminal
-run does not print the blocks, the `kept modified file` notes, the result lines
-or the closing summary. The question names the source
-(`Apply changes from <source>? [y/N/q]`). The `skipped` lines of the skipped
-items that cause exit code 1, `Use --force to replace.` and the adoption notice
-of a `schema: 1` lockfile are printed on stderr; without `--quiet`, a terminal
-run prints no `skipped` line, because the blocks name these files.
-`update --dry-run --quiet` prints nothing. A terminal run prints the adoption
-notice before the block of the source that adopted the lockfile.
+applied or in a source whose preview changes nothing, when a source could not be
+fetched, or when a step fails. Answers `n` and `q` do not change the exit code,
+and a `skip` line in a source that was not applied does not cause exit code 1.
+Sources applied before a failure in the apply of a later source stay applied.
+With `--quiet`, a terminal run does not print the blocks, the
+`kept modified file` notes, the result lines or the closing summary. The
+question names the source (`Apply changes from <source>? [y/N/q]`). The
+`skipped` lines of the skipped items that cause exit code 1,
+`Use --force to replace.` and the adoption notice of a `schema: 1` lockfile are
+printed on stderr; without `--quiet`, a terminal run prints no `skipped` line,
+because the blocks name these files. `update --dry-run --quiet` prints nothing
+on stdout. A terminal run prints the adoption notice before the block of the
+source that adopted the lockfile.
 
 A run with `--yes`, or without a terminal, prints `Updated <n> of <m> item(s)`
 and one status line per item when an item changed or was skipped, files were
@@ -430,7 +466,11 @@ interrupted item as `completed — interrupted before` and counts it. When no it
 was updated, completed or removed, but files were written or deleted, it prints
 `Changed <n> file(s) written or deleted`. It prints
 `everything is up to date — nothing to do` when nothing changed, no item was
-skipped, no file was kept with a note and no lockfile was adopted.
+skipped, no source was skipped, no file was kept with a note and no lockfile was
+adopted. An item of a skipped source has the status line
+`skipped — source not reachable` when its source could not be fetched, and
+`skipped — requires a source that was skipped` when its source requires an item
+of a skipped source.
 
 For a git source, `update` records the commit that it fetched in the lockfile
 entries of the source that the run selected, also when the source has no changes
@@ -1176,9 +1216,9 @@ Mode.
 
 ## Exit codes
 
-| Code | Meaning                                                                                    |
-| ---- | ------------------------------------------------------------------------------------------ |
-| 0    | Success                                                                                    |
-| 1    | General error; or `add` / `update` skipped an item because of a modified or unmanaged file |
-| 2    | Usage error (bad args)                                                                     |
-| 130  | Interrupted (Ctrl+C)                                                                       |
+| Code | Meaning                                                                                                                                                                                        |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Success                                                                                                                                                                                        |
+| 1    | General error; or `add` / `update` skipped an item because of a modified or unmanaged file; or `update` skipped a source (it could not be fetched, or it requires an item of a skipped source) |
+| 2    | Usage error (bad args)                                                                                                                                                                         |
+| 130  | Interrupted (Ctrl+C)                                                                                                                                                                           |

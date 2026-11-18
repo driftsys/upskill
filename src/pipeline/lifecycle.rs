@@ -22,11 +22,12 @@ use super::owned::{FileState, adopt_schema1, adopt_schema1_in_memory, classify};
 use super::prepared::prepare_install;
 use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, BothScopesItem, DoctorReport, DoctorScopes,
-    EarlierLayoutFile, InterruptedItem, ItemKind, ListReport, ListedBundle, ListedItem,
-    MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry, OrphanReason, OrphanedDependency,
-    PreviewAction, PreviewItem, RemoveFilter, RemoveReport, RemovedItem, ScopedDoctor, ScopedList,
-    SkippedPlugin, SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile,
-    UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
+    EarlierLayoutFile, FetchFailed, InterruptedItem, ItemKind, ListReport, ListedBundle,
+    ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry, OrphanReason,
+    OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport, RemovedItem,
+    ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure, SkippedPlugin, SkippedSource,
+    SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile, UpdateObserver,
+    UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -744,8 +745,25 @@ fn reselect_from_entries(
 /// cannot be read as a directory is an error that names its label (its hint
 /// names `upskill remove --source` only when a lockfile item has that
 /// source), and a git source is not
-/// fetched for this check. An error in this step stops the run before the
-/// adoption and before any source is applied.
+/// fetched for this check.
+///
+/// A source whose prepare fails with a [`FetchFailed`] in its error chain
+/// (a `git clone` that fails, or a local-path source whose path does not
+/// exist, of the source itself or of a cross-source dependency source that
+/// it requires) is skipped: it is not prepared, none of its files is
+/// written, its lockfile entries do not change except the `files` record
+/// that the whole-lockfile adoption of a `schema: 1` lockfile writes, it is
+/// in [`UpdateReport::skipped_sources`], and each of its selected entries is
+/// reported as [`UpdateStatus::SourceSkipped`] with its [`SkipCause`]. A
+/// prepared source whose plan writes an item that the lockfile records from
+/// a skipped source is skipped too, until no further source is dropped.
+/// [`UpdateObserver::interrupted`] is read before each source, after a fetch
+/// failure and before that comparison; once it is true, no further source
+/// is fetched, no further skip is recorded, and the run fails with the
+/// skips recorded before it in [`SkippedBeforeFailure`]. The overlap check
+/// treats a skipped source as a recorded source that the run does not read. Any other
+/// error in this step stops the run before the adoption and before any
+/// source is applied.
 ///
 /// Then, for each source, in this order:
 ///
@@ -826,7 +844,9 @@ fn reselect_from_entries(
 /// unchanged files at the old paths are deleted through the ownership record.
 ///
 /// An error after an adoption carries the adopted paths as
-/// [`AdoptedBeforeFailure`]. An error while one source is applied leaves the
+/// [`AdoptedBeforeFailure`]. An error after a source was skipped carries the
+/// skipped sources as [`SkippedBeforeFailure`], as the outermost context
+/// layer. An error while one source is applied leaves the
 /// sources applied before it applied.
 pub fn update(
     at: &crate::scope::ScopeRoot,
@@ -879,13 +899,18 @@ pub fn update(
     // The adoption of a `schema: 1` lockfile is saved. A later error must
     // still carry the adopted paths for the adoption notice.
     let result = (|| -> Result<()> {
-        let total_sources = by_source.len();
         // Prepare phase: fetch, resolve, check and plan every source, in the
         // order of the apply phase, without any write. A failure here (for
         // example the overlap check of one source) happens before the
-        // adoption and before any source is applied.
-        let mut prepared_sources = Vec::with_capacity(total_sources);
+        // adoption and before any source is applied, except a fetch failure,
+        // which skips the source.
+        let mut prepared_sources = Vec::with_capacity(by_source.len());
         for (source_label, source_entries) in by_source {
+            // An interrupt stops the prepare phase at once: no further
+            // source is fetched.
+            if observer.interrupted() {
+                anyhow::bail!("interrupted before the source `{source_label}` was fetched");
+            }
             let source = crate::source::parse_install_source_label(&source_label)
                 .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
 
@@ -945,9 +970,87 @@ pub fn update(
                     .collect()
             };
 
-            let prepared = prepare_install(&source, target, &item_filter, &options)?;
+            // A source that cannot be fetched (a [`FetchFailed`] in the
+            // error chain, also for a dependency source) is skipped: it is
+            // not written, and the other sources are applied. Every other
+            // prepare error stops the run.
+            let prepared = match super::git::check_local_source_exists(&source)
+                .and_then(|()| prepare_install(&source, target, &item_filter, &options))
+            {
+                Ok(prepared) => prepared,
+                // A fetch that an interrupt ended is not a fetch failure.
+                Err(err)
+                    if err.downcast_ref::<FetchFailed>().is_some() && !observer.interrupted() =>
+                {
+                    for entry in &source_entries {
+                        report.items.push(UpdatedItem {
+                            kind: entry.kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status: UpdateStatus::SourceSkipped {
+                                cause: SkipCause::Unreachable,
+                            },
+                        });
+                    }
+                    report.skipped_sources.push(SkippedSource {
+                        source: source_label,
+                        cause: SkipCause::Unreachable,
+                        error: format!("{err:#}"),
+                    });
+                    continue;
+                }
+                Err(err) => return Err(err),
+            };
             prepared_sources.push((source_label, source_entries, prepared));
         }
+        // One verdict per source: a prepared source whose plan writes an item
+        // that the lockfile records from a skipped source is skipped too, so
+        // that no item of a skipped source is written. Repeated until no
+        // source is dropped, so that the order of the sources does not
+        // matter. An interrupted run records no such skip.
+        if observer.interrupted() {
+            anyhow::bail!(
+                "interrupted before the sources were checked against the skipped sources"
+            );
+        }
+        loop {
+            let skipped_items: std::collections::BTreeMap<(ItemKind, String), String> = lock
+                .items
+                .iter()
+                .filter(|i| report.skipped_sources.iter().any(|s| s.source == i.source))
+                .map(|i| ((i.kind, i.name.clone()), i.source.clone()))
+                .collect();
+            let found = prepared_sources
+                .iter()
+                .enumerate()
+                .find_map(|(index, (_, _, p))| {
+                    p.planned_hashes().into_keys().find_map(|key| {
+                        skipped_items.get(&key).map(|src| (index, key, src.clone()))
+                    })
+                });
+            let Some((index, (kind, name), unreachable)) = found else {
+                break;
+            };
+            let (source_label, source_entries, _) = prepared_sources.remove(index);
+            for entry in &source_entries {
+                report.items.push(UpdatedItem {
+                    kind: entry.kind,
+                    name: entry.name.clone(),
+                    source: source_label.clone(),
+                    status: UpdateStatus::SourceSkipped {
+                        cause: SkipCause::RequiresSkipped,
+                    },
+                });
+            }
+            report.skipped_sources.push(SkippedSource {
+                source: source_label,
+                cause: SkipCause::RequiresSkipped,
+                error: format!(
+                    "it requires {kind} `{name}` of the source `{unreachable}`, which was skipped"
+                ),
+            });
+        }
+        let total_sources = prepared_sources.len();
 
         // The overlap check of `add`, applied to the items of every source
         // that the run reads and to the items of every recorded local-path
@@ -1223,7 +1326,9 @@ pub fn update(
                     UpdateStatus::CompletedInterrupted => result.completed += 1,
                     UpdateStatus::Removed => result.removed += 1,
                     UpdateStatus::SkippedModified { .. } => result.skipped += 1,
-                    UpdateStatus::UpToDate | UpdateStatus::NotApplied { .. } => {}
+                    UpdateStatus::UpToDate
+                    | UpdateStatus::NotApplied { .. }
+                    | UpdateStatus::SourceSkipped { .. } => {}
                 }
             }
             observer.applied(&result);
@@ -1246,7 +1351,7 @@ pub fn update(
     report.kept_modified.sort();
     report.kept_modified.dedup();
     if let Err(err) = result {
-        return Err(match &report.adopted {
+        let err = match &report.adopted {
             Some(paths)
                 if !paths.is_empty() && err.downcast_ref::<AdoptedBeforeFailure>().is_none() =>
             {
@@ -1255,6 +1360,14 @@ pub fn update(
                 })
             }
             _ => err,
+        };
+        // The skipped sources are reported also when a later step fails.
+        return Err(if report.skipped_sources.is_empty() {
+            err
+        } else {
+            err.context(SkippedBeforeFailure {
+                sources: report.skipped_sources.clone(),
+            })
         });
     }
 
@@ -1537,6 +1650,234 @@ mod tests {
             .find(|i| i.name == name)
             .unwrap_or_else(|| panic!("no item {name} in {:?}", report.items))
             .status
+    }
+
+    /// An observer that reports an interrupt.
+    struct Interrupted {
+        previews: usize,
+    }
+
+    impl UpdateObserver for Interrupted {
+        fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
+            self.previews += 1;
+            SourceDecision::Apply
+        }
+
+        fn applied(&mut self, _result: &SourceResult) {}
+
+        fn interrupted(&self) -> bool {
+            true
+        }
+    }
+
+    /// An interrupt stops the prepare phase at once: the source that cannot
+    /// be fetched is not recorded as skipped, and nothing is previewed.
+    #[test]
+    fn an_interrupt_stops_the_prepare_phase_without_a_skip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (a, b) = (tmp.path().join("a"), tmp.path().join("b"));
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&a, "x", "body");
+        skill(&b, "y", "body");
+        install(&a, &target);
+        install(&b, &target);
+        fs::remove_dir_all(&a).unwrap();
+        let lock_before = lock_bytes(&target);
+
+        let mut observer = Interrupted { previews: 0 };
+        let err = run(&target, &mut observer).unwrap_err();
+
+        assert!(
+            err.downcast_ref::<SkippedBeforeFailure>().is_none(),
+            "{err:#}"
+        );
+        assert!(format!("{err:#}").contains("interrupted"), "{err:#}");
+        assert_eq!(observer.previews, 0);
+        assert_eq!(lock_bytes(&target), lock_before);
+    }
+
+    /// An observer whose interrupt is set after its first query: the check
+    /// before the first source passes, and the interrupt is seen when the
+    /// fetch of that source has failed.
+    struct InterruptedDuringFetch {
+        queries: std::cell::Cell<usize>,
+    }
+
+    impl UpdateObserver for InterruptedDuringFetch {
+        fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
+            SourceDecision::Apply
+        }
+
+        fn applied(&mut self, _result: &SourceResult) {}
+
+        fn interrupted(&self) -> bool {
+            let n = self.queries.get();
+            self.queries.set(n + 1);
+            n > 0
+        }
+    }
+
+    /// A fetch that fails after an interrupt is not a fetch failure: no
+    /// skipped source is recorded and the run stops with the fetch error.
+    #[test]
+    fn a_fetch_failure_after_an_interrupt_records_no_skip_and_stops() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (a, b) = (tmp.path().join("a"), tmp.path().join("b"));
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&a, "x", "body");
+        skill(&b, "y", "body");
+        install(&a, &target);
+        install(&b, &target);
+        fs::remove_dir_all(&a).unwrap();
+        let lock_before = lock_bytes(&target);
+
+        let mut observer = InterruptedDuringFetch {
+            queries: std::cell::Cell::new(0),
+        };
+        let err = run(&target, &mut observer).unwrap_err();
+
+        assert!(err.downcast_ref::<FetchFailed>().is_some(), "{err:#}");
+        assert!(
+            err.downcast_ref::<SkippedBeforeFailure>().is_none(),
+            "{err:#}"
+        );
+        assert_eq!(lock_bytes(&target), lock_before);
+    }
+
+    /// An observer whose interrupt is set from query `at` on, and that
+    /// counts its queries.
+    struct InterruptedAt {
+        at: usize,
+        queries: std::cell::Cell<usize>,
+    }
+
+    impl UpdateObserver for InterruptedAt {
+        fn preview(&mut self, _preview: &SourcePreview) -> SourceDecision {
+            SourceDecision::Skip
+        }
+
+        fn applied(&mut self, _result: &SourceResult) {}
+
+        fn interrupted(&self) -> bool {
+            let n = self.queries.get();
+            self.queries.set(n + 1);
+            n >= self.at
+        }
+    }
+
+    /// An interrupt after the first source was prepared: the second source
+    /// is not fetched. Its path is missing, so a fetch of it would fail with
+    /// the fetch error instead of the interrupt error.
+    #[test]
+    fn an_interrupt_after_the_first_source_fetches_no_further_source() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (a, b) = (tmp.path().join("a"), tmp.path().join("b"));
+        let target = tmp.path().join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&a, "x", "body");
+        skill(&b, "y", "body");
+        install(&a, &target);
+        install(&b, &target);
+        fs::remove_dir_all(&b).unwrap();
+
+        let mut observer = InterruptedAt {
+            at: 1,
+            queries: std::cell::Cell::new(0),
+        };
+        let err = run(&target, &mut observer).unwrap_err();
+
+        let label = InstallSource::LocalPath(b.clone()).to_string();
+        assert_eq!(
+            format!("{err:#}"),
+            format!("interrupted before the source `{label}` was fetched")
+        );
+    }
+
+    /// The cascade layout with local paths: `a` holds `x` (requires `y` of
+    /// the missing directory `m`) and `z`; `c` holds `w` (requires `z` of
+    /// `a`). `m` and `a` cannot be fetched, and `c` requires an item of the
+    /// skipped `a`.
+    fn stage_local_cascade(tmp: &Path) -> PathBuf {
+        let (a, c, m) = (tmp.join("a"), tmp.join("c"), tmp.join("m"));
+        let target = tmp.join("t");
+        fs::create_dir_all(&target).unwrap();
+        skill(&m, "y", "body");
+        write(
+            &a,
+            "x/SKILL.md",
+            format!(
+                "---\nschema: 1\nname: x\ndescription: test x\nrequires:\n  skills: [{{ name: y, source: {} }}]\n---\nbody\n",
+                m.display()
+            )
+            .as_bytes(),
+        );
+        skill(&a, "z", "body");
+        write(
+            &c,
+            "w/SKILL.md",
+            format!(
+                "---\nschema: 1\nname: w\ndescription: test w\nrequires:\n  skills: [{{ name: z, source: {} }}]\n---\nbody\n",
+                a.display()
+            )
+            .as_bytes(),
+        );
+        install(&a, &target);
+        install(&c, &target);
+        fs::remove_dir_all(&m).unwrap();
+        target
+    }
+
+    /// Without an interrupt the local cascade layout skips `c` for its
+    /// requirement; with an interrupt at the cascade check, no such skip is
+    /// recorded.
+    #[test]
+    fn an_interrupt_before_the_cascade_records_no_cascade_skip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = stage_local_cascade(tmp.path());
+
+        // Count the queries of a run without an interrupt; the last one is
+        // the check before the cascade.
+        let mut counting = InterruptedAt {
+            at: usize::MAX,
+            queries: std::cell::Cell::new(0),
+        };
+        let report = run(&target, &mut counting).unwrap();
+        assert!(
+            report
+                .skipped_sources
+                .iter()
+                .any(|s| s.cause == SkipCause::RequiresSkipped),
+            "{:?}",
+            report.skipped_sources
+        );
+        let last = counting.queries.get() - 1;
+
+        let mut observer = InterruptedAt {
+            at: last,
+            queries: std::cell::Cell::new(0),
+        };
+        let err = run(&target, &mut observer).unwrap_err();
+        assert!(format!("{err:#}").contains("interrupted"), "{err:#}");
+        // The skips recorded before the interrupt are still carried: `a`
+        // and `m`, which could not be fetched; `c` is not skipped.
+        let skipped = &err
+            .downcast_ref::<SkippedBeforeFailure>()
+            .expect("the skips before the interrupt are carried")
+            .sources;
+        let got: Vec<(String, SkipCause)> = skipped
+            .iter()
+            .map(|s| (s.source.clone(), s.cause))
+            .collect();
+        let label = |dir: &str| InstallSource::LocalPath(tmp.path().join(dir)).to_string();
+        assert_eq!(
+            got,
+            vec![
+                (label("a"), SkipCause::Unreachable),
+                (label("m"), SkipCause::Unreachable),
+            ]
+        );
     }
 
     /// #504: a source whose preview changes nothing and that is not applied

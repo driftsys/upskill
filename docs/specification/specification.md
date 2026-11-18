@@ -262,21 +262,39 @@ resolves for it (§2.6) are protected; when that directory does not exist,
 nothing is protected for it. A recorded source that exists and cannot be read as
 a directory fails the step with an error that names its source label; the error
 suggests `upskill remove --source <label>` only when a lockfile item has that
-source. A git source is not fetched for this check. An error in the prepare step
-stops the run before any source is applied. Then `update` handles the sources
-one at a time, sorted by source label. For each source it computes a preview
-from the fetched content, the files on disk and the lockfile, just before the
-source is applied. A preview **changes something** when applying the source
-writes or deletes a file, changes the lockfile record of an item (any field
-except `pending`, `required_by` and `commit`), completes an interrupted item (a
-non-empty `pending` record, §4), removes an item, or creates or changes a
-hand-shake file (§3.4). A write of a file that already holds the planned bytes
-is not a change, unless the executable bits (`0o111`) of the file differ from
-the target executable bits (Unix only): each executable bit of the source
-resource for which the file has the matching read bit (owner, group, other). The
-apply sets the executable bits to the target, so the file is a change. A
-difference in the other permission bits is not a change. A `skip` item and a
-`kept modified file` note are not changes.
+source. A git source is not fetched for this check; a skipped source (below) is
+protected by this rule as a recorded source that the run does not read. A source
+whose content cannot be fetched (a `git clone` that fails, for example because
+the host does not answer, the repository was deleted, the ref does not exist or
+the authentication is refused, or a local-path source whose path does not exist)
+is skipped, also when the source of a cross-source dependency that it requires
+cannot be fetched: none of its files is written, and its lockfile entries do not
+change, except the `files` record that the adoption of a `schema: 1` lockfile
+writes for every entry (see below); `update` prints on stderr, in every mode and
+also with `--quiet`, one line that names the source label, says that the source
+could not be fetched and was skipped, and gives the cause, and the other sources
+are handled. A prepared source whose plan would write an item that the lockfile
+records from a skipped source is skipped too, with a line that names its label,
+says that it was skipped (not that it could not be fetched), and names the item
+and the skipped source that the item comes from; this repeats until no further
+source is skipped. The run then exits with code 1, also when every other source
+was applied and in a dry run. After an interrupt, the prepare step fetches no
+further source and records no further skip, and the run exits with code 130; the
+lines of the sources skipped before the interrupt are still printed. Any other
+error in the prepare step stops the run before any source is applied. Then
+`update` handles the sources one at a time, sorted by source label. For each
+source it computes a preview from the fetched content, the files on disk and the
+lockfile, just before the source is applied. A preview **changes something**
+when applying the source writes or deletes a file, changes the lockfile record
+of an item (any field except `pending`, `required_by` and `commit`), completes
+an interrupted item (a non-empty `pending` record, §4), removes an item, or
+creates or changes a hand-shake file (§3.4). A write of a file that already
+holds the planned bytes is not a change, unless the executable bits (`0o111`) of
+the file differ from the target executable bits (Unix only): each executable bit
+of the source resource for which the file has the matching read bit (owner,
+group, other). The apply sets the executable bits to the target, so the file is
+a change. A difference in the other permission bits is not a change. A `skip`
+item and a `kept modified file` note are not changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action
@@ -302,20 +320,22 @@ difference in the other permission bits is not a change. A `skip` item and a
   `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`. After the
   last source it prints `Updated <n> of <m> item(s) from <a> of <s> source(s).`,
   followed by `<k> source(s) not applied.` when a source with changes was not
-  applied, and by `Stopped; <r> source(s) not examined.` or `Stopped.` after `q`
+  applied, by `<u> source(s) skipped.` when sources were skipped, for either
+  cause, and by `Stopped; <r> source(s) not examined.` or `Stopped.` after `q`
   or end of input; then `Changed <n> file(s) written or deleted` when no item
   was updated, completed or removed but files were written or deleted. It prints
   `everything is up to date — nothing to do` instead when no source was applied,
   no source with changes was declined, no file was kept with a note, no item was
-  skipped and no lockfile was adopted. The exit code is 1 when an item is
-  skipped in an applied source or in a source whose preview changes nothing, or
-  when a step fails; answers `n` and `q` do not change it, and a `skip` line of
-  a source that was not applied does not cause exit code 1. With `--quiet`, the
-  blocks, the notes, the result lines and the closing summary are not printed;
-  the question is `Apply changes from <source>? [y/N/q]`, and the `skipped`
-  lines of the skipped items that cause exit code 1, `Use --force to replace.`
-  and the adoption notice are printed on stderr. Without `--quiet`, a terminal
-  run prints no `skipped` line.
+  skipped, no source was skipped and no lockfile was adopted. The exit code is 1
+  when an item is skipped in an applied source or in a source whose preview
+  changes nothing, when a source was skipped, or when a step fails; answers `n`
+  and `q` do not change it, and a `skip` line of a source that was not applied
+  does not cause exit code 1. With `--quiet`, the blocks, the notes, the result
+  lines and the closing summary are not printed; the question is
+  `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of the skipped
+  items that cause exit code 1, `Use --force to replace.` and the adoption
+  notice are printed on stderr. Without `--quiet`, a terminal run prints no
+  `skipped` line.
 - **`--yes`, or stdin is not a terminal.** Every source is applied without a
   question, also a source whose preview changes nothing, so its plugin and MCP
   steps run. `update` prints `Updated <n> of <m> item(s)` and one status line
@@ -326,7 +346,11 @@ difference in the other permission bits is not a change. A `skip` item and a
   removed but files were written or deleted, it prints
   `Changed <n> file(s) written or deleted`. It prints
   `everything is up to date — nothing to do` when nothing changed, no item was
-  skipped, no file was kept with a note and no lockfile was adopted.
+  skipped, no source was skipped, no file was kept with a note and no lockfile
+  was adopted. An item of a skipped source has the status line
+  `skipped — source not reachable` when its source could not be fetched, and
+  `skipped — requires a source that was skipped` when its source requires an
+  item of a skipped source.
 - **Recorded commit.** For a git source, `update` sets the fetched commit on the
   lockfile entries of the source that the run selected (the named items, or
   every item when no name is given): with the item records when the source is
@@ -346,14 +370,21 @@ difference in the other permission bits is not a change. A `skip` item and a
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
   `Each block is computed for the current state; a later block does not include the effect of an earlier one.`,
-  and exits with code 0 when no step fails. `update --dry-run --quiet` prints
-  nothing. Because nothing is applied, a later block does not include the effect
-  of applying an earlier source.
+  and exits with code 0 when no step fails and no source was skipped, for either
+  cause (code 1 otherwise). `update --dry-run --quiet` prints nothing on stdout.
+  Because nothing is applied, a later block does not include the effect of
+  applying an earlier source.
 
 A `schema: 1` lockfile is adopted once per run, without a question, after every
-source passed the checks of the prepare step, for the first source that also
-resolves to items (§4); in a terminal the adoption notice is printed before the
-block of that source. The adoption stays when the run fails or is stopped.
+source that was not skipped (because it could not be fetched, or because it
+requires an item of a skipped source) passed the checks of the prepare step, for
+the first such source that also resolves to items (§4); in a terminal the
+adoption notice is printed before the block of that source. The adoption stays
+when the run fails or is stopped. The adoption covers the whole lockfile: an
+entry of a skipped source gets the `files` record of its files on disk; no other
+field of that entry changes and none of its files is written. When every source
+is skipped, nothing is adopted. When a later step fails after a source was
+skipped, the line of the skipped source is still printed, before the error.
 
 Known limits: the plugin and MCP steps of a bundle source run when the source is
 applied, are not part of the preview and are not a reason to ask, so a terminal

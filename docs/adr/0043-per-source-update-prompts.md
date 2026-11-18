@@ -43,16 +43,36 @@ failed until `update --force`.
    that requires it is prepared. Then the source overlap check runs once on the
    items of all these sources together and on the item directories of every
    local-path source recorded in the lockfile that the run does not otherwise
-   read (#547). An error in this phase stops the run before any adoption and
-   before any source is applied. As built, the prepare phase does not read the
-   interrupt flag: the Ctrl-C handler sets the flag and returns. A Ctrl-C in a
-   terminal also reaches a running `git` child process, because `git` is started
-   without a new process group; when that ends the fetch with an error, the run
-   fails before any source is applied. Otherwise the phase goes on. After such
-   an interrupt, when the phase completes, the observer of a terminal run and of
-   a `--yes` run returns a stop for the first source, after the empty-source
-   check and the adoption step of that source and before its preview is shown,
-   so no source is applied; the `--dry-run` observer does not read the flag and
+   read (#547). A source that cannot be fetched (a failed `git clone`, or a
+   local-path source whose path does not exist), also through the source of a
+   cross-source dependency that it requires, is skipped (#551): its files are
+   not written (a `schema: 1` adoption that another source causes still records
+   the `files` of its lockfile entries, see Decision 6), it is reported on
+   stderr with its label and the cause, the other sources are handled, and the
+   run exits with code 1, also in a dry run. One run gives one verdict per
+   source: a prepared source whose plan would write an item that the lockfile
+   records from a skipped source is skipped too, with its own message (it was
+   skipped because it requires an item of the named skipped source, not because
+   it could not be fetched), until no further source is dropped. A skipped
+   source is not in the prepared set, so the overlap check treats it as a
+   recorded source that the run does not read: a local path that does not exist
+   protects nothing, and a git source has its item directories in no directory
+   on disk. Any other error in this phase stops the run before any adoption and
+   before any source is applied. The prepare phase reads the interrupt flag at
+   three points: before each source, after a fetch failure, and before the step
+   that compares the prepared sources with the skipped sources. At each point,
+   after an interrupt, it fetches no further source, records no further skip,
+   and the run fails with exit code 130; the skips recorded before the interrupt
+   are still reported. A Ctrl-C in a terminal also reaches a running `git` child
+   process, because `git` is started without a new process group; a fetch that
+   ends with an error after an interrupt is therefore not a fetch failure. An
+   interrupt during the prepare step of a source, also of the last source, is
+   seen at the next of these points, so the phase does not complete. Only an
+   interrupt that arrives after the check before the comparison step reaches the
+   apply phase: there, the observer of a terminal run and of a `--yes` run
+   returns a stop for the first source, after the empty-source check and the
+   adoption step of that source and before its preview is shown, so no source is
+   applied; the `--dry-run` observer does not stop in the preview step and
    prints every block. The process exits with code 130 when the flag is set.
    Then `update` handles the sources one at a time, in the same order, and
    computes the preview of each source from its fetched content, the files on
@@ -95,9 +115,13 @@ failed until `update --force`.
    preview changes nothing, so its plugin and MCP steps run. `--dry-run` prints
    the same blocks and applies nothing.
 6. **A `schema: 1` lockfile is adopted once per run, without a question**, after
-   every source passed the checks of the prepare phase, for the first source
-   that also passes the empty-source check, before the preview of that source is
-   computed.
+   every source that was not skipped (because it could not be fetched, or
+   because it requires an item of a skipped source) passed the checks of the
+   prepare phase, for the first such source that also passes the empty-source
+   check, before the preview of that source is computed. The adoption covers the
+   whole lockfile: an entry of a skipped source gets the `files` record of its
+   files on disk, and no other field of that entry changes. When every source is
+   skipped, nothing is adopted.
 
 ## Consequences
 
@@ -137,8 +161,10 @@ failed until `update --force`.
     result lines or the closing summary. The question names the source.
 - A run can still stop after earlier sources were applied (#471): after a `q`
   answer, end of input or a read error at the question, an interrupt, or an
-  error in the apply phase of a later source. An error in the prepare phase
-  applies no source.
+  error in the apply phase of a later source. An error in the prepare phase,
+  other than a source that cannot be fetched, applies no source; a source that
+  cannot be fetched, and a source that requires an item of such a source, are
+  skipped and the other sources are applied.
 
 ## Alternatives considered
 
@@ -152,6 +178,15 @@ failed until `update --force`.
 - **Remove the question and always apply, as `--yes` does.** Rejected:
   `update --force` deletes user edits, and the question is the place where the
   user sees which ones.
+- **Stop the run when one source cannot be fetched** (the behaviour from #549
+  until #551). Rejected: one host that does not answer, or one deleted
+  repository, blocked the update of every other source of the lockfile. Before
+  #549, `update` handled one source at a time, so the sources before the failing
+  one were updated. Skipping the source keeps the other sources current, and
+  exit code 1 still reports the failure to scripts. Other prepare errors (a
+  parse error, the overlap check, a recorded source that exists and cannot be
+  read) still stop the run, because they show a state of the lockfile or of the
+  disk that the user must correct before any write.
 - **A question per item.** Rejected: a source is reinstalled as a unit
   (dependency closure, bundle resolution), and a partial apply of one source
   needs rules that do not exist.
