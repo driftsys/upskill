@@ -223,10 +223,13 @@ and add them from there.
 client-native plugins by shelling out to each client's own CLI
 (`claude plugin install`, `copilot plugin install`, `code
 --install-extension`,
-`opencode plugin`) — they are **not** rendered through the generation pipeline.
-If a client's CLI is not on `PATH`, the plugin is skipped (not an error) and
-recorded as `skipped` in the lockfile; `upskill doctor` reports skipped and
-missing plugins. Removing the bundle cleans up its plugins.
+`opencode plugin add`, which needs opencode 2.x) — they are **not** rendered
+through the generation pipeline. A `plugin_uri` opencode plugin is written into
+the `plugin` array of `opencode.json` instead. If a client's CLI is not on
+`PATH`, or `opencode --version` reports a major version below 2, the plugin is
+skipped (not an error, with a warning) and recorded as `skipped` in the
+lockfile; `upskill doctor` reports skipped and missing plugins. Removing the
+bundle cleans up its plugins.
 
 **Bundle MCP servers.** When a bundle declares an `mcps:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` configures those
@@ -512,23 +515,26 @@ and nothing is written.
 The plugin and MCP steps of a bundle source run when the source is applied. They
 are not part of the preview and are not a reason to ask. A terminal run does not
 apply a source whose preview changes nothing, so it does not repair a missing
-plugin or MCP registration of that source; `upskill doctor` reports it and
-`update --yes` repairs it. A change of only the `required_by` field of an item
-record is not shown as a change and does not cause a question; it is saved when
-the source is applied, and also when the preview of the source changes nothing.
-It is not saved with `--dry-run` or for a source that the answer did not apply.
-`required_by` is refreshed when `add` writes its install, when `update` applies
-a source, and when `update` does not apply a source whose preview changes
-nothing; a dry run, a declined source and a source at which the run stops
-refresh nothing. A refresh computes `required_by` of every lockfile entry again,
-and rewrites an entry only where the new value differs. A requirer is evaluated
-by the run when the run resolved its `requires`: every item of an install by
-item names, or of a whole directory source, and every item that such an item
-requires. A bundle install, and a request that also names a bundle (resolved by
-name), evaluate no requirer. An evaluated requirer is removed from every entry
-and added back where it still requires the item (also an item that `--exclude`
-leaves out). Every other requirer is kept, also when it is not installed. The
-result does not depend on the order of the sources or of two `add` commands.
+MCP registration of that source; `upskill doctor` reports it and `update --yes`
+repairs it. A plugin that `doctor` reports missing is installed again also for a
+source whose preview changes nothing, in a terminal run as well, but not for a
+source that the answer did not apply and not with `--dry-run` or `--check`. A
+change of only the `required_by` field of an item record is not shown as a
+change and does not cause a question; it is saved when the source is applied,
+and also when the preview of the source changes nothing. It is not saved with
+`--dry-run` or for a source that the answer did not apply. `required_by` is
+refreshed when `add` writes its install, when `update` applies a source, and
+when `update` does not apply a source whose preview changes nothing; a dry run,
+a declined source and a source at which the run stops refresh nothing. A refresh
+computes `required_by` of every lockfile entry again, and rewrites an entry only
+where the new value differs. A requirer is evaluated by the run when the run
+resolved its `requires`: every item of an install by item names, or of a whole
+directory source, and every item that such an item requires. A bundle install,
+and a request that also names a bundle (resolved by name), evaluate no requirer.
+An evaluated requirer is removed from every entry and added back where it still
+requires the item (also an item that `--exclude` leaves out). Every other
+requirer is kept, also when it is not installed. The result does not depend on
+the order of the sources or of two `add` commands.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.
@@ -877,9 +883,12 @@ scope. For each scope it reports eleven independent buckets:
   dependency of items that are no longer installed. Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
   found in the client. Likely uninstalled out-of-band; `upskill update --yes`
-  reinstalls them. A run in a terminal applies a source only when its preview
-  changes something, and the plugin and MCP steps are not part of the preview.
-  Causes exit 1.
+  reinstalls them, also when no item changed. An opencode plugin whose
+  identifier is in the `plugin` array of the scope's `opencode.json` is
+  installed, and `doctor` runs no opencode command for it; otherwise `doctor`
+  runs `opencode plugin list`. With opencode below version 2, `doctor` runs no
+  `opencode plugin` command and does not report the plugin missing. Causes exit
+  1.
 - **Skipped plugins** (informational) — recorded as `skipped` because the client
   CLI was not on PATH at install time. Install the CLI then run
   `upskill update --yes` to install them. A run in a terminal applies a source

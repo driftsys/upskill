@@ -583,6 +583,10 @@ pub struct UpdateReport {
     pub sources_not_applied: usize,
     /// True when the observer returned [`SourceDecision::Stop`].
     pub stopped: bool,
+    /// Plugins that the run installed again because they were recorded as
+    /// installed and the client reported them missing (issue #229). The
+    /// plugin install that is part of the apply of a source is not listed.
+    pub plugin_results: Vec<PluginResult>,
     /// Sources of the run that were not previewed because the observer
     /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the
     /// run did not stop.

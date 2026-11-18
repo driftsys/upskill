@@ -46,6 +46,8 @@ pub(super) struct PreparedInstall {
     /// to the overlap check. `update` checks the items of all its sources
     /// together with [`PreparedInstall::source_items`].
     source_items: Vec<super::output::SourceItem>,
+    /// The fetched root of the entry source: a directory or a bundle file.
+    local_source: PathBuf,
     /// Deletes the clone of the entry source when dropped.
     _tmp_guard: Option<tempfile::TempDir>,
 }
@@ -74,6 +76,41 @@ pub(super) struct InstallPreview {
 /// file, merges duplicate planned items and checks the installed names.
 /// Writes nothing in `target`: no file, no directory and no lockfile. The conflict
 /// check reads the lockfile and does not keep it.
+/// Record installed and warn-skipped plugins in `lock`. A plugin whose
+/// client CLI is absent or has an unsupported version is recorded as
+/// skipped. Plugins that failed (non-zero exit) are NOT recorded — they are
+/// transient errors; the CLI is present but misbehaving.
+pub(super) fn record_plugin_results(
+    lock: &mut Lockfile,
+    results: &[super::PluginResult],
+    plugin_scope: PluginScope,
+) {
+    use crate::lockfile::PluginInstallStatus;
+    use crate::plugin::PluginOutcome;
+
+    for pr in results {
+        let status = match &pr.outcome {
+            PluginOutcome::Success => PluginInstallStatus::Installed,
+            PluginOutcome::CliNotFound | PluginOutcome::UnsupportedVersion { .. } => {
+                PluginInstallStatus::Skipped
+            }
+            PluginOutcome::ManualInstructions => PluginInstallStatus::Instructions,
+            PluginOutcome::Failed { .. } => continue,
+        };
+        lock.upsert_plugin(crate::lockfile::LockedPlugin {
+            name: pr.name.clone(),
+            client: pr.client.clone(),
+            identifier: pr.identifier.clone(),
+            scope: match plugin_scope {
+                PluginScope::Project => Some("project".into()),
+                PluginScope::User => Some("user".into()),
+            },
+            bundle: pr.bundle.clone(),
+            status,
+        });
+    }
+}
+
 pub(super) fn prepare_install(
     source: &InstallSource,
     target: &Path,
@@ -357,11 +394,37 @@ pub(super) fn prepare_install(
         closure,
         resolved_bundles,
         source_items,
+        local_source,
         _tmp_guard: tmp_guard,
     })
 }
 
 impl PreparedInstall {
+    /// The bundle `name` as the fetched entry source declares it now: a
+    /// bundle that this install resolved, else the bundle file of that name
+    /// in the source. `None` when the source has no such bundle or its
+    /// manifest cannot be read.
+    pub fn source_bundle(&self, name: &str) -> Option<crate::model::Bundle> {
+        if let Some(rb) = self
+            .resolved_bundles
+            .iter()
+            .find(|rb| rb.bundle.name == name)
+        {
+            return Some(rb.bundle.clone());
+        }
+        if let Some(bundle) = self.report.bundles.iter().find(|b| b.name == name) {
+            return Some(bundle.clone());
+        }
+        let path = if discovery::is_bundle_file(&self.local_source) {
+            self.local_source.clone()
+        } else {
+            discovery::find_bundle_by_name(&self.local_source, name)?
+        };
+        crate::parse::bundle::load(&path)
+            .ok()
+            .filter(|bundle| bundle.name == name)
+    }
+
     /// Every item directory of every source that this install reads, as given
     /// to the overlap check of [`prepare_install`].
     pub fn source_items(&self) -> &[super::output::SourceItem] {
@@ -598,6 +661,7 @@ impl PreparedInstall {
             closure: _closure,
             resolved_bundles,
             source_items: _,
+            local_source: _,
             _tmp_guard,
         } = self;
         report.adopted = adopted;
@@ -714,30 +778,7 @@ impl PreparedInstall {
         }
         // Record installed and warn-skipped plugins in the lockfile so that
         // `doctor` can surface skipped ones and verify installed ones.
-        // Plugins that failed (non-zero exit) are NOT recorded — they are
-        // transient errors; the CLI is present but misbehaving.
-        for pr in &report.plugin_results {
-            use crate::lockfile::PluginInstallStatus;
-            use crate::plugin::PluginOutcome;
-
-            let status = match &pr.outcome {
-                PluginOutcome::Success => PluginInstallStatus::Installed,
-                PluginOutcome::CliNotFound => PluginInstallStatus::Skipped,
-                PluginOutcome::ManualInstructions => PluginInstallStatus::Instructions,
-                PluginOutcome::Failed { .. } => continue,
-            };
-            lock.upsert_plugin(crate::lockfile::LockedPlugin {
-                name: pr.name.clone(),
-                client: pr.client.clone(),
-                identifier: pr.identifier.clone(),
-                scope: match plugin_scope {
-                    PluginScope::Project => Some("project".into()),
-                    PluginScope::User => Some("user".into()),
-                },
-                bundle: pr.bundle.clone(),
-                status,
-            });
-        }
+        record_plugin_results(&mut lock, &report.plugin_results, plugin_scope);
         // Record configured and warn-skipped MCP servers in the lockfile.
         for mr in &report.mcp_results {
             use crate::lockfile::McpInstallStatus;
@@ -746,8 +787,11 @@ impl PreparedInstall {
             let status = match &mr.outcome {
                 PluginOutcome::Success => McpInstallStatus::Installed,
                 PluginOutcome::CliNotFound => McpInstallStatus::Skipped,
-                // ManualInstructions is unused for MCP; Failed is transient.
-                PluginOutcome::ManualInstructions | PluginOutcome::Failed { .. } => continue,
+                // ManualInstructions and UnsupportedVersion are unused for
+                // MCP; Failed is transient.
+                PluginOutcome::ManualInstructions
+                | PluginOutcome::UnsupportedVersion { .. }
+                | PluginOutcome::Failed { .. } => continue,
             };
             lock.upsert_mcp(crate::lockfile::LockedMcp {
                 name: mr.name.clone(),

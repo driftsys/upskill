@@ -26,7 +26,7 @@ Each of the four target clients exposes a CLI for plugin/extension management:
 - `copilot plugin marketplace add <source>` +
   `copilot plugin install <plugin>@<marketplace>`
 - `code --install-extension <ext-id>`
-- `opencode plugin <module>`
+- `opencode plugin add <package>` (opencode 2.x)
 
 These CLIs already implement the lifecycle work (marketplace registration,
 version pinning, scope semantics, idempotent updates) that upskill would
@@ -84,7 +84,7 @@ matching client targeted, upskill shells out:
 | claude   | `claude plugin marketplace add <source>` (idempotent — checked via `claude plugin marketplace list`), then `claude plugin install <plugin>@<marketplace> --scope <scope>` |
 | copilot  | `copilot plugin marketplace add <source>` (idempotent), then `copilot plugin install <plugin>@<marketplace>`                                                              |
 | vscode   | `code --install-extension <extension>` (naturally idempotent)                                                                                                             |
-| opencode | `opencode plugin <module>`                                                                                                                                                |
+| opencode | `opencode plugin add <module>`                                                                                                                                            |
 
 Claude's `--scope` derives from upskill's existing project/global flag:
 
@@ -113,6 +113,38 @@ The rules/skills/agents portion of the bundle still installs. Rationale: in
 mixed-client teams, the bundle's primary value (SSOT-derived content) is
 independent of whether every plugin lands. Failing the whole install for a
 missing tertiary tool is hostile.
+
+### opencode: version 2.x only
+
+upskill uses the plugin commands of opencode 2.x only:
+`opencode plugin add <package>` to install, `opencode plugin list` to check and
+`opencode plugin remove <package>` to uninstall. Before it runs any
+`opencode plugin` command, upskill runs `opencode --version`. When the major
+version is below 2, or no version can be read, upskill runs no `opencode plugin`
+command: opencode 1.x reads `opencode plugin <word>` as an install of the module
+`<word>`, so `opencode plugin list` would install a module named `list`. An
+install then records the plugin as `skipped`, and `add` prints a warning that
+names `opencode 2.x` and the version found. `doctor` treats the plugin as a
+plugin whose state cannot be checked: it is not reported as missing.
+
+A plugin declared with `plugin_uri` is installed by a write to the `plugin`
+array of `opencode.json`, not by a command. For every opencode plugin that the
+lockfile records as installed, `doctor` first reads the `opencode.json` that
+upskill writes for that scope. When the `plugin` array holds the recorded
+identifier, the plugin is installed and `doctor` runs no opencode command for
+it. Otherwise `doctor` checks it with `opencode plugin list`.
+
+### Repair by `update`
+
+`update`, also when no item of a source changes, installs again every plugin of
+the bundles that the lockfile records for a source of the run, when the lockfile
+records the plugin as installed and the check of `doctor` reports it missing.
+Only the missing client of the plugin is installed. A plugin that the apply of
+the source installed in the same run is not installed again. This runs when the
+source is applied, and when its preview changes nothing; it does not run for a
+source that the answer did not apply, with `--dry-run`, or with `--check`. So
+the hint `upskill update --yes` to fix that `doctor` prints for a missing plugin
+is true.
 
 ### Lockfile records the resolved triple
 

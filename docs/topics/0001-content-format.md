@@ -684,7 +684,7 @@ plugins:
 | `copilot`  | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
 | `vscode`   | `extension`   | string | YES      | Extension ID (passed to `code --install-extension`).                                                   |
 | `vscode`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
-| `opencode` | `module`      | string | YES      | Module name (passed to `opencode plugin`).                                                             |
+| `opencode` | `module`      | string | YES      | Module name (passed to `opencode plugin add`; opencode 2.x).                                           |
 | `opencode` | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
 
 `source` and `marketplace` are **distinct** and both required for the
@@ -757,7 +757,7 @@ descriptors.
 | claude   | `claude plugin marketplace add <source>`, then `claude plugin install <plugin>@<marketplace> --scope <scope>` |
 | copilot  | `copilot plugin marketplace add <source>`, then `copilot plugin install <plugin>@<marketplace>`               |
 | vscode   | `code --install-extension <extension>`                                                                        |
-| opencode | `opencode plugin <module>`                                                                                    |
+| opencode | `opencode plugin add <module>`                                                                                |
 
 Claude's `--scope` derives from upskill's project/global context:
 

@@ -675,34 +675,34 @@ fn print_selection_skipped(report: &InstallReport) {
 /// Follows the warn-skip policy: CLI-not-found prints a warning with an
 /// optional install URL; failures print the stderr output.
 fn print_plugin_results(report: &InstallReport) {
-    if style::is_quiet() || report.plugin_results.is_empty() {
+    print_plugin_result_list(&report.plugin_results);
+}
+
+/// Print plugin install results: successes to stdout, manual steps, skips
+/// and failures to stderr.
+fn print_plugin_result_list(results: &[PluginResult]) {
+    if style::is_quiet() || results.is_empty() {
         return;
     }
 
     use upskill::plugin::PluginOutcome;
 
-    let successes: Vec<&PluginResult> = report
-        .plugin_results
-        .iter()
-        .filter(|r| r.outcome.is_success())
-        .collect();
-    let skipped: Vec<&PluginResult> = report
-        .plugin_results
+    let successes: Vec<&PluginResult> = results.iter().filter(|r| r.outcome.is_success()).collect();
+    let skipped: Vec<&PluginResult> = results
         .iter()
         .filter(|r| r.outcome.is_cli_not_found())
         .collect();
-    let instructions: Vec<&PluginResult> = report
-        .plugin_results
+    let instructions: Vec<&PluginResult> = results
         .iter()
         .filter(|r| r.outcome.is_manual_instructions())
         .collect();
-    let failures: Vec<&PluginResult> = report
-        .plugin_results
+    let failures: Vec<&PluginResult> = results
         .iter()
         .filter(|r| {
             !r.outcome.is_success()
                 && !r.outcome.is_cli_not_found()
                 && !r.outcome.is_manual_instructions()
+                && !r.outcome.is_unsupported_version()
         })
         .collect();
 
@@ -752,6 +752,18 @@ fn print_plugin_results(report: &InstallReport) {
             r.client,
             url_hint
         );
+    }
+
+    for r in results {
+        if let PluginOutcome::UnsupportedVersion { required, found } = &r.outcome {
+            eprintln!(
+                "{} plugin {} skipped — {} or later is needed, found: {}",
+                style::warn("warning:"),
+                style::name(&r.name),
+                required,
+                found.as_deref().unwrap_or("no version")
+            );
+        }
     }
 
     for r in &failures {
@@ -811,7 +823,7 @@ fn print_mcp_results(report: &InstallReport) {
                     stderr.trim()
                 );
             }
-            PluginOutcome::ManualInstructions => {}
+            PluginOutcome::ManualInstructions | PluginOutcome::UnsupportedVersion { .. } => {}
         }
         for var in &mr.requires_env {
             if std::env::var_os(var).is_none() && warned_env.insert((&mr.name, var)) {
@@ -1081,6 +1093,8 @@ fn run_update(args: UpdateArgs) -> i32 {
     );
     match result {
         Ok(report) => {
+            // Plugins that the run installed again (issue #229).
+            print_plugin_result_list(&report.plugin_results);
             let code = if dry_run {
                 print_update_report(&report, true);
                 EXIT_SUCCESS

@@ -405,23 +405,28 @@ skipped, the line of the skipped source is still printed, before the error.
 
 Known limits: the plugin and MCP steps of a bundle source run when the source is
 applied, are not part of the preview and are not a reason to ask, so a terminal
-run does not repair a missing plugin or MCP registration of a source whose
-preview changes nothing (`doctor` reports it, `update --yes` repairs it). A
-change of only `required_by` in an item record is not shown and does not cause a
-question; it is saved when the source is applied, and also when the preview of
-the source changes nothing, but not with `--dry-run` or for a declined source.
-`required_by` is refreshed when `add` writes its install, when `update` applies
-a source, and when `update` does not apply a source whose preview changes
-nothing; a dry run, a declined source and a source at which the run stops
-refresh nothing. A refresh computes `required_by` of every lockfile entry again,
-and rewrites an entry only where the new value differs. A requirer is evaluated
-by the run when the run resolved its `requires`: every item of an install by
-item names, or of a whole directory source, and every item that such an item
-requires. A bundle install, and a request that also names a bundle (resolved by
-name), evaluate no requirer. An evaluated requirer is removed from every entry
-and added back where it still requires the item (also an item that `--exclude`
-leaves out). Every other requirer is kept, also when it is not installed. The
-result does not depend on the order of the sources or of two `add` commands.
+run does not repair a missing MCP registration of a source whose preview changes
+nothing (`doctor` reports it, `update --yes` repairs it). A plugin that the
+lockfile records as installed for a bundle of a source of the run, and that the
+check of `doctor` reports missing, is installed again when the source is applied
+and also when its preview changes nothing, in a terminal run as well; not for a
+source that the answer did not apply, not with `--dry-run` and not with
+`--check` (ADR-0008). A change of only `required_by` in an item record is not
+shown and does not cause a question; it is saved when the source is applied, and
+also when the preview of the source changes nothing, but not with `--dry-run` or
+for a declined source. `required_by` is refreshed when `add` writes its install,
+when `update` applies a source, and when `update` does not apply a source whose
+preview changes nothing; a dry run, a declined source and a source at which the
+run stops refresh nothing. A refresh computes `required_by` of every lockfile
+entry again, and rewrites an entry only where the new value differs. A requirer
+is evaluated by the run when the run resolved its `requires`: every item of an
+install by item names, or of a whole directory source, and every item that such
+an item requires. A bundle install, and a request that also names a bundle
+(resolved by name), evaluate no requirer. An evaluated requirer is removed from
+every entry and added back where it still requires the item (also an item that
+`--exclude` leaves out). Every other requirer is kept, also when it is not
+installed. The result does not depend on the order of the sources or of two
+`add` commands.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
@@ -625,27 +630,29 @@ the check above refuses it.
   §2.1), recorded files that could not be inspected (`doctor` continues with the
   others), SSOT hash drift on `local:` sources (`update` fixes), lockfile
   entries with no recoverable source (`remove` fixes), installed plugins missing
-  from the client (`update --yes` reinstalls: a run in a terminal applies a
-  source only when its preview changes something, and the plugin and MCP steps
-  are not part of the preview), skipped plugins (informational — CLI was absent
-  at install time), orphaned dependencies (informational), MCP server
-  reconciliation, and interrupted items (an item with a non-empty `pending`
-  record: run the same command again to complete it), and, for the global scope
-  only, files at the earlier global Copilot paths (`earlier_layout`;
-  `upskill update --global` moves them). `doctor` also prints a note for each
-  item that the lockfiles of both scopes record; the note does not change the
-  exit code. After the scope reports, `doctor` prints the support level of each
-  client and kind (`Support levels:`; the compiled table in `src/support.rs`,
-  stated in the user guide page "Support levels"); the section does not change
-  the exit code and `doctor` does not detect client versions. Exit 0 when clean,
-  1 when any drift bucket is non-empty, including `earlier_layout`. Skipped
-  plugins are warnings and do not affect the exit code. Missing, modified and
-  unreadable files are checked against the `files` record; a recorded path that
-  `remove` would never delete (outside the client roots, fewer than three
-  components, or with a `..` component) is skipped without a report. For an item
-  with an empty or missing `files` record (a `schema: 1` lockfile, or a
-  `schema: 2` item with an empty list), `doctor` checks each per-client entry
-  file instead.
+  from the client (`update --yes` reinstalls them, also when no item changed; an
+  opencode plugin whose identifier is in the `plugin` array of the scope's
+  `opencode.json` is installed and no opencode command is run for it; with an
+  opencode version below 2, no `opencode plugin` command is run and the plugin
+  is not reported missing), skipped plugins (informational — CLI was absent, or
+  opencode was below version 2, at install time), orphaned dependencies
+  (informational), MCP server reconciliation, and interrupted items (an item
+  with a non-empty `pending` record: run the same command again to complete it),
+  and, for the global scope only, files at the earlier global Copilot paths
+  (`earlier_layout`; `upskill update --global` moves them). `doctor` also prints
+  a note for each item that the lockfiles of both scopes record; the note does
+  not change the exit code. After the scope reports, `doctor` prints the support
+  level of each client and kind (`Support levels:`; the compiled table in
+  `src/support.rs`, stated in the user guide page "Support levels"); the section
+  does not change the exit code and `doctor` does not detect client versions.
+  Exit 0 when clean, 1 when any drift bucket is non-empty, including
+  `earlier_layout`. Skipped plugins are warnings and do not affect the exit
+  code. Missing, modified and unreadable files are checked against the `files`
+  record; a recorded path that `remove` would never delete (outside the client
+  roots, fewer than three components, or with a `..` component) is skipped
+  without a report. For an item with an empty or missing `files` record (a
+  `schema: 1` lockfile, or a `schema: 2` item with an empty list), `doctor`
+  checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 

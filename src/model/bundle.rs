@@ -198,9 +198,9 @@ pub enum VscodePluginDescriptor {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum OpencodePluginDescriptor {
-    /// Install via `opencode plugin`.
+    /// Install via `opencode plugin add` (opencode 2.x).
     Install {
-        /// Module name (passed to `opencode plugin`).
+        /// Module name (passed to `opencode plugin add`).
         module: String,
         /// URL shown in warn-skip message when CLI not found.
         #[serde(default, skip_serializing_if = "Option::is_none")]

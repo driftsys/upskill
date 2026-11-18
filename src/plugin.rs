@@ -4,7 +4,9 @@
 //! - Claude Code: `claude plugin marketplace add` + `claude plugin install`
 //! - Copilot CLI: `copilot plugin marketplace add` + `copilot plugin install`
 //! - VS Code: `code --install-extension`
-//! - opencode: `opencode plugin`
+//! - opencode: `opencode plugin add` (opencode 2.x or later; the major
+//!   version is read with `opencode --version` before any `opencode plugin`
+//!   command)
 //!
 //! This module exposes typed install/uninstall functions per client.
 //! All functions return structured results (never write to stdout/stderr)
@@ -47,6 +49,16 @@ pub enum PluginOutcome {
     },
     /// Plugin requires manual installation via instructions URL.
     ManualInstructions,
+    /// Client CLI found, but its version is below the version that upskill
+    /// needs, or `--version` did not print a version. No plugin command was
+    /// run — plugin skipped.
+    UnsupportedVersion {
+        /// The version that upskill needs, for example `opencode 2.x`.
+        required: &'static str,
+        /// The first line that `--version` printed; `None` when it printed
+        /// nothing or failed.
+        found: Option<String>,
+    },
 }
 
 impl PluginOutcome {
@@ -63,6 +75,11 @@ impl PluginOutcome {
     /// True when the plugin has manual installation instructions.
     pub fn is_manual_instructions(&self) -> bool {
         matches!(self, Self::ManualInstructions)
+    }
+
+    /// True when the CLI version is below the needed version.
+    pub fn is_unsupported_version(&self) -> bool {
+        matches!(self, Self::UnsupportedVersion { .. })
     }
 }
 
@@ -89,7 +106,9 @@ pub fn install_claude_plugin(
         PluginOutcome::CliNotFound => return PluginOutcome::CliNotFound,
         PluginOutcome::Failed { .. } => return result,
         PluginOutcome::Success => {}
-        PluginOutcome::ManualInstructions => unreachable!(),
+        PluginOutcome::ManualInstructions | PluginOutcome::UnsupportedVersion { .. } => {
+            unreachable!()
+        }
     }
 
     // Step 2: Install plugin with scope. The install ref uses the marketplace
@@ -112,9 +131,74 @@ pub fn install_vscode_extension(extension: &str) -> PluginOutcome {
     run_command("code", &["--install-extension", extension])
 }
 
-/// Install an opencode module via `opencode plugin`.
+/// Install an opencode package via `opencode plugin add <package>`.
+///
+/// Runs `opencode --version` first and runs no `opencode plugin` command
+/// when the major version is below 2 or cannot be read (see
+/// [`opencode_version`]).
 pub fn install_opencode_plugin(module: &str) -> PluginOutcome {
-    run_command("opencode", &["plugin", module])
+    match opencode_version() {
+        OpencodeVersion::NotFound => PluginOutcome::CliNotFound,
+        OpencodeVersion::Unsupported { found } => PluginOutcome::UnsupportedVersion {
+            required: OPENCODE_REQUIRED,
+            found,
+        },
+        OpencodeVersion::Supported => run_command("opencode", &["plugin", "add", module]),
+    }
+}
+
+/// The opencode version that upskill needs for its `opencode plugin`
+/// commands, as shown to the user.
+pub const OPENCODE_REQUIRED: &str = "opencode 2.x";
+
+/// The lowest opencode major version whose plugin commands upskill uses
+/// (`opencode plugin add`, `opencode plugin list`, `opencode plugin remove`).
+const OPENCODE_MIN_MAJOR: u64 = 2;
+
+/// Result of `opencode --version`, read before any `opencode plugin` command.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum OpencodeVersion {
+    /// `opencode` is not on PATH.
+    NotFound,
+    /// The major version is [`OPENCODE_MIN_MAJOR`] or higher.
+    Supported,
+    /// The major version is lower, or no version could be read.
+    Unsupported { found: Option<String> },
+}
+
+/// Run `opencode --version` and compare its major version with
+/// [`OPENCODE_MIN_MAJOR`]. opencode 1.x reads `opencode plugin <word>` as an
+/// install of the module `<word>`, so no `opencode plugin` command is run
+/// unless the version is known to be supported.
+fn opencode_version() -> OpencodeVersion {
+    match run_command_output("opencode", &["--version"]) {
+        CommandOutput::CliNotFound => OpencodeVersion::NotFound,
+        CommandOutput::Failed { .. } => OpencodeVersion::Unsupported { found: None },
+        CommandOutput::Success { stdout } => {
+            let first = stdout.lines().next().unwrap_or("").trim().to_string();
+            match parse_major_version(&first) {
+                Some(major) if major >= OPENCODE_MIN_MAJOR => OpencodeVersion::Supported,
+                _ => OpencodeVersion::Unsupported {
+                    found: (!first.is_empty()).then_some(first),
+                },
+            }
+        }
+    }
+}
+
+/// The major version in a `--version` line such as `opencode v2.1.4` or
+/// `2.1.4`: the leading digits of the first word that starts with a digit,
+/// after an optional `v`.
+fn parse_major_version(line: &str) -> Option<u64> {
+    line.split_whitespace().find_map(|word| {
+        let word = word.strip_prefix('v').unwrap_or(word);
+        let digits: String = word.chars().take_while(char::is_ascii_digit).collect();
+        if digits.is_empty() {
+            None
+        } else {
+            digits.parse().ok()
+        }
+    })
 }
 
 /// Install a GitHub Copilot CLI plugin via `copilot plugin marketplace add`
@@ -127,7 +211,9 @@ pub fn install_copilot_plugin(source: &str, marketplace: &str, plugin: &str) -> 
         PluginOutcome::CliNotFound => return PluginOutcome::CliNotFound,
         PluginOutcome::Failed { .. } => return result,
         PluginOutcome::Success => {}
-        PluginOutcome::ManualInstructions => unreachable!(),
+        PluginOutcome::ManualInstructions | PluginOutcome::UnsupportedVersion { .. } => {
+            unreachable!()
+        }
     }
 
     // Step 2: Install plugin from marketplace. The install ref uses the
@@ -165,9 +251,18 @@ pub fn uninstall_vscode_extension(extension: &str) -> PluginOutcome {
     run_command("code", &["--uninstall-extension", extension])
 }
 
-/// Uninstall an opencode module.
+/// Uninstall an opencode package via `opencode plugin remove <package>`.
+/// Runs no `opencode plugin` command when the version check of
+/// [`install_opencode_plugin`] fails.
 pub fn uninstall_opencode_plugin(module: &str) -> PluginOutcome {
-    run_command("opencode", &["plugin", "remove", module])
+    match opencode_version() {
+        OpencodeVersion::NotFound => PluginOutcome::CliNotFound,
+        OpencodeVersion::Unsupported { found } => PluginOutcome::UnsupportedVersion {
+            required: OPENCODE_REQUIRED,
+            found,
+        },
+        OpencodeVersion::Supported => run_command("opencode", &["plugin", "remove", module]),
+    }
 }
 
 /// Uninstall a GitHub Copilot CLI plugin. `marketplace` is the marketplace
@@ -260,10 +355,25 @@ pub fn check_vscode_extension_installed(extension_id: &str) -> PluginCheckResult
 /// Check whether an opencode plugin is installed.
 ///
 /// Runs `opencode plugin list` and searches for `module_name` as a
-/// substring of any output line.
+/// substring of any output line. Runs `opencode --version` first; when the
+/// major version is below 2 or cannot be read, runs no `opencode plugin`
+/// command and returns [`PluginCheckResult::QueryFailed`] (the state cannot
+/// be checked).
 pub fn check_opencode_plugin_installed(module_name: &str) -> PluginCheckResult {
-    let out = run_command_output("opencode", &["plugin", "list"]);
-    check_output_for_substring(out, module_name)
+    match opencode_version() {
+        OpencodeVersion::NotFound => PluginCheckResult::CliNotFound,
+        OpencodeVersion::Unsupported { found } => PluginCheckResult::QueryFailed {
+            exit_code: None,
+            stderr: format!(
+                "{OPENCODE_REQUIRED} or later is needed to list plugins; found: {}",
+                found.as_deref().unwrap_or("no version")
+            ),
+        },
+        OpencodeVersion::Supported => {
+            let out = run_command_output("opencode", &["plugin", "list"]);
+            check_output_for_substring(out, module_name)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -402,6 +512,16 @@ pub(crate) fn run_command(program: &str, args: &[&str]) -> PluginOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_major_version_reads_the_forms_of_opencode() {
+        assert_eq!(parse_major_version("opencode v2.1.4"), Some(2));
+        assert_eq!(parse_major_version("opencode v1.15.13"), Some(1));
+        assert_eq!(parse_major_version("2.1.4"), Some(2));
+        assert_eq!(parse_major_version("v10.0.0"), Some(10));
+        assert_eq!(parse_major_version("opencode"), None);
+        assert_eq!(parse_major_version(""), None);
+    }
 
     #[test]
     fn plugin_scope_as_claude_flag() {
