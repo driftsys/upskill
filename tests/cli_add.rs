@@ -1215,3 +1215,57 @@ fn add_force_with_quiet_prints_no_list() {
     assert!(!stdout.contains("Replaced or deleted"), "{stdout}");
     assert!(!installed_script(tmp.path()).exists());
 }
+
+/// Names of the direct entries of `dir`, sorted.
+fn entry_names(dir: &Path) -> Vec<String> {
+    let mut names: Vec<String> = fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    names
+}
+
+#[test]
+fn add_of_a_missing_local_path_fails_and_writes_nothing_in_the_project_scope() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let before = entry_names(&proj);
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./missing", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&assert.get_output().stderr).into_owned();
+
+    assert!(stderr.contains("does not exist"), "{stderr}");
+    assert!(stderr.contains("missing"), "{stderr}");
+    assert!(!proj.join(".upskill-lock.json").exists());
+    assert!(!proj.join("CLAUDE.md").exists());
+    assert_eq!(entry_names(&proj), before);
+}
+
+#[test]
+fn add_of_a_missing_local_path_fails_and_writes_nothing_in_the_global_scope() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let before = entry_names(&home);
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./missing", "--claude", "--global"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&assert.get_output().stderr).into_owned();
+
+    assert!(stderr.contains("does not exist"), "{stderr}");
+    assert!(stderr.contains("missing"), "{stderr}");
+    assert!(!home.join(".upskill-lock.json").exists());
+    assert!(!home.join("CLAUDE.md").exists());
+    assert_eq!(entry_names(&home), before);
+}
