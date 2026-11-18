@@ -8,10 +8,18 @@
 //!
 //! Two runs that overlap each save the whole file. Before it saves, a run
 //! loads the file again and applies only its own roots with [`merge_roots`],
-//! which leaves the entries of the other run in place. The remaining race is
-//! the time between that second load and the rename of the save: when another
-//! run saves inside that time, its entries are lost, and its roots are checked
-//! again at their next session start.
+//! which leaves the entries of the other run in place. An `update` saves
+//! through [`mark_current_in_file`], which loads and saves without a lookup
+//! between them. Without a file lock, these cases remain:
+//!
+//! - A run saves between the second load and the rename of another run. Its
+//!   save is lost. A lost check of a notice run is made again at the next
+//!   session start, because the root is still due. A lost removal by `update`
+//!   is not: the root is not due, so the removed entries stay until the next
+//!   check, at most 24 hours later.
+//! - A notice run looks up a root while an `update` of that root saves. The
+//!   notice run writes its own state of the root, so the removed entries come
+//!   back until the next check, at most 24 hours later.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -202,9 +210,12 @@ pub fn forget(cache: &mut NoticeCache, root: &Path) {
 ///
 /// A root of `roots` that is not in `checked` was not looked up by this run,
 /// so this run changed only its `reported`. When `fresh` holds that root, its
-/// `checked_at` and `updates` stay as `fresh` holds them, and `reported` takes
-/// the entries of `mine` that are still in the `updates` of `fresh`. This keeps
-/// a removal by [`mark_current_in_file`] that was saved during this run.
+/// `checked_at` and `updates` stay as `fresh` holds them, and `reported`
+/// becomes the `reported` of `fresh` together with the entries of `mine` that
+/// are in the `updates` of `fresh`, sorted and without duplicates. This keeps a
+/// removal by [`mark_current_in_file`] that was saved during this run (it
+/// removed the entries from both sets of `fresh`), and the set that another
+/// run printed after a lookup.
 pub fn merge_roots(
     mut fresh: NoticeCache,
     mine: &NoticeCache,
@@ -218,12 +229,17 @@ pub fn merge_roots(
                 match fresh.scopes.get_mut(&key(root)) {
                     Some(current) if only_reported => {
                         let updates = &current.updates;
-                        current.reported = state
-                            .reported
-                            .iter()
-                            .filter(|entry| updates.contains(entry))
-                            .cloned()
-                            .collect();
+                        let mut reported = current.reported.clone();
+                        reported.extend(
+                            state
+                                .reported
+                                .iter()
+                                .filter(|entry| updates.contains(entry))
+                                .cloned(),
+                        );
+                        reported.sort();
+                        reported.dedup();
+                        current.reported = reported;
                     }
                     _ => {
                         fresh.scopes.insert(key(root), state.clone());
@@ -602,6 +618,22 @@ mod tests {
         let state = &merged.scopes[&key(&root())];
         assert_eq!(state.updates, set(&["skill:b@c1"]));
         assert_eq!(state.reported, set(&["skill:b@c1"]));
+    }
+
+    #[test]
+    fn merge_roots_keeps_the_set_that_another_run_printed_after_a_lookup() {
+        // Run A loaded the old set and did not look up the root. Run B looked
+        // it up, found a new set, printed it and saved. A then saves.
+        let mut mine = cache_of(&[(&root(), &["skill:a@c1"])]);
+        decide(&mut mine, Scope::Project, &root(), false);
+        let mut fresh = cache_of(&[(&root(), &["skill:a@c2", "skill:b@c2"])]);
+        decide(&mut fresh, Scope::Project, &root(), false);
+        let mut merged = merge_roots(fresh, &mine, &[root()], &[]);
+        assert_eq!(
+            merged.scopes[&key(&root())].reported,
+            set(&["skill:a@c2", "skill:b@c2"])
+        );
+        assert_eq!(decide(&mut merged, Scope::Project, &root(), false), None);
     }
 
     #[test]

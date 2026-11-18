@@ -673,9 +673,9 @@ The command is quiet by design:
   fails part of the way removes nothing: the items that it had updated stay in
   the notice until the next lookup. A failure to read or write the cache file
   does not change the result of `update` and prints nothing. When a
-  session-start run of `--notice` overlaps the `update` and looks up the sources
-  of that scope, it can write back the entries that `update` removed, and they
-  stay until the next lookup.
+  session-start run of `--notice` and an `update` of the same scope save the
+  cache file at the same time, the notice can list installed updates until the
+  next check, at most 24 hours later.
 - It contacts the sources at most once in 24 hours for each scope, with the same
   lookups as `update --check` and a time limit of 5 seconds for all sources.
   Between two lookups, it uses the result of the last one. A lookup that reaches

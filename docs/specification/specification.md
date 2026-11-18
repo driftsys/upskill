@@ -514,9 +514,14 @@ rules, in order:
    its own state replaces the state of the copy: when an `update` of that root
    saved during the lookups, the entries that the `update` removed come back and
    stay until the next check. A failed write is ignored. A run that saves
-   between the second read and the rename of this run loses its entries; its
-   roots are checked again at their next session start. Closing these cases
-   needs a file lock, which the command does not use.
+   between the second read and the rename of this run loses its save. This also
+   applies to an `update` that removes entries: its removal is lost when a
+   notice run renames after it, and a notice run is lost when the `update` saves
+   between its own load and rename. A lost check of a notice run is made again
+   at the next session start, because the root is still due. A lost removal is
+   not: the root is not due, so the removed entries stay until the next check,
+   at most 24 hours later. Closing these cases needs a file lock, which the
+   command does not use.
 
 Every failure after argument parsing prints nothing and gives exit code 0;
 nothing is written to stderr. An interrupt (SIGINT) ends the command at once
