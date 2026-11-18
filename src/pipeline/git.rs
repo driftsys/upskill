@@ -128,10 +128,10 @@ pub struct FetchedSource {
 /// one tempdir-scoped pass.
 ///
 /// A local path that does not exist fails with a [`super::FetchFailed`]
-/// ("source path <path> does not exist"), as a clone that fails does. So
+/// (`source path <path> does not exist`), as a clone that fails does. So
 /// `add` of a missing path writes nothing and exits 1, `update` skips the
 /// source, and a dependency on a missing local-path source fails with
-/// "fetch requires source `<label>`: source path <path> does not exist".
+/// `fetch requires source <label>: source path <path> does not exist`.
 pub fn fetch_ssot(source: &InstallSource) -> Result<FetchedSource> {
     match source {
         InstallSource::LocalPath(p) if !p.exists() => Err(anyhow::Error::new(super::FetchFailed {
@@ -274,10 +274,10 @@ mod tests {
     fn a_missing_local_path_is_a_fetch_failure() {
         let tmp = tempfile::tempdir().unwrap();
         let missing = InstallSource::LocalPath(tmp.path().join("missing"));
-        let err = match fetch_ssot(&missing).context("fetch requires source `x`") {
-            Ok(_) => panic!("a missing local path must not be fetched"),
-            Err(err) => err,
-        };
+        let err = fetch_ssot(&missing)
+            .context("fetch requires source `x`")
+            .err()
+            .expect("a missing local path must not be fetched");
         assert!(err.downcast_ref::<super::super::FetchFailed>().is_some());
         assert!(format!("{err:#}").contains("does not exist"), "{err:#}");
         let present = InstallSource::LocalPath(tmp.path().to_path_buf());

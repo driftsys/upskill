@@ -56,6 +56,10 @@ names to filter:
 upskill add driftsys/skills code-review secret-scanner
 ```
 
+`add` of a local path that does not exist fails with exit code 1 and writes
+nothing. `add` of a source that holds no item installs nothing and exits with
+code 0.
+
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a flag uses the project scope. Outside a
 git repository, `add` without a flag installs nothing and stops with exit code 2

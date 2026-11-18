@@ -697,6 +697,7 @@ fn a_missing_local_dependency_of_a_bundle_skips_the_bundle_source() {
         "{err}"
     );
     assert!(err.contains("fetch requires source"), "{err}");
+    assert!(err.contains("does not exist"), "{err}");
     assert_eq!(files_under(&e.proj), before, "update changed a file");
 }
 
