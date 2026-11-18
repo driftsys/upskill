@@ -135,6 +135,8 @@ fn yes_then_yes_applies_both() {
         stdout(&result).contains("Updated 2 of 2 item(s) from 2 of 2 source(s)."),
         "{result}"
     );
+    // Items changed, so the summary is not followed by the file count.
+    assert!(!stdout(&result).contains("Changed "), "{result}");
 }
 
 #[test]
@@ -706,6 +708,186 @@ fn an_item_skipped_in_two_ways_is_counted_once() {
     assert_eq!(stderr(&result).matches(QUESTION).count(), 1, "{result}");
     assert!(
         summary(&result).starts_with("Updated 0 of 2 item(s) from 0 of 2 source(s)."),
+        "{result}"
+    );
+}
+
+/// A project with `code-review` from `./reg-a`, which requires the skill
+/// `sarif` from `reg-b`, and the skill `other` from `reg-b`. No file is
+/// edited. Returns the project, the home and the agent source.
+fn cross_source_with_a_second_item() -> (tempfile::TempDir, PathBuf, PathBuf) {
+    let (tmp, home, agent, sarif) = cross_source_with_a_skipped_dependency();
+    // Undo the edit and the source change of the fixture.
+    write_skill(tmp.path(), "reg-b", "sarif", "Body.");
+    fs::remove_file(&sarif).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--force", "--yes"])
+        .assert()
+        .success();
+    write_skill(tmp.path(), "reg-b", "other", "Other.");
+    let reg_b = tmp.path().join("reg-b");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            reg_b.to_str().unwrap(),
+            "other",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    (tmp, home, agent)
+}
+
+#[test]
+fn the_owning_source_does_not_report_a_dependency_written_before_again() {
+    // `reg-a` writes the new `sarif`; `reg-b` is applied after it for
+    // `other` and finds `sarif` written (issue #506).
+    let (tmp, home, _agent) = cross_source_with_a_second_item();
+    assert_eq!(label(tmp.path(), "sarif"), label(tmp.path(), "other"));
+    write_skill(tmp.path(), "reg-b", "sarif", "Changed.");
+    write_skill(tmp.path(), "reg-b", "other", "Changed.");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\ny\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(stderr(&result).matches(QUESTION).count(), 2, "{result}");
+    let result_lines: Vec<&str> = stdout(&result)
+        .lines()
+        .filter(|l| l.starts_with("  ") && l.contains(" updated"))
+        .collect();
+    // One `1 updated` line per source: the sum equals `<n>`.
+    assert_eq!(result_lines.len(), 2, "{result}");
+    for line in &result_lines {
+        assert!(line.starts_with("  1 updated"), "{line}: {result}");
+    }
+    assert!(
+        summary(&result).starts_with("Updated 2 of 3 item(s) from 2 of 2 source(s)."),
+        "{result}"
+    );
+}
+
+#[test]
+fn a_changed_and_edited_dependency_is_skipped_and_not_updated() {
+    let (tmp, home, agent, sarif) = cross_source_with_a_skipped_dependency();
+    let text = fs::read_to_string(&agent).unwrap();
+    fs::write(&agent, format!("{text}Changed.\n")).unwrap();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\n");
+    assert_eq!(result["returncode"], 1, "{result}");
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+    assert!(
+        stdout(&result).contains("  1 updated, 1 skipped"),
+        "{result}"
+    );
+    assert!(
+        summary(&result).starts_with("Updated 1 of 2 item(s)"),
+        "{result}"
+    );
+}
+
+#[test]
+fn an_interrupted_dependency_completed_by_another_source_counts_as_completed() {
+    let (tmp, home, _agent) = cross_source_with_a_second_item();
+    let path = tmp.path().join(".upskill-lock.json");
+    let mut lock = lockfile(tmp.path());
+    for entry in lock["items"].as_array_mut().unwrap() {
+        if entry["name"] == "sarif" {
+            entry["pending"] = entry["files"].clone();
+        }
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\ny\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        entry(tmp.path(), "sarif").get("pending").is_none(),
+        "{result}"
+    );
+    assert!(stdout(&result).contains("  1 completed"), "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 1 of 3 item(s)"),
+        "{result}"
+    );
+}
+
+#[test]
+fn an_added_cross_source_requires_counts_the_new_dependency() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_skill(tmp.path(), "reg-b", "sarif", "Body.");
+    let reg_a = tmp.path().join("reg-a").join("code-review");
+    fs::create_dir_all(&reg_a).unwrap();
+    let agent = reg_a.join("AGENT.md");
+    fs::write(
+        &agent,
+        "---\nschema: 1\nname: code-review\ndescription: Use for review\n---\nBody.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review", "--claude", "--project"])
+        .assert()
+        .success();
+    fs::write(
+        &agent,
+        format!(
+            "---\nschema: 1\nname: code-review\ndescription: Use for review\nrequires:\n  \
+             skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+            tmp.path().join("reg-b").display()
+        ),
+    )
+    .unwrap();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(claude_skill(tmp.path(), "sarif").is_file(), "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 2 of 2 item(s) from 1 of 1 source(s)."),
+        "{result}"
+    );
+}
+
+#[test]
+fn quit_counts_every_item_of_every_source() {
+    // Three sources with two items each; a skill and an agent share the
+    // name `one` and count as two items (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_skill(tmp.path(), "a", "one", "One.");
+    write_skill(tmp.path(), "a", "two", "Two.");
+    write_skill(tmp.path(), "b", "three", "Three.");
+    let agent = tmp.path().join("b").join("one");
+    fs::create_dir_all(&agent).unwrap();
+    fs::write(
+        agent.join("AGENT.md"),
+        "---\nschema: 1\nname: one\ndescription: Use for one\n---\nBody.\n",
+    )
+    .unwrap();
+    write_skill(tmp.path(), "c", "four", "Four.");
+    write_skill(tmp.path(), "c", "five", "Five.");
+    for dir in ["./a", "./b", "./c"] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["add", dir, "--claude", "--project"])
+            .assert()
+            .success();
+    }
+    change_source(tmp.path(), "a", "one");
+    change_source(tmp.path(), "b", "three");
+    change_source(tmp.path(), "c", "four");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "q\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(
+        summary(&result),
+        "Updated 0 of 6 item(s) from 0 of 1 source(s). 1 source(s) not applied. \
+         Stopped; 2 source(s) not examined.",
         "{result}"
     );
 }

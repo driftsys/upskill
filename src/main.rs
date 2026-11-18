@@ -2960,7 +2960,9 @@ mod tests {
         let mut report = UpdateReport {
             sources_considered: 2,
             sources_applied: 1,
-            items_in_run: 2,
+            // One more than the two items below: a planned dependency
+            // without a status line.
+            items_in_run: 3,
             ..UpdateReport::default()
         };
         for status in [
@@ -2981,12 +2983,12 @@ mod tests {
         }
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s)."
+            "Updated 1 of 3 item(s) from 1 of 2 source(s)."
         );
         report.sources_not_applied = 1;
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied."
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied."
         );
         report
             .skipped_sources
@@ -2997,19 +2999,19 @@ mod tests {
             });
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
              1 source(s) skipped."
         );
         report.skipped_sources.clear();
         report.stopped = true;
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. Stopped."
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied. Stopped."
         );
         report.sources_remaining = 3;
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
              Stopped; 3 source(s) not examined."
         );
     }

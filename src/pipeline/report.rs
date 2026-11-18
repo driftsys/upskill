@@ -608,9 +608,11 @@ pub struct UpdateReport {
     /// previewed and are not counted in [`UpdateReport::sources_considered`].
     pub skipped_sources: Vec<SkippedSource>,
     /// The number of distinct items that the run covers, by `(kind,
-    /// installed name)`: the lockfile entries of every source of the run
-    /// (also of a skipped source) and the items that the plans of the
-    /// fetched sources install. The number is computed before the first
+    /// installed name)`: the lockfile entries that the run selects (every
+    /// entry, or with names only the named entries), also of a skipped
+    /// source, and the items that the plans of the sources that were fetched
+    /// and not skipped install. A skipped source adds no planned item. The
+    /// number is computed before the first
     /// source is previewed, so it does not depend on where the run stops.
     pub items_in_run: usize,
 }
@@ -988,7 +990,6 @@ mod tests {
                 old_hash: None,
                 new_hash: None,
             },
-            UpdateStatus::UpToDate,
         ] {
             report.items.push(UpdatedItem {
                 kind: ItemKind::Skill,
@@ -997,6 +998,26 @@ mod tests {
                 status,
             });
         }
+        report.items.push(UpdatedItem {
+            kind: ItemKind::Skill,
+            name: "y".into(),
+            source: "s".into(),
+            status: UpdateStatus::UpToDate,
+        });
         assert_eq!(report.changed_items(), 1);
+    }
+
+    #[test]
+    fn changed_items_tells_two_kinds_with_one_name_apart() {
+        let mut report = UpdateReport::default();
+        for kind in [ItemKind::Skill, ItemKind::Agent] {
+            report.items.push(UpdatedItem {
+                kind,
+                name: "x".into(),
+                source: "s".into(),
+                status: UpdateStatus::Removed,
+            });
+        }
+        assert_eq!(report.changed_items(), 2);
     }
 }

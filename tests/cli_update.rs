@@ -2106,4 +2106,6 @@ fn update_yes_counts_the_items_of_the_run_as_the_terminal_summary_does() {
     assert!(out.status.success(), "{out:?}");
     let stdout = String::from_utf8(out.stdout).unwrap();
     assert!(stdout.contains("Updated 1 of 2 item(s)"), "{stdout}");
+    // The unchanged dependency `sarif` counts in `<m>` but has no line.
+    assert!(!stdout.contains("sarif"), "{stdout}");
 }

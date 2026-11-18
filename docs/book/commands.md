@@ -449,13 +449,14 @@ that line. After the last source, it prints one closing summary:
 `Updated <n> of <m> item(s) from <a> of <s> source(s).` `<n>` counts the items
 that the run updated, completed or removed, also a dependency from another
 source that the apply of a source updated. `<m>` counts the items that the run
-covers: the lockfile entries of all its sources, also of the sources that were
-not examined after `q`, and the items that the plans of its sources install. An
-item (by kind and installed name) is counted once in each number, and `<m>` is
-the same whether or not the run stops. The summary is followed by
-`<k> source(s) not applied.` when a source with changes was not applied, by
-`<u> source(s) skipped.` when sources were skipped, for either cause (the item
-count `<m>` includes the items of these sources), and by
+covers: the lockfile entries that the run selects (all entries, or with names
+only the named entries), also of the sources that were skipped or not examined
+after `q`, and the items that the plans of the sources that were fetched and not
+skipped install. An item (by kind and installed name) is counted once in each
+number, and `<m>` is the same whether or not the run stops. The summary is
+followed by `<k> source(s) not applied.` when a source with changes was not
+applied, by `<u> source(s) skipped.` when sources were skipped, for either cause
+(the item count `<m>` includes the items of these sources), and by
 `Stopped; <r> source(s) not examined.` (or `Stopped.` when no source remained)
 after `q` or end of input. When no item was updated, completed or removed but
 files were written or deleted (for example the files of a client that the flags
@@ -512,8 +513,11 @@ does not count in the output above, and `update --dry-run` and a declined source
 record no commit.
 
 `update --dry-run` prints the blocks, then
-`Dry-run: would update <n> of <m> item(s)` (`<m>` has the meaning of the
-terminal closing summary) and the line
+`Dry-run: would update <n> of <m> item(s)`. `<n>` is the number of selected
+lockfile entries that the block of their own source lists with an action other
+than `skip` (a dependency from another source and an item that is not in the
+lockfile are not counted), and `<m>` has the meaning of the terminal closing
+summary. Then it prints the line
 `Each block is computed for the current state; a later block does not include the effect of an earlier one.`
 Each block is exact for the files on disk, but because nothing is applied, a
 later block does not include the effect of applying an earlier source. With a
