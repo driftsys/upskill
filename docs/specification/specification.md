@@ -376,13 +376,18 @@ item and a `kept modified file` note are not changes.
   skipped keeps its recorded commit. An entry that the names did not select
   keeps its recorded commit when the source is not applied. When the source is
   applied, the reinstall covers the named items, the items that a named item
-  requires (from the same source or from another one), and every member of a
-  bundle source; each reinstalled entry gets the commit of its own source (an
-  entry from another source gets that source's commit), unless its update is
-  skipped, and any other entry keeps its recorded commit. The lockfile is saved
-  only when a value differs. This write is not a change of the source (see the
-  preview above) and does not count in the output. A dry run, a declined source
-  and a stopped run record no commit.
+  requires (from the same source or from another one). For a directory source
+  with recorded bundles, it reinstalls the members of those bundles and the
+  items of that source installed directly; it installs no other item of the
+  source. It applies the kinds recorded by `add --kind`. A directly installed
+  item outside that restriction is kept unchanged and is not updated; to update
+  it, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
+  reinstalled as a whole. Each reinstalled entry gets the commit of its own
+  source (an entry from another source gets that source's commit), unless its
+  update is skipped, and any other entry keeps its recorded commit. The lockfile
+  is saved only when a value differs. This write is not a change of the source
+  (see the preview above) and does not count in the output. A dry run, a
+  declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and

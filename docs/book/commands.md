@@ -493,10 +493,17 @@ entries of the source that the run selected, also when the source has no changes
 and is not applied, except the entry of an item whose update is skipped, which
 keeps its recorded commit. With names, an entry that the names did not select
 keeps its commit when the source is not applied. In an applied source, the
-reinstall covers the named items, the items that a named item requires, and
-every member of a bundle source; each reinstalled entry gets the commit of its
-own source, unless its update is skipped, and any other entry keeps its commit.
-For a source that is not applied, only a changed commit value, or a changed
+reinstall covers the named items and the items that a named item requires. For a
+directory source with recorded bundles, it reinstalls the members of those
+bundles and the items of that source installed directly; it installs no other
+item of the source. It applies the kinds recorded by `add --kind`. A directly
+installed item outside that restriction is kept unchanged and is not updated; to
+update it, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
+reinstalled as a whole. Each reinstalled entry gets the commit of its own
+source, unless its update is skipped, and any other entry keeps its commit. If a
+recorded bundle is missing from the source, update fails before any write;
+remove the bundle's items with `upskill remove` or restore the bundle. For a
+source that is not applied, only a changed commit value, or a changed
 `required_by` value, causes a lockfile write. This write is not a change: it
 does not count in the output above, and `update --dry-run` and a declined source
 record no commit.

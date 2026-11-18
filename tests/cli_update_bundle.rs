@@ -268,3 +268,90 @@ fn update_keeps_an_item_installed_directly_beside_a_bundle_of_the_same_source() 
             .any(|item| item["name"] == "b" && item["kind"] == "skill")
     );
 }
+
+#[test]
+fn update_keeps_a_direct_item_of_another_kind_beside_a_kind_restricted_bundle() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "b",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let skill_path = consumer.path().join(".claude/skills/b/SKILL.md");
+    let old_body = fs::read_to_string(&skill_path).unwrap();
+    let lock_path = consumer.path().join(".upskill-lock.json");
+    let before: serde_json::Value = serde_json::from_slice(&fs::read(&lock_path).unwrap()).unwrap();
+    let old_entry = before["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["name"] == "b" && item["kind"] == "skill")
+        .unwrap();
+    write_rule_body(registry.path(), "r", "Changed rule body.");
+    write(
+        &registry.path().join("b/SKILL.md"),
+        "---\nname: b\ndescription: A changed skill.\n---\nChanged skill body.\n",
+    );
+    update_named_bundle(consumer.path());
+    assert!(
+        fs::read_to_string(consumer.path().join(".claude/rules/r.md"))
+            .unwrap()
+            .contains("Changed rule body.")
+    );
+    assert_eq!(fs::read_to_string(&skill_path).unwrap(), old_body);
+    let after: serde_json::Value = serde_json::from_slice(&fs::read(&lock_path).unwrap()).unwrap();
+    assert_eq!(
+        after["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["name"] == "b" && item["kind"] == "skill")
+            .unwrap(),
+        old_entry
+    );
+}
+
+#[test]
+fn update_fails_before_any_write_when_a_recorded_bundle_left_the_source() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    let paths = [
+        ".claude/skills/a/SKILL.md",
+        ".claude/rules/r.md",
+        ".upskill-lock.json",
+        "CLAUDE.md",
+    ];
+    let before: Vec<_> = paths
+        .iter()
+        .map(|path| fs::read(consumer.path().join(path)).unwrap())
+        .collect();
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    write(
+        &registry.path().join("a/SKILL.md"),
+        "---\nname: a\ndescription: A changed skill.\n---\nChanged skill body.\n",
+    );
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("bun"));
+    for (path, contents) in paths.iter().zip(before) {
+        assert_eq!(
+            fs::read(consumer.path().join(path)).unwrap(),
+            contents,
+            "{path} changed"
+        );
+    }
+}

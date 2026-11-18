@@ -910,8 +910,13 @@ fn reselect_from_entries(
 /// its recorded commit. An entry of the source that `names` did not select
 /// keeps its recorded commit on this path. In an applied source the
 /// reinstall covers the selected entries, the entries that a selected item
-/// requires (from this source or from another one), and every member for a
-/// bundle source. Each reinstalled entry gets the commit of its own source,
+/// requires (from this source or from another one). For a directory source
+/// with recorded bundles, it reinstalls the members of those bundles and the
+/// directly installed items of that source, and no other source items. It
+/// applies the kinds recorded by `add --kind`; a direct item outside that
+/// restriction is kept unchanged and is not updated. To update it, run
+/// `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled
+/// as a whole. Each reinstalled entry gets the commit of its own source,
 /// unless its update is skipped; any other entry keeps its recorded commit.
 /// Every source without changes that is not applied, in a run that is not
 /// a dry run and not stopped, a git source or a local path, also gets
@@ -1125,6 +1130,29 @@ pub fn update(
                 }
                 Err(err) => return Err(err),
             };
+            // A direct item excluded by the recorded kinds is kept unchanged,
+            // not treated as an item that disappeared from the source.
+            let source_entries: Vec<_> = source_entries
+                .into_iter()
+                .filter(|entry| {
+                    let name = entry.source_name.as_ref().unwrap_or(&entry.name);
+                    let keep = !options.kinds.is_empty()
+                        && !options.kinds.contains(&entry.kind)
+                        && entry.required_by.is_empty()
+                        && !recorded_bundles
+                            .iter()
+                            .any(|bundle| bundle.items.contains(name));
+                    if keep {
+                        report.items.push(UpdatedItem {
+                            kind: entry.kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status: UpdateStatus::UpToDate,
+                        });
+                    }
+                    !keep
+                })
+                .collect();
             prepared_sources.push((source_label, source_entries, prepared));
         }
         // One verdict per source: a prepared source whose plan writes an item
