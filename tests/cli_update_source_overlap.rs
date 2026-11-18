@@ -567,10 +567,11 @@ fn stage_layout(layout: Layout) -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf
             .success();
     }
     // A source inside the project is named from the project, so that its
-    // label has no `..` component.
+    // label has no `..` component. The argument is built as text with `/`:
+    // `add` does not read `..\src-a` as a local path on Windows.
     let outer_arg = match layout.outer.strip_prefix("proj/") {
-        Some(rest) => Path::new(".").join(rest),
-        None => Path::new("..").join(layout.outer),
+        Some(rest) => format!("./{rest}"),
+        None => format!("../{}", layout.outer),
     };
     common::upskill_cmd(&home)
         .current_dir(&proj)
