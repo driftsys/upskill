@@ -932,6 +932,12 @@ fn assert_remove_fails_on_an_unreadable_source(extra: &[&str]) {
     let dir = proj.join(".agents/skills/a");
     let before = files_under(&proj);
     fs::set_permissions(&dir, fs::Permissions::from_mode(0o333)).unwrap();
+    // A process that runs as root reads the directory despite the mode, so
+    // the test has nothing to check there.
+    if fs::read_dir(&dir).is_ok() {
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
     let mut args = vec!["remove", "a", "--project"];
     args.extend_from_slice(extra);
     let output = common::upskill_cmd(&home)
@@ -959,4 +965,57 @@ fn remove_fails_when_a_recorded_source_that_exists_cannot_be_read() {
 #[test]
 fn remove_force_fails_when_a_recorded_source_that_exists_cannot_be_read() {
     assert_remove_fails_on_an_unreadable_source(&["--force"]);
+}
+
+#[test]
+fn add_of_the_same_source_ignores_the_recorded_files_of_its_own_items() {
+    // The probe of the review of pull request #560. The project registry
+    // `.agents/skills` holds `q`; `q` is installed for OpenCode as `r`, so
+    // `.agents/skills/r` is both a recorded output of `r` and an item
+    // directory of the same source. The check of recorded files covers the
+    // items of another source only, so the second `add` of that source,
+    // which installs nothing, is not refused by it.
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    write_skill(&proj.join(".agents/skills/q"), "q", "# q");
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./.agents/skills", "--project", "--opencode"])
+        .args(["--as", "r"])
+        .assert()
+        .success();
+    assert!(proj.join(".agents/skills/r/SKILL.md").is_file());
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./.agents/skills", "--project", "--claude"])
+        .args(["--exclude", "q", "--exclude", "r"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn remove_skips_a_recorded_local_source_that_does_not_exist() {
+    let (tmp, home, proj, _outer) = stage_layout(ISSUE);
+    let src_w = tmp.path().join("src-w");
+    write_skill(&src_w.join("w"), "w", "# w");
+    add(&home, &proj, "../src-w");
+    fs::remove_dir_all(&src_w).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["remove", "other", "--project"])
+        .assert()
+        .success();
+    assert!(!proj.join(".claude/skills/other").exists());
+}
+
+#[test]
+fn remove_refuses_also_when_the_recorded_file_inside_the_other_source_is_modified() {
+    // `remove` would keep the modified file, but the check compares every
+    // recorded file.
+    let (_tmp, home, proj, _outer) = stage_layout(ISSUE);
+    write_skill(&proj.join(".agents/skills/a/y"), "y", "# y, edited");
+    assert_remove_refused(&home, &proj, &[]);
 }

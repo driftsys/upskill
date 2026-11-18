@@ -241,7 +241,8 @@ pub(super) struct SourceItem {
 /// the run. `update` also passes the same item directories to
 /// [`check_outside_recorded_paths`] with the recorded files of every item that
 /// it removes because its source no longer contains it, and `add` passes its
-/// own item directories with the recorded files of every lockfile item.
+/// own item directories with the recorded files of every lockfile item from
+/// another source.
 pub(super) fn check_run_outside_outputs(at: &ScopeRoot, items: &[SourceItem]) -> Result<()> {
     let written = |item: &SourceItem| item.installed.clone().filter(|_| !item.excluded);
     for item in items {
@@ -369,7 +370,7 @@ pub(super) enum RecordedUse {
 /// every recorded file (`files` and `pending`) of every item that the run
 /// removes because its source no longer contains it, also a modified file
 /// that the removal would keep. For [`RecordedUse::AddReads`], `recorded`
-/// holds every recorded file of every item of the lockfile. Called before
+/// holds every recorded file of every lockfile item from another source. Called before
 /// the first deletion or write of the run.
 pub(super) fn check_outside_recorded_paths(
     target: &Path,

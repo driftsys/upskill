@@ -126,10 +126,10 @@ installed name of an item of the given source. The `audience` field and the
 client selection are not applied. The error names the item, its directory, the
 output path and the item of that output path. In the same way, also with
 `--force`, `add` refuses a source whose item directory contains a file that the
-lockfile of the scope records (`files` or `pending`, §4) for an installed item;
-the error names the file and that item. With a `schema: 1` lockfile, the
-recorded files are those that the adoption (§4) would record; the check saves
-nothing.
+lockfile of the scope records (`files` or `pending`, §4) for an item from
+another source; the error names the file and that item. With a `schema: 1`
+lockfile, the recorded files are those that the adoption (§4) would record; the
+check saves nothing.
 
 Before any write, `add` classifies every destination of every item against the
 item's `files` and `pending` records (§4). A destination is a conflict when it
@@ -587,14 +587,15 @@ item recorded from a local-path source contains a recorded file (`files` or
 `pending`, also a modified file that `remove` keeps) of an item that it removes;
 the error names both items and asks to remove the other item first, no file is
 deleted and the lockfile is not changed. A git source is not fetched for this
-check, a recorded local source that does not exist is skipped, and a recorded
-local source that exists and cannot be read fails `remove` with exit code 1 and
-an error that names its source label, before any deletion. With a `schema: 1`
-lockfile, the recorded files are those that the adoption (§4) would record; the
-check runs before the adoption and saves nothing. The lockfile entry of each
-removed item is dropped. `remove` adopts a `schema: 1` lockfile and prints the
-adoption notice, except when a name is not in the lockfile, which is an error,
-and when the check above refuses it.
+check, only the recorded local sources of the items that stay installed are
+read, such a source that does not exist is skipped, and such a source that
+exists and cannot be read fails `remove` with exit code 1 and an error that
+names its source label, before any deletion. With a `schema: 1` lockfile, the
+recorded files are those that the adoption (§4) would record; the check runs
+before the adoption and saves nothing. The lockfile entry of each removed item
+is dropped. `remove` adopts a `schema: 1` lockfile and prints the adoption
+notice, except when a name is not in the lockfile, which is an error, and when
+the check above refuses it.
 
 ### 2.4 `list` / `doctor`
 
@@ -821,13 +822,14 @@ was killed is not deleted by upskill. Two upskill processes that change one
 scope at the same time are not supported. `add`, `update` and `remove` (not
 `update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
 not a `remove` that is refused because a removed file overlaps the source
-directory of another installed item, not an `add` or an `update` that is refused
-for a source item that overlaps an output path of the run or that contains a
-recorded file that the check of §2.1 or §2.2 compares, for a conflict with
-another source, for two items with one installed name, or for an installed name
-that is empty, `.` or `..` or that has a path separator, and not an `update`
-whose first source resolves to no items while the lockfile records items from
-it) adopt a `schema: 1` lockfile: they keep the old bytes as
+directory of another installed item or because the recorded local source of an
+item that stays installed exists and cannot be read, not an `add` or an `update`
+that is refused for a source item that overlaps an output path of the run or
+that contains a recorded file that the check of §2.1 or §2.2 compares, for a
+conflict with another source, for two items with one installed name, or for an
+installed name that is empty, `.` or `..` or that has a path separator, and not
+an `update` whose first source resolves to no items while the lockfile records
+items from it) adopt a `schema: 1` lockfile: they keep the old bytes as
 `.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
 replaced), record each existing file at the items' output paths with its current
 hash, save `schema: 2`, and print the adopted paths to stderr.

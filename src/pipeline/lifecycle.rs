@@ -58,8 +58,9 @@ use super::{
 /// recorded from a local-path source, contains a recorded file (any file of
 /// the `files` and `pending` records, also a modified file that the removal
 /// would keep) of an item that it removes (`check_removal_outside_sources`).
-/// A recorded local source that does not exist is skipped; one that exists
-/// and cannot be read fails `remove` with an error that names it.
+/// Only the recorded local sources of the items that stay installed are
+/// read: such a source that does not exist is skipped; one that exists and
+/// cannot be read fails `remove` with an error that names it.
 ///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
 /// `.vscode/settings.json`) are user-owned after creation per ADR-0003, so
@@ -152,9 +153,9 @@ pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<Remove
 /// that a `schema: 1` lockfile is checked with the files that the adoption
 /// records; nothing is written. The item directories are read as
 /// in the overlap check of [`update`] (`collect_recorded_local_items`); a git
-/// source is not fetched, a recorded source that does not exist is skipped,
-/// and a recorded source that exists and cannot be read is an error that
-/// names its label.
+/// source is not fetched. Only the sources of the items that stay installed
+/// are read: such a source that does not exist is skipped, and one that exists
+/// and cannot be read is an error that names its label.
 fn check_removal_outside_sources(
     target: &Path,
     lock: &crate::lockfile::Lockfile,
@@ -1533,7 +1534,8 @@ fn removal_preview(plan: RemovalPlan) -> PreviewItem {
 }
 
 /// Push to `out` the item directories of the source recorded as `label`,
-/// for the overlap check of [`update`], when `label` is a local path. Every
+/// for the overlap checks of [`update`] and of [`remove`]
+/// (`check_removal_outside_sources`), when `label` is a local path. Every
 /// item is pushed without an installed name, so that its directory is
 /// protected. A directory that does not exist holds no item and pushes
 /// nothing. For a bundle-file label, whether or not the bundle file still
