@@ -162,9 +162,10 @@ with exit code 1 and an error that names both items, also with `--force` and
 
 `add` also fails with exit code 1, before any change and also with `--force`,
 when an item directory of the source contains a file that the lockfile of the
-scope records for an item from another source. Two spellings of one local path,
-for example with a trailing slash or through a symbolic link, are the same
-source. The error names the file and the item that it is recorded for.
+scope records for an item from another source. For this check, two spellings of
+one local path, for example with a trailing slash or through a symbolic link,
+are the same source. The error names the file and the item that it is recorded
+for.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
 destination of every item against the item's `files` and `pending` records (see
