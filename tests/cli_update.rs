@@ -2148,3 +2148,62 @@ fn dry_run_counts_only_the_selected_entries_with_a_change() {
     let stdout = String::from_utf8(out.stdout).unwrap();
     assert!(stdout.contains("would update 1 of 3 item(s)"), "{stdout}");
 }
+
+#[test]
+fn update_lists_a_dependency_planned_from_two_sources_once() {
+    // `first` and `second` require `sarif` from `reg-b`; `add` refuses a
+    // second source for `sarif`, so `second` names `reg-x` only after the
+    // install. `reg-d` then plans `sarif` from `reg-x` and `reg-b` plans it
+    // from `reg-b`: both change it, and it is listed once (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    for reg in ["reg-b", "reg-x"] {
+        let dir = tmp.path().join(reg).join("sarif");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("SKILL.md"),
+            format!("---\nschema: 1\nname: sarif\ndescription: Use for sarif\n---\n{reg}.\n"),
+        )
+        .unwrap();
+    }
+    for (dir, name, reg) in [("reg-c", "first", "reg-b"), ("reg-d", "second", "reg-b")] {
+        let folder = tmp.path().join(dir).join(name);
+        fs::create_dir_all(&folder).unwrap();
+        fs::write(
+            folder.join("AGENT.md"),
+            format!(
+                "---\nschema: 1\nname: {name}\ndescription: Use for {name}\nrequires:\n  \
+                 skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+                tmp.path().join(reg).display()
+            ),
+        )
+        .unwrap();
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["add", &format!("./{dir}"), name, "--claude", "--project"])
+            .assert()
+            .success();
+    }
+    let second = tmp.path().join("reg-d").join("second").join("AGENT.md");
+    let text = fs::read_to_string(&second).unwrap();
+    fs::write(
+        &second,
+        text.replace(
+            &tmp.path().join("reg-b").display().to_string(),
+            &tmp.path().join("reg-x").display().to_string(),
+        ),
+    )
+    .unwrap();
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--yes"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let lines: Vec<&str> = stdout.lines().filter(|l| l.contains("sarif")).collect();
+    assert_eq!(lines.len(), 1, "{stdout}");
+    assert!(lines[0].contains("updated"), "{stdout}");
+}

@@ -976,6 +976,19 @@ fn two_requiring_sources(absolute: bool) {
         summary(&result).starts_with("Updated 3 of 3 item(s)"),
         "{result}"
     );
+    // The blocks come in the order that the test names: the owner `reg-b`
+    // after the requiring sources, or before them.
+    let order: Vec<&str> = stdout(&result)
+        .lines()
+        .filter(|l| l.starts_with("local:"))
+        .map(|l| &l[l.len() - 5..])
+        .collect();
+    let expected = if absolute {
+        ["reg-b", "reg-c", "reg-d"]
+    } else {
+        ["reg-c", "reg-d", "reg-b"]
+    };
+    assert_eq!(order, expected, "{result}");
     // The per-source counts add up to `<n>`: `sarif` is counted once.
     assert_eq!(updated_in_result_lines(&result), 3, "{result}");
 }
