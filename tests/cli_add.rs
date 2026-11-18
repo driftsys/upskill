@@ -1296,6 +1296,7 @@ fn add_of_an_existing_local_path_without_an_item_installs_nothing_and_succeeds()
         serde_json::from_str(&fs::read_to_string(proj.join(".upskill-lock.json")).unwrap())
             .unwrap();
     assert_eq!(lock["items"].as_array().unwrap().len(), 0, "{lock}");
+    assert!(proj.join("CLAUDE.md").exists());
 }
 
 #[test]
