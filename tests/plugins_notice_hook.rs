@@ -452,6 +452,8 @@ fn copilot_hook_prints_only_json_when_cdpath_resolves_the_directory() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
+        // A literal on purpose: the only copy of the request wording that
+        // does not come from `COPILOT_REQUEST`.
         "{\"additionalContext\":\"Tell the user at the start of your first reply: upskill: notice\"}\n"
     );
     assert_eq!(
