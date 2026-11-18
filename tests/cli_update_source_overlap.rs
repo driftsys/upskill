@@ -904,6 +904,9 @@ fn remove_refuses_when_the_item_whose_source_holds_the_file_has_an_alias() {
     assert_remove_refused_for(&home, &proj, &[], "z");
 }
 
+// On Windows, `std::path::absolute` resolves a `..` component, so the
+// recorded label has none and the case cannot be built there.
+#[cfg(unix)]
 #[test]
 fn remove_compares_a_source_path_spelled_with_a_parent_component() {
     let (_tmp, home, proj, _outer) = stage_layout(Layout {
