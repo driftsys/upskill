@@ -1579,3 +1579,24 @@ fn add_with_an_unknown_kind_is_a_usage_error() {
     assert!(!target.join(".upskill-lock.json").exists());
     assert!(!target.join(".mcp.json").exists());
 }
+
+#[test]
+fn add_kind_that_removes_every_named_item_is_an_error() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "s",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("no item of kind rule matches: s"));
+    assert!(!target.join(".claude").exists());
+    assert!(!target.join(".upskill-lock.json").exists());
+}

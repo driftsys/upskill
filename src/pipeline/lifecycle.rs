@@ -1030,12 +1030,30 @@ pub fn update(
             } else {
                 selection.clone()
             };
+            let recorded_bundles: Vec<_> = lock
+                .bundles
+                .iter()
+                .filter(|bundle| bundle.source == source_label)
+                .collect();
+            let kinds = if recorded_bundles
+                .iter()
+                .all(|bundle| !bundle.kinds.is_empty())
+            {
+                recorded_bundles
+                    .iter()
+                    .flat_map(|bundle| bundle.kinds.iter().copied())
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .into_iter()
+                    .collect()
+            } else {
+                Vec::new()
+            };
             let options = AddOptions {
                 force: true,
                 overwrite,
                 aliases,
                 excludes: vec![],
-                kinds: vec![],
+                kinds,
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
                 scope: at.scope,
@@ -1049,20 +1067,34 @@ pub fn update(
             // resolved and refreshed because `prepare_install` re-expands
             // the closure for each requested item.
             //
-            // Bundle sources are exempt: a bundle is its own unit and must
-            // be reinstalled as a whole (an empty filter routes it through
-            // the bundle-resolution path), so scoping to item names there
-            // would mis-route a `.bundle.yaml` source into name resolution.
-            let is_bundle_source = source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
-                || lock.bundles.iter().any(|b| b.source == source_label);
-            let item_filter: Vec<String> = if is_bundle_source {
-                Vec::new()
-            } else {
-                source_entries
-                    .iter()
-                    .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
-                    .collect()
-            };
+            // Bundle-file sources resolve as a whole. Directory sources with
+            // recorded bundles resolve those bundles and their direct items.
+            let item_filter: Vec<String> =
+                if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
+                    Vec::new()
+                } else if !recorded_bundles.is_empty() {
+                    recorded_bundles
+                        .iter()
+                        .map(|bundle| bundle.name.clone())
+                        .chain(
+                            source_entries
+                                .iter()
+                                .filter(|entry| entry.required_by.is_empty())
+                                .map(|entry| entry.source_name.as_ref().unwrap_or(&entry.name))
+                                .filter(|name| {
+                                    !recorded_bundles
+                                        .iter()
+                                        .any(|bundle| bundle.items.contains(name))
+                                })
+                                .cloned(),
+                        )
+                        .collect()
+                } else {
+                    source_entries
+                        .iter()
+                        .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
+                        .collect()
+                };
 
             // A source that cannot be fetched (a [`FetchFailed`] in the
             // error chain, also for a dependency source) is skipped: it is

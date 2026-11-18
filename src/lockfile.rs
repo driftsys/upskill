@@ -136,6 +136,9 @@ pub struct LockedItem {
 /// to the items it resolved to.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LockedBundle {
+    /// The kinds that `add --kind` restricted this bundle to. Empty: every kind.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub kinds: Vec<ItemKind>,
     pub name: String,
     pub source: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -434,6 +437,21 @@ mod tests {
     use crate::generate::Client;
     use crate::pipeline::InstalledItem;
     use std::path::PathBuf;
+
+    #[test]
+    fn bundle_kinds_default_to_empty_and_are_omitted_when_empty() {
+        let bundle: super::LockedBundle = serde_json::from_value(serde_json::json!({
+            "name": "bun", "source": "local:/source", "items": ["r"]
+        }))
+        .unwrap();
+        assert!(bundle.kinds.is_empty());
+        assert!(
+            serde_json::to_value(&bundle)
+                .unwrap()
+                .get("kinds")
+                .is_none()
+        );
+    }
 
     fn item(kind: ItemKind, name: &str) -> LockedItem {
         LockedItem {

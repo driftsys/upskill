@@ -217,7 +217,7 @@ pub(super) fn prepare_install(
         let incoming: Vec<(ItemKind, String)> = scanned_items
             .iter()
             .filter(|(_, n)| !options.excludes.contains(n))
-            .filter(|(kind, _)| options.kinds.is_empty() || options.kinds.contains(kind))
+            .filter(|(kind, _)| entry_names.takes(*kind))
             .filter(|(_, n)| items.is_empty() || items.contains(n))
             .filter_map(|(kind, name)| {
                 let effective_name = entry_names
@@ -339,6 +339,19 @@ pub(super) fn prepare_install(
             options.scope,
         )?
     };
+
+    if !options.kinds.is_empty() && !items.is_empty() && report.planned.is_empty() {
+        anyhow::bail!(
+            "no item of kind {} matches: {}",
+            options
+                .kinds
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", "),
+            items.join(", ")
+        );
+    }
 
     // An item planned twice from the same source item (for example named
     // and also a member of a named bundle) is kept once. Two items with one
@@ -711,6 +724,7 @@ impl PreparedInstall {
             // came from the entry source.
             for bundle in &report.bundles {
                 lock.upsert_bundle(crate::lockfile::LockedBundle {
+                    kinds: options.kinds.clone(),
                     name: bundle.name.clone(),
                     source: label.clone(),
                     git_ref: git_ref.clone(),
@@ -721,6 +735,7 @@ impl PreparedInstall {
             // Bundle closure: record each bundle under its OWN source and ref.
             for rb in &resolved_bundles {
                 lock.upsert_bundle(crate::lockfile::LockedBundle {
+                    kinds: options.kinds.clone(),
                     name: rb.bundle.name.clone(),
                     source: rb.source_label.clone(),
                     git_ref: rb.git_ref.clone(),

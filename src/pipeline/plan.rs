@@ -36,10 +36,12 @@ pub(crate) struct PlanNames {
     pub aliases: BTreeMap<String, String>,
     /// Source names to skip (`--exclude`).
     pub excludes: Vec<String>,
+    /// Item kinds to include; an empty list includes every kind.
     pub kinds: Vec<ItemKind>,
 }
 
 impl PlanNames {
+    /// Whether the kind is included by the kind restriction.
     pub fn takes(&self, kind: ItemKind) -> bool {
         self.kinds.is_empty() || self.kinds.contains(&kind)
     }
