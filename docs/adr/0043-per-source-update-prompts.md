@@ -43,42 +43,48 @@ failed until `update --force`.
    that requires it is prepared. Then the source overlap check runs once on the
    items of all these sources together and on the item directories of every
    local-path source recorded in the lockfile that the run does not otherwise
-   read (#547). A source that cannot be fetched (a failed `git clone`, or a
-   local-path source whose path does not exist), also through the source of a
-   cross-source dependency that it requires, is skipped (#551): its files are
-   not written (a `schema: 1` adoption that another source causes still records
-   the `files` of its lockfile entries, see Decision 6), it is reported on
-   stderr with its label and the cause, the other sources are handled, and the
-   run exits with code 1, also in a dry run. One run gives one verdict per
-   source: a prepared source whose plan would write an item that the lockfile
-   records from a skipped source is skipped too, with its own message (it was
-   skipped because it requires an item of the named skipped source, not because
-   it could not be fetched), until no further source is dropped. A skipped
-   source is not in the prepared set, so the overlap check treats it as a
-   recorded source that the run does not read: a local path that does not exist
-   protects nothing, and a git source has its item directories in no directory
-   on disk. Any other error in this phase stops the run before any adoption and
-   before any source is applied. The prepare phase reads the interrupt flag at
-   three points: before each source, after a fetch failure, and before the step
-   that compares the prepared sources with the skipped sources. At each point,
-   after an interrupt, it fetches no further source, records no further skip,
-   and the run fails with exit code 130; the skips recorded before the interrupt
-   are still reported. A Ctrl-C in a terminal also reaches a running `git` child
-   process, because `git` is started without a new process group; a fetch that
-   ends with an error after an interrupt is therefore not a fetch failure. An
-   interrupt during the prepare step of a source, also of the last source, is
-   seen at the next of these points, so the phase does not complete. Only an
-   interrupt that arrives after the check before the comparison step reaches the
-   apply phase: there, the observer of a terminal run and of a `--yes` run
-   returns a stop for the first source, after the empty-source check and the
-   adoption step of that source and before its preview is shown, so no source is
-   applied; the `--dry-run` observer does not stop in the preview step and
-   prints every block. The process exits with code 130 when the flag is set.
-   Then `update` handles the sources one at a time, in the same order, and
-   computes the preview of each source from its fetched content, the files on
-   disk and the lockfile. The preview and the apply come from the same planning
-   and classification code. The apply classifies the files again and does not
-   rely on the preview.
+   read (#547). The same check also compares these item directories with the
+   recorded files that the run deletes for an item that its source no longer
+   contains (#550). `add` applies the check to the recorded files of the items
+   that the lockfile records from another source, and `remove` refuses to delete
+   a recorded file that is inside, or contains, the source directory of another
+   installed item recorded from a local-path source, also with `--force` (#550).
+   A source that cannot be fetched (a failed `git clone`, or a local-path source
+   whose path does not exist), also through the source of a cross-source
+   dependency that it requires, is skipped (#551): its files are not written (a
+   `schema: 1` adoption that another source causes still records the `files` of
+   its lockfile entries, see Decision 6), it is reported on stderr with its
+   label and the cause, the other sources are handled, and the run exits with
+   code 1, also in a dry run. One run gives one verdict per source: a prepared
+   source whose plan would write an item that the lockfile records from a
+   skipped source is skipped too, with its own message (it was skipped because
+   it requires an item of the named skipped source, not because it could not be
+   fetched), until no further source is dropped. A skipped source is not in the
+   prepared set, so the overlap check treats it as a recorded source that the
+   run does not read: a local path that does not exist protects nothing, and a
+   git source has its item directories in no directory on disk. Any other error
+   in this phase stops the run before any adoption and before any source is
+   applied. The prepare phase reads the interrupt flag at three points: before
+   each source, after a fetch failure, and before the step that compares the
+   prepared sources with the skipped sources. At each point, after an interrupt,
+   it fetches no further source, records no further skip, and the run fails with
+   exit code 130; the skips recorded before the interrupt are still reported. A
+   Ctrl-C in a terminal also reaches a running `git` child process, because
+   `git` is started without a new process group; a fetch that ends with an error
+   after an interrupt is therefore not a fetch failure. An interrupt during the
+   prepare step of a source, also of the last source, is seen at the next of
+   these points, so the phase does not complete. Only an interrupt that arrives
+   after the check before the comparison step reaches the apply phase: there,
+   the observer of a terminal run and of a `--yes` run returns a stop for the
+   first source, after the empty-source check and the adoption step of that
+   source and before its preview is shown, so no source is applied; the
+   `--dry-run` observer does not stop in the preview step and prints every
+   block. The process exits with code 130 when the flag is set. Then `update`
+   handles the sources one at a time, in the same order, and computes the
+   preview of each source from its fetched content, the files on disk and the
+   lockfile. The preview and the apply come from the same planning and
+   classification code. The apply classifies the files again and does not rely
+   on the preview.
 2. **One question per source that changes something.** In a terminal without
    `--yes`, `update` prints one block per source and asks `Apply? [y/N/q]` only
    when applying the source writes or deletes a file (also a file whose bytes

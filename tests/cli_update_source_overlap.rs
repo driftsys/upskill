@@ -5,8 +5,9 @@
 //! of an item is, is inside, or contains a path that the run writes for an
 //! item that it installs. The check compares every source that the run reads
 //! with each other, and also the local-path sources recorded in the lockfile
-//! that the run does not otherwise read. The deletion of the files of an item
-//! that its source no longer contains is not part of this check.
+//! that the run does not otherwise read. The check also covers the recorded
+//! files that the run deletes for an item that its source no longer contains
+//! (issue #550), and the same layout is checked for `add` and `remove`.
 
 mod common;
 
@@ -501,13 +502,14 @@ fn update_protects_the_root_of_a_recorded_bundle_file_that_was_deleted() {
     }
 }
 
-#[test]
-fn update_does_not_check_the_deletion_of_an_item_that_its_source_no_longer_contains() {
-    // A stated limit, which issue #550 will change. The skill `a` has the
-    // resource `y/SKILL.md`, written for OpenCode at
-    // `.agents/skills/a/y/SKILL.md`. That directory is the source of the
-    // installed skill `y`. When the source of `a` no longer contains `a`,
-    // `update` removes `a` and deletes the source of `y`.
+/// The layout of issue #550. The skill `a` of `<tmp>/src-a` has the
+/// resource `y/SKILL.md`, which is written for OpenCode at
+/// `.agents/skills/a/y/SKILL.md`. With `with_y`, that directory is also the
+/// source of the installed skill `y`. The skill `y` is added first, from a
+/// copy of the file, so that the overlap check of `add` does not refuse it;
+/// then `<tmp>/src-a` is added for OpenCode and Claude. Returns
+/// `(tmp, home, proj, src_a)`.
+fn stage_removed_item_layout(with_y: bool) -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf) {
     let tmp = tempfile::TempDir::new().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -517,30 +519,142 @@ fn update_does_not_check_the_deletion_of_an_item_that_its_source_no_longer_conta
     write_skill(&src_a.join("a"), "a", "# a");
     write_skill(&src_a.join("a/y"), "y", "# y");
     write_skill(&src_a.join("other"), "other", "# other");
+    if with_y {
+        write_skill(&proj.join(".agents/skills/a/y"), "y", "# y");
+        add(&home, &proj, "./.agents/skills/a");
+    }
     common::upskill_cmd(&home)
         .current_dir(&proj)
         .args(["add", "../src-a", "--project", "--opencode", "--claude"])
         .assert()
         .success();
-    add(&home, &proj, "./.agents/skills/a");
-    // Preconditions: the resource file of `a` exists, and it is the source
-    // of the installed skill `y`.
     assert!(proj.join(".agents/skills/a/y/SKILL.md").is_file());
-    assert!(
-        recorded_source(&proj, "items", "y")
-            .replace('\\', "/")
-            .ends_with(".agents/skills/a"),
-        "{}",
-        recorded_source(&proj, "items", "y")
-    );
-    fs::remove_dir_all(src_a.join("a")).unwrap();
+    if with_y {
+        assert!(
+            recorded_source(&proj, "items", "y")
+                .replace('\\', "/")
+                .ends_with(".agents/skills/a"),
+            "{}",
+            recorded_source(&proj, "items", "y")
+        );
+    }
+    (tmp, home, proj, src_a)
+}
 
-    common::upskill_cmd(&home)
+#[test]
+fn update_refuses_to_delete_a_removed_item_file_inside_the_source_of_another_item() {
+    let (_tmp, home, proj, src_a) = stage_removed_item_layout(true);
+    fs::remove_dir_all(src_a.join("a")).unwrap();
+    assert_update_refused(
+        &home,
+        &proj,
+        &[],
+        &["the source directory of skill 'y' (", "of skill 'a';"],
+    );
+    assert!(proj.join(".agents/skills/a/y/SKILL.md").is_file());
+}
+
+#[test]
+fn update_dry_run_refuses_to_delete_a_removed_item_file_inside_the_source_of_another_item() {
+    let (_tmp, home, proj, src_a) = stage_removed_item_layout(true);
+    fs::remove_dir_all(src_a.join("a")).unwrap();
+    assert_update_refused(
+        &home,
+        &proj,
+        &["--dry-run"],
+        &["the source directory of skill 'y' (", "of skill 'a';"],
+    );
+}
+
+#[test]
+fn update_still_removes_an_item_that_left_its_source_without_an_overlap() {
+    let (_tmp, home, proj, src_a) = stage_removed_item_layout(false);
+    fs::remove_dir_all(src_a.join("a")).unwrap();
+    let assert = common::upskill_cmd(&home)
         .current_dir(&proj)
         .args(["update", "--project", "--yes"])
         .assert()
         .success();
-    assert!(!proj.join(".agents/skills/a/y/SKILL.md").exists());
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(out.contains("removed — no longer in source"), "{out}");
+    assert!(!proj.join(".agents/skills/a").exists());
+}
+
+#[test]
+fn add_refuses_a_source_item_that_contains_a_recorded_file_of_another_source() {
+    // Step 2 of issue #550.
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(false);
+    let before = files_under(&proj);
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./.agents/skills/a", "--project", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    for part in [
+        "the source directory of skill 'y' (",
+        ") contains the output path",
+        "of skill 'a';",
+        "installing would delete or overwrite the source",
+    ] {
+        assert!(stderr.contains(part), "stderr lacks {part:?}: {stderr}");
+    }
+    assert_eq!(files_under(&proj), before, "add changed a file");
+}
+
+#[test]
+fn add_accepts_a_source_outside_every_recorded_output_path() {
+    let (tmp, home, proj, _src_a) = stage_removed_item_layout(false);
+    write_skill(&tmp.path().join("src-b/b"), "b", "# b");
+    add(&home, &proj, "../src-b");
+    assert!(proj.join(".claude/skills/b/SKILL.md").is_file());
+}
+
+/// Run `remove a` with `extra` and assert that it exits 1, names both
+/// items, and changes no file.
+fn assert_remove_refused(home: &Path, proj: &Path, extra: &[&str]) {
+    let before = files_under(proj);
+    let mut args = vec!["remove", "a", "--project"];
+    args.extend_from_slice(extra);
+    let assert = common::upskill_cmd(home)
+        .current_dir(proj)
+        .args(&args)
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    for part in [
+        "of the installed skill 'y'",
+        "the recorded path",
+        "of skill 'a'",
+        "Remove skill 'y' first",
+    ] {
+        assert!(stderr.contains(part), "stderr lacks {part:?}: {stderr}");
+    }
+    assert_eq!(files_under(proj), before, "remove changed a file");
+}
+
+#[test]
+fn remove_refuses_to_delete_a_recorded_file_inside_the_source_of_another_item() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(true);
+    assert_remove_refused(&home, &proj, &[]);
+}
+
+#[test]
+fn remove_force_refuses_to_delete_a_recorded_file_inside_the_source_of_another_item() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(true);
+    assert_remove_refused(&home, &proj, &["--force"]);
+}
+
+#[test]
+fn remove_without_an_overlap_is_unchanged() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(false);
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["remove", "a", "--project"])
+        .assert()
+        .success();
+    assert!(!proj.join(".agents/skills/a").exists());
+    assert!(proj.join(".agents/skills/other/SKILL.md").is_file());
 }
 
 #[test]

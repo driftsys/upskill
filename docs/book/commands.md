@@ -153,8 +153,15 @@ file that is not a bundle file) fails the `update` with exit code 1 and an error
 that names its source label; the error suggests
 `upskill remove --source <label>` only when a lockfile item has that source. The
 refusal comes before any file or lockfile is changed, also with `--force` and
-`--dry-run`. The deletion of the files of an item that its source no longer
-contains is not part of this check.
+`--dry-run`. The check also covers the recorded files that `update` deletes for
+an item that its source no longer contains: when the directory of an item of a
+source that the run reads, or of a recorded local-path source, is inside such a
+file path or contains one, `update` is refused with the same error and exit code
+1, also with `--dry-run`.
+
+`add` also refuses, with the same error and exit code 1 and before any change, a
+source whose item directory is inside, or contains, a file that the lockfile of
+the scope records for an item from another source.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
 destination of every item against the item's `files` and `pending` records (see
@@ -747,6 +754,13 @@ a symbolic link, `remove` fails before it deletes anything. An item whose
 `files` and `pending` records are both empty has nothing deleted. The lockfile
 entry of every removed item is dropped, including when files were kept.
 
+Before it deletes anything, and also with `--force`, `remove` fails with exit
+code 1 when the source directory of another installed item, recorded from a
+local-path source, is inside, or contains, a recorded file of an item that it
+removes. The error names both items and asks you to remove the other item first.
+No file is deleted and the lockfile is not changed. A git source is not fetched
+for this check.
+
 `remove` adopts a `schema: 1` lockfile and prints the adoption notice, as
 described in [State files](#state-files). A name that is not in the lockfile is
 an error, and in that case `remove` does not adopt.
@@ -1167,13 +1181,16 @@ least one file, `doctor` therefore no longer reports the other outputs of that
 item that were already missing before adoption. The adopted paths are printed
 also when the command fails after the adoption was saved. `update --dry-run` and
 `doctor` do not adopt, and neither does a `remove` that fails because a name is
-not in the lockfile. An `add` does not adopt when it is refused because a source
-item overlaps an output path of the run, because an item conflicts with an item
-installed from another source, because two items would install under one name,
-or because an installed name is empty, `.` or `..` or contains a path separator.
-An `update` refused for one of these reasons does not adopt, because it checks
-every source before it adopts, and neither does an `update` whose first source
-resolves to no items while the lockfile records items from it.
+not in the lockfile, or a `remove` that is refused because the source directory
+of another installed item overlaps a file that it would delete. An `add` does
+not adopt when it is refused because a source item overlaps an output path of
+the run or a recorded file of an item from another source, because an item
+conflicts with an item installed from another source, because two items would
+install under one name, or because an installed name is empty, `.` or `..` or
+contains a path separator. An `update` refused for one of these reasons does not
+adopt, because it checks every source before it adopts, and neither does an
+`update` whose first source resolves to no items while the lockfile records
+items from it.
 
 ## Per-client output paths
 

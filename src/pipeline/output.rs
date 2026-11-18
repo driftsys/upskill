@@ -238,7 +238,8 @@ pub(super) struct SourceItem {
 /// the first step again (all clients, as in
 /// [`check_source_outside_outputs`]): the item directory must not be inside
 /// such a path or contain one. Called before the first deletion or write of
-/// the run.
+/// the run. The recorded files that a run deletes or overwrites for an item
+/// that it does not install are checked by [`check_outside_recorded_paths`].
 pub(super) fn check_run_outside_outputs(at: &ScopeRoot, items: &[SourceItem]) -> Result<()> {
     let written = |item: &SourceItem| item.installed.clone().filter(|_| !item.excluded);
     for item in items {
@@ -264,22 +265,112 @@ pub(super) fn check_run_outside_outputs(at: &ScopeRoot, items: &[SourceItem]) ->
                     } else {
                         continue;
                     };
-                    let inner_name = inner.installed.as_ref().unwrap_or(&inner.name);
-                    anyhow::bail!(
-                        "the source directory of {} '{inner_name}' ({}) {relation} the output \
-                         path {} of {} '{outer_name}'; installing would delete or overwrite the \
-                         source. Copy the items to a directory outside the client output \
-                         directories and add them from there",
-                        inner.kind,
-                        inner.dir.display(),
-                        out.display(),
-                        outer.kind
-                    );
+                    return Err(cross_overlap_error(
+                        inner,
+                        relation,
+                        &out,
+                        outer.kind,
+                        &outer_name,
+                    ));
                 }
             }
         }
     }
     Ok(())
+}
+
+/// The error of [`check_run_outside_outputs`] and
+/// [`check_outside_recorded_paths`]: the directory of `inner` is inside, or
+/// contains (`relation`), the path `out` of the item `(outer_kind,
+/// outer_name)`.
+fn cross_overlap_error(
+    inner: &SourceItem,
+    relation: &str,
+    out: &Path,
+    outer_kind: ItemKind,
+    outer_name: &str,
+) -> anyhow::Error {
+    let inner_name = inner.installed.as_ref().unwrap_or(&inner.name);
+    anyhow::anyhow!(
+        "the source directory of {} '{inner_name}' ({}) {relation} the output path {} of {} \
+         '{outer_name}'; installing would delete or overwrite the source. Copy the items to a \
+         directory outside the client output directories and add them from there",
+        inner.kind,
+        inner.dir.display(),
+        out.display(),
+        outer_kind
+    )
+}
+
+/// One recorded file of an installed item, relative to the scope root: a
+/// path of its `files` or `pending` record that `apply::deletable` accepts.
+#[derive(Debug, Clone)]
+pub(super) struct RecordedPath {
+    pub kind: ItemKind,
+    pub name: String,
+    pub path: PathBuf,
+}
+
+/// The recorded files of `entry` (its `files` and `pending` records), as
+/// `remove` plans them for deletion.
+pub(super) fn recorded_paths(entry: &crate::lockfile::LockedItem) -> Vec<RecordedPath> {
+    entry
+        .files
+        .iter()
+        .chain(&entry.pending)
+        .filter_map(|file| super::apply::deletable(&file.path))
+        .map(|path| RecordedPath {
+            kind: entry.kind,
+            name: entry.name.clone(),
+            path,
+        })
+        .collect()
+}
+
+/// The first source item of `items` whose directory is inside, or contains,
+/// a path of `recorded` under the scope root `target`. Returns the item, the
+/// relation (`"is inside"` or `"contains"`), the canonical path and the
+/// recorded path. Paths are compared in canonical form, as in
+/// [`check_run_outside_outputs`].
+pub(super) fn find_recorded_overlap<'a>(
+    target: &Path,
+    recorded: &'a [RecordedPath],
+    items: &'a [SourceItem],
+) -> Option<(&'a SourceItem, &'static str, PathBuf, &'a RecordedPath)> {
+    let canonical = |p: &Path| fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    let target = canonical(target);
+    let dirs: Vec<PathBuf> = items.iter().map(|item| canonical(&item.dir)).collect();
+    for rec in recorded {
+        let out = canonical(&target.join(&rec.path));
+        for (item, dir) in items.iter().zip(&dirs) {
+            if dir.starts_with(&out) {
+                return Some((item, "is inside", out, rec));
+            }
+            if out.starts_with(dir) {
+                return Some((item, "contains", out, rec));
+            }
+        }
+    }
+    None
+}
+
+/// Refuse a run when a source item directory of `items` is inside, or
+/// contains, a recorded path of `recorded`: a file that `update` deletes for
+/// an item that its source no longer contains, or a recorded file of an item
+/// that `add` does not install from its source. The message has the form of
+/// the message of [`check_run_outside_outputs`]. Called before the first
+/// deletion or write of the run.
+pub(super) fn check_outside_recorded_paths(
+    target: &Path,
+    recorded: &[RecordedPath],
+    items: &[SourceItem],
+) -> Result<()> {
+    match find_recorded_overlap(target, recorded, items) {
+        Some((item, relation, out, rec)) => Err(cross_overlap_error(
+            item, relation, &out, rec.kind, &rec.name,
+        )),
+        None => Ok(()),
+    }
 }
 
 /// Find an output path that contains `source` (or is `source`) and is inside

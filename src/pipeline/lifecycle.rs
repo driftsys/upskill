@@ -53,6 +53,11 @@ use super::{
 /// empty are removed, up to and excluding the kind directory (for example
 /// `.claude/skills`).
 ///
+/// Before the adoption and before any deletion, also when `force` is true,
+/// `remove` fails when the source directory of another installed item,
+/// recorded from a local-path source, is inside, or contains, a recorded file
+/// of an item that it removes (`check_removal_outside_sources`).
+///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
 /// `.vscode/settings.json`) are user-owned after creation per ADR-0003, so
 /// they are left alone with one exception: for each bundle that lists a
@@ -117,6 +122,9 @@ pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<Remove
     let keys: Vec<(ItemKind, String)> =
         to_remove.iter().map(|i| (i.kind, i.name.clone())).collect();
 
+    // Before the adoption and before any deletion, whatever `force` is.
+    check_removal_outside_sources(target, &lock, &to_remove)?;
+
     // The adoption is saved before any file is deleted. Every later error
     // carries the adopted paths, so that `main.rs` can still print the adoption notice.
     let adopted = adopt_schema1(target, &mut lock)?;
@@ -131,6 +139,69 @@ pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<Remove
         }
         (Err(err), _) => Err(err),
     }
+}
+
+/// Refuse a `remove` when the source directory of another installed item,
+/// recorded from a local-path source, is inside, or contains, a recorded file
+/// of an item in `to_remove` (issue #550). The item directories are read as
+/// in the overlap check of [`update`] (`collect_recorded_local_items`); a git
+/// source is not fetched, and a recorded source that cannot be read is
+/// skipped, because it holds no directory that the removal can delete.
+fn check_removal_outside_sources(
+    target: &Path,
+    lock: &crate::lockfile::Lockfile,
+    to_remove: &[crate::lockfile::LockedItem],
+) -> Result<()> {
+    let removed = |e: &crate::lockfile::LockedItem| {
+        to_remove
+            .iter()
+            .any(|r| r.kind == e.kind && r.name == e.name)
+    };
+    let recorded: Vec<super::output::RecordedPath> = to_remove
+        .iter()
+        .flat_map(super::output::recorded_paths)
+        .collect();
+    let others: Vec<&crate::lockfile::LockedItem> =
+        lock.items.iter().filter(|e| !removed(e)).collect();
+    let labels: std::collections::BTreeSet<&str> =
+        others.iter().map(|e| e.source.as_str()).collect();
+    for label in labels {
+        let mut source_items = Vec::new();
+        if collect_recorded_local_items(label, &mut source_items).is_err() {
+            continue;
+        }
+        // The installed item of `label` that an item directory holds.
+        let owner = |item: &super::output::SourceItem| {
+            others.iter().copied().find(|e| {
+                e.source == label
+                    && e.kind == item.kind
+                    && e.source_name.as_deref().unwrap_or(&e.name) == item.name
+            })
+        };
+        // Only the directory of an installed item is protected.
+        source_items.retain(|item| owner(item).is_some());
+        let Some((item, relation, out, rec)) =
+            super::output::find_recorded_overlap(target, &recorded, &source_items)
+        else {
+            continue;
+        };
+        let other = owner(item).map_or(item.name.as_str(), |e| e.name.as_str());
+        anyhow::bail!(
+            "the source directory ({}) of the installed {} '{other}' {relation} the recorded \
+             path {} of {} '{}'; removing {} '{}' would delete the source of {} '{other}'. \
+             Remove {} '{other}' first",
+            item.dir.display(),
+            item.kind,
+            out.display(),
+            rec.kind,
+            rec.name,
+            rec.kind,
+            rec.name,
+            item.kind,
+            item.kind
+        );
+    }
+    Ok(())
 }
 
 /// What `remove` does with the recorded files of one item, computed before
@@ -745,7 +816,10 @@ fn reselect_from_entries(
 /// cannot be read as a directory is an error that names its label (its hint
 /// names `upskill remove --source` only when a lockfile item has that
 /// source), and a git source is not
-/// fetched for this check.
+/// fetched for this check. The same item directories are then compared with
+/// the recorded files that the run deletes for an item that its source no
+/// longer contains (`output::check_outside_recorded_paths`); an overlap fails
+/// the run before any write, also with `dry_run`.
 ///
 /// A source whose prepare fails with a [`FetchFailed`] in its error chain
 /// (a `git clone` that fails, or a local-path source whose path does not
@@ -1084,6 +1158,19 @@ pub fn update(
             })?;
         }
         super::output::check_run_outside_outputs(&at_check, &source_items)?;
+        // The recorded files that the run deletes for an item that its
+        // source no longer contains are checked against the same item
+        // directories (issue #550).
+        let mut deleted = Vec::new();
+        for (_, source_entries, prepared) in &prepared_sources {
+            let planned = prepared.planned_hashes();
+            for entry in source_entries {
+                if !planned.contains_key(&(entry.kind, entry.name.clone())) {
+                    deleted.extend(super::output::recorded_paths(entry));
+                }
+            }
+        }
+        super::output::check_outside_recorded_paths(target, &deleted, &source_items)?;
 
         // Apply phase: preview, decide and commit each source in turn.
         for (index, (source_label, source_entries, prepared)) in
