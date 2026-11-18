@@ -951,3 +951,113 @@ fn notice_exits_with_code_0_and_writes_nothing_to_stderr_when_stdout_is_closed()
     assert_eq!(out.status.code(), Some(0));
     assert_eq!(stderr(&out), "");
 }
+
+#[test]
+fn notice_with_repeat_prints_the_same_set_at_every_run() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    for _ in 0..2 {
+        let out = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+        assert_eq!(out.status.code(), Some(0));
+        assert_eq!(stdout(&out), PROJECT_LINE);
+        assert_eq!(stderr(&out), "");
+    }
+}
+
+#[test]
+fn notice_with_repeat_records_the_set_as_reported() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let first = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    assert_eq!(stdout(&first), PROJECT_LINE);
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
+}
+
+#[test]
+fn repeat_without_notice_is_a_usage_error() {
+    let e = env();
+    for args in [
+        &["update", "--repeat"][..],
+        &["update", "--repeat", "--check"],
+        &["update", "--repeat", "--yes"],
+        &["update", "--repeat", "--dry-run"],
+        &["update", "--repeat", "--global"],
+        &["update", "--repeat", "alpha"],
+    ] {
+        let out = run(&e, &e.repo, args);
+        assert_eq!(out.status.code(), Some(2), "{args:?}");
+    }
+}
+
+#[test]
+fn notice_with_repeat_prints_nothing_after_update_applied_the_updates() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice", "--repeat"])),
+        PROJECT_LINE
+    );
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    let out = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+}
+
+#[test]
+fn a_dry_run_update_keeps_the_cached_updates() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    run(&e, &e.repo, &["update", "--dry-run"]);
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice", "--repeat"])),
+        PROJECT_LINE
+    );
+}
+
+#[test]
+fn update_of_one_item_keeps_the_cached_update_of_another_item() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    let applied = run(&e, &e.repo, &["update", "--yes", "alpha"]);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice", "--repeat"])),
+        "upskill: 1 update available (project). Run \"upskill update\".\n"
+    );
+}
+
+#[test]
+fn update_succeeds_and_prints_nothing_more_when_the_cache_cannot_be_written() {
+    use std::os::unix::fs::PermissionsExt;
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice"]);
+    let reference = env();
+    run(&reference, &reference.repo, &["add", REMOTE, "--claude"]);
+    advance(&reference, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let expected = run(&reference, &reference.repo, &["update", "--yes"]);
+    let cache_dir = cache_path(&e).parent().unwrap().to_path_buf();
+    fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o555)).unwrap();
+    if fs::write(cache_dir.join("probe"), "").is_ok() {
+        eprintln!("skipped: the process can write to a read-only directory (running as root)");
+        return;
+    }
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(applied.status.code(), Some(0), "{}", stderr(&applied));
+    let strip = |s: String, r: &Env| s.replace(r.repo.to_str().unwrap(), "<repo>");
+    assert_eq!(
+        strip(stderr(&applied), &e),
+        strip(stderr(&expected), &reference)
+    );
+    assert_eq!(stdout(&applied), stdout(&expected));
+}

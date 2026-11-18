@@ -105,9 +105,11 @@ src/
 
 Outside `src/`, `plugins/` holds the sources of the session-notice hook plugins
 for Claude Code and Copilot CLI. Each plugin calls `upskill update --notice`
-from a session-start hook. These directories are the sources. A copy is
-published in the repository `driftsys/metapowers`, which holds the marketplace
-manifests (`.claude-plugin/marketplace.json` for Claude Code,
+from a session-start hook; the Copilot plugin adds `--repeat`, because Copilot
+CLI gives the line to the model and does not show it to the user. These
+directories are the sources. A copy is published in the repository
+`driftsys/metapowers`, which holds the marketplace manifests
+(`.claude-plugin/marketplace.json` for Claude Code,
 `.github/plugin/marketplace.json` for Copilot CLI). A change to `plugins/` must
 be copied there. The Claude Code hook uses the matcher `startup` because the
 notice is meant for a new session: a resumed, cleared, compacted or forked
@@ -167,7 +169,10 @@ refusing. `update --notice` is built for a session-start hook: it exits 0 in
 every case after argument parsing, also on an interrupt, writes nothing to
 stderr, never fetches, and keeps for each scope root the time of the last check,
 the updates found and the printed set in `<cache>/upskill/notice.json`
-(`$XDG_CACHE_HOME` when absolute, else `~/.cache`).
+(`$XDG_CACHE_HOME` when absolute, else `~/.cache`). It prints a set once; with
+`--repeat` (valid only with `--notice`) it prints the set at every run. An
+applied `update` removes the items that it updated or found up to date from the
+cached updates of its scope root; a cache failure there prints nothing.
 
 ### Source format
 

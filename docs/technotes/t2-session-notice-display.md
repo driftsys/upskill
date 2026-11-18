@@ -6,14 +6,17 @@ when a session starts, and the results of the trial: Claude Code in
 non-interactive mode and in the interactive terminal, Copilot CLI in prompt
 mode, and the session-notice plugins of both clients loaded from a directory and
 installed through a marketplace, and a later trial of Copilot CLI in prompt mode
-with a request to the model in the context text. The interactive display of
-Copilot CLI has not been observed. This note is informative.
+with a request to the model in the context text, and a trial of the plugin with
+that request in the interactive terminal of Copilot CLI. This note is
+informative.
 
 `upskill update --notice` prints one plain line on standard output for each
 scope that has available updates (the project scope, then the global scope), for
 example `upskill: 3 updates available (project). Run "upskill update".` It
-prints a given set of updates once. The question of trial T2 is what each client
-does with such a line.
+prints a given set of updates once; with `--repeat`, which the Copilot plugin
+passes since the interactive trial below, it prints the set at every run until
+`upskill update` runs. The question of trial T2 is what each client does with
+such a line.
 
 ## Method
 
@@ -127,8 +130,9 @@ The documented shape of a hook file (not run):
   trial in prompt mode (see the request trial below), and the Copilot plugin
   puts that request before the notice. In the interactive terminal of Claude
   Code, only a hook output with `systemMessage` is displayed to the user (see
-  the interactive terminal section below). Whether the user sees the line in the
-  interactive terminal of Copilot CLI is not observed.
+  the interactive terminal section below). In the interactive terminal of
+  Copilot CLI, the model did not report the notice in any of 3 runs, and nothing
+  on the screen showed it (see the Copilot CLI interactive trial below).
 - Copilot CLI documents only a JSON object with `additionalContext`, and the
   trial confirmed that it ignores a plain line in prompt mode (see the Copilot
   CLI trial result below). The hook command of the Copilot plugin therefore
@@ -311,8 +315,8 @@ Observed:
 
 Not observed:
 
-- The interactive terminal: whether any form is displayed to the user there, and
-  how the trust question is asked there.
+- The interactive terminal in this trial. A later trial ran the plugin there
+  (see the Copilot CLI interactive trial below).
 - A hook that a plugin declares: not run in this trial (see the plugin sections
   below).
 - Form B declared in `.claude/settings.json`.
@@ -377,7 +381,8 @@ Observed:
 
 Not observed:
 
-- The interactive terminal.
+- The interactive terminal in this series (see the Copilot CLI interactive trial
+  below).
 - The plugin `hooks.json` with the `upskill` binary: the hook of this series was
   a repository hook that printed a fixed text. The notice line of this series
   holds single quotes, while the binary prints double quotes. The plugin series
@@ -409,6 +414,41 @@ What follows for the Copilot plugin: its hook command puts the text of V1 before
 the notice. The user sees the notice only when the model follows the request.
 The counts above are 15 runs of that wording with one client version and one
 model, and they are not a guarantee.
+
+## Trial result: Copilot CLI, interactive terminal
+
+Run on 2026-11-18 for issue #530 with Copilot CLI 1.0.112 in the interactive
+terminal, driven through a pseudo-terminal with `expect`. The plugin was loaded
+with `--plugin-dir` from commit `2bd1967`, which holds the request of V1 before
+the notice. The runs used a temporary project with one available update and a
+new cache directory for each run. The folder trust question was answered "Yes"
+for the session. The first prompt was `Reply with the single word READY.` There
+were 3 runs.
+
+Result: the reply held the notice in 0 of 3 runs.
+
+Observed in each run:
+
+- The session-start hook ran when the first prompt was sent, not when the
+  terminal opened.
+- `notice.json` was written, so the set was recorded as reported.
+- The hook event in the session record held the request and the notice together
+  with the context of another installed plugin (about 6 kB, which tells the
+  model to call a skill first).
+- The model (`gpt-5.6-luna`) first called the tool `skill`, then answered
+  `READY` without the notice.
+- Nothing on the screen showed the notice.
+
+Not separated: whether the cause is the interactive mode, the tool call before
+the reply, or the context of the other plugin.
+
+What follows for the Copilot plugin: the request in the context text does not
+make sure that a Copilot CLI user sees the notice, and the single print of a set
+was used up in each run. The hook command of the Copilot plugin therefore calls
+`upskill update --notice --repeat`, which gives the notice to the model at every
+session start until `upskill update` runs. The Claude Code plugin keeps the
+single print, because Claude Code shows the line to the user through
+`systemMessage`.
 
 ## Trial result: the session-notice plugins loaded from a directory
 
@@ -502,13 +542,14 @@ Copilot CLI 1.0.112:
 1. Whether the user sees the plain line, and whether the agent receives it and
    mentions it. Answered for prompt mode: the plain line was ignored and did not
    reach the model, and did not appear in the standard output or the standard
-   error. Open for the interactive terminal.
+   error. Not run in the interactive terminal for the plain line.
 2. The same points for its JSON form. Answered for prompt mode: the model
    received `additionalContext` and did not mention it without being asked. The
    line appeared in the output only as the model's answer to prompt 2. With a
    request to tell the user before the notice, the model reported the notice in
-   15 of 15 runs (see the request trial above). Open for the interactive
-   terminal.
+   15 of 15 runs (see the request trial above). In the interactive terminal,
+   with the plugin and the same request, the model reported it in 0 of 3 runs,
+   and nothing on the screen showed it (see the interactive trial above).
 3. Whether a plain line is ignored. Answered: yes, in prompt mode.
 4. Whether a hook declared in `.claude/settings.json` also runs. Answered: yes,
    in a trusted folder, for the plain line (form E). Form B in that file was not
@@ -519,6 +560,7 @@ Copilot CLI 1.0.112:
 
 An install of either plugin through a marketplace is answered: the plugin files
 of 2026-11-15 passed it in prompt mode (see the marketplace section above).
-Still open: the interactive display of Copilot CLI, a hook declared in
-`~/.copilot/hooks/`, the interactive terminal for an install through a
-marketplace, and an install from the GitHub repository `driftsys/metapowers`.
+Still open: whether the cause of the interactive result is the interactive mode,
+the tool call before the reply or the context of the other plugin, a hook
+declared in `~/.copilot/hooks/`, the interactive terminal for an install through
+a marketplace, and an install from the GitHub repository `driftsys/metapowers`.

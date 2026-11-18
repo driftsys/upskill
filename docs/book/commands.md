@@ -248,6 +248,7 @@ upskill update code-review           # update one item
 upskill update --dry-run             # preview changes without applying
 upskill update --check               # report newer versions, without a fetch
 upskill update --notice              # one line per scope for a session start
+upskill update --notice --repeat     # the same, also for a set printed before
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
@@ -636,11 +637,13 @@ update. 1 when a lockfile cannot be read or parsed. 2 for a usage error.
 
 ```bash
 upskill update --notice
+upskill update --notice --repeat
 ```
 
 Prints one line for each scope that has available updates, for a session-start
-hook of an AI client. It takes no item name and no other flag (any of them is
-refused with exit code 2). It uses the scopes that `list` uses, in the order
+hook of an AI client. It takes no item name and no other flag except `--repeat`
+(any other is refused with exit code 2). `--repeat` without `--notice` is
+refused with exit code 2. It uses the scopes that `list` uses, in the order
 project, global, and leaves out a scope that has no lockfile. It prints no scope
 line and writes nothing to stderr. A line has one of two forms:
 
@@ -657,6 +660,17 @@ The command is quiet by design:
 - A set of updates is printed once. The command prints the line again only when
   the set of available updates changes. When no update is available, it prints
   nothing.
+- With `--repeat`, the line is printed at every run while the cache holds
+  available updates for the scope, also when the set was printed before. This is
+  for a client that gives the line to the agent and does not show it to the
+  user: the Copilot CLI plugin uses it. The run still records the set as
+  printed, so a later run without `--repeat` prints it only when it changes.
+  Nothing else changes.
+- A successful `upskill update` (not `--dry-run`, `--check` or `--notice`)
+  removes from the cached updates of its scope the items that it updated or that
+  are up to date, so the notice does not report updates that are already
+  installed. A failure to read or write the cache file does not change the
+  result of `update` and prints nothing.
 - It contacts the sources at most once in 24 hours for each scope, with the same
   lookups as `update --check` and a time limit of 5 seconds for all sources.
   Between two lookups, it uses the result of the last one. A lookup that reaches

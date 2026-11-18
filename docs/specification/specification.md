@@ -186,7 +186,7 @@ error that names the item.
 ```text
 upskill update [name...] [--global|--project] [--dry-run] [--force]
 upskill update --check [name...] [--global|--project]
-upskill update --notice
+upskill update --notice [--repeat]
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
@@ -462,7 +462,8 @@ ran, also when a source is not reachable; 1 when a lockfile cannot be read or
 parsed. `--quiet` suppresses the output.
 
 `update --notice` prints a session notice for a session-start hook. It accepts
-no name and no other flag (exit code 2). Its roots are the scopes that
+no name and no other flag except `--repeat` (exit code 2). `--repeat` without
+`--notice` is a usage error (exit code 2). Its roots are the scopes that
 `update --check` reports without a flag; a root without a lockfile is left out.
 It changes no lockfile and no installed file. The only file it keeps is the
 cache file `notice.json` in the upskill cache directory (it writes the file
@@ -496,8 +497,8 @@ rules, in order:
    `updates` stays.
 2. For each root, project then global, the command compares `updates` with
    `reported`. When `updates` is empty, it empties `reported` and prints
-   nothing. When they are equal, it prints nothing. Otherwise it sets `reported`
-   to `updates` and prints
+   nothing. When they are equal and `--repeat` is not given, it prints nothing.
+   Otherwise it sets `reported` to `updates` and prints
    `upskill: <n> update(s) available (<scope>). Run "<command>".`, where `<n>`
    is the number of distinct entries of `updates` and `<command>` is
    `upskill update` for the project scope and `upskill update --global` for the
@@ -527,6 +528,13 @@ failed read or write of the cache file is ignored. When the cache directory
 cannot be written, nothing is stored, so the check runs and the line is printed
 at every session start. With `--quiet`, rule 1 and rule 3 apply, and rule 2
 prints nothing and leaves `reported` unchanged.
+
+A successful `update` that applies (not `--dry-run`, `--check` or `--notice`)
+removes from `updates` and `reported` of its scope root every entry whose
+`<kind>:<name>` part is an item that the run reported as updated, up to date,
+completed or removed. Without this step, `--repeat` would print updates that are
+already installed until the next check. A failed read or write of the cache file
+does not change the exit code of `update` and prints nothing.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,

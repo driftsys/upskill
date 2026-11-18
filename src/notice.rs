@@ -216,17 +216,31 @@ pub fn prune(cache: &mut NoticeCache, has_lockfile: impl Fn(&Path) -> bool) {
     cache.scopes.retain(|root, _| has_lockfile(Path::new(root)));
 }
 
+/// Remove from `updates` and `reported` of `root` each entry whose
+/// `<kind>:<name>` part is in `current`, the items that an applied `update`
+/// left at the version of their source. Returns true when the cache changed.
+pub fn mark_current(cache: &mut NoticeCache, root: &Path, current: &[String]) -> bool {
+    let Some(state) = cache.scopes.get_mut(&key(root)) else {
+        return false;
+    };
+    let before = (state.updates.len(), state.reported.len());
+    let keep = |entry: &String| !current.iter().any(|item| item == item_of(entry));
+    state.updates.retain(keep);
+    state.reported.retain(keep);
+    before != (state.updates.len(), state.reported.len())
+}
+
 /// The line to print for `root`, and the cache change that goes with it.
-/// Returns `None` when `updates` is empty (and clears `reported`) or equals
-/// `reported`, and when `root` has no state. Otherwise sets
-/// `reported = updates` and returns the line.
-pub fn decide(cache: &mut NoticeCache, scope: Scope, root: &Path) -> Option<String> {
+/// Returns `None` when `updates` is empty (and clears `reported`), when
+/// `updates` equals `reported` and `repeat` is false, and when `root` has no
+/// state. Otherwise sets `reported = updates` and returns the line.
+pub fn decide(cache: &mut NoticeCache, scope: Scope, root: &Path, repeat: bool) -> Option<String> {
     let state = cache.scopes.get_mut(&key(root))?;
     if state.updates.is_empty() {
         state.reported.clear();
         return None;
     }
-    if state.updates == state.reported {
+    if state.updates == state.reported && !repeat {
         return None;
     }
     state.reported = state.updates.clone();
@@ -300,16 +314,38 @@ mod tests {
     fn a_new_set_prints_once() {
         let mut cache = recorded(&["skill:a@c1", "rule:b@c1", "agent:c@c1"]);
         assert_eq!(
-            decide(&mut cache, Scope::Project, &root()).as_deref(),
+            decide(&mut cache, Scope::Project, &root(), false).as_deref(),
             Some("upskill: 3 updates available (project). Run \"upskill update\".")
         );
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
+    }
+
+    #[test]
+    fn a_reported_set_prints_again_with_repeat() {
+        let mut cache = recorded(&["skill:a@c1"]);
+        assert!(decide(&mut cache, Scope::Project, &root(), true).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), true).is_some());
+        assert_eq!(cache.scopes[&key(&root())].reported, set(&["skill:a@c1"]));
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
+    }
+
+    #[test]
+    fn mark_current_removes_the_named_items_from_both_sets() {
+        let mut cache = recorded(&["agent:local", "skill:a@c1", "skill:b@c1"]);
+        decide(&mut cache, Scope::Project, &root(), false);
+        let current = set(&["skill:a", "agent:local", "rule:a"]);
+        assert!(mark_current(&mut cache, &root(), &current));
+        let state = &cache.scopes[&key(&root())];
+        assert_eq!(state.updates, set(&["skill:b@c1"]));
+        assert_eq!(state.reported, set(&["skill:b@c1"]));
+        assert!(!mark_current(&mut cache, &root(), &current));
+        assert!(!mark_current(&mut cache, &other_root(), &current));
     }
 
     #[test]
     fn a_changed_set_prints_again() {
         let mut cache = recorded(&["skill:a@c1"]);
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
         record_check(
             &mut cache,
             &root(),
@@ -317,16 +353,16 @@ mod tests {
             Reached::Fully,
             2_000,
         );
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
     }
 
     #[test]
     fn an_empty_set_prints_nothing_and_clears_the_reported_set() {
         let mut cache = recorded(&["skill:a@c1"]);
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
         record_check(&mut cache, &root(), vec![], Reached::Fully, 2_000);
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
         assert!(cache.scopes[&key(&root())].reported.is_empty());
         record_check(
             &mut cache,
@@ -335,15 +371,15 @@ mod tests {
             Reached::Fully,
             3_000,
         );
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
     }
 
     #[test]
     fn an_equal_set_leaves_the_cache_unchanged() {
         let mut cache = recorded(&["skill:a@c1"]);
-        decide(&mut cache, Scope::Project, &root());
+        decide(&mut cache, Scope::Project, &root(), false);
         let before = cache.clone();
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
         assert_eq!(cache, before);
     }
 
@@ -435,7 +471,7 @@ mod tests {
     fn a_subset_from_a_partly_reached_check_does_not_print_a_second_line() {
         let full = ["rule:b@c1", "skill:a@c1"];
         let mut cache = recorded(&full);
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
         record_check(
             &mut cache,
             &root(),
@@ -443,9 +479,9 @@ mod tests {
             Reached::Partly,
             2_000,
         );
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
         record_check(&mut cache, &root(), set(&full), Reached::Fully, 3_000);
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
     }
 
     fn other_root() -> PathBuf {
@@ -511,7 +547,7 @@ mod tests {
     fn one_update_uses_the_singular_form() {
         let mut cache = recorded(&["skill:a@c1"]);
         assert_eq!(
-            decide(&mut cache, Scope::Project, &root()).as_deref(),
+            decide(&mut cache, Scope::Project, &root(), false).as_deref(),
             Some("upskill: 1 update available (project). Run \"upskill update\".")
         );
     }
@@ -520,7 +556,7 @@ mod tests {
     fn the_global_line_names_the_global_flag() {
         let mut cache = recorded(&["skill:a@c1"]);
         assert_eq!(
-            decide(&mut cache, Scope::Global, &root()).as_deref(),
+            decide(&mut cache, Scope::Global, &root(), false).as_deref(),
             Some("upskill: 1 update available (global). Run \"upskill update --global\".")
         );
     }
@@ -539,7 +575,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("nested/cache").join(CACHE_FILE_NAME);
         let mut cache = recorded(&["skill:a@c1", "rule:b"]);
-        decide(&mut cache, Scope::Project, &root());
+        decide(&mut cache, Scope::Project, &root(), false);
         cache.save(&path).unwrap();
         assert_eq!(NoticeCache::load(&path), cache);
         let names: Vec<_> = fs::read_dir(path.parent().unwrap())
@@ -601,7 +637,7 @@ mod tests {
     #[test]
     fn a_root_without_state_prints_nothing() {
         let mut cache = NoticeCache::default();
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
         assert_eq!(cache, NoticeCache::default());
     }
 
@@ -617,7 +653,7 @@ mod tests {
     #[test]
     fn two_orders_of_one_set_print_once() {
         let mut cache = recorded(&["skill:b@c1", "rule:a@c1"]);
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
         record_check(
             &mut cache,
             &root(),
@@ -625,7 +661,7 @@ mod tests {
             Reached::Fully,
             2_000,
         );
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
     }
 
     #[test]

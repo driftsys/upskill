@@ -80,10 +80,11 @@ is compared by content and has no commit).
 ## Report available updates when a session starts
 
 `upskill update --notice` prints one line for each scope that has updates,
-prints a given set of updates once, contacts the sources at most once in 24
-hours, and exits with code 0 in every case after the arguments are parsed (also
-when it is interrupted), so that it cannot make a hook fail. When it has nothing
-to report it prints nothing.
+prints a given set of updates once (with `--repeat`, at every run until
+`upskill update` runs), contacts the sources at most once in 24 hours, and exits
+with code 0 in every case after the arguments are parsed (also when it is
+interrupted), so that it cannot make a hook fail. When it has nothing to report
+it prints nothing.
 
 The recommended way to call it from a session-start hook is the `upskill`
 plugin, which the `driftsys/metapowers` marketplace publishes. Install it for
@@ -106,18 +107,21 @@ What you get depends on the client:
 - Claude Code shows one line at session start. You see it, and the agent
   receives it.
 - Copilot CLI gives the notice to the agent. It has no documented way to show
-  the output of a session-start hook to you, and it did not print the notice in
-  the runs made in prompt mode. The plugin therefore asks the agent to tell you
-  at the start of its first reply. In 5 runs in prompt mode with Copilot CLI
-  1.0.112 and the plugin loaded from a directory, the agent did so each time.
-  The interactive terminal was not tested, and an agent can ignore the request.
-  Issue [#530](https://github.com/driftsys/upskill/issues/530) tracks this.
+  the output of a session-start hook to you. The plugin therefore asks the agent
+  to tell you at the start of its first reply. **In Copilot CLI you see the
+  notice only when the agent follows the request.** In 5 runs in prompt mode
+  with Copilot CLI 1.0.112 and the plugin loaded from a directory, the agent did
+  so each time. In 3 runs in the interactive terminal of the same version, the
+  agent did not do so in any run. For this reason the Copilot plugin calls
+  `upskill update --notice --repeat`: the notice is given to the agent at every
+  session start until `upskill update` runs. Issue
+  [#530](https://github.com/driftsys/upskill/issues/530) records the trials.
 
-A given set of updates is announced once.
+In Claude Code a given set of updates is announced once.
 
 The plugin needs an `upskill` binary on `PATH` that has `update --notice`.
-Release 0.9.0 is the first release that has it. When the binary is missing or
-older, the hook prints nothing.
+Release 0.9.0 is the first release that has it. The Copilot plugin also needs
+`--repeat`. When the binary is missing or older, the hook prints nothing.
 
 A hand-written hook that only runs `upskill update --notice` does not show the
 notice to you in either client. Claude Code gives a plain line to the agent and
