@@ -43,17 +43,19 @@ failed until `update --force`.
    that requires it is prepared. Then the source overlap check runs once on the
    items of all these sources together and on the item directories of every
    local-path source recorded in the lockfile that the run does not otherwise
-   read (#547). The same check also compares these item directories with the
-   recorded files that the run deletes for an item that its source no longer
-   contains (#550). `add` applies the check to the recorded files of the items
-   that the lockfile records from another source, and `remove` refuses to delete
-   a recorded file that is inside, or contains, the source directory of another
-   installed item recorded from a local-path source, also with `--force` (#550).
-   With a `schema: 1` lockfile these checks read the files that the adoption
-   would record, computed in memory without a write. A source that cannot be
-   fetched (a failed `git clone`, or a local-path source whose path does not
-   exist), also through the source of a cross-source dependency that it
-   requires, is skipped (#551): its files are not written (a `schema: 1`
+   read (#547). The same item directories must also not contain a recorded file
+   (any file of the `files` and `pending` records, also a modified file that the
+   removal keeps) of an item that the run removes because its source no longer
+   contains it (#550). `add` refuses a source whose item directory contains a
+   recorded file of an installed item, and `remove` refuses to delete the
+   recorded files of an item when the source directory of another installed
+   item, recorded from a local-path source, contains one of them, also with
+   `--force`; a recorded local source that exists and cannot be read makes
+   `remove` fail (#550). With a `schema: 1` lockfile these checks read the files
+   that the adoption would record, computed in memory without a write. A source
+   that cannot be fetched (a failed `git clone`, or a local-path source whose
+   path does not exist), also through the source of a cross-source dependency
+   that it requires, is skipped (#551): its files are not written (a `schema: 1`
    adoption that another source causes still records the `files` of its lockfile
    entries, see Decision 6), it is reported on stderr with its label and the
    cause, the other sources are handled, and the run exits with code 1, also in

@@ -238,8 +238,10 @@ pub(super) struct SourceItem {
 /// the first step again (all clients, as in
 /// [`check_source_outside_outputs`]): the item directory must not be inside
 /// such a path or contain one. Called before the first deletion or write of
-/// the run. The recorded files that a run deletes or overwrites for an item
-/// that it does not install are checked by [`check_outside_recorded_paths`].
+/// the run. `update` also passes the same item directories to
+/// [`check_outside_recorded_paths`] with the recorded files of every item that
+/// it removes because its source no longer contains it, and `add` passes its
+/// own item directories with the recorded files of every lockfile item.
 pub(super) fn check_run_outside_outputs(at: &ScopeRoot, items: &[SourceItem]) -> Result<()> {
     let written = |item: &SourceItem| item.installed.clone().filter(|_| !item.excluded);
     for item in items {
@@ -279,8 +281,7 @@ pub(super) fn check_run_outside_outputs(at: &ScopeRoot, items: &[SourceItem]) ->
     Ok(())
 }
 
-/// The error of [`check_run_outside_outputs`] and
-/// [`check_outside_recorded_paths`]: the directory of `inner` is inside, or
+/// The error of [`check_run_outside_outputs`]: the directory of `inner` is inside, or
 /// contains (`relation`), the path `out` of the item `(outer_kind,
 /// outer_name)`.
 fn cross_overlap_error(
@@ -327,49 +328,88 @@ pub(super) fn recorded_paths(entry: &crate::lockfile::LockedItem) -> Vec<Recorde
         .collect()
 }
 
-/// The first source item of `items` whose directory is inside, or contains,
-/// a path of `recorded` under the scope root `target`. Returns the item, the
-/// relation (`"is inside"` or `"contains"`), the canonical path and the
-/// recorded path. Paths are compared in canonical form, as in
-/// [`check_run_outside_outputs`].
+/// The first source item of `items` whose directory contains a path of
+/// `recorded` under the scope root `target`. Returns the item, the canonical
+/// path and the recorded path. Paths are compared in canonical form, as in
+/// [`check_run_outside_outputs`]. A recorded path names a file, so an item
+/// directory cannot be inside it; when a directory now stands at a recorded
+/// path, that path is not a regular file and no deletion removes it.
 pub(super) fn find_recorded_overlap<'a>(
     target: &Path,
     recorded: &'a [RecordedPath],
     items: &'a [SourceItem],
-) -> Option<(&'a SourceItem, &'static str, PathBuf, &'a RecordedPath)> {
+) -> Option<(&'a SourceItem, PathBuf, &'a RecordedPath)> {
     let canonical = |p: &Path| fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
     let target = canonical(target);
     let dirs: Vec<PathBuf> = items.iter().map(|item| canonical(&item.dir)).collect();
     for rec in recorded {
         let out = canonical(&target.join(&rec.path));
         for (item, dir) in items.iter().zip(&dirs) {
-            if dir.starts_with(&out) {
-                return Some((item, "is inside", out, rec));
-            }
             if out.starts_with(dir) {
-                return Some((item, "contains", out, rec));
+                return Some((item, out, rec));
             }
         }
     }
     None
 }
 
-/// Refuse a run when a source item directory of `items` is inside, or
-/// contains, a recorded path of `recorded`: a file that `update` deletes for
-/// an item that its source no longer contains, or a recorded file of an item
-/// that `add` does not install from its source. The message has the form of
-/// the message of [`check_run_outside_outputs`]. Called before the first
-/// deletion or write of the run.
+/// Which command reads the recorded paths in [`check_outside_recorded_paths`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum RecordedUse {
+    /// `update` deletes the recorded files of an item that its source no
+    /// longer contains.
+    UpdateDeletes,
+    /// `add` installs from a source that holds recorded files of installed
+    /// items.
+    AddReads,
+}
+
+/// Refuse a run when a source item directory of `items` contains a recorded
+/// path of `recorded`. For [`RecordedUse::UpdateDeletes`], `recorded` holds
+/// every recorded file (`files` and `pending`) of every item that the run
+/// removes because its source no longer contains it, also a modified file
+/// that the removal would keep. For [`RecordedUse::AddReads`], `recorded`
+/// holds every recorded file of every item of the lockfile. Called before
+/// the first deletion or write of the run.
 pub(super) fn check_outside_recorded_paths(
     target: &Path,
     recorded: &[RecordedPath],
     items: &[SourceItem],
+    usage: RecordedUse,
 ) -> Result<()> {
-    match find_recorded_overlap(target, recorded, items) {
-        Some((item, relation, out, rec)) => Err(cross_overlap_error(
-            item, relation, &out, rec.kind, &rec.name,
-        )),
-        None => Ok(()),
+    let Some((item, out, rec)) = find_recorded_overlap(target, recorded, items) else {
+        return Ok(());
+    };
+    let inner = item.installed.as_ref().unwrap_or(&item.name);
+    match usage {
+        RecordedUse::UpdateDeletes => anyhow::bail!(
+            "the source directory of {} '{inner}' ({}) contains the recorded file {} of {} '{}'; \
+             the update would delete this file because the source of {} '{}' no longer \
+             contains the item. Remove {} '{inner}' first, or restore {} '{}' in its source",
+            item.kind,
+            item.dir.display(),
+            out.display(),
+            rec.kind,
+            rec.name,
+            rec.kind,
+            rec.name,
+            item.kind,
+            rec.kind,
+            rec.name
+        ),
+        RecordedUse::AddReads => anyhow::bail!(
+            "the source directory of {} '{inner}' ({}) contains the file {}, which upskill \
+             recorded for the installed {} '{}'; an update or a remove of {} '{}' would delete \
+             it. Copy the item to a directory outside the client output directories and add it \
+             from there",
+            item.kind,
+            item.dir.display(),
+            out.display(),
+            rec.kind,
+            rec.name,
+            rec.kind,
+            rec.name
+        ),
     }
 }
 

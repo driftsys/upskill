@@ -55,8 +55,11 @@ use super::{
 ///
 /// Before the adoption and before any deletion, also when `force` is true,
 /// `remove` fails when the source directory of another installed item,
-/// recorded from a local-path source, is inside, or contains, a recorded file
-/// of an item that it removes (`check_removal_outside_sources`).
+/// recorded from a local-path source, contains a recorded file (any file of
+/// the `files` and `pending` records, also a modified file that the removal
+/// would keep) of an item that it removes (`check_removal_outside_sources`).
+/// A recorded local source that does not exist is skipped; one that exists
+/// and cannot be read fails `remove` with an error that names it.
 ///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
 /// `.vscode/settings.json`) are user-owned after creation per ADR-0003, so
@@ -142,14 +145,16 @@ pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<Remove
 }
 
 /// Refuse a `remove` when the source directory of another installed item,
-/// recorded from a local-path source, is inside, or contains, a recorded file
-/// of an item in `to_remove` (issue #550). The recorded files are those of
+/// recorded from a local-path source, contains a recorded file of an item in
+/// `to_remove` (issue #550). Every file of the `files` and `pending` records
+/// is compared, also a modified file that the removal would keep. The recorded files are those of
 /// the lockfile after an adoption in memory (`adopt_schema1_in_memory`), so
 /// that a `schema: 1` lockfile is checked with the files that the adoption
 /// records; nothing is written. The item directories are read as
 /// in the overlap check of [`update`] (`collect_recorded_local_items`); a git
-/// source is not fetched, and a recorded source that cannot be read is
-/// skipped, because it holds no directory that the removal can delete.
+/// source is not fetched, a recorded source that does not exist is skipped,
+/// and a recorded source that exists and cannot be read is an error that
+/// names its label.
 fn check_removal_outside_sources(
     target: &Path,
     lock: &crate::lockfile::Lockfile,
@@ -176,9 +181,12 @@ fn check_removal_outside_sources(
         others.iter().map(|e| e.source.as_str()).collect();
     for label in labels {
         let mut source_items = Vec::new();
-        if collect_recorded_local_items(label, &mut source_items).is_err() {
-            continue;
-        }
+        collect_recorded_local_items(label, &mut source_items).with_context(|| {
+            format!(
+                "read the recorded source `{label}` for the overlap check of `remove`; restore it \
+                 or make it readable"
+            )
+        })?;
         // The installed item of `label` that an item directory holds.
         let owner = |item: &super::output::SourceItem| {
             others.iter().copied().find(|e| {
@@ -189,14 +197,14 @@ fn check_removal_outside_sources(
         };
         // Only the directory of an installed item is protected.
         source_items.retain(|item| owner(item).is_some());
-        let Some((item, relation, out, rec)) =
+        let Some((item, out, rec)) =
             super::output::find_recorded_overlap(target, &recorded, &source_items)
         else {
             continue;
         };
         let other = owner(item).map_or(item.name.as_str(), |e| e.name.as_str());
         anyhow::bail!(
-            "the source directory ({}) of the installed {} '{other}' {relation} the recorded \
+            "the source directory ({}) of the installed {} '{other}' contains the recorded \
              path {} of {} '{}'; removing {} '{}' would delete the source of {} '{other}'. \
              Remove {} '{other}' first",
             item.dir.display(),
@@ -826,9 +834,10 @@ fn reselect_from_entries(
 /// names `upskill remove --source` only when a lockfile item has that
 /// source), and a git source is not
 /// fetched for this check. The same item directories are then compared with
-/// the recorded files that the run deletes for an item that its source no
-/// longer contains (`output::check_outside_recorded_paths`); an overlap fails
-/// the run before any write, also with `dry_run`.
+/// every recorded file (`files` and `pending`, also a modified file that the
+/// removal keeps) of an item that its source no longer contains
+/// (`output::check_outside_recorded_paths`); an item directory that contains
+/// one fails the run before any write, also with `overwrite` and `dry_run`.
 ///
 /// A source whose prepare fails with a [`FetchFailed`] in its error chain
 /// (a `git clone` that fails, or a local-path source whose path does not
@@ -1190,7 +1199,12 @@ pub fn update(
                 }
             }
         }
-        super::output::check_outside_recorded_paths(target, &deleted, &source_items)?;
+        super::output::check_outside_recorded_paths(
+            target,
+            &deleted,
+            &source_items,
+            super::output::RecordedUse::UpdateDeletes,
+        )?;
 
         // Apply phase: preview, decide and commit each source in turn.
         for (index, (source_label, source_entries, prepared)) in

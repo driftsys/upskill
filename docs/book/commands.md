@@ -153,15 +153,17 @@ file that is not a bundle file) fails the `update` with exit code 1 and an error
 that names its source label; the error suggests
 `upskill remove --source <label>` only when a lockfile item has that source. The
 refusal comes before any file or lockfile is changed, also with `--force` and
-`--dry-run`. The check also covers the recorded files that `update` deletes for
-an item that its source no longer contains: when the directory of an item of a
-source that the run reads, or of a recorded local-path source, is inside such a
-file path or contains one, `update` is refused with the same error and exit code
-1, also with `--dry-run`.
+`--dry-run`. The check also covers every recorded file of an item that `update`
+removes because its source no longer contains it, also a modified file that the
+removal would keep: when the directory of an item of a source that the run
+reads, or of a recorded local-path source, contains such a file, `update` fails
+with exit code 1 and an error that names both items, also with `--force` and
+`--dry-run`.
 
-`add` also refuses, with the same error and exit code 1 and before any change, a
-source whose item directory is inside, or contains, a file that the lockfile of
-the scope records for an item from another source.
+`add` also fails with exit code 1, before any change and also with `--force`,
+when an item directory of the source contains a file that the lockfile of the
+scope records for an installed item. The error names the file and the item that
+it is recorded for.
 
 **Modified and unmanaged files.** Before `add` writes anything, it checks every
 destination of every item against the item's `files` and `pending` records (see
@@ -756,12 +758,15 @@ entry of every removed item is dropped, including when files were kept.
 
 Before it deletes anything, and also with `--force`, `remove` fails with exit
 code 1 when the source directory of another installed item, recorded from a
-local-path source, is inside, or contains, a recorded file of an item that it
-removes. The error names both items and asks you to remove the other item first.
-No file is deleted and the lockfile is not changed. A git source is not fetched
-for this check. With a `schema: 1` lockfile, this check and the checks of `add`
-and `update` above use the files that the adoption would record, without saving
-the adoption.
+local-path source, contains a recorded file of an item that it removes. Every
+file of the `files` and `pending` records is compared, also a modified file that
+`remove` would keep. The error names both items and asks you to remove the other
+item first. No file is deleted and the lockfile is not changed. A git source is
+not fetched for this check. A recorded local source that does not exist is
+skipped; one that exists and cannot be read makes `remove` fail with exit code 1
+and an error that names the source. With a `schema: 1` lockfile, this check and
+the checks of `add` and `update` above use the files that the adoption would
+record, without saving the adoption.
 
 `remove` adopts a `schema: 1` lockfile and prints the adoption notice, as
 described in [State files](#state-files). A name that is not in the lockfile is
@@ -1186,7 +1191,7 @@ also when the command fails after the adoption was saved. `update --dry-run` and
 not in the lockfile, or a `remove` that is refused because the source directory
 of another installed item overlaps a file that it would delete. An `add` does
 not adopt when it is refused because a source item overlaps an output path of
-the run or a recorded file of an item from another source, because an item
+the run or contains a recorded file of an installed item, because an item
 conflicts with an item installed from another source, because two items would
 install under one name, or because an installed name is empty, `.` or `..` or
 contains a path separator. An `update` refused for one of these reasons does not
