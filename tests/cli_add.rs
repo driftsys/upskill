@@ -1307,7 +1307,10 @@ fn add_of_a_relative_missing_local_path_prints_the_absolute_path() {
     let proj = tmp.path().join("proj");
     fs::create_dir_all(proj.join(".git")).unwrap();
     let before = entry_names(&proj);
-    let expected = proj.canonicalize().unwrap().join("missing");
+    // The spelling of the working directory in the message differs between
+    // platforms (a symlinked temp dir, a Windows short name), so the test
+    // checks the end of the path and that the typed form is not printed.
+    let expected = Path::new("proj").join("missing");
 
     let assert = common::upskill_cmd(&home)
         .current_dir(&proj)
@@ -1316,13 +1319,12 @@ fn add_of_a_relative_missing_local_path_prints_the_absolute_path() {
         .code(1);
     let stderr = String::from_utf8_lossy(&assert.get_output().stderr).into_owned();
 
+    assert!(stderr.contains("source path "), "{stderr}");
     assert!(
-        stderr.contains(&format!(
-            "source path {} does not exist",
-            expected.display()
-        )),
+        stderr.contains(&format!("{} does not exist", expected.display())),
         "{stderr}"
     );
+    assert!(!stderr.contains("./missing"), "{stderr}");
     assert_eq!(entry_names(&proj), before);
 }
 
