@@ -1163,6 +1163,14 @@ fn run_update_notice() -> i32 {
 
 fn notice_lines() -> Option<()> {
     let cache_path = notice_cache_path()?;
+    let _run_lock = match notice::acquire_run_lock(
+        &cache_path.with_file_name(notice::LOCK_FILE_NAME),
+        std::time::SystemTime::now(),
+    ) {
+        notice::LockAttempt::Held(lock) => Some(lock),
+        notice::LockAttempt::Busy => return Some(()),
+        notice::LockAttempt::Unavailable => None,
+    };
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .ok()?

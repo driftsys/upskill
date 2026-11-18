@@ -2,16 +2,22 @@
 //!
 //! The cache file records, for each scope root, the time of the last check
 //! (a check that reached no source also sets it), the updates that check
-//! found, and the set that the last printed notice reported. The functions
-//! take the time as an argument. Only [`NoticeCache::load`] and
-//! [`NoticeCache::save`] perform file I/O.
+//! found, and the set that the last printed notice reported. Time-dependent
+//! functions take the time as an argument. Cache loading and saving, run lock
+//! acquisition, and run lock cleanup perform file I/O.
 //!
-//! Two runs that overlap each save the whole file. Before it saves, a run
-//! loads the file again and applies only its own roots with [`merge_roots`],
-//! which leaves the entries of the other run in place. The remaining race is
-//! the time between that second load and the rename of the save: when another
-//! run saves inside that time, its entries are lost, and its roots are checked
-//! again at their next session start.
+//! Runs sharing a cache directory share a run lock. A run that finds a lock
+//! younger than 60 seconds exits without printing a notice or changing the
+//! cache, even when it handles a different repository. That repository can
+//! print its notice at a later session start. Locks at least 60 seconds old
+//! or dated after the current time are replaced. When the lock cannot be
+//! acquired for another reason, a run continues without it. A completed run
+//! drops its lock; an interrupted run leaves the file until it expires.
+//!
+//! Before saving, a run loads the cache again and applies only its own roots
+//! with [`merge_roots`]. This preserves other roots saved before that load,
+//! including when a run continues without a lock. If another run saves between
+//! that second load and the rename of the save, its changes can be lost.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -27,6 +33,70 @@ use crate::scope::Scope;
 pub const NETWORK_PERIOD_SECS: u64 = 24 * 60 * 60;
 /// The name of the cache file in the upskill cache directory.
 pub const CACHE_FILE_NAME: &str = "notice.json";
+
+/// The name of the run lock file in the upskill cache directory.
+pub const LOCK_FILE_NAME: &str = "notice.lock";
+/// The age in seconds at which a run lock can be replaced.
+pub const LOCK_MAX_AGE_SECS: u64 = 60;
+
+/// Deletes the lock file when dropped.
+pub struct RunLock {
+    path: PathBuf,
+}
+
+impl Drop for RunLock {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
+pub enum LockAttempt {
+    /// This run created the lock file.
+    Held(RunLock),
+    /// Another run holds a lock younger than `LOCK_MAX_AGE_SECS`.
+    Busy,
+    /// The lock file cannot be created for another reason.
+    Unavailable,
+}
+
+/// Create a run lock, replacing an expired or future-dated lock once.
+pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt {
+    let dir = path.parent().unwrap_or_else(|| Path::new("."));
+    if fs::create_dir_all(dir).is_err() {
+        return LockAttempt::Unavailable;
+    }
+    match fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+    {
+        Ok(_) => return LockAttempt::Held(RunLock { path: path.into() }),
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+        Err(_) => return LockAttempt::Unavailable,
+    }
+    let modified = match fs::metadata(path).and_then(|metadata| metadata.modified()) {
+        Ok(modified) => modified,
+        Err(_) => return LockAttempt::Unavailable,
+    };
+    if now
+        .duration_since(modified)
+        .is_ok_and(|age| age < std::time::Duration::from_secs(LOCK_MAX_AGE_SECS))
+    {
+        return LockAttempt::Busy;
+    }
+    if fs::remove_file(path).is_err() {
+        return LockAttempt::Unavailable;
+    }
+    match fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+    {
+        Ok(_) => LockAttempt::Held(RunLock { path: path.into() }),
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => LockAttempt::Busy,
+        Err(_) => LockAttempt::Unavailable,
+    }
+}
 
 /// State of one scope root in the cache file. A missing field of a file reads
 /// as its default value.
@@ -246,6 +316,92 @@ mod tests {
     use super::*;
     use crate::pipeline::{CheckedSource, ItemKind};
     use std::path::PathBuf;
+
+    use std::time::{Duration, SystemTime};
+
+    fn lock_path(dir: &tempfile::TempDir) -> PathBuf {
+        dir.path().join("cache").join(LOCK_FILE_NAME)
+    }
+
+    fn set_age(path: &Path, now: SystemTime, secs: u64) {
+        fs::File::options()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(now - Duration::from_secs(secs))
+            .unwrap();
+    }
+
+    #[test]
+    fn the_first_run_holds_the_lock_and_creates_the_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        let attempt = acquire_run_lock(&path, SystemTime::now());
+        assert!(matches!(attempt, LockAttempt::Held(_)));
+        assert!(path.is_file());
+    }
+
+    #[test]
+    fn dropping_the_lock_deletes_the_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        let LockAttempt::Held(lock) = acquire_run_lock(&path, SystemTime::now()) else {
+            panic!("expected a held lock");
+        };
+        drop(lock);
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn a_lock_younger_than_60_seconds_is_busy() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "").unwrap();
+        let now = SystemTime::now();
+        set_age(&path, now, 59);
+        assert!(matches!(acquire_run_lock(&path, now), LockAttempt::Busy));
+        assert!(path.is_file());
+    }
+
+    #[test]
+    fn a_lock_of_60_seconds_is_replaced() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "").unwrap();
+        let now = SystemTime::now();
+        set_age(&path, now, 60);
+        let attempt = acquire_run_lock(&path, now);
+        assert!(matches!(attempt, LockAttempt::Held(_)));
+        assert!(path.is_file());
+    }
+
+    #[test]
+    fn a_lock_dated_after_now_is_replaced() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let now = SystemTime::now();
+        fs::File::create(&path)
+            .unwrap()
+            .set_modified(now + Duration::from_secs(3600))
+            .unwrap();
+        let attempt = acquire_run_lock(&path, now);
+        assert!(matches!(attempt, LockAttempt::Held(_)));
+        assert!(path.is_file());
+    }
+
+    #[test]
+    fn a_directory_that_cannot_be_created_is_unavailable() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::write(path.parent().unwrap(), "").unwrap();
+        assert!(matches!(
+            acquire_run_lock(&path, SystemTime::now()),
+            LockAttempt::Unavailable
+        ));
+    }
 
     fn root() -> PathBuf {
         PathBuf::from("/work/project")

@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, SystemTime};
 
 const REMOTE: &str = "https://example.invalid/team/skills";
 
@@ -890,45 +891,41 @@ fn an_interrupted_notice_leaves_an_existing_cache_file_unchanged() {
 
 #[cfg(unix)]
 #[test]
-fn notice_runs_that_overlap_keep_the_cache_entries_of_each_other() {
+fn notice_runs_that_overlap_skip_the_second_root_until_a_later_run() {
     let e = env();
     let other = e.home.parent().unwrap().join("repo2");
     fs::create_dir_all(other.join(".git")).unwrap();
     run(&e, &e.repo, &["add", REMOTE, "--claude"]);
     let added = run(&e, &other, &["add", REMOTE, "--claude"]);
     assert!(added.status.success(), "{}", stderr(&added));
-    // The cache file holds an outdated entry of the other project.
-    assert_eq!(stdout(&run(&e, &other, &["update", "--notice"])), "");
-    let mut cache: serde_json::Value =
-        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
-    let outdated =
-        serde_json::json!({"checked_at": 1, "updates": ["skill:outdated@c0"], "reported": []});
-    for (root, state) in cache["scopes"].as_object_mut().unwrap() {
-        assert!(is_root_named(root, "repo2"), "{root}");
-        *state = outdated.clone();
-    }
-    fs::write(cache_path(&e), serde_json::to_vec(&cache).unwrap()).unwrap();
     advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
-    // The first run loaded that cache and waits in its lookup.
-    let mut blocked = BlockedRun::start(&e, &e.repo);
+    let lock = cache_path(&e).with_file_name("notice.lock");
+    let blocked = BlockedRun::start(&e, &e.repo);
     let second = run(&e, &other, &["update", "--notice"]);
-    assert_eq!(second.status.code(), Some(0));
-    assert_eq!(stdout(&second), PROJECT_LINE);
+    let cache_during_lookup = fs::read(cache_path(&e)).ok();
+    let lock_during_lookup = lock.is_file();
     blocked.release();
-    let status = blocked.child.wait().unwrap();
-    assert_eq!(status.code(), Some(0));
+    let first = blocked.child.wait_with_output().unwrap();
+    assert_eq!(second.status.code(), Some(0));
+    assert_eq!(stdout(&second), "");
+    assert_eq!(stderr(&second), "");
+    assert!(cache_during_lookup.is_none());
+    assert!(lock_during_lookup);
+    assert_eq!(first.status.code(), Some(0));
+    assert_eq!(stderr(&first), "");
     let cache: serde_json::Value =
         serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
     let states = cache["scopes"].as_object().unwrap();
-    assert_eq!(states.len(), 2, "{cache}");
-    let (_, other_state) = states
-        .iter()
-        .find(|(r, _)| is_root_named(r, "repo2"))
-        .unwrap();
-    // The newer entry of the second run stays; the first run did not write
-    // back the outdated one.
-    assert!(other_state["checked_at"].as_u64().unwrap() > 1, "{cache}");
-    assert_ne!(other_state["updates"], outdated["updates"], "{cache}");
+    assert_eq!(states.len(), 1, "{cache}");
+    assert!(
+        states.keys().all(|root| is_root_named(root, "repo")),
+        "{cache}"
+    );
+    assert!(!lock.exists());
+    let later = run(&e, &other, &["update", "--notice"]);
+    assert_eq!(later.status.code(), Some(0));
+    assert_eq!(stdout(&later), PROJECT_LINE);
+    assert_eq!(stderr(&later), "");
 }
 
 #[cfg(unix)]
@@ -949,5 +946,89 @@ fn notice_exits_with_code_0_and_writes_nothing_to_stderr_when_stdout_is_closed()
     drop(child.stdout.take());
     let out = child.wait_with_output().unwrap();
     assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stderr(&out), "");
+}
+
+#[test]
+fn notice_with_a_fresh_lock_file_prints_nothing_and_leaves_the_cache_unchanged() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let lock = cache_path(&e).with_file_name("notice.lock");
+    fs::create_dir_all(lock.parent().unwrap()).unwrap();
+    fs::write(&lock, "").unwrap();
+    let before = fs::read(cache_path(&e)).ok();
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+    assert_eq!(fs::read(cache_path(&e)).ok(), before);
+    assert!(lock.is_file());
+    fs::remove_file(lock).unwrap();
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice"])),
+        PROJECT_LINE
+    );
+}
+
+#[test]
+fn notice_with_a_lock_file_of_60_seconds_prints_the_notice_and_deletes_the_lock() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let lock = cache_path(&e).with_file_name("notice.lock");
+    fs::create_dir_all(lock.parent().unwrap()).unwrap();
+    fs::File::create(&lock)
+        .unwrap()
+        .set_modified(SystemTime::now() - Duration::from_secs(60))
+        .unwrap();
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), PROJECT_LINE);
+    assert_eq!(stderr(&out), "");
+    assert!(!lock.exists());
+}
+
+#[test]
+fn a_completed_notice_run_leaves_no_lock_file() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let lock = cache_path(&e).with_file_name("notice.lock");
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), PROJECT_LINE);
+    assert_eq!(stderr(&out), "");
+    assert!(!lock.exists());
+}
+
+#[test]
+fn notice_with_a_lock_file_dated_in_the_future_prints_the_notice() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let lock = cache_path(&e).with_file_name("notice.lock");
+    fs::create_dir_all(lock.parent().unwrap()).unwrap();
+    fs::File::create(&lock)
+        .unwrap()
+        .set_modified(SystemTime::now() + Duration::from_secs(3600))
+        .unwrap();
+    let out = run(&e, &e.repo, &["update", "--notice"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), PROJECT_LINE);
+    assert_eq!(stderr(&out), "");
+}
+
+#[test]
+fn notice_prints_when_the_cache_directory_is_a_regular_file() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let xdg = e.home.parent().unwrap().join("file-cache");
+    fs::create_dir_all(&xdg).unwrap();
+    fs::write(xdg.join("upskill"), "").unwrap();
+    let out = run_xdg(&e, &e.repo, &["update", "--notice"], xdg.to_str().unwrap());
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), PROJECT_LINE);
     assert_eq!(stderr(&out), "");
 }
