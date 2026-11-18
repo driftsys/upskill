@@ -418,8 +418,7 @@ impl Resolver {
             .map_err(|e| anyhow::anyhow!("parse requires source `{src_dsl}`: {e}"))?;
         let label = install_source.to_string();
         if !self.sources.contains_key(&label) {
-            let fetched = super::git::check_local_source_exists(&install_source)
-                .and_then(|()| super::git::fetch_ssot(&install_source))
+            let fetched = super::git::fetch_ssot(&install_source)
                 .with_context(|| format!("fetch requires source `{label}`"))?;
             let index = index_source(&fetched.root)?;
             if let Some(g) = fetched.guard {
@@ -686,8 +685,7 @@ impl BundleResolver {
             .map_err(|e| anyhow::anyhow!("parse requires source `{src_dsl}`: {e}"))?;
         let label = install_source.to_string();
         if !self.sources.contains_key(&label) {
-            let fetched = super::git::check_local_source_exists(&install_source)
-                .and_then(|()| super::git::fetch_ssot(&install_source))
+            let fetched = super::git::fetch_ssot(&install_source)
                 .with_context(|| format!("fetch requires source `{label}`"))?;
             if let Some(g) = fetched.guard {
                 self.guards.push(g);
