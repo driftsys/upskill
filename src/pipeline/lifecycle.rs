@@ -824,7 +824,8 @@ pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedP
 }
 
 /// Install again every plugin of `bundles` that the lockfile records as
-/// installed and that [`plugin_is_missing`] reports missing, except the
+/// skipped, or as installed when [`plugin_is_missing`] reports it missing,
+/// except the
 /// `(name, client)` pairs in `done`, and record the results in the lockfile.
 /// Only the missing client of a plugin is installed. Returns the results;
 /// empty when nothing is missing, and then nothing is written.
@@ -845,9 +846,15 @@ fn repair_missing_plugins(
         let missing: Vec<(String, String)> = lock
             .plugins
             .iter()
-            .filter(|p| p.bundle == bundle.name && p.status == PluginInstallStatus::Installed)
+            .filter(|p| p.bundle == bundle.name)
             .filter(|p| !done.contains(&(p.name.clone(), p.client.clone())))
-            .filter(|p| plugin_is_missing(target, p))
+            .filter(|p| match p.status {
+                // A skipped plugin is tried again: its client CLI may be on
+                // PATH now (issue #229).
+                PluginInstallStatus::Skipped => true,
+                PluginInstallStatus::Installed => plugin_is_missing(target, p),
+                PluginInstallStatus::Instructions => false,
+            })
             .map(|p| (p.name.clone(), p.client.clone()))
             .collect();
         if missing.is_empty() {

@@ -407,26 +407,26 @@ Known limits: the plugin and MCP steps of a bundle source run when the source is
 applied, are not part of the preview and are not a reason to ask, so a terminal
 run does not repair a missing MCP registration of a source whose preview changes
 nothing (`doctor` reports it, `update --yes` repairs it). A plugin that the
-lockfile records as installed for a bundle of a source of the run, and that the
-check of `doctor` reports missing, is installed again when the source is applied
-and also when its preview changes nothing, in a terminal run as well; not for a
-source that the answer did not apply, not with `--dry-run` and not with
-`--check` (ADR-0008). A change of only `required_by` in an item record is not
-shown and does not cause a question; it is saved when the source is applied, and
-also when the preview of the source changes nothing, but not with `--dry-run` or
-for a declined source. `required_by` is refreshed when `add` writes its install,
-when `update` applies a source, and when `update` does not apply a source whose
-preview changes nothing; a dry run, a declined source and a source at which the
-run stops refresh nothing. A refresh computes `required_by` of every lockfile
-entry again, and rewrites an entry only where the new value differs. A requirer
-is evaluated by the run when the run resolved its `requires`: every item of an
-install by item names, or of a whole directory source, and every item that such
-an item requires. A bundle install, and a request that also names a bundle
-(resolved by name), evaluate no requirer. An evaluated requirer is removed from
-every entry and added back where it still requires the item (also an item that
-`--exclude` leaves out). Every other requirer is kept, also when it is not
-installed. The result does not depend on the order of the sources or of two
-`add` commands.
+lockfile records for a bundle of a source of the run as installed, when the
+check of `doctor` reports it missing, or as skipped, is installed again when the
+source is applied and also when its preview changes nothing, in a terminal run
+as well; not for a source that the answer did not apply, not with `--dry-run`
+and not with `--check` (ADR-0008). A change of only `required_by` in an item
+record is not shown and does not cause a question; it is saved when the source
+is applied, and also when the preview of the source changes nothing, but not
+with `--dry-run` or for a declined source. `required_by` is refreshed when `add`
+writes its install, when `update` applies a source, and when `update` does not
+apply a source whose preview changes nothing; a dry run, a declined source and a
+source at which the run stops refresh nothing. A refresh computes `required_by`
+of every lockfile entry again, and rewrites an entry only where the new value
+differs. A requirer is evaluated by the run when the run resolved its
+`requires`: every item of an install by item names, or of a whole directory
+source, and every item that such an item requires. A bundle install, and a
+request that also names a bundle (resolved by name), evaluate no requirer. An
+evaluated requirer is removed from every entry and added back where it still
+requires the item (also an item that `--exclude` leaves out). Every other
+requirer is kept, also when it is not installed. The result does not depend on
+the order of the sources or of two `add` commands.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
@@ -635,7 +635,8 @@ the check above refuses it.
   `opencode.json` is installed and no opencode command is run for it; with an
   opencode version below 2, no `opencode plugin` command is run and the plugin
   is not reported missing), skipped plugins (informational — CLI was absent, or
-  opencode was below version 2, at install time), orphaned dependencies
+  opencode was below version 2, at install time; `update --yes` tries them again
+  and records `installed` when the install succeeds), orphaned dependencies
   (informational), MCP server reconciliation, and interrupted items (an item
   with a non-empty `pending` record: run the same command again to complete it),
   and, for the global scope only, files at the earlier global Copilot paths

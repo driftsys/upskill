@@ -516,25 +516,26 @@ The plugin and MCP steps of a bundle source run when the source is applied. They
 are not part of the preview and are not a reason to ask. A terminal run does not
 apply a source whose preview changes nothing, so it does not repair a missing
 MCP registration of that source; `upskill doctor` reports it and `update --yes`
-repairs it. A plugin that `doctor` reports missing is installed again also for a
-source whose preview changes nothing, in a terminal run as well, but not for a
-source that the answer did not apply and not with `--dry-run` or `--check`. A
-change of only the `required_by` field of an item record is not shown as a
-change and does not cause a question; it is saved when the source is applied,
-and also when the preview of the source changes nothing. It is not saved with
-`--dry-run` or for a source that the answer did not apply. `required_by` is
-refreshed when `add` writes its install, when `update` applies a source, and
-when `update` does not apply a source whose preview changes nothing; a dry run,
-a declined source and a source at which the run stops refresh nothing. A refresh
-computes `required_by` of every lockfile entry again, and rewrites an entry only
-where the new value differs. A requirer is evaluated by the run when the run
-resolved its `requires`: every item of an install by item names, or of a whole
-directory source, and every item that such an item requires. A bundle install,
-and a request that also names a bundle (resolved by name), evaluate no requirer.
-An evaluated requirer is removed from every entry and added back where it still
-requires the item (also an item that `--exclude` leaves out). Every other
-requirer is kept, also when it is not installed. The result does not depend on
-the order of the sources or of two `add` commands.
+repairs it. A plugin that `doctor` reports missing, or that the lockfile records
+as `skipped`, is installed again also for a source whose preview changes
+nothing, in a terminal run as well, but not for a source that the answer did not
+apply and not with `--dry-run` or `--check`. A change of only the `required_by`
+field of an item record is not shown as a change and does not cause a question;
+it is saved when the source is applied, and also when the preview of the source
+changes nothing. It is not saved with `--dry-run` or for a source that the
+answer did not apply. `required_by` is refreshed when `add` writes its install,
+when `update` applies a source, and when `update` does not apply a source whose
+preview changes nothing; a dry run, a declined source and a source at which the
+run stops refresh nothing. A refresh computes `required_by` of every lockfile
+entry again, and rewrites an entry only where the new value differs. A requirer
+is evaluated by the run when the run resolved its `requires`: every item of an
+install by item names, or of a whole directory source, and every item that such
+an item requires. A bundle install, and a request that also names a bundle
+(resolved by name), evaluate no requirer. An evaluated requirer is removed from
+every entry and added back where it still requires the item (also an item that
+`--exclude` leaves out). Every other requirer is kept, also when it is not
+installed. The result does not depend on the order of the sources or of two
+`add` commands.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.
@@ -892,9 +893,12 @@ scope. For each scope it reports eleven independent buckets:
 - **Skipped plugins** (informational) — recorded as `skipped` because the client
   CLI was not on PATH at install time, or `opencode --version` reported a major
   version below 2 (or no version). Install the CLI, or opencode 2.x, then run
-  `upskill update --yes` to install them. A run in a terminal applies a source
-  only when its preview changes something, and the plugin and MCP steps are not
-  part of the preview. Does **not** cause exit 1.
+  `upskill update --yes`: it tries again every skipped plugin of a bundle that
+  the lockfile records for a source of the run, also when no item changed, and
+  records it as `installed` when the install succeeds. When the CLI is still
+  absent or opencode is still below 2, the plugin stays `skipped` and the
+  warning of `add` is printed again. `update <name>` covers only the sources of
+  the named items. Does **not** cause exit 1.
 - **MCP servers** — each Claude-client MCP entry in the lockfile is checked
   against `claude mcp list`. A server in the lockfile but **not registered** in
   the client causes exit 1 (`upskill update --yes` reconfigures it; a run in a

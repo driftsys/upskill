@@ -286,3 +286,58 @@ fn doctor_does_not_report_a_module_plugin_missing_when_opencode_is_1x() {
     assert!(!stdout(&out).contains("missing"), "{}", stdout(&out));
     assert!(plugin_lines(&env.log()).is_empty(), "{}", env.log());
 }
+
+/// Rename the fake `opencode` away so that no `opencode` is on `PATH`, and
+/// put it back with [`restore_opencode`].
+fn hide_opencode(env: &Env) {
+    fs::rename(env.bin.join("opencode"), env.bin.join("opencode.hidden")).unwrap();
+}
+
+fn restore_opencode(env: &Env, version: &str) {
+    let hidden = env.bin.join("opencode.hidden");
+    let body = fs::read_to_string(&hidden)
+        .unwrap()
+        .replace("v2.1.4", version);
+    fs::write(&hidden, body).unwrap();
+    fs::rename(&hidden, env.bin.join("opencode")).unwrap();
+}
+
+#[test]
+fn update_yes_installs_a_skipped_plugin_once_opencode_2x_is_on_path() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    hide_opencode(&env);
+    env.add().success();
+    let lock = fs::read_to_string(env.project.join(".upskill-lock.json")).unwrap();
+    assert!(lock.contains("\"skipped\""), "{lock}");
+
+    restore_opencode(&env, "v2.1.4");
+    env.set_list(&format!("{MODULE}\n"));
+    env.run(&["update", "--yes", "--project"]).code(0);
+    assert!(
+        plugin_lines(&env.log()).contains(&format!("plugin add {MODULE}").as_str()),
+        "{}",
+        env.log()
+    );
+    let lock = fs::read_to_string(env.project.join(".upskill-lock.json")).unwrap();
+    assert!(lock.contains("\"installed\""), "{lock}");
+    assert!(!lock.contains("\"skipped\""), "{lock}");
+
+    let out = env.run(&["doctor", "--project"]).code(0);
+    assert!(!stdout(&out).contains("skipped"), "{}", stdout(&out));
+}
+
+#[test]
+fn update_yes_keeps_a_skipped_plugin_skipped_when_opencode_is_1x() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    hide_opencode(&env);
+    env.add().success();
+
+    restore_opencode(&env, "v1.15.13");
+    env.clear_log();
+    let out = env.run(&["update", "--yes", "--project"]).code(0);
+    assert!(plugin_lines(&env.log()).is_empty(), "{}", env.log());
+    // The warning of `add` is printed again.
+    assert!(stderr(&out).contains("opencode 2"), "{}", stderr(&out));
+    let lock = fs::read_to_string(env.project.join(".upskill-lock.json")).unwrap();
+    assert!(lock.contains("\"skipped\""), "{lock}");
+}

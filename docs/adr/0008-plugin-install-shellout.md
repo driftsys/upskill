@@ -138,13 +138,16 @@ it. Otherwise `doctor` checks it with `opencode plugin list`.
 
 `update`, also when no item of a source changes, installs again every plugin of
 the bundles that the lockfile records for a source of the run, when the lockfile
-records the plugin as installed and the check of `doctor` reports it missing.
-Only the missing client of the plugin is installed. A plugin that the apply of
-the source installed in the same run is not installed again. This runs when the
-source is applied, and when its preview changes nothing; it does not run for a
-source that the answer did not apply, with `--dry-run`, or with `--check`. So
-the hint `upskill update --yes` to fix that `doctor` prints for a missing plugin
-is true.
+records the plugin as installed and the check of `doctor` reports it missing, or
+records it as skipped. Only that client of the plugin is installed. A skipped
+plugin whose install succeeds is recorded as installed; when the client CLI is
+still absent or opencode is still below 2, it stays skipped and the warning of
+`add` is printed again. A plugin that the apply of the source installed in the
+same run is not installed again. This runs when the source is applied, and when
+its preview changes nothing; it does not run for a source that the answer did
+not apply, with `--dry-run`, or with `--check`. So the hint
+`upskill update --yes` to fix that `doctor` prints for a missing plugin, and the
+advice to run `upskill update --yes` for a skipped plugin, are true.
 
 ### Lockfile records the resolved triple
 
