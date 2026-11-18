@@ -106,9 +106,12 @@ What you get depends on the client:
 - Claude Code shows one line at session start. You see it, and the agent
   receives it.
 - Copilot CLI gives the notice to the agent. It has no documented way to show
-  the output of a session-start hook to you, and the notice was not displayed in
-  the runs made in prompt mode (issue
-  [#530](https://github.com/driftsys/upskill/issues/530) tracks this).
+  the output of a session-start hook to you, and it did not print the notice in
+  the runs made in prompt mode. The plugin therefore asks the agent to tell you
+  at the start of its first reply. In 5 runs in prompt mode with Copilot CLI
+  1.0.112 and the plugin loaded from a directory, the agent did so each time.
+  The interactive terminal was not tested, and an agent can ignore the request.
+  Issue [#530](https://github.com/driftsys/upskill/issues/530) tracks this.
 
 A given set of updates is announced once.
 
@@ -119,9 +122,9 @@ older, the hook prints nothing.
 A hand-written hook that only runs `upskill update --notice` does not show the
 notice to you in either client. Claude Code gives a plain line to the agent and
 does not display it. Copilot CLI ignores a plain line: it reads only a JSON
-object with `additionalContext`. To write your own hook, start from the plugin
-sources in `plugins/` of the upskill repository, which wrap the line in the JSON
-that each client reads.
+object with `additionalContext`, and gives that text to the agent. To write your
+own hook, start from the plugin sources in `plugins/` of the upskill repository,
+which wrap the line in the JSON that each client reads.
 
 See [`update --notice`](commands.md#update---notice) for the output, the cache
 file and the exit codes. A session without network access records the attempt
