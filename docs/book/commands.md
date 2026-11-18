@@ -667,10 +667,15 @@ The command is quiet by design:
   printed, so a later run without `--repeat` prints it only when it changes.
   Nothing else changes.
 - A successful `upskill update` (not `--dry-run`, `--check` or `--notice`)
-  removes from the cached updates of its scope the items that it updated or that
-  are up to date, so the notice does not report updates that are already
-  installed. A failure to read or write the cache file does not change the
-  result of `update` and prints nothing.
+  removes from the cached updates of its scope the items that it reports as
+  updated, up to date, completed after an interruption, or removed, so the
+  notice does not report updates that are already installed. An `update` that
+  fails part of the way removes nothing: the items that it had updated stay in
+  the notice until the next lookup. A failure to read or write the cache file
+  does not change the result of `update` and prints nothing. When a
+  session-start run of `--notice` overlaps the `update` and looks up the sources
+  of that scope, it can write back the entries that `update` removed, and they
+  stay until the next lookup.
 - It contacts the sources at most once in 24 hours for each scope, with the same
   lookups as `update --check` and a time limit of 5 seconds for all sources.
   Between two lookups, it uses the result of the last one. A lookup that reaches

@@ -189,7 +189,7 @@ pub enum Commands {
         /// or the process is interrupted. A failed step prints nothing; an
         /// interrupt during the lookups prints nothing and an interrupt after
         /// the line was written lets it print again in the next session.
-        /// Accepts no other argument or flag.
+        /// Accepts no other argument or flag except `--repeat`.
         #[arg(
             long = "notice",
             conflicts_with_all = ["names", "dry_run", "check", "global", "project", "yes", "force", "claude", "copilot", "vscode", "opencode"]
@@ -199,8 +199,9 @@ pub enum Commands {
         /// available updates for the scope, also when the set was printed
         /// before. For a hook whose client gives the line to the model and
         /// does not show it to the user. The set is still recorded as
-        /// printed. A successful `upskill update` removes the items that it
-        /// updated from the cached set of its scope.
+        /// printed. An `upskill update` that applies and succeeds removes from
+        /// the cached set of its scope the items that it reports as updated,
+        /// up to date, completed after an interruption, or removed.
         #[arg(long = "repeat")]
         repeat: bool,
         /// Operate on `$HOME` instead of the current directory.

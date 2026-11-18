@@ -507,9 +507,16 @@ rules, in order:
    whose root directory holds no `.upskill-lock.json`. The command reads the
    cache file again, applies the states of the roots of this run to that copy,
    and writes the copy, through a temporary file and a rename, only when its
-   content changed. A failed write is ignored. A run that saves between the
-   second read and the rename of this run loses its entries; its roots are
-   checked again at their next session start.
+   content changed. For a root that this run did not check, it keeps
+   `checked_at` and `updates` of the copy and sets `reported` to the entries of
+   its own `reported` that are in those `updates`, so that a removal by an
+   `update` that saved during this run stays. For a root that this run checked,
+   its own state replaces the state of the copy: when an `update` of that root
+   saved during the lookups, the entries that the `update` removed come back and
+   stay until the next check. A failed write is ignored. A run that saves
+   between the second read and the rename of this run loses its entries; its
+   roots are checked again at their next session start. Closing these cases
+   needs a file lock, which the command does not use.
 
 Every failure after argument parsing prints nothing and gives exit code 0;
 nothing is written to stderr. An interrupt (SIGINT) ends the command at once
@@ -531,10 +538,14 @@ prints nothing and leaves `reported` unchanged.
 
 A successful `update` that applies (not `--dry-run`, `--check` or `--notice`)
 removes from `updates` and `reported` of its scope root every entry whose
-`<kind>:<name>` part is an item that the run reported as updated, up to date,
-completed or removed. Without this step, `--repeat` would print updates that are
-already installed until the next check. A failed read or write of the cache file
-does not change the exit code of `update` and prints nothing.
+`<kind>:<name>` part is an item that the run reports as updated, up to date,
+completed after an interruption, or removed. It loads the file, applies the
+change and saves the file at once, without a lookup between the load and the
+save. Without this step, `--repeat` would print updates that are already
+installed until the next check. An `update` that fails part of the way removes
+nothing: the items that it had updated stay in `updates` until the next check of
+the root. A failed read or write of the cache file does not change the exit code
+of `update` and prints nothing.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,

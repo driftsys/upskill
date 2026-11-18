@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::pipeline::{ScopedCheck, SourceStatus};
+use crate::pipeline::{ScopedCheck, SourceStatus, UpdateReport, UpdateStatus};
 use crate::scope::Scope;
 
 /// The shortest time in seconds between two checks that contact the sources.
@@ -199,16 +199,77 @@ pub fn forget(cache: &mut NoticeCache, root: &Path) {
 /// result. A root that `mine` does not hold is removed from `fresh`. The states
 /// of all other roots stay as `fresh` holds them, so that a run that overlapped
 /// another run does not drop the entries of the other run.
-pub fn merge_roots(mut fresh: NoticeCache, mine: &NoticeCache, roots: &[PathBuf]) -> NoticeCache {
+///
+/// A root of `roots` that is not in `checked` was not looked up by this run,
+/// so this run changed only its `reported`. When `fresh` holds that root, its
+/// `checked_at` and `updates` stay as `fresh` holds them, and `reported` takes
+/// the entries of `mine` that are still in the `updates` of `fresh`. This keeps
+/// a removal by [`mark_current_in_file`] that was saved during this run.
+pub fn merge_roots(
+    mut fresh: NoticeCache,
+    mine: &NoticeCache,
+    roots: &[PathBuf],
+    checked: &[PathBuf],
+) -> NoticeCache {
     for root in roots {
         match mine.scopes.get(&key(root)) {
             Some(state) => {
-                fresh.scopes.insert(key(root), state.clone());
+                let only_reported = !checked.contains(root);
+                match fresh.scopes.get_mut(&key(root)) {
+                    Some(current) if only_reported => {
+                        let updates = &current.updates;
+                        current.reported = state
+                            .reported
+                            .iter()
+                            .filter(|entry| updates.contains(entry))
+                            .cloned()
+                            .collect();
+                    }
+                    _ => {
+                        fresh.scopes.insert(key(root), state.clone());
+                    }
+                }
             }
             None => forget(&mut fresh, root),
         }
     }
     fresh
+}
+
+/// The `<kind>:<name>` of each item that an applied `update` left at the
+/// version of its source: the statuses `Updated`, `UpToDate`,
+/// `CompletedInterrupted` and `Removed`. An item that was skipped, not
+/// applied, or whose source was skipped is not current.
+pub fn current_items(report: &UpdateReport) -> Vec<String> {
+    report
+        .items
+        .iter()
+        .filter(|item| {
+            matches!(
+                item.status,
+                UpdateStatus::UpToDate
+                    | UpdateStatus::Updated { .. }
+                    | UpdateStatus::CompletedInterrupted
+                    | UpdateStatus::Removed
+            )
+        })
+        .map(|item| format!("{}:{}", item.kind, item.name))
+        .collect()
+}
+
+/// Load the cache file at `path`, apply [`mark_current`] for `root`, and save
+/// the file at once when it changed. The load and the save follow one another
+/// without a lookup between them. A failed read is an empty cache and a failed
+/// write is ignored: the caller is an `update` whose result does not depend on
+/// the notice.
+pub fn mark_current_in_file(path: &Path, root: &Path, current: &[String]) {
+    if current.is_empty() {
+        return;
+    }
+    let mut cache = NoticeCache::load(path);
+    if mark_current(&mut cache, root, current) {
+        let _ = cache.save(path);
+    }
 }
 
 /// Remove each state whose root path `has_lockfile` rejects.
@@ -506,7 +567,7 @@ mod tests {
             (&root(), &["skill:new@c1"]),
             (&other_root(), &["skill:o@c1"]),
         ]);
-        let merged = merge_roots(fresh, &mine, &[root()]);
+        let merged = merge_roots(fresh, &mine, &[root()], &[root()]);
         assert_eq!(merged.scopes[&key(&root())].updates, set(&["skill:new@c1"]));
         assert_eq!(
             merged.scopes[&key(&other_root())].updates,
@@ -517,7 +578,7 @@ mod tests {
     #[test]
     fn merge_roots_removes_a_handled_root_that_is_absent_from_my_cache() {
         let fresh = cache_of(&[(&root(), &["skill:a@c1"]), (&other_root(), &["skill:o@c1"])]);
-        let merged = merge_roots(fresh, &NoticeCache::default(), &[root()]);
+        let merged = merge_roots(fresh, &NoticeCache::default(), &[root()], &[]);
         assert!(!merged.scopes.contains_key(&key(&root())));
         assert!(merged.scopes.contains_key(&key(&other_root())));
     }
@@ -525,8 +586,70 @@ mod tests {
     #[test]
     fn merge_roots_adds_a_handled_root_that_the_fresh_cache_lacks() {
         let mine = cache_of(&[(&root(), &["skill:a@c1"])]);
-        let merged = merge_roots(NoticeCache::default(), &mine, &[root()]);
+        let merged = merge_roots(NoticeCache::default(), &mine, &[root()], &[]);
         assert_eq!(merged, mine);
+    }
+
+    #[test]
+    fn merge_roots_keeps_the_updates_of_fresh_for_a_root_that_was_not_checked() {
+        // `mine` loaded the cache before an `update` removed `skill:a` from
+        // the file, and printed both entries without a lookup.
+        let mut mine = cache_of(&[(&root(), &["skill:a@c1", "skill:b@c1"])]);
+        decide(&mut mine, Scope::Project, &root(), true);
+        let mut fresh = cache_of(&[(&root(), &["skill:a@c1", "skill:b@c1"])]);
+        mark_current(&mut fresh, &root(), &set(&["skill:a"]));
+        let merged = merge_roots(fresh, &mine, &[root()], &[]);
+        let state = &merged.scopes[&key(&root())];
+        assert_eq!(state.updates, set(&["skill:b@c1"]));
+        assert_eq!(state.reported, set(&["skill:b@c1"]));
+    }
+
+    #[test]
+    fn current_items_takes_the_statuses_that_leave_an_item_current() {
+        use crate::pipeline::{PreviewAction, SkipCause, UpdatedItem};
+        let item = |name: &str, status| UpdatedItem {
+            kind: ItemKind::Skill,
+            name: name.into(),
+            source: "owner/repo".into(),
+            status,
+        };
+        let report = UpdateReport {
+            items: vec![
+                item("up-to-date", UpdateStatus::UpToDate),
+                item(
+                    "updated",
+                    UpdateStatus::Updated {
+                        old_hash: None,
+                        new_hash: None,
+                    },
+                ),
+                item("completed", UpdateStatus::CompletedInterrupted),
+                item("removed", UpdateStatus::Removed),
+                item("skipped", UpdateStatus::SkippedModified { files: vec![] }),
+                item(
+                    "not-applied",
+                    UpdateStatus::NotApplied {
+                        action: PreviewAction::Skip,
+                    },
+                ),
+                item(
+                    "source-skipped",
+                    UpdateStatus::SourceSkipped {
+                        cause: SkipCause::Unreachable,
+                    },
+                ),
+            ],
+            ..UpdateReport::default()
+        };
+        assert_eq!(
+            current_items(&report),
+            set(&[
+                "skill:up-to-date",
+                "skill:updated",
+                "skill:completed",
+                "skill:removed"
+            ])
+        );
     }
 
     #[test]

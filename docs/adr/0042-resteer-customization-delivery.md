@@ -122,17 +122,25 @@ and installed through a command.
    content hash of a local path source, and stops its lookups after 10 seconds.
    `update
    --notice` is built for a session-start hook: it prints one line
-   for each scope that has updates, prints a given set of updates once, contacts
-   the sources at most once in 24 hours for each scope with a time limit of 5
-   seconds, keeps its state in `notice.json` in the cache directory, and exits
-   with code 0 in every case after the arguments are parsed. upskill does not
-   apply updates without the user's command. The hook is delivered as a plugin
-   for each of Claude Code and Copilot CLI, both named `upskill`, with sources
-   in `plugins/upskill-claude` and `plugins/upskill-copilot` of this repository
-   and a published copy in `driftsys/metapowers`. The user installs the plugin
-   with the client's own command; upskill does not install or own it. Trial T2
+   for each scope that has updates, prints a given set of updates once (see the
+   decision of 2026-11-19 below for Copilot CLI), contacts the sources at most
+   once in 24 hours for each scope with a time limit of 5 seconds, keeps its
+   state in `notice.json` in the cache directory, and exits with code 0 in every
+   case after the arguments are parsed. upskill does not apply updates without
+   the user's command. The hook is delivered as a plugin for each of Claude Code
+   and Copilot CLI, both named `upskill`, with sources in
+   `plugins/upskill-claude` and `plugins/upskill-copilot` of this repository and
+   a published copy in `driftsys/metapowers`. The user installs the plugin with
+   the client's own command; upskill does not install or own it. Trial T2
    (technote `t2-session-notice-display.md`) records how each client shows the
-   hook output.
+   hook output. Decision of 2026-11-19 (issue #530): for Copilot CLI the notice
+   repeats at every session start until `upskill update` runs. The Copilot
+   plugin calls `upskill update --notice --repeat`, which prints the cached set
+   at every run. Reason: Copilot CLI gives the hook output to the model and does
+   not show it to the user, and in a trial in its interactive terminal the model
+   passed the notice on in 0 of 3 runs, so a single print can be used up without
+   the user seeing it. The Claude Code plugin keeps the single print, because
+   Claude Code shows the line to the user.
 
 This record replaces the following clauses of
 [AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md):

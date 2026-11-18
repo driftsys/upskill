@@ -46,9 +46,12 @@ fn main() {
         }
     };
 
-    // `--repeat` is valid only with `--notice`. With `requires = "notice"` on
-    // the flag, clap accepted `update --repeat --yes`, so the rule is checked
-    // here.
+    // `--repeat` is valid only with `--notice`. `requires = "notice"` alone is
+    // not enough: clap accepts a missing required argument when a present
+    // argument conflicts with it (`is_missing_required_ok` in clap_builder's
+    // validator), and `--notice` conflicts with the names, `--yes`,
+    // `--global`, `--dry-run` and the other flags. So `requires` rejects only
+    // a bare `--repeat`, and the rule is checked here.
     if matches!(
         cli.command,
         Commands::Update {
@@ -1106,8 +1109,11 @@ fn run_update(args: UpdateArgs) -> i32 {
     );
     match result {
         Ok(report) => {
+            // A dry run writes no file, also not the notice cache.
             if !dry_run {
-                mark_notice_current(&at.root, &report);
+                if let Some(path) = notice_cache_path() {
+                    notice::mark_current_in_file(&path, &at.root, &notice::current_items(&report));
+                }
             }
             let code = if dry_run {
                 print_update_report(&report, true);
@@ -1233,44 +1239,13 @@ fn notice_lines(repeat: bool) -> Option<()> {
     // removes it.
     let handled: Vec<PathBuf> = roots.iter().map(|at| at.root.clone()).collect();
     let fresh = notice::NoticeCache::load(&cache_path);
-    let mut merged = notice::merge_roots(fresh.clone(), &cache, &handled);
+    let checked: Vec<PathBuf> = due.iter().map(|at| at.root.clone()).collect();
+    let mut merged = notice::merge_roots(fresh.clone(), &cache, &handled, &checked);
     notice::prune(&mut merged, has_lockfile);
     if merged != fresh {
         let _ = merged.save(&cache_path);
     }
     Some(())
-}
-
-/// Remove from the notice cache of `root` the items that an applied `update`
-/// left at the version of their source: updated, up to date, completed or
-/// removed. Without this, `update --notice --repeat` would report updates that
-/// are already installed until the next check. A failed step changes nothing
-/// and prints nothing.
-fn mark_notice_current(root: &std::path::Path, report: &UpdateReport) {
-    let current: Vec<String> = report
-        .items
-        .iter()
-        .filter(|item| {
-            matches!(
-                item.status,
-                UpdateStatus::UpToDate
-                    | UpdateStatus::Updated { .. }
-                    | UpdateStatus::CompletedInterrupted
-                    | UpdateStatus::Removed
-            )
-        })
-        .map(|item| format!("{}:{}", item.kind, item.name))
-        .collect();
-    if current.is_empty() {
-        return;
-    }
-    let Some(cache_path) = notice_cache_path() else {
-        return;
-    };
-    let mut cache = notice::NoticeCache::load(&cache_path);
-    if notice::mark_current(&mut cache, root, &current) {
-        let _ = cache.save(&cache_path);
-    }
 }
 
 /// True when the directory `root` holds a lockfile.

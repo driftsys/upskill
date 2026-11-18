@@ -171,8 +171,9 @@ stderr, never fetches, and keeps for each scope root the time of the last check,
 the updates found and the printed set in `<cache>/upskill/notice.json`
 (`$XDG_CACHE_HOME` when absolute, else `~/.cache`). It prints a set once; with
 `--repeat` (valid only with `--notice`) it prints the set at every run. An
-applied `update` removes the items that it updated or found up to date from the
-cached updates of its scope root; a cache failure there prints nothing.
+applied `update` removes from the cached updates of its scope root the items
+that it reports as updated, up to date, completed after an interruption, or
+removed; a cache failure there prints nothing.
 
 ### Source format
 
