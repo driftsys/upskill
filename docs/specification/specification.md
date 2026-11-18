@@ -129,7 +129,13 @@ compared too. The sources that `add` reads are the given source and every
 dependency source of a `requires` closure. An `--as` alias is used as the
 installed name of an item of the given source. The `audience` field and the
 client selection are not applied. The error names the item, its directory, the
-output path and the item of that output path.
+output path and the item of that output path. In the same way, also with
+`--force`, `add` refuses a source whose item directory contains a file that the
+lockfile of the scope records (`files` or `pending`, §4) for an item from
+another source (for this check, two local paths that resolve to the same
+directory are one source); the error names the file and that item. With a
+`schema: 1` lockfile, the recorded files are those that the adoption (§4) would
+record; the check saves nothing.
 
 Before any write, `add` classifies every destination of every item against the
 item's `files` and `pending` records (§4). A destination is a conflict when it
@@ -260,7 +266,13 @@ cross-source dependency is fetched again when the source that requires it is
 reinstalled), runs the checks of §2.1 and plans it, without any change. The
 source overlap check of §2.1 is then applied to the items of all these sources
 together, and also protects the item directories of every local-path source
-recorded in the lockfile that the run does not otherwise read. A recorded
+recorded in the lockfile that the run does not otherwise read. The same item
+directories are also compared with every recorded file (`files` and `pending`)
+of an item that the run removes because its source no longer contains it, also a
+modified file that the removal keeps: a directory that contains such a file
+refuses the run with exit code 1 and an error that names both items, also with
+`--force` and in a dry run. With a `schema: 1` lockfile, the recorded files are
+those that the adoption (§4) would record; the check saves nothing. A recorded
 directory source that no longer exists is skipped. For a recorded bundle file,
 also one that no longer exists, the items of the source directory that `add`
 resolves for it (§2.6) are protected; when that directory does not exist,
@@ -575,9 +587,21 @@ the list, the item and the path, and nothing is deleted. Absolute paths and
 paths with a `..` component are outside that layout. A symbolic link in the item
 part of a recorded path's parent directories makes `remove` fail before any
 deletion. An item whose `files` and `pending` records are both empty has no file
-deleted. The lockfile entry of each removed item is dropped. `remove` adopts a
-`schema: 1` lockfile and prints the adoption notice, except when a name is not
-in the lockfile, which is an error.
+deleted. Before any deletion and before the adoption, also with `--force`,
+`remove` fails with exit code 1 when the source directory of another installed
+item recorded from a local-path source contains a recorded file (`files` or
+`pending`, also a modified file that `remove` keeps) of an item that it removes;
+the error names both items and asks to remove the other item first, no file is
+deleted and the lockfile is not changed. A git source is not fetched for this
+check, only the recorded local sources of the items that stay installed are
+read, such a source that does not exist is skipped, and such a source that
+exists and cannot be read fails `remove` with exit code 1 and an error that
+names its source label, before any deletion. With a `schema: 1` lockfile, the
+recorded files are those that the adoption (§4) would record; the check runs
+before the adoption and saves nothing. The lockfile entry of each removed item
+is dropped. `remove` adopts a `schema: 1` lockfile and prints the adoption
+notice, except when a name is not in the lockfile, which is an error, and when
+the check above refuses it.
 
 ### 2.4 `list` / `doctor`
 
@@ -803,15 +827,18 @@ deleted. `doctor` does not apply this check. A stage file left by a process that
 was killed is not deleted by upskill. Two upskill processes that change one
 scope at the same time are not supported. `add`, `update` and `remove` (not
 `update --dry-run`, not `doctor`, not a `remove` that fails on an unknown name,
-not an `add` or an `update` that is refused for a source item that overlaps an
-output path of the run, for a conflict with another source, for two items with
-one installed name, or for an installed name that is empty, `.` or `..` or that
-has a path separator, and not an `update` whose first source resolves to no
-items while the lockfile records items from it) adopt a `schema: 1` lockfile:
-they keep the old bytes as `.upskill-lock.json.v1` (an existing
-`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
-the items' output paths with its current hash, save `schema: 2`, and print the
-adopted paths to stderr.
+not a `remove` that is refused because a removed file overlaps the source
+directory of another installed item or because the recorded local source of an
+item that stays installed exists and cannot be read, not an `add` or an `update`
+that is refused for a source item that overlaps an output path of the run or
+that contains a recorded file that the check of §2.1 or §2.2 compares, for a
+conflict with another source, for two items with one installed name, or for an
+installed name that is empty, `.` or `..` or that has a path separator, and not
+an `update` whose first source resolves to no items while the lockfile records
+items from it) adopt a `schema: 1` lockfile: they keep the old bytes as
+`.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
+replaced), record each existing file at the items' output paths with its current
+hash, save `schema: 2`, and print the adopted paths to stderr.
 
 Two possible locations:
 
