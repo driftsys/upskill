@@ -21,6 +21,11 @@ enum Plugin {
 
 const PLUGINS: [Plugin; 2] = [Plugin::Claude, Plugin::Copilot];
 
+/// The request that the Copilot plugin puts before the notice. Copilot CLI
+/// gives the hook output to the model only, so the text asks the model to
+/// pass the notice on to the user.
+const COPILOT_REQUEST: &str = "Tell the user at the start of your first reply: ";
+
 impl Plugin {
     fn dir(self) -> PathBuf {
         let name = match self {
@@ -102,7 +107,11 @@ impl Plugin {
             }
             Plugin::Copilot => {
                 assert_eq!(out.as_object().unwrap().len(), 1);
-                vec![get(&out["additionalContext"])]
+                let text = get(&out["additionalContext"]);
+                let notice = text
+                    .strip_prefix(COPILOT_REQUEST)
+                    .expect("the context text starts with the request to the model");
+                vec![notice.to_string()]
             }
         }
     }
@@ -441,7 +450,7 @@ fn copilot_hook_prints_only_json_when_cdpath_resolves_the_directory() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        "{\"additionalContext\":\"upskill: notice\"}\n"
+        "{\"additionalContext\":\"Tell the user at the start of your first reply: upskill: notice\"}\n"
     );
     assert_eq!(
         recorded
