@@ -5,8 +5,9 @@ It records what the documentation of each client states about a hook that runs
 when a session starts, and the results of the trial: Claude Code in
 non-interactive mode and in the interactive terminal, Copilot CLI in prompt
 mode, and the session-notice plugins of both clients loaded from a directory and
-installed through a marketplace. The interactive display of Copilot CLI has not
-been observed. This note is informative.
+installed through a marketplace, and a later trial of Copilot CLI in prompt mode
+with a request to the model in the context text. The interactive display of
+Copilot CLI has not been observed. This note is informative.
 
 `upskill update --notice` prints one plain line on standard output for each
 scope that has available updates (the project scope, then the global scope), for
@@ -323,7 +324,9 @@ What follows for the Copilot plugin:
   wrap the line of `upskill update --notice` in a JSON object with
   `additionalContext`, and print nothing when the binary prints nothing.
 - The model receives the notice and does not report it without being asked. No
-  form that shows the line to the user was found in prompt mode.
+  form that shows the line to the user was found in prompt mode in this trial. A
+  later trial found that the model reports the line when the text asks for it
+  (see the request trial below).
 - A hook declared in `.claude/settings.json` runs in Copilot CLI too, so a
   project that declares the hook for both clients would run it twice in Copilot
   CLI. This is an inference: the trial declared the hook in one place only. The
@@ -375,14 +378,37 @@ Observed:
 Not observed:
 
 - The interactive terminal.
-- The plugin `hooks.json` with the `upskill` binary: the hook of this trial was
-  a repository hook that printed a fixed text.
+- The plugin `hooks.json` with the `upskill` binary: the hook of this series was
+  a repository hook that printed a fixed text. The notice line of this series
+  holds single quotes, while the binary prints double quotes. The plugin series
+  below covers both points.
 - Another model than the default one, other prompts, other wordings.
+
+Plugin series, run on the same day after the hook command of the Copilot plugin
+received the text of V1. The plugin was loaded with `--plugin-dir` from
+`plugins/upskill-copilot`, with the binary built from the same commit first on
+`PATH`, in a temporary project with one available update. The plugin was not
+installed from a marketplace, so the hook ran once for each session. Each of the
+5 runs used prompt 1 and a new, empty cache directory:
+
+```text
+PATH=<build directory>:$PATH XDG_CACHE_HOME=<new directory> copilot --no-auto-update --disable-builtin-mcps --available-tools= --no-ask-user --trust-folder --plugin-dir <repository>/plugins/upskill-copilot -p "Reply with the single word READY."
+```
+
+- In 5 of 5 runs the first line of the output was
+  `upskill: 1 update available (project). Run "upskill update".`, with no
+  change, followed by an empty line and `READY`.
+- After each run the cache directory held `upskill/notice.json`, which shows
+  that the plugin hook ran the binary.
+- Every run exited with code 0.
+
+Not observed in the plugin series: prompt 2, a second session with the same
+cache directory, and an install through a marketplace.
 
 What follows for the Copilot plugin: its hook command puts the text of V1 before
 the notice. The user sees the notice only when the model follows the request.
-The count above is 10 runs of that wording with one client version and one
-model, and it is not a guarantee.
+The counts above are 15 runs of that wording with one client version and one
+model, and they are not a guarantee.
 
 ## Trial result: the session-notice plugins loaded from a directory
 
@@ -405,7 +431,9 @@ the later changes to the hook command (`cd --` before the directory change and
 the replacement of control characters) and before the plugin was renamed to
 `upskill`. The Claude Code run was also made before the rename and before the
 change for control characters. The current plugin files were not run in these
-runs. The marketplace install in the next section ran the final plugin files.
+runs. The marketplace install in the next section ran the plugin files as they
+were on 2026-11-15, before the request text of issue #530 was added to the hook
+command of the Copilot plugin.
 
 ## Trial result: install through a marketplace
 
@@ -416,9 +444,9 @@ held the content of `driftsys/metapowers` pull request 78 before its merge
 with one available update, a new cache directory for each client, prompt mode,
 and the same prompt as the other plugin runs (it asks whether the context holds
 a notice about upskill updates, and asks for an exact quote or `NONE`). The
-plugin files were the final ones, after the rename to `upskill` and the change
-for control characters. The marketplace and the plugin were removed after the
-runs.
+plugin files were those of 2026-11-15, after the rename to `upskill` and the
+change for control characters, and before the request text of issue #530. The
+marketplace and the plugin were removed after the runs.
 
 | Client                                           | Session 1       | Session 2       |
 | ------------------------------------------------ | --------------- | --------------- |
@@ -479,7 +507,7 @@ Copilot CLI 1.0.112:
    received `additionalContext` and did not mention it without being asked. The
    line appeared in the output only as the model's answer to prompt 2. With a
    request to tell the user before the notice, the model reported the notice in
-   10 of 10 runs (see the request trial above). Open for the interactive
+   15 of 15 runs (see the request trial above). Open for the interactive
    terminal.
 3. Whether a plain line is ignored. Answered: yes, in prompt mode.
 4. Whether a hook declared in `.claude/settings.json` also runs. Answered: yes,
@@ -489,8 +517,8 @@ Copilot CLI 1.0.112:
    `hooks.json` at the plugin root, with the plugin root as working directory,
    and in a folder that was not trusted.
 
-An install of either plugin through a marketplace is answered: the final plugin
-files passed it in prompt mode (see the marketplace section above). Still open:
-the interactive display of Copilot CLI, a hook declared in `~/.copilot/hooks/`,
-the interactive terminal for an install through a marketplace, and an install
-from the GitHub repository `driftsys/metapowers`.
+An install of either plugin through a marketplace is answered: the plugin files
+of 2026-11-15 passed it in prompt mode (see the marketplace section above).
+Still open: the interactive display of Copilot CLI, a hook declared in
+`~/.copilot/hooks/`, the interactive terminal for an install through a
+marketplace, and an install from the GitHub repository `driftsys/metapowers`.

@@ -105,11 +105,13 @@ What you get depends on the client:
 
 - Claude Code shows one line at session start. You see it, and the agent
   receives it.
-- Copilot CLI gives the notice to the agent only. It has no documented way to
-  show the output of a session-start hook to you. The plugin therefore asks the
-  agent to tell you at the start of its first reply. In 10 runs in prompt mode
-  with Copilot CLI 1.0.112, the agent did so each time. The interactive terminal
-  was not tested, and an agent can ignore the request.
+- Copilot CLI gives the notice to the agent. It has no documented way to show
+  the output of a session-start hook to you, and it did not print the notice in
+  the runs made in prompt mode. The plugin therefore asks the agent to tell you
+  at the start of its first reply. In 5 runs in prompt mode with Copilot CLI
+  1.0.112 and the plugin loaded from a directory, the agent did so each time.
+  The interactive terminal was not tested, and an agent can ignore the request.
+  Issue [#530](https://github.com/driftsys/upskill/issues/530) tracks this.
 
 A given set of updates is announced once.
 
