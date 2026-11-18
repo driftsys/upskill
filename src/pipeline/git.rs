@@ -131,7 +131,7 @@ pub struct FetchedSource {
 /// (`source path <path> does not exist`), as a clone that fails does. So
 /// `add` of a missing path writes nothing and exits 1, `update` skips the
 /// source, and a dependency on a missing local-path source fails with
-/// `fetch requires source <label>: source path <path> does not exist`.
+/// ``fetch requires source `<label>`: source path <path> does not exist``.
 pub fn fetch_ssot(source: &InstallSource) -> Result<FetchedSource> {
     match source {
         InstallSource::LocalPath(p) if !p.exists() => Err(anyhow::Error::new(super::FetchFailed {

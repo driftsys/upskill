@@ -1292,6 +1292,37 @@ fn add_of_an_existing_local_path_without_an_item_installs_nothing_and_succeeds()
         .assert()
         .code(0)
         .stdout(predicates::str::contains("Installed 0 files"));
+    let lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(proj.join(".upskill-lock.json")).unwrap())
+            .unwrap();
+    assert_eq!(lock["items"].as_array().unwrap().len(), 0, "{lock}");
+}
+
+#[test]
+fn add_of_a_relative_missing_local_path_prints_the_absolute_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let before = entry_names(&proj);
+    let expected = proj.canonicalize().unwrap().join("missing");
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./missing", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&assert.get_output().stderr).into_owned();
+
+    assert!(
+        stderr.contains(&format!(
+            "source path {} does not exist",
+            expected.display()
+        )),
+        "{stderr}"
+    );
+    assert_eq!(entry_names(&proj), before);
 }
 
 #[test]
@@ -1322,8 +1353,14 @@ fn add_of_an_item_that_requires_a_missing_local_source_fails_and_writes_nothing(
         .code(1);
     let stderr = String::from_utf8_lossy(&assert.get_output().stderr).into_owned();
 
-    assert!(stderr.contains("fetch requires source"), "{stderr}");
-    assert!(stderr.contains("does not exist"), "{stderr}");
+    assert!(
+        stderr.contains(&format!(
+            "fetch requires source `local:{}`: source path {} does not exist",
+            gone.display(),
+            gone.display()
+        )),
+        "{stderr}"
+    );
     assert!(!proj.join(".upskill-lock.json").exists());
     assert!(!proj.join("CLAUDE.md").exists());
     assert_eq!(entry_names(&proj), before);
