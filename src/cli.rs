@@ -85,6 +85,9 @@ pub enum Commands {
         /// Skip specific items during install (repeatable).
         #[arg(long = "exclude", value_name = "NAME")]
         exclude: Vec<String>,
+        /// Restrict installed item kinds (repeatable); skip plugins and MCP servers.
+        #[arg(short = 'k', long = "kind", value_name = "KIND")]
+        kind: Vec<String>,
         /// Restrict output to Claude Code. Combine client flags to target
         /// several; no client flag emits for all clients (the default).
         #[arg(long = "claude", help_heading = "Client selection")]

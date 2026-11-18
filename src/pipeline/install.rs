@@ -114,11 +114,12 @@ pub(super) fn collect_source_items(
                 continue;
             }
             let name = probe_effective_name(&entry_path, kind, &folder);
-            let installed = if filter.is_some_and(|items| !items.contains(kind, &name)) {
-                None
-            } else {
-                Some(names.alias_for(&name).unwrap_or(&name).clone())
-            };
+            let installed =
+                if !names.takes(kind) || filter.is_some_and(|items| !items.contains(kind, &name)) {
+                    None
+                } else {
+                    Some(names.alias_for(&name).unwrap_or(&name).clone())
+                };
             out.push(SourceItem {
                 kind,
                 excluded: names.excludes.contains(&name),
@@ -325,6 +326,29 @@ pub(super) struct DependencyClosure {
     /// it is dropped.
     #[allow(dead_code)]
     pub guards: Vec<tempfile::TempDir>,
+}
+
+impl DependencyClosure {
+    /// Remove every item whose kind is not in `kinds` from `by_source`,
+    /// `item_source` and the keys of `required_by`. No-op for an empty slice.
+    pub(super) fn retain_kinds(&mut self, kinds: &[ItemKind]) {
+        if kinds.is_empty() {
+            return;
+        }
+        for source in self.by_source.values_mut() {
+            if !kinds.contains(&ItemKind::Rule) {
+                source.items.rules.clear();
+            }
+            if !kinds.contains(&ItemKind::Skill) {
+                source.items.skills.clear();
+            }
+            if !kinds.contains(&ItemKind::Agent) {
+                source.items.agents.clear();
+            }
+        }
+        self.item_source.retain(|(kind, _), _| kinds.contains(kind));
+        self.required_by.retain(|(kind, _), _| kinds.contains(kind));
+    }
 }
 
 /// One source's contribution to a [`DependencyClosure`].
@@ -1286,6 +1310,9 @@ fn install_items_of_kind(
     names: &PlanNames,
     scope: Scope,
 ) -> Result<()> {
+    if !names.takes(kind) {
+        return Ok(());
+    }
     let entrypoint = kind.entrypoint_filename();
     for (folder, dir) in iter_item_dirs(source)? {
         let entry_path = dir.join(entrypoint);

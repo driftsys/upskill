@@ -115,6 +115,9 @@ pub struct AddOptions {
     pub aliases: Vec<(String, String)>,
     /// Item names to skip during install.
     pub excludes: Vec<String>,
+    /// Item kinds to install. Empty means every kind. When it is not empty, the
+    /// install runs no plugin step and no MCP step.
+    pub kinds: Vec<ItemKind>,
     /// Consumer-side client selection (ADR-0012). Default targets all
     /// clients, preserving the emit-for-everyone behaviour.
     pub selection: crate::select::ClientSelection,

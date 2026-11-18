@@ -115,6 +115,7 @@ pub(super) fn prepare_install(
         scanned_items
             .iter()
             .filter(|(_, n)| !options.excludes.contains(n))
+            .filter(|(kind, _)| options.kinds.is_empty() || options.kinds.contains(kind))
             .filter(|(_, n)| items.is_empty() || items.contains(n))
             .filter(|(kind, name)| seen.insert((*kind, name.clone())))
             .map(|(kind, name)| (*kind, name.clone()))
@@ -146,7 +147,7 @@ pub(super) fn prepare_install(
     // lockfile recording and plugin/MCP install.
     let bundle_resolution =
         resolve_bundle_request(&label, &local_source, git_ref, commit.as_deref(), items)?;
-    let (closure, resolved_bundles): (Option<DependencyClosure>, Vec<ResolvedBundle>) =
+    let (mut closure, resolved_bundles): (Option<DependencyClosure>, Vec<ResolvedBundle>) =
         if let Some((c, bundles)) = bundle_resolution {
             (Some(c), bundles)
         } else if discovery::is_bundle_file(&local_source) || defer_to_name_resolution {
@@ -164,11 +165,16 @@ pub(super) fn prepare_install(
             )
         };
 
+    if let Some(closure) = &mut closure {
+        closure.retain_kinds(&options.kinds);
+    }
+
     // Installed names of entry-source items. The first mapping given for
     // a name wins; an exact `orig=alias` wins over a bare `--as`. The
     // conflict check below and the plan use the same names.
     let mut entry_names = plan::PlanNames {
         excludes: options.excludes.clone(),
+        kinds: options.kinds.clone(),
         ..plan::PlanNames::default()
     };
     for (from, to) in &options.aliases {
@@ -211,6 +217,7 @@ pub(super) fn prepare_install(
         let incoming: Vec<(ItemKind, String)> = scanned_items
             .iter()
             .filter(|(_, n)| !options.excludes.contains(n))
+            .filter(|(kind, _)| options.kinds.is_empty() || options.kinds.contains(kind))
             .filter(|(_, n)| items.is_empty() || items.contains(n))
             .filter_map(|(kind, name)| {
                 let effective_name = entry_names
@@ -246,6 +253,7 @@ pub(super) fn prepare_install(
     if let Some(closure) = &closure {
         let no_aliases = plan::PlanNames {
             excludes: options.excludes.clone(),
+            kinds: options.kinds.clone(),
             ..plan::PlanNames::default()
         };
         // Every visited source, also one without items in the run: its item
@@ -286,6 +294,7 @@ pub(super) fn prepare_install(
     // matches source names and applies to every source.
     let dependency_names = plan::PlanNames {
         excludes: options.excludes.clone(),
+        kinds: options.kinds.clone(),
         ..plan::PlanNames::default()
     };
     let mut report = if let Some(closure) = &closure {
@@ -645,12 +654,19 @@ impl PreparedInstall {
                 .collect();
         }
 
-        // -- Plugin installation (ADR-0008) --
-        report.plugin_results = install_plugins_from_bundles(&report.bundles, plugin_scope, target);
+        if options.kinds.is_empty() {
+            // -- Plugin installation (ADR-0008) --
+            report.plugin_results =
+                install_plugins_from_bundles(&report.bundles, plugin_scope, target);
 
-        // -- MCP server configuration (ADR-0010), restricted to the selection --
-        report.mcp_results =
-            install_mcps_from_bundles(&report.bundles, plugin_scope, target, &options.selection);
+            // -- MCP server configuration (ADR-0010), restricted to the selection --
+            report.mcp_results = install_mcps_from_bundles(
+                &report.bundles,
+                plugin_scope,
+                target,
+                &options.selection,
+            );
+        }
 
         // `required_by` of every entry, also of a skipped or kept item, gets
         // the provenance of this run (#504).

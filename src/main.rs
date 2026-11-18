@@ -2,6 +2,7 @@ use anyhow::Context;
 use clap::{Parser, error::ErrorKind};
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -65,6 +66,7 @@ fn main() {
             force,
             alias,
             exclude,
+            kind,
             claude,
             copilot,
             vscode,
@@ -77,6 +79,7 @@ fn main() {
             force,
             aliases: &alias,
             excludes: &exclude,
+            kinds: &kind,
             flag_clients: client_flags(claude, copilot, vscode, opencode),
         }),
         Commands::Remove {
@@ -229,6 +232,7 @@ struct AddArgs<'a> {
     force: bool,
     aliases: &'a [String],
     excludes: &'a [String],
+    kinds: &'a [String],
     /// Clients named by `--claude`/`--copilot`/`--vscode`/`--opencode`.
     /// Empty means no client flag was passed (fall back to config / all).
     flag_clients: Vec<SelectedClient>,
@@ -285,8 +289,20 @@ fn run_add(args: AddArgs) -> i32 {
         force,
         aliases,
         excludes,
+        kinds,
         flag_clients,
     } = args;
+    let kinds = match kinds
+        .iter()
+        .map(|kind| ItemKind::from_str(kind))
+        .collect::<anyhow::Result<Vec<_>>>()
+    {
+        Ok(kinds) => kinds,
+        Err(err) => {
+            print_error(&err);
+            return EXIT_USAGE;
+        }
+    };
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
         Err(err) => {
@@ -312,6 +328,7 @@ fn run_add(args: AddArgs) -> i32 {
         overwrite: force,
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
+        kinds,
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
         keep_unwithheld_edits: false,
         scope: at.scope,

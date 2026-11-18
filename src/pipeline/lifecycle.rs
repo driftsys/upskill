@@ -1035,6 +1035,7 @@ pub fn update(
                 overwrite,
                 aliases,
                 excludes: vec![],
+                kinds: vec![],
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
                 scope: at.scope,

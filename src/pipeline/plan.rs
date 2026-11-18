@@ -36,9 +36,14 @@ pub(crate) struct PlanNames {
     pub aliases: BTreeMap<String, String>,
     /// Source names to skip (`--exclude`).
     pub excludes: Vec<String>,
+    pub kinds: Vec<ItemKind>,
 }
 
 impl PlanNames {
+    pub fn takes(&self, kind: ItemKind) -> bool {
+        self.kinds.is_empty() || self.kinds.contains(&kind)
+    }
+
     /// The alias of the item named `name` in the source, if any.
     pub fn alias_for(&self, name: &str) -> Option<&String> {
         self.aliases.get(name).or_else(|| self.aliases.get(""))
