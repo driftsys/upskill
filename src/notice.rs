@@ -3,12 +3,15 @@
 //! The cache file records, for each scope root, the time of the last check
 //! (a check that reached no source also sets it), the updates that check
 //! found, and the set that the last printed notice reported. The functions
-//! take the time as an argument. Only [`NoticeCache::load`] and
-//! [`NoticeCache::save`] perform file I/O.
+//! take the time as an argument. File I/O happens only in
+//! [`NoticeCache::load`] and [`NoticeCache::save`], and in
+//! [`mark_current_in_file`], which calls them.
 //!
 //! Two runs that overlap each save the whole file. Before it saves, a run
 //! loads the file again and applies only its own roots with [`merge_roots`],
-//! which leaves the entries of the other run in place. An `update` saves
+//! which leaves the entries of the other run in place. For a root that the run
+//! did not look up, the saved `reported` is the part of the reloaded `updates`
+//! that either run had reported. An `update` saves
 //! through [`mark_current_in_file`], which loads and saves without a lookup
 //! between them. Without a file lock, these cases remain:
 //!
@@ -16,10 +19,10 @@
 //!   save is lost. A lost check of a notice run is made again at the next
 //!   session start, because the root is still due. A lost removal by `update`
 //!   is not: the root is not due, so the removed entries stay until the next
-//!   check, at most 24 hours later.
+//!   check that reaches the source.
 //! - A notice run looks up a root while an `update` of that root saves. The
 //!   notice run writes its own state of the root, so the removed entries come
-//!   back until the next check, at most 24 hours later.
+//!   back until the next check that reaches the source.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -211,11 +214,12 @@ pub fn forget(cache: &mut NoticeCache, root: &Path) {
 /// A root of `roots` that is not in `checked` was not looked up by this run,
 /// so this run changed only its `reported`. When `fresh` holds that root, its
 /// `checked_at` and `updates` stay as `fresh` holds them, and `reported`
-/// becomes the `reported` of `fresh` together with the entries of `mine` that
-/// are in the `updates` of `fresh`, sorted and without duplicates. This keeps a
-/// removal by [`mark_current_in_file`] that was saved during this run (it
-/// removed the entries from both sets of `fresh`), and the set that another
-/// run printed after a lookup.
+/// becomes the entries of the `updates` of `fresh` that the `reported` of
+/// `fresh` or of `mine` holds (in the order of `updates`, so sorted and
+/// without duplicates). An entry that is no longer in `updates` is dropped:
+/// a removal by [`mark_current_in_file`] stays removed, and an entry of an
+/// older set cannot keep `reported` different from `updates`. When `fresh`
+/// does not hold that root, the state of `mine` is inserted.
 pub fn merge_roots(
     mut fresh: NoticeCache,
     mine: &NoticeCache,
@@ -228,18 +232,14 @@ pub fn merge_roots(
                 let only_reported = !checked.contains(root);
                 match fresh.scopes.get_mut(&key(root)) {
                     Some(current) if only_reported => {
-                        let updates = &current.updates;
-                        let mut reported = current.reported.clone();
-                        reported.extend(
-                            state
-                                .reported
-                                .iter()
-                                .filter(|entry| updates.contains(entry))
-                                .cloned(),
-                        );
-                        reported.sort();
-                        reported.dedup();
-                        current.reported = reported;
+                        current.reported = current
+                            .updates
+                            .iter()
+                            .filter(|entry| {
+                                current.reported.contains(entry) || state.reported.contains(entry)
+                            })
+                            .cloned()
+                            .collect();
                     }
                     _ => {
                         fresh.scopes.insert(key(root), state.clone());
@@ -636,6 +636,95 @@ mod tests {
         assert_eq!(decide(&mut merged, Scope::Project, &root(), false), None);
     }
 
+    /// Three runs of a plain notice in sequence, each loading the file the
+    /// previous one saved, with `checked` empty after the first run.
+    fn plain_runs(mut file: NoticeCache, runs: usize) -> (NoticeCache, usize) {
+        let mut printed = 0;
+        for _ in 0..runs {
+            let mut mine = file.clone();
+            if decide(&mut mine, Scope::Project, &root(), false).is_some() {
+                printed += 1;
+            }
+            file = merge_roots(file, &mine, &[root()], &[]);
+        }
+        (file, printed)
+    }
+
+    #[test]
+    fn a_plain_run_after_a_quiet_check_of_a_changed_set_prints_once() {
+        // A quiet check recorded `skill:a@c2`; `reported` still names `c1`.
+        let mut file = recorded(&["skill:a@c1"]);
+        decide(&mut file, Scope::Project, &root(), false);
+        record_check(
+            &mut file,
+            &root(),
+            set(&["skill:a@c2"]),
+            Reached::Fully,
+            2_000,
+        );
+        let (file, printed) = plain_runs(file, 3);
+        assert_eq!(printed, 1);
+        assert_eq!(file.scopes[&key(&root())].reported, set(&["skill:a@c2"]));
+    }
+
+    #[test]
+    fn a_run_that_overlapped_a_run_that_printed_a_new_set_causes_no_second_print() {
+        let mut mine = recorded(&["skill:a@c1"]);
+        decide(&mut mine, Scope::Project, &root(), false);
+        let mut fresh = recorded(&["skill:a@c2", "skill:b@c2"]);
+        decide(&mut fresh, Scope::Project, &root(), false);
+        let merged = merge_roots(fresh, &mine, &[root()], &[]);
+        let (_, printed) = plain_runs(merged, 2);
+        assert_eq!(printed, 0);
+    }
+
+    #[test]
+    fn a_run_that_overlapped_an_update_does_not_bring_back_the_removed_items() {
+        let mut mine = recorded(&["skill:a@c1", "skill:b@c1"]);
+        decide(&mut mine, Scope::Project, &root(), false);
+        let mut fresh = mine.clone();
+        mark_current(&mut fresh, &root(), &set(&["skill:a"]));
+        let merged = merge_roots(fresh, &mine, &[root()], &[]);
+        let state = &merged.scopes[&key(&root())];
+        assert_eq!(state.updates, set(&["skill:b@c1"]));
+        assert_eq!(state.reported, set(&["skill:b@c1"]));
+    }
+
+    #[test]
+    fn three_plain_sessions_without_overlap_print_a_set_once() {
+        let (file, printed) = plain_runs(recorded(&["skill:b@c1", "rule:a@c1", "agent:z"]), 3);
+        assert_eq!(printed, 1);
+        let state = &file.scopes[&key(&root())];
+        assert_eq!(state.reported, state.updates);
+    }
+
+    #[test]
+    fn mark_current_matches_the_kind_and_the_whole_name() {
+        let mut cache = recorded(&["rule:a@c1", "skill:a@c1", "skill:ab@c1"]);
+        assert!(mark_current(&mut cache, &root(), &set(&["skill:a"])));
+        assert_eq!(
+            cache.scopes[&key(&root())].updates,
+            set(&["rule:a@c1", "skill:ab@c1"])
+        );
+    }
+
+    #[test]
+    fn mark_current_in_file_saves_the_removal_and_ignores_an_absent_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(CACHE_FILE_NAME);
+        recorded(&["skill:a@c1", "skill:b@c1"]).save(&path).unwrap();
+        mark_current_in_file(&path, &root(), &set(&["skill:a"]));
+        assert_eq!(
+            NoticeCache::load(&path).scopes[&key(&root())].updates,
+            set(&["skill:b@c1"])
+        );
+        mark_current_in_file(&path, &other_root(), &set(&["skill:b"]));
+        assert_eq!(
+            NoticeCache::load(&path).scopes[&key(&root())].updates,
+            set(&["skill:b@c1"])
+        );
+    }
+
     #[test]
     fn current_items_takes_the_statuses_that_leave_an_item_current() {
         use crate::pipeline::{PreviewAction, SkipCause, UpdatedItem};
@@ -656,7 +745,12 @@ mod tests {
                     },
                 ),
                 item("completed", UpdateStatus::CompletedInterrupted),
-                item("removed", UpdateStatus::Removed),
+                UpdatedItem {
+                    kind: ItemKind::Agent,
+                    name: "removed".into(),
+                    source: "owner/repo".into(),
+                    status: UpdateStatus::Removed,
+                },
                 item("skipped", UpdateStatus::SkippedModified { files: vec![] }),
                 item(
                     "not-applied",
@@ -679,7 +773,7 @@ mod tests {
                 "skill:up-to-date",
                 "skill:updated",
                 "skill:completed",
-                "skill:removed"
+                "agent:removed"
             ])
         );
     }

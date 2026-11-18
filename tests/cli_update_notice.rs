@@ -1032,6 +1032,98 @@ fn update_of_one_item_keeps_the_cached_update_of_another_item() {
         stdout(&run(&e, &e.repo, &["update", "--notice", "--repeat"])),
         "upskill: 1 update available (project). Run \"upskill update\".\n"
     );
+    assert_eq!(
+        cached_updates(&e, "repo"),
+        vec![format!("skill:beta@{}", upstream_head(&e))]
+    );
+}
+
+/// The cached `updates` of the scope root whose directory is named `name`.
+fn cached_updates(e: &Env, name: &str) -> Vec<String> {
+    let cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(e)).unwrap()).unwrap();
+    let (_, state) = cache["scopes"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .find(|(root, _)| is_root_named(root, name))
+        .unwrap_or_else(|| panic!("no root named {name}: {cache}"));
+    state["updates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect()
+}
+
+#[test]
+fn a_global_update_run_outside_its_root_removes_the_current_items_of_the_global_scope() {
+    let e = env();
+    let added = run(&e, &e.outside, &["add", REMOTE, "--claude", "--global"]);
+    assert!(added.status.success(), "{}", stderr(&added));
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    assert_eq!(
+        stdout(&run(&e, &e.outside, &["update", "--notice", "--repeat"])),
+        GLOBAL_LINE
+    );
+    let applied = run(&e, &e.outside, &["update", "--global", "--yes"]);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    assert_eq!(cached_updates(&e, "home"), Vec::<String>::new());
+    assert_eq!(
+        stdout(&run(&e, &e.outside, &["update", "--notice", "--repeat"])),
+        ""
+    );
+}
+
+#[test]
+fn an_update_that_exits_with_code_1_removes_the_items_that_it_updated() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    let installed = e.repo.join(".claude/skills/alpha/SKILL.md");
+    assert!(installed.is_file());
+    fs::write(&installed, "edited by hand\n").unwrap();
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    assert_eq!(applied.status.code(), Some(1), "{}", stderr(&applied));
+    assert_eq!(
+        cached_updates(&e, "repo"),
+        vec![format!("skill:alpha@{}", upstream_head(&e))]
+    );
+}
+
+#[test]
+fn an_update_that_fails_with_an_error_leaves_the_cache_file_unchanged() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    let before = fs::read(cache_path(&e)).unwrap();
+    // The upstream is no longer reachable, so the fetch fails.
+    fs::rename(&e.upstream, e.home.parent().unwrap().join("moved")).unwrap();
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    assert_ne!(applied.status.code(), Some(0), "{}", stderr(&applied));
+    assert_eq!(fs::read(cache_path(&e)).unwrap(), before);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_notice_run_that_overlaps_a_global_update_does_not_restore_the_removed_items() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let added = run(&e, &e.outside, &["add", REMOTE, "--claude", "--global"]);
+    assert!(added.status.success(), "{}", stderr(&added));
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice"]);
+    // Only the project scope is due; the global scope is not.
+    age_scope(&e, "repo", 86_400);
+    let mut blocked = BlockedRun::start(&e, &e.repo);
+    let applied = run(&e, &e.outside, &["update", "--global", "--yes"]);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    assert_eq!(cached_updates(&e, "home"), Vec::<String>::new());
+    blocked.release();
+    assert_eq!(blocked.child.wait().unwrap().code(), Some(0));
+    assert_eq!(cached_updates(&e, "home"), Vec::<String>::new());
 }
 
 #[test]

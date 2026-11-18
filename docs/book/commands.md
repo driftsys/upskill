@@ -666,16 +666,17 @@ The command is quiet by design:
   user: the Copilot CLI plugin uses it. The run still records the set as
   printed, so a later run without `--repeat` prints it only when it changes.
   Nothing else changes.
-- A successful `upskill update` (not `--dry-run`, `--check` or `--notice`)
-  removes from the cached updates of its scope the items that it reports as
-  updated, up to date, completed after an interruption, or removed, so the
-  notice does not report updates that are already installed. An `update` that
-  fails part of the way removes nothing: the items that it had updated stay in
-  the notice until the next lookup. A failure to read or write the cache file
-  does not change the result of `update` and prints nothing. When a
-  session-start run of `--notice` and an `update` of the same scope save the
-  cache file at the same time, the notice can list installed updates until the
-  next check, at most 24 hours later.
+- An `upskill update` that applies (not `--dry-run`, `--check` or `--notice`)
+  and returns its report, with exit code 0 or 1, removes from the cached updates
+  of its scope the items that it reports as updated, up to date, completed after
+  an interruption, or removed, so the notice does not report updates that are
+  already installed. An `update` that stops with an error removes nothing: the
+  items that it had updated stay in the notice until the next check that reaches
+  the source. A failure to read or write the cache file does not change the
+  result of `update` and prints nothing. When a session-start run of `--notice`
+  and an `update` of the same scope save the cache file at the same time, the
+  notice can list installed updates until the next check that reaches the
+  source, which comes 24 hours or more later.
 - It contacts the sources at most once in 24 hours for each scope, with the same
   lookups as `update --check` and a time limit of 5 seconds for all sources.
   Between two lookups, it uses the result of the last one. A lookup that reaches
@@ -711,9 +712,10 @@ The command is quiet by design:
   Before the command saves the file, it reads the file again and applies only
   the entries of its own roots, so that a run that overlaps another run keeps
   the entries of that run. A run that saves between that read and the save of
-  the command can still lose its entries; its roots are then checked again at
-  the next session start. When neither directory is known, the command uses no
-  cache and prints nothing.
+  the command can still lose its save. A lost check is made again at the next
+  session start; a lost removal by `update` stays lost until the next check that
+  reaches the source. When neither directory is known, the command uses no cache
+  and prints nothing.
 - With `--quiet` it prints no line. The lookups and the cache update still run,
   and the set stays unreported, so a later run without `--quiet` prints it.
 

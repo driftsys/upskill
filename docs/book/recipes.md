@@ -120,8 +120,10 @@ What you get depends on the client:
 In Claude Code a given set of updates is announced once.
 
 The plugin needs an `upskill` binary on `PATH` that has `update --notice`.
-Release 0.9.0 is the first release that has it. The Copilot plugin also needs
-`--repeat`. When the binary is missing or older, the hook prints nothing.
+Release 0.9.0 is the first release that has it. The Copilot plugin needs a
+binary that has `update --notice --repeat`, and release 0.9.0 does not have it:
+with release 0.9.0, the Copilot hook prints nothing. When the binary is missing
+or older, the hook prints nothing.
 
 A hand-written hook that only runs `upskill update --notice` does not show the
 notice to you in either client. Claude Code gives a plain line to the agent and

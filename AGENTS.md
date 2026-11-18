@@ -97,7 +97,8 @@ src/
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
 ├── support.rs           Support level table (client x kind), printed by `doctor`
 ├── notice.rs            `update --notice`: when a session notice line prints, and
-│                        the cache file that records it
+│                        the cache file that records it; the removal of current
+│                        items from that file after an applying `update`
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
 └── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)

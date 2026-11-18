@@ -1,7 +1,9 @@
 # AD-0042 — Re-steer customization delivery to reliable install, update and removal
 
 Status: **accepted**. Date: 2026-11-11. Amended on 2026-11-15 to state the
-delivered behaviour and to add Decision 8.
+delivered behaviour and to add Decision 8. Amended on 2026-11-19 to record in
+Decision 8 that the session notice repeats for Copilot CLI until
+`upskill update` runs.
 [MVP epic #283](https://github.com/driftsys/upskill/issues/283). The archived
 [re-steer design](https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-11-11-customization-resteer-design.md)
 holds the original design and delivery order. This record states the decisions

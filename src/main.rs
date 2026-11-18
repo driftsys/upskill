@@ -46,12 +46,13 @@ fn main() {
         }
     };
 
-    // `--repeat` is valid only with `--notice`. `requires = "notice"` alone is
-    // not enough: clap accepts a missing required argument when a present
-    // argument conflicts with it (`is_missing_required_ok` in clap_builder's
-    // validator), and `--notice` conflicts with the names, `--yes`,
-    // `--global`, `--dry-run` and the other flags. So `requires` rejects only
-    // a bare `--repeat`, and the rule is checked here.
+    // `--repeat` is valid only with `--notice`. The flag in `cli.rs` has no
+    // `requires = "notice"`, because clap would not enforce it here: clap
+    // accepts a missing required argument when a present argument conflicts
+    // with it (`is_missing_required_ok` in clap_builder's validator), and
+    // `--notice` conflicts with the names, `--yes`, `--global`, `--dry-run`
+    // and the other flags. Such an attribute would reject only a bare
+    // `--repeat`, so the rule is checked here.
     if matches!(
         cli.command,
         Commands::Update {

@@ -473,7 +473,9 @@ the replacement of control characters) and before the plugin was renamed to
 change for control characters. The current plugin files were not run in these
 runs. The marketplace install in the next section ran the plugin files as they
 were on 2026-11-15, before the request text of issue #530 was added to the hook
-command of the Copilot plugin.
+command of the Copilot plugin, and before that command received `--repeat`. With
+`--repeat`, a second session prints the set again, so the `NONE` of session 2
+for the Copilot plugin does not describe the current plugin.
 
 ## Trial result: install through a marketplace
 

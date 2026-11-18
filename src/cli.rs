@@ -183,8 +183,8 @@ pub enum Commands {
         check: bool,
         /// Print one line for each scope that has available updates, for a
         /// session-start hook of an AI client. A set of updates is printed
-        /// once (see `--repeat`). The sources are contacted at most once in 24 hours, for
-        /// 5 seconds at most, and without a fetch. After the arguments are
+        /// once (see `--repeat`). The sources are contacted at most once in
+        /// 24 hours, for 5 seconds at most, and without a fetch. After the arguments are
         /// parsed, it exits with code 0 in every case, also when a step fails
         /// or the process is interrupted. A failed step prints nothing; an
         /// interrupt during the lookups prints nothing and an interrupt after
@@ -199,9 +199,11 @@ pub enum Commands {
         /// available updates for the scope, also when the set was printed
         /// before. For a hook whose client gives the line to the model and
         /// does not show it to the user. The set is still recorded as
-        /// printed. An `upskill update` that applies and succeeds removes from
-        /// the cached set of its scope the items that it reports as updated,
-        /// up to date, completed after an interruption, or removed.
+        /// printed. An `upskill update` that applies and returns a report (exit
+        /// code 0 or 1) removes from the cached set of its scope the items
+        /// that it reports as updated, up to date, completed after an
+        /// interruption, or removed. An `update` that stops with an error
+        /// removes nothing.
         #[arg(long = "repeat")]
         repeat: bool,
         /// Operate on `$HOME` instead of the current directory.
