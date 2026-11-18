@@ -334,13 +334,21 @@ item and a `kept modified file` note are not changes.
   nothing is not applied and asks nothing. The apply decides again from the
   disk. After an applied source, `update` prints a result line with the non-zero
   counts of `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
-  `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`. After the
-  last source it prints `Updated <n> of <m> item(s) from <a> of <s> source(s).`,
-  followed by `<k> source(s) not applied.` when a source with changes was not
-  applied, by `<u> source(s) skipped.` when sources were skipped, for either
-  cause, and by `Stopped; <r> source(s) not examined.` or `Stopped.` after `q`
-  or end of input; then `Changed <n> file(s) written or deleted` when no item
-  was updated, completed or removed but files were written or deleted. It prints
+  `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`; the
+  counts include a dependency from another source that the apply updated,
+  completed or skipped. After the last source it prints
+  `Updated <n> of <m> item(s) from <a> of <s> source(s).`: `<n>` is the number
+  of items that the run updated, completed or removed, also as a dependency of
+  another source, and `<m>` is the number of items that the run covers (the
+  lockfile entries of all its sources, also of skipped sources and of sources
+  not examined after `q`, and the items that the plans of its sources install).
+  Each item, by kind and installed name, is counted once in `<n>` and in `<m>`,
+  and `<m>` does not depend on where the run stops. The line is followed by
+  `<k> source(s) not applied.` when a source with changes was not applied, by
+  `<u> source(s) skipped.` when sources were skipped, for either cause, and by
+  `Stopped; <r> source(s) not examined.` or `Stopped.` after `q` or end of
+  input; then `Changed <n> file(s) written or deleted` when no item was updated,
+  completed or removed but files were written or deleted. It prints
   `everything is up to date — nothing to do` instead when no source was applied,
   no source with changes was declined, no file was kept with a note, no item was
   skipped, no source was skipped and no lockfile was adopted. The exit code is 1

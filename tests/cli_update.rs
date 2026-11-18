@@ -2061,3 +2061,28 @@ fn update_refuses_a_source_item_that_contains_the_output_path_of_another_item() 
         lock_before
     );
 }
+
+#[test]
+fn update_lists_a_dependency_updated_through_another_source_once() {
+    // `./reg-a` comes before `reg-b`: its reinstall updates `sarif`, and
+    // `reg-b` then finds `sarif` up to date (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let (_agent, sarif) = cross_source_project(tmp.path(), &home);
+    let source = tmp.path().join("reg-b").join("sarif").join("SKILL.md");
+    let text = fs::read_to_string(&source).unwrap();
+    fs::write(&source, format!("{text}Changed.\n")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--yes"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(fs::read_to_string(&sarif).unwrap().contains("Changed."));
+    let lines: Vec<&str> = stdout.lines().filter(|l| l.contains("sarif")).collect();
+    assert_eq!(lines.len(), 1, "{stdout}");
+    assert!(lines[0].contains("updated"), "{stdout}");
+}

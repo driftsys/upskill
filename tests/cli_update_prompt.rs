@@ -181,7 +181,9 @@ fn assert_stops_at_the_first_source(input: &str) {
     assert!(!stdout(&result).contains(&label_b), "{result}");
     assert!(
         stdout(&result).contains(
-            "Updated 0 of 1 item(s) from 0 of 1 source(s). 1 source(s) not applied. \
+            // `<m>` counts the item of the source that was not examined
+            // too (issue #506).
+            "Updated 0 of 2 item(s) from 0 of 1 source(s). 1 source(s) not applied. \
              Stopped; 1 source(s) not examined.\n"
         ),
         "{result}"
@@ -650,4 +652,60 @@ fn a_source_whose_only_outcome_is_a_skipped_dependency_exits_1() {
         "{result}"
     );
     assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+}
+
+/// The `Updated ...` summary line of a terminal run.
+fn summary(result: &serde_json::Value) -> &str {
+    stdout(result)
+        .lines()
+        .find(|line| line.starts_with("Updated "))
+        .unwrap_or_else(|| panic!("no summary: {result}"))
+}
+
+#[test]
+fn an_applied_cross_source_dependency_counts_as_updated() {
+    // `code-review` from `./reg-a` requires `sarif` from `reg-b`. Only the
+    // source of `sarif` changes, and `reg-a` comes first: its reinstall
+    // updates `sarif`, and `reg-b` then has no changes (issue #506).
+    let (tmp, home, _agent, sarif) = cross_source_with_a_skipped_dependency();
+    fs::remove_file(&sarif).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--force", "--yes"])
+        .assert()
+        .success();
+    write_skill(tmp.path(), "reg-b", "sarif", "Changed again.");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(stderr(&result).matches(QUESTION).count(), 1, "{result}");
+    assert!(
+        fs::read_to_string(&sarif)
+            .unwrap()
+            .contains("Changed again.")
+    );
+    assert!(
+        stdout(&result).contains("  1 updated, "),
+        "result line: {result}"
+    );
+    assert!(
+        summary(&result).starts_with("Updated 1 of 2 item(s) from 1 of 2 source(s)."),
+        "{result}"
+    );
+}
+
+#[test]
+fn an_item_skipped_in_two_ways_is_counted_once() {
+    // `reg-a` has changes and is declined, so `sarif` is not applied as a
+    // skip; `reg-b` has only the skip of `sarif`, so `sarif` is skipped.
+    let (tmp, home, agent, _sarif) = cross_source_with_a_skipped_dependency();
+    let text = fs::read_to_string(&agent).unwrap();
+    fs::write(&agent, format!("{text}Changed.\n")).unwrap();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "n\n");
+    assert_eq!(stderr(&result).matches(QUESTION).count(), 1, "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 0 of 2 item(s) from 0 of 2 source(s)."),
+        "{result}"
+    );
 }

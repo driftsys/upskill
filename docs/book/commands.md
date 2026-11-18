@@ -444,8 +444,15 @@ The apply checks the files on disk again; it does not rely on the preview. After
 an applied source, `update` prints one result line with the non-zero counts of
 `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
 `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied` when every
-count is 0. After the last source, it prints one closing summary:
-`Updated <n> of <m> item(s) from <a> of <s> source(s).`, followed by
+count is 0; a dependency from another source that the apply writes is counted in
+that line. After the last source, it prints one closing summary:
+`Updated <n> of <m> item(s) from <a> of <s> source(s).` `<n>` counts the items
+that the run updated, completed or removed, also a dependency from another
+source that the apply of a source updated. `<m>` counts the items that the run
+covers: the lockfile entries of all its sources, also of the sources that were
+not examined after `q`, and the items that the plans of its sources install. An
+item (by kind and installed name) is counted once in each number, and `<m>` is
+the same whether or not the run stops. The summary is followed by
 `<k> source(s) not applied.` when a source with changes was not applied, by
 `<u> source(s) skipped.` when sources were skipped, for either cause (the item
 count `<m>` includes the items of these sources), and by

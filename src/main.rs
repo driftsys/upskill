@@ -1584,28 +1584,18 @@ fn render_result(result: &SourceResult) -> String {
 }
 
 /// The closing summary of a terminal run: the items updated, completed or
-/// removed out of the items considered, and the sources applied out of the
+/// removed ([`UpdateReport::changed_items`]) out of the items that the run
+/// covers ([`UpdateReport::items_in_run`]), and the sources applied out of the
 /// sources considered, then ` <k> source(s) not applied.` when a source with
 /// changes was not applied, then ` <u> source(s) skipped.` when a source
 /// was skipped (for either [`upskill::pipeline::SkipCause`]), then
 /// ` Stopped; <r> source(s) not examined.` (or ` Stopped.` when no source
 /// remained) after `q` or end of input.
 fn closing_summary(report: &UpdateReport) -> String {
-    let changed = report
-        .items
-        .iter()
-        .filter(|i| {
-            matches!(
-                i.status,
-                UpdateStatus::Updated { .. }
-                    | UpdateStatus::CompletedInterrupted
-                    | UpdateStatus::Removed
-            )
-        })
-        .count();
     let mut line = format!(
-        "Updated {changed} of {} item(s) from {} of {} source(s).",
-        report.items.len(),
+        "Updated {} of {} item(s) from {} of {} source(s).",
+        report.changed_items(),
+        report.items_in_run,
         report.sources_applied,
         report.sources_considered
     );
@@ -1670,15 +1660,7 @@ fn finish_terminal_update(report: &UpdateReport) -> i32 {
     } else {
         println!();
         println!("{}", closing_summary(report));
-        let changed_items = report.items.iter().any(|i| {
-            matches!(
-                i.status,
-                UpdateStatus::Updated { .. }
-                    | UpdateStatus::CompletedInterrupted
-                    | UpdateStatus::Removed
-            )
-        });
-        if !changed_items && !report.changed.is_empty() {
+        if report.changed_items() == 0 && !report.changed.is_empty() {
             print_changed_files(report.changed.len());
         }
     }
@@ -2990,6 +2972,7 @@ mod tests {
         let mut report = UpdateReport {
             sources_considered: 2,
             sources_applied: 1,
+            items_in_run: 2,
             ..UpdateReport::default()
         };
         for status in [
