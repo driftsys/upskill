@@ -891,3 +891,101 @@ fn quit_counts_every_item_of_every_source() {
         "{result}"
     );
 }
+
+#[test]
+fn the_owning_source_does_not_complete_a_dependency_again() {
+    // `reg-a` completes the interrupted `sarif`; `reg-b` is applied after it
+    // for `other` and finds `sarif` completed (issue #506).
+    let (tmp, home, _agent) = cross_source_with_a_second_item();
+    let path = tmp.path().join(".upskill-lock.json");
+    let mut lock = lockfile(tmp.path());
+    for entry in lock["items"].as_array_mut().unwrap() {
+        if entry["name"] == "sarif" {
+            entry["pending"] = entry["files"].clone();
+        }
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+    write_skill(tmp.path(), "reg-b", "other", "Changed.");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\ny\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(stderr(&result).matches(QUESTION).count(), 2, "{result}");
+    assert_eq!(stdout(&result).matches(" completed").count(), 1, "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 2 of 3 item(s) from 2 of 2 source(s)."),
+        "{result}"
+    );
+}
+
+/// The sum of the `<n> updated` counts of the result lines.
+fn updated_in_result_lines(result: &serde_json::Value) -> usize {
+    stdout(result)
+        .lines()
+        .filter_map(|l| {
+            let mut words = l.strip_prefix("  ")?.split(' ');
+            let n = words.next()?.parse::<usize>().ok()?;
+            words.next()?.starts_with("updated").then_some(n)
+        })
+        .sum()
+}
+
+/// Two sources each require `sarif` of `reg-b`, which also contains it.
+/// With `absolute`, the requiring sources are added by absolute path and
+/// come after `reg-b`; otherwise they come before it.
+fn two_requiring_sources(absolute: bool) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_skill(tmp.path(), "reg-b", "sarif", "Body.");
+    let mut agents = Vec::new();
+    for (dir, name) in [("reg-c", "first"), ("reg-d", "second")] {
+        let folder = tmp.path().join(dir).join(name);
+        fs::create_dir_all(&folder).unwrap();
+        let agent = folder.join("AGENT.md");
+        fs::write(
+            &agent,
+            format!(
+                "---\nschema: 1\nname: {name}\ndescription: Use for {name}\nrequires:\n  \
+                 skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+                tmp.path().join("reg-b").display()
+            ),
+        )
+        .unwrap();
+        let source = if absolute {
+            tmp.path().join(dir).display().to_string()
+        } else {
+            format!("./{dir}")
+        };
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["add", &source, name, "--claude", "--project"])
+            .assert()
+            .success();
+        agents.push(agent);
+    }
+    write_skill(tmp.path(), "reg-b", "sarif", "Changed.");
+    for agent in &agents {
+        let text = fs::read_to_string(agent).unwrap();
+        fs::write(agent, format!("{text}Changed.\n")).unwrap();
+    }
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\ny\ny\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 3 of 3 item(s)"),
+        "{result}"
+    );
+    // The per-source counts add up to `<n>`: `sarif` is counted once.
+    assert_eq!(updated_in_result_lines(&result), 3, "{result}");
+}
+
+#[test]
+fn two_requiring_sources_before_the_owner_count_the_dependency_once() {
+    two_requiring_sources(false);
+}
+
+#[test]
+fn two_requiring_sources_after_the_owner_count_the_dependency_once() {
+    two_requiring_sources(true);
+}

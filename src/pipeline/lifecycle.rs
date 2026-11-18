@@ -988,8 +988,10 @@ pub fn update(
             .push(entry);
     }
 
-    // The items that the run covers: every lockfile entry of the run, and
-    // below the items that the plans of the fetched sources install.
+    // The items that the run covers: every lockfile entry that the run
+    // selects, and below the items that the plans of the sources that were
+    // fetched and not skipped install (a source skipped for `RequiresSkipped`
+    // is removed from `prepared_sources` before its plan is counted).
     let mut run_items: std::collections::BTreeSet<(ItemKind, String)> = by_source
         .values()
         .flatten()
@@ -1516,16 +1518,24 @@ pub fn update(
     // An item that a source changed as a dependency of another source can
     // also have an `UpToDate` entry from a later source of the run (its own
     // source, which then finds it written). An `UpToDate` entry of an item
-    // that has a change anywhere in the report is not reported.
+    // that has a change anywhere in the report is not reported. Only the
+    // first change of an item is reported: two sources can plan different
+    // content for one item when their `requires` name different sources or
+    // refs for it.
     let changed_keys: std::collections::BTreeSet<(ItemKind, String)> = report
         .items
         .iter()
         .filter(|i| i.status.is_change())
         .map(|i| (i.kind, i.name.clone()))
         .collect();
+    let mut seen_changed = std::collections::BTreeSet::new();
     report.items.retain(|item| {
-        item.status != UpdateStatus::UpToDate
-            || !changed_keys.contains(&(item.kind, item.name.clone()))
+        if item.status.is_change() {
+            seen_changed.insert((item.kind, item.name.clone()))
+        } else {
+            item.status != UpdateStatus::UpToDate
+                || !changed_keys.contains(&(item.kind, item.name.clone()))
+        }
     });
     // An item skipped by the reinstall of two sources, or not applied as a
     // skip in two sources, is reported once.

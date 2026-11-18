@@ -2960,8 +2960,9 @@ mod tests {
         let mut report = UpdateReport {
             sources_considered: 2,
             sources_applied: 1,
-            // One more than the two items below: a planned dependency
-            // without a status line.
+            // The two entries below are of one item; 3 is the number of
+            // items that the run covers, for example with planned
+            // dependencies that have no status line.
             items_in_run: 3,
             ..UpdateReport::default()
         };

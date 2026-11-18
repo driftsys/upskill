@@ -2109,3 +2109,42 @@ fn update_yes_counts_the_items_of_the_run_as_the_terminal_summary_does() {
     // The unchanged dependency `sarif` counts in `<m>` but has no line.
     assert!(!stdout.contains("sarif"), "{stdout}");
 }
+
+#[test]
+fn dry_run_counts_only_the_selected_entries_with_a_change() {
+    // `code-review` changes and now also requires the new skill `lint`;
+    // the source of its dependency `sarif` changes too. `<n>` counts
+    // `code-review` only; `<m>` counts the three items (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let (agent, _sarif) = cross_source_project(tmp.path(), &home);
+    let lint = tmp.path().join("reg-a").join("lint");
+    fs::create_dir_all(&lint).unwrap();
+    fs::write(
+        lint.join("SKILL.md"),
+        "---\nschema: 1\nname: lint\ndescription: Use for lint\n---\nBody.\n",
+    )
+    .unwrap();
+    fs::write(
+        &agent,
+        format!(
+            "---\nschema: 1\nname: code-review\ndescription: Use for review\nrequires:\n  \
+             skills: [lint, {{ name: sarif, source: {} }}]\n---\nChanged.\n",
+            tmp.path().join("reg-b").display()
+        ),
+    )
+    .unwrap();
+    let sarif_source = tmp.path().join("reg-b").join("sarif").join("SKILL.md");
+    let text = fs::read_to_string(&sarif_source).unwrap();
+    fs::write(&sarif_source, format!("{text}Changed.\n")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "code-review", "--project", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(stdout.contains("would update 1 of 3 item(s)"), "{stdout}");
+}
