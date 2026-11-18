@@ -94,6 +94,11 @@ upskill add <source> [items...] [--global|--project]
 `items...` after the source filter to a subset. There is no interactive picker;
 install-all-by-default fits bundle curation.
 
+`add` of a local path that does not exist fails with exit code 1 and writes
+nothing. With no item name, `add` of a local path that exists and holds no item
+installs no item, still writes the lockfile and `CLAUDE.md`, and exits with code
+0.
+
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a scope flag uses the project scope.
 Outside a git repository, `add` without a scope flag writes nothing and stops

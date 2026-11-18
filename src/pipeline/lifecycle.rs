@@ -974,9 +974,7 @@ pub fn update(
             // error chain, also for a dependency source) is skipped: it is
             // not written, and the other sources are applied. Every other
             // prepare error stops the run.
-            let prepared = match super::git::check_local_source_exists(&source)
-                .and_then(|()| prepare_install(&source, target, &item_filter, &options))
-            {
+            let prepared = match prepare_install(&source, target, &item_filter, &options) {
                 Ok(prepared) => prepared,
                 // A fetch that an interrupt ended is not a fetch failure.
                 Err(err)
