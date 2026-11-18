@@ -238,11 +238,36 @@ fn opencode_1x_runs_no_plugin_command_and_warns() {
     assert!(lock.contains("\"skipped\""), "{lock}");
 
     env.run(&["doctor", "--project"]).code(0);
-    // The plugin is recorded as skipped, so `update` does not try it again.
-    env.run(&["update", "--yes", "--project"]).code(0);
-    env.run(&["remove", "alpha", "--project"]).success();
-
+    // `update` and `remove` are not run here: the plugin is recorded as
+    // skipped, so the repair of `update` never selects it, and `remove` runs
+    // no opencode command. They would pass without the version check. The
+    // repair under opencode 1.x is covered by
+    // `update_yes_repair_runs_no_plugin_command_when_opencode_is_1x`.
     assert!(plugin_lines(&env.log()).is_empty(), "{}", env.log());
+}
+
+#[test]
+fn update_yes_repair_runs_no_plugin_command_when_opencode_is_1x() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    env.add().success();
+    let lock = fs::read_to_string(env.project.join(".upskill-lock.json")).unwrap();
+    assert!(lock.contains("\"installed\""), "{lock}");
+    // The plugin is missing, and the user goes back to opencode 1.x.
+    env.set_list("");
+    let script = env.bin.join("opencode");
+    let body = fs::read_to_string(&script)
+        .unwrap()
+        .replace("v2.1.4", "v1.15.13");
+    fs::write(&script, body).unwrap();
+    env.clear_log();
+
+    let out = env.run(&["update", "--yes", "--project"]).code(0);
+    assert!(plugin_lines(&env.log()).is_empty(), "{}", env.log());
+    // The doctor check cannot run under 1.x, so the plugin is not selected
+    // for the repair and the user is told nothing about it.
+    assert!(!stderr(&out).contains("superpowers"), "{}", stderr(&out));
+    let lock = fs::read_to_string(env.project.join(".upskill-lock.json")).unwrap();
+    assert!(lock.contains("\"installed\""), "{lock}");
 }
 
 #[test]

@@ -788,6 +788,109 @@ fn reselect_from_entries(
     }
 }
 
+/// True when the client reports that `plugin`, recorded as installed, is
+/// not installed. Used by `doctor` and by the plugin repair of `update`.
+///
+/// An opencode plugin whose identifier is in the `plugin` array of
+/// `<target>/opencode.json` is installed, and no opencode command is run
+/// for it. Otherwise the client CLI is queried. A client CLI that is absent,
+/// that has an unsupported version, or whose query fails gives `false`: the
+/// state cannot be checked, and a false report of a missing plugin is
+/// avoided. An unknown client gives `false`.
+pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedPlugin) -> bool {
+    use crate::plugin::{
+        PluginScope, check_claude_plugin_installed, check_opencode_plugin_installed,
+        check_vscode_extension_installed,
+    };
+
+    let check = match plugin.client.as_str() {
+        "claude" => {
+            let scope = match plugin.scope.as_deref() {
+                Some("user") => PluginScope::User,
+                _ => PluginScope::Project,
+            };
+            check_claude_plugin_installed(&plugin.name, scope)
+        }
+        "vscode" => check_vscode_extension_installed(&plugin.identifier),
+        "opencode" => {
+            if crate::ancillary::opencode_plugin_listed(target, &plugin.identifier) {
+                return false;
+            }
+            check_opencode_plugin_installed(&plugin.identifier)
+        }
+        _ => return false,
+    };
+    check.is_not_installed()
+}
+
+/// Install again every plugin of `bundles` that the lockfile records as
+/// installed and that [`plugin_is_missing`] reports missing, except the
+/// `(name, client)` pairs in `done`, and record the results in the lockfile.
+/// Only the missing client of a plugin is installed. Returns the results;
+/// empty when nothing is missing, and then nothing is written.
+fn repair_missing_plugins(
+    target: &Path,
+    plugin_scope: crate::plugin::PluginScope,
+    bundles: &[crate::model::Bundle],
+    done: &std::collections::BTreeSet<(String, String)>,
+) -> Result<Vec<super::PluginResult>> {
+    use crate::lockfile::PluginInstallStatus;
+
+    if bundles.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    let mut reduced = Vec::new();
+    for bundle in bundles {
+        let missing: Vec<(String, String)> = lock
+            .plugins
+            .iter()
+            .filter(|p| p.bundle == bundle.name && p.status == PluginInstallStatus::Installed)
+            .filter(|p| !done.contains(&(p.name.clone(), p.client.clone())))
+            .filter(|p| plugin_is_missing(target, p))
+            .map(|p| (p.name.clone(), p.client.clone()))
+            .collect();
+        if missing.is_empty() {
+            continue;
+        }
+        let is_missing =
+            |name: &str, client: &str| missing.iter().any(|(n, c)| n == name && c == client);
+        let mut repaired = bundle.clone();
+        repaired.plugins = bundle
+            .plugins
+            .iter()
+            .filter_map(|(name, entry)| {
+                let mut entry = entry.clone();
+                if !is_missing(name, "claude") {
+                    entry.claude = None;
+                }
+                if !is_missing(name, "copilot") {
+                    entry.copilot = None;
+                }
+                if !is_missing(name, "vscode") {
+                    entry.vscode = None;
+                }
+                if !is_missing(name, "opencode") {
+                    entry.opencode = None;
+                }
+                let empty = entry.claude.is_none()
+                    && entry.copilot.is_none()
+                    && entry.vscode.is_none()
+                    && entry.opencode.is_none();
+                (!empty).then(|| (name.clone(), entry))
+            })
+            .collect();
+        reduced.push(repaired);
+    }
+    if reduced.is_empty() {
+        return Ok(Vec::new());
+    }
+    let results = super::install::install_plugins_from_bundles(&reduced, plugin_scope, target);
+    super::prepared::record_plugin_results(&mut lock, &results, plugin_scope);
+    lock.save(target)?;
+    Ok(results)
+}
+
 /// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
 /// handle the sources one at a time, sorted by source label. `update`
 /// always fetches per ADR-0004 — there is no `--offline`. `update --check`
@@ -921,109 +1024,6 @@ fn reselect_from_entries(
 /// skipped sources as [`SkippedBeforeFailure`], as the outermost context
 /// layer. An error while one source is applied leaves the
 /// sources applied before it applied.
-/// True when the client reports that `plugin`, recorded as installed, is
-/// not installed. Used by `doctor` and by the plugin repair of `update`.
-///
-/// An opencode plugin whose identifier is in the `plugin` array of
-/// `<target>/opencode.json` is installed, and no opencode command is run
-/// for it. Otherwise the client CLI is queried. A client CLI that is absent,
-/// that has an unsupported version, or whose query fails gives `false`: the
-/// state cannot be checked, and a false report of a missing plugin is
-/// avoided. An unknown client gives `false`.
-pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedPlugin) -> bool {
-    use crate::plugin::{
-        PluginScope, check_claude_plugin_installed, check_opencode_plugin_installed,
-        check_vscode_extension_installed,
-    };
-
-    let check = match plugin.client.as_str() {
-        "claude" => {
-            let scope = match plugin.scope.as_deref() {
-                Some("user") => PluginScope::User,
-                _ => PluginScope::Project,
-            };
-            check_claude_plugin_installed(&plugin.name, scope)
-        }
-        "vscode" => check_vscode_extension_installed(&plugin.identifier),
-        "opencode" => {
-            if crate::ancillary::opencode_plugin_listed(target, &plugin.identifier) {
-                return false;
-            }
-            check_opencode_plugin_installed(&plugin.identifier)
-        }
-        _ => return false,
-    };
-    check.is_not_installed()
-}
-
-/// Install again every plugin of `bundles` that the lockfile records as
-/// installed and that [`plugin_is_missing`] reports missing, except the
-/// `(name, client)` pairs in `done`, and record the results in the lockfile.
-/// Only the missing client of a plugin is installed. Returns the results;
-/// empty when nothing is missing, and then nothing is written.
-fn repair_missing_plugins(
-    target: &Path,
-    plugin_scope: crate::plugin::PluginScope,
-    bundles: &[crate::model::Bundle],
-    done: &std::collections::BTreeSet<(String, String)>,
-) -> Result<Vec<super::PluginResult>> {
-    use crate::lockfile::PluginInstallStatus;
-
-    if bundles.is_empty() {
-        return Ok(Vec::new());
-    }
-    let mut lock = crate::lockfile::Lockfile::load(target)?;
-    let mut reduced = Vec::new();
-    for bundle in bundles {
-        let missing: Vec<(String, String)> = lock
-            .plugins
-            .iter()
-            .filter(|p| p.bundle == bundle.name && p.status == PluginInstallStatus::Installed)
-            .filter(|p| !done.contains(&(p.name.clone(), p.client.clone())))
-            .filter(|p| plugin_is_missing(target, p))
-            .map(|p| (p.name.clone(), p.client.clone()))
-            .collect();
-        if missing.is_empty() {
-            continue;
-        }
-        let is_missing =
-            |name: &str, client: &str| missing.iter().any(|(n, c)| n == name && c == client);
-        let mut repaired = bundle.clone();
-        repaired.plugins = bundle
-            .plugins
-            .iter()
-            .filter_map(|(name, entry)| {
-                let mut entry = entry.clone();
-                if !is_missing(name, "claude") {
-                    entry.claude = None;
-                }
-                if !is_missing(name, "copilot") {
-                    entry.copilot = None;
-                }
-                if !is_missing(name, "vscode") {
-                    entry.vscode = None;
-                }
-                if !is_missing(name, "opencode") {
-                    entry.opencode = None;
-                }
-                let empty = entry.claude.is_none()
-                    && entry.copilot.is_none()
-                    && entry.vscode.is_none()
-                    && entry.opencode.is_none();
-                (!empty).then(|| (name.clone(), entry))
-            })
-            .collect();
-        reduced.push(repaired);
-    }
-    if reduced.is_empty() {
-        return Ok(Vec::new());
-    }
-    let results = super::install::install_plugins_from_bundles(&reduced, plugin_scope, target);
-    super::prepared::record_plugin_results(&mut lock, &results, plugin_scope);
-    lock.save(target)?;
-    Ok(results)
-}
-
 pub fn update(
     at: &crate::scope::ScopeRoot,
     names: &[String],

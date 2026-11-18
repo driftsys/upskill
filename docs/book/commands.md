@@ -890,7 +890,8 @@ scope. For each scope it reports eleven independent buckets:
   `opencode plugin` command and does not report the plugin missing. Causes exit
   1.
 - **Skipped plugins** (informational) — recorded as `skipped` because the client
-  CLI was not on PATH at install time. Install the CLI then run
+  CLI was not on PATH at install time, or `opencode --version` reported a major
+  version below 2 (or no version). Install the CLI, or opencode 2.x, then run
   `upskill update --yes` to install them. A run in a terminal applies a source
   only when its preview changes something, and the plugin and MCP steps are not
   part of the preview. Does **not** cause exit 1.

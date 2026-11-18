@@ -71,11 +71,6 @@ pub(super) struct InstallPreview {
     pub handshake: Vec<PathBuf>,
 }
 
-/// Fetches `source`, resolves its items and dependencies, runs the
-/// cross-source conflict check and the overlap check, plans every output
-/// file, merges duplicate planned items and checks the installed names.
-/// Writes nothing in `target`: no file, no directory and no lockfile. The conflict
-/// check reads the lockfile and does not keep it.
 /// Record installed and warn-skipped plugins in `lock`. A plugin whose
 /// client CLI is absent or has an unsupported version is recorded as
 /// skipped. Plugins that failed (non-zero exit) are NOT recorded — they are
@@ -111,6 +106,11 @@ pub(super) fn record_plugin_results(
     }
 }
 
+/// Fetches `source`, resolves its items and dependencies, runs the
+/// cross-source conflict check and the overlap check, plans every output
+/// file, merges duplicate planned items and checks the installed names.
+/// Writes nothing in `target`: no file, no directory and no lockfile. The conflict
+/// check reads the lockfile and does not keep it.
 pub(super) fn prepare_install(
     source: &InstallSource,
     target: &Path,
