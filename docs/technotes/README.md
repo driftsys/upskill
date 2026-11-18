@@ -85,10 +85,13 @@ snapshot; a stable name does not imply that external research remains current.
   terminal: only `systemMessage` is displayed (observed by the maintainer); both
   session-notice plugins print a set once when loaded from a directory (runs
   made before the rename and the last changes to the hook commands) and when
-  installed through a marketplace (the final plugin files, prompt mode, local
-  marketplace directory); a Copilot CLI plugin hook loads from `hooks.json` at
-  the plugin root, starts in the plugin root and runs in an untrusted folder;
-  the interactive display of Copilot CLI is not run.
+  installed through a marketplace (the plugin files of 2026-11-15, prompt mode,
+  local marketplace directory); Copilot CLI 1.0.112 in prompt mode: the model
+  reports the notice at the start of its reply when the context text asks for it
+  (observed on 2026-11-18, 10 of 10 runs with a repository hook and 5 of 5 runs
+  with the plugin loaded from a directory); a Copilot CLI plugin hook loads from
+  `hooks.json` at the plugin root, starts in the plugin root and runs in an
+  untrusted folder; the interactive display of Copilot CLI is not run.
 - [Copilot visibility of duplicate installs](t1-copilot-duplicate-visibility.md):
   T1, Copilot 1.0.109; a rule installed for Claude and Copilot is listed twice
   (observed); that it is applied twice rests on the model's own statement; the

@@ -5,8 +5,9 @@
 //! of an item is, is inside, or contains a path that the run writes for an
 //! item that it installs. The check compares every source that the run reads
 //! with each other, and also the local-path sources recorded in the lockfile
-//! that the run does not otherwise read. The deletion of the files of an item
-//! that its source no longer contains is not part of this check.
+//! that the run does not otherwise read. The check also covers the recorded
+//! files that the run deletes for an item that its source no longer contains
+//! (issue #550), and the same layout is checked for `add` and `remove`.
 
 mod common;
 
@@ -501,13 +502,226 @@ fn update_protects_the_root_of_a_recorded_bundle_file_that_was_deleted() {
     }
 }
 
+/// The options of [`stage_layout`].
+#[derive(Clone, Copy)]
+struct Layout {
+    /// The directory of the source of `a`, relative to the temporary
+    /// directory (for example `src-a`, or `proj/zz-src` inside the project).
+    outer: &'static str,
+    /// Whether the skill `y` is installed from `.agents/skills/a`.
+    with_y: bool,
+    /// How `add` names the source of `y`, relative to the project, when
+    /// `link` is false.
+    inner: &'static str,
+    /// Whether `add` names the source of `y` through the symbolic link
+    /// `<tmp>/link`, which points to `<proj>/.agents/skills/a` (unix only).
+    link: bool,
+    /// The `--as` value of the `add` of `y`, for example `y=z`.
+    alias: Option<&'static str>,
+}
+
+const ISSUE: Layout = Layout {
+    outer: "src-a",
+    with_y: true,
+    inner: "./.agents/skills/a",
+    link: false,
+    alias: None,
+};
+
+/// The layout of issue #550. The skill `a` of `<tmp>/<outer>` has the
+/// resource `y/SKILL.md`, which is written for OpenCode at
+/// `.agents/skills/a/y/SKILL.md`. With `with_y`, that directory is also the
+/// source of the installed skill `y`. The skill `y` is added first, from a
+/// copy of the file, so that the overlap check of `add` does not refuse it;
+/// then the source of `a` is added for OpenCode and Claude. Returns
+/// `(tmp, home, proj, outer)`.
+fn stage_layout(layout: Layout) -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf) {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let outer = tmp.path().join(layout.outer);
+    write_skill(&outer.join("a"), "a", "# a");
+    write_skill(&outer.join("a/y"), "y", "# y");
+    write_skill(&outer.join("other"), "other", "# other");
+    if layout.with_y {
+        write_skill(&proj.join(".agents/skills/a/y"), "y", "# y");
+        fs::create_dir_all(proj.join(".agents/skills/x")).unwrap();
+        let inner = if layout.link {
+            let link = tmp.path().join("link");
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(proj.join(".agents/skills/a"), &link).unwrap();
+            link.display().to_string()
+        } else {
+            layout.inner.to_string()
+        };
+        let mut args = vec!["add", inner.as_str(), "--claude", "--project"];
+        if let Some(alias) = layout.alias {
+            args.extend(["--as", alias]);
+        }
+        common::upskill_cmd(&home)
+            .current_dir(&proj)
+            .args(&args)
+            .assert()
+            .success();
+    }
+    // A source inside the project is named from the project, so that its
+    // label has no `..` component. The argument is built as text with `/`:
+    // `add` does not read `..\src-a` as a local path on Windows.
+    let outer_arg = match layout.outer.strip_prefix("proj/") {
+        Some(rest) => format!("./{rest}"),
+        None => format!("../{}", layout.outer),
+    };
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add"])
+        .arg(&outer_arg)
+        .args(["--project", "--opencode", "--claude"])
+        .assert()
+        .success();
+    assert!(proj.join(".agents/skills/a/y/SKILL.md").is_file());
+    (tmp, home, proj, outer)
+}
+
+/// [`stage_layout`] of the issue, with or without the skill `y`.
+fn stage_removed_item_layout(with_y: bool) -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf) {
+    stage_layout(Layout { with_y, ..ISSUE })
+}
+
+/// The parts of the refusal of `update` for the removed skill `a`, with the
+/// installed name `inner` of the skill whose source holds the file.
+fn update_deletes_parts(inner: &str) -> Vec<String> {
+    vec![
+        format!("the source directory of skill '{inner}' ("),
+        ") contains the recorded file ".to_string(),
+        "of skill 'a'; the update would delete this file".to_string(),
+        format!("Remove skill '{inner}' first, or restore skill 'a' in its source"),
+    ]
+}
+
+/// Run `update --project --yes` with `extra`, assert exit code 1, that
+/// stderr holds every part, and that no file under `target` changed.
+fn assert_update_refused_with(home: &Path, target: &Path, extra: &[&str], parts: &[String]) {
+    let before = files_under(target);
+    let mut args = vec!["update", "--project", "--yes"];
+    args.extend_from_slice(extra);
+    let assert = common::upskill_cmd(home)
+        .current_dir(target)
+        .args(&args)
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    for part in parts {
+        assert!(
+            stderr.contains(part.as_str()),
+            "stderr lacks {part:?}: {stderr}"
+        );
+    }
+    assert_eq!(files_under(target), before, "update changed a file");
+}
+
 #[test]
-fn update_does_not_check_the_deletion_of_an_item_that_its_source_no_longer_contains() {
-    // A stated limit, which issue #550 will change. The skill `a` has the
-    // resource `y/SKILL.md`, written for OpenCode at
-    // `.agents/skills/a/y/SKILL.md`. That directory is the source of the
-    // installed skill `y`. When the source of `a` no longer contains `a`,
-    // `update` removes `a` and deletes the source of `y`.
+fn update_force_refuses_to_delete_a_removed_item_file_inside_the_source_of_another_item() {
+    let (_tmp, home, proj, outer) = stage_layout(ISSUE);
+    fs::remove_dir_all(outer.join("a")).unwrap();
+    assert_update_refused_with(&home, &proj, &["--force"], &update_deletes_parts("y"));
+}
+
+#[test]
+fn update_refuses_when_the_removed_item_is_in_the_source_that_sorts_last() {
+    // The label `<proj>/zz-src` sorts after `<proj>/.agents/skills/a`.
+    let (_tmp, home, proj, outer) = stage_layout(Layout {
+        outer: "proj/zz-src",
+        ..ISSUE
+    });
+    fs::remove_dir_all(outer.join("a")).unwrap();
+    assert_update_refused_with(&home, &proj, &[], &update_deletes_parts("y"));
+}
+
+#[test]
+fn update_refuses_when_the_item_whose_source_holds_the_file_has_an_alias() {
+    let (_tmp, home, proj, outer) = stage_layout(Layout {
+        alias: Some("y=z"),
+        ..ISSUE
+    });
+    fs::remove_dir_all(outer.join("a")).unwrap();
+    assert_update_refused_with(&home, &proj, &[], &update_deletes_parts("z"));
+}
+
+#[test]
+fn update_refuses_to_delete_a_removed_item_file_inside_the_source_of_another_item() {
+    let (_tmp, home, proj, src_a) = stage_removed_item_layout(true);
+    fs::remove_dir_all(src_a.join("a")).unwrap();
+    assert_update_refused_with(&home, &proj, &[], &update_deletes_parts("y"));
+    assert!(proj.join(".agents/skills/a/y/SKILL.md").is_file());
+}
+
+#[test]
+fn update_dry_run_refuses_to_delete_a_removed_item_file_inside_the_source_of_another_item() {
+    let (_tmp, home, proj, src_a) = stage_removed_item_layout(true);
+    fs::remove_dir_all(src_a.join("a")).unwrap();
+    assert_update_refused_with(&home, &proj, &["--dry-run"], &update_deletes_parts("y"));
+}
+
+#[test]
+fn update_still_removes_an_item_that_left_its_source_without_an_overlap() {
+    let (_tmp, home, proj, src_a) = stage_removed_item_layout(false);
+    fs::remove_dir_all(src_a.join("a")).unwrap();
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .success();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(out.contains("removed — no longer in source"), "{out}");
+    assert!(!proj.join(".agents/skills/a").exists());
+}
+
+/// Run `add <source> --project --claude` with `extra` in `proj`, assert
+/// exit code 1 with the refusal of a source that holds a file recorded for
+/// the installed skill `outer`, and that no file changed.
+fn assert_add_refused(home: &Path, proj: &Path, source: &str, outer: &str, extra: &[&str]) {
+    let before = files_under(proj);
+    let mut args = vec!["add", source, "--project", "--claude"];
+    args.extend_from_slice(extra);
+    let assert = common::upskill_cmd(home)
+        .current_dir(proj)
+        .args(&args)
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    for part in [
+        "the source directory of skill 'y' (".to_string(),
+        ") contains the file ".to_string(),
+        format!("which upskill recorded for the installed skill '{outer}'"),
+        format!("an update or a remove of skill '{outer}' would delete it"),
+    ] {
+        assert!(
+            stderr.contains(part.as_str()),
+            "stderr lacks {part:?}: {stderr}"
+        );
+    }
+    assert_eq!(files_under(proj), before, "add changed a file");
+}
+
+#[test]
+fn add_refuses_a_source_item_that_contains_a_recorded_file_of_another_source() {
+    // Step 2 of issue #550.
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(false);
+    assert_add_refused(&home, &proj, "./.agents/skills/a", "a", &[]);
+}
+
+#[test]
+fn add_force_refuses_a_source_item_that_contains_a_recorded_file_of_another_source() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(false);
+    assert_add_refused(&home, &proj, "./.agents/skills/a", "a", &["--force"]);
+}
+
+#[test]
+fn add_refuses_a_source_item_that_contains_a_recorded_file_of_an_aliased_item() {
+    // `a` is installed as `b`, so its OpenCode resource is recorded at
+    // `.agents/skills/b/y/SKILL.md`.
     let tmp = tempfile::TempDir::new().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -516,31 +730,77 @@ fn update_does_not_check_the_deletion_of_an_item_that_its_source_no_longer_conta
     let src_a = tmp.path().join("src-a");
     write_skill(&src_a.join("a"), "a", "# a");
     write_skill(&src_a.join("a/y"), "y", "# y");
-    write_skill(&src_a.join("other"), "other", "# other");
     common::upskill_cmd(&home)
         .current_dir(&proj)
         .args(["add", "../src-a", "--project", "--opencode", "--claude"])
+        .args(["--as", "a=b"])
         .assert()
         .success();
-    add(&home, &proj, "./.agents/skills/a");
-    // Preconditions: the resource file of `a` exists, and it is the source
-    // of the installed skill `y`.
-    assert!(proj.join(".agents/skills/a/y/SKILL.md").is_file());
-    assert!(
-        recorded_source(&proj, "items", "y")
-            .replace('\\', "/")
-            .ends_with(".agents/skills/a"),
-        "{}",
-        recorded_source(&proj, "items", "y")
-    );
-    fs::remove_dir_all(src_a.join("a")).unwrap();
+    assert!(proj.join(".agents/skills/b/y/SKILL.md").is_file());
+    assert_add_refused(&home, &proj, "./.agents/skills/b", "b", &[]);
+}
 
+#[test]
+fn add_accepts_a_source_outside_every_recorded_output_path() {
+    let (tmp, home, proj, _src_a) = stage_removed_item_layout(false);
+    write_skill(&tmp.path().join("src-b/b"), "b", "# b");
+    add(&home, &proj, "../src-b");
+    assert!(proj.join(".claude/skills/b/SKILL.md").is_file());
+}
+
+/// Run `remove a` with `extra` and assert that it exits 1, names both
+/// items, and changes no file.
+fn assert_remove_refused(home: &Path, proj: &Path, extra: &[&str]) {
+    assert_remove_refused_for(home, proj, extra, "y");
+}
+
+/// As [`assert_remove_refused`], with the installed name `inner` of the
+/// item whose source holds the file.
+fn assert_remove_refused_for(home: &Path, proj: &Path, extra: &[&str], inner: &str) {
+    let before = files_under(proj);
+    let mut args = vec!["remove", "a", "--project"];
+    args.extend_from_slice(extra);
+    let assert = common::upskill_cmd(home)
+        .current_dir(proj)
+        .args(&args)
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    for part in [
+        format!("of the installed skill '{inner}' contains the recorded path"),
+        "of skill 'a'".to_string(),
+        format!("Remove skill '{inner}' first"),
+    ] {
+        assert!(
+            stderr.contains(part.as_str()),
+            "stderr lacks {part:?}: {stderr}"
+        );
+    }
+    assert_eq!(files_under(proj), before, "remove changed a file");
+}
+
+#[test]
+fn remove_refuses_to_delete_a_recorded_file_inside_the_source_of_another_item() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(true);
+    assert_remove_refused(&home, &proj, &[]);
+}
+
+#[test]
+fn remove_force_refuses_to_delete_a_recorded_file_inside_the_source_of_another_item() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(true);
+    assert_remove_refused(&home, &proj, &["--force"]);
+}
+
+#[test]
+fn remove_without_an_overlap_is_unchanged() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(false);
     common::upskill_cmd(&home)
         .current_dir(&proj)
-        .args(["update", "--project", "--yes"])
+        .args(["remove", "a", "--project"])
         .assert()
         .success();
-    assert!(!proj.join(".agents/skills/a/y/SKILL.md").exists());
+    assert!(!proj.join(".agents/skills/a").exists());
+    assert!(proj.join(".agents/skills/other/SKILL.md").is_file());
 }
 
 #[test]
@@ -595,4 +855,241 @@ fn update_does_not_protect_the_parent_of_a_deleted_recorded_directory_source() {
         .args(["update", "--project", "--yes", "a"])
         .assert()
         .success();
+}
+
+/// Rewrite the lockfile as schema 1 without `files` and `pending` records.
+fn downgrade_to_schema_1(root: &Path) {
+    let path = root.join(".upskill-lock.json");
+    let mut lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    lock["schema"] = 1.into();
+    for entry in lock["items"].as_array_mut().unwrap() {
+        let entry = entry.as_object_mut().unwrap();
+        entry.remove("files");
+        entry.remove("pending");
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+}
+
+#[test]
+fn update_with_a_schema_1_lockfile_refuses_to_delete_a_removed_item_file_inside_a_source() {
+    let (_tmp, home, proj, src_a) = stage_removed_item_layout(true);
+    downgrade_to_schema_1(&proj);
+    fs::remove_dir_all(src_a.join("a")).unwrap();
+    // `assert_update_refused` also compares the lockfile bytes, so the
+    // lockfile stays `schema: 1` and no backup file is written.
+    assert_update_refused_with(&home, &proj, &[], &update_deletes_parts("y"));
+}
+
+#[test]
+fn remove_with_a_schema_1_lockfile_refuses_to_delete_a_recorded_file_inside_a_source() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(true);
+    downgrade_to_schema_1(&proj);
+    assert_remove_refused(&home, &proj, &[]);
+}
+
+#[test]
+fn add_with_a_schema_1_lockfile_refuses_a_source_item_that_contains_a_recorded_file() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(false);
+    downgrade_to_schema_1(&proj);
+    assert_add_refused(&home, &proj, "./.agents/skills/a", "a", &[]);
+}
+
+#[test]
+fn remove_refuses_when_the_item_whose_source_holds_the_file_has_an_alias() {
+    let (_tmp, home, proj, _outer) = stage_layout(Layout {
+        alias: Some("y=z"),
+        ..ISSUE
+    });
+    assert_remove_refused_for(&home, &proj, &[], "z");
+}
+
+// On Windows, `std::path::absolute` resolves a `..` component, so the
+// recorded label has none and the case cannot be built there.
+#[cfg(unix)]
+#[test]
+fn remove_compares_a_source_path_spelled_with_a_parent_component() {
+    let (_tmp, home, proj, _outer) = stage_layout(Layout {
+        inner: "./.agents/skills/x/../a",
+        ..ISSUE
+    });
+    assert!(recorded_source(&proj, "items", "y").contains(".."));
+    assert_remove_refused(&home, &proj, &[]);
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_compares_a_source_path_spelled_through_a_symbolic_link() {
+    let (_tmp, home, proj, _outer) = stage_layout(Layout {
+        link: true,
+        ..ISSUE
+    });
+    assert!(recorded_source(&proj, "items", "y").contains("link"));
+    assert_remove_refused(&home, &proj, &[]);
+}
+
+/// Set the mode of `dir`, run `remove a` with `extra`, and restore the mode.
+#[cfg(unix)]
+fn assert_remove_fails_on_an_unreadable_source(extra: &[&str]) {
+    use std::os::unix::fs::PermissionsExt;
+    let (_tmp, home, proj, _outer) = stage_layout(ISSUE);
+    let dir = proj.join(".agents/skills/a");
+    let before = files_under(&proj);
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o333)).unwrap();
+    // A process that runs as root reads the directory despite the mode, so
+    // the test has nothing to check there.
+    if fs::read_dir(&dir).is_ok() {
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        eprintln!(
+            "skipped: this process can read {} despite mode 0o333",
+            dir.display()
+        );
+        return;
+    }
+    let mut args = vec!["remove", "a", "--project"];
+    args.extend_from_slice(extra);
+    let output = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(&args)
+        .output()
+        .unwrap();
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert_eq!(output.status.code(), Some(1), "{stderr}");
+    assert!(
+        stderr.contains("read the recorded source `local:") && stderr.contains(".agents/skills/a`"),
+        "{stderr}"
+    );
+    assert_eq!(files_under(&proj), before, "remove changed a file");
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_fails_when_a_recorded_source_that_exists_cannot_be_read() {
+    assert_remove_fails_on_an_unreadable_source(&[]);
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_force_fails_when_a_recorded_source_that_exists_cannot_be_read() {
+    assert_remove_fails_on_an_unreadable_source(&["--force"]);
+}
+
+/// The probe of the review of pull request #560. The project registry
+/// `.agents/skills` holds `q`; `q` is installed for OpenCode as `r`, so
+/// `.agents/skills/r` is both a recorded output of `r` and an item
+/// directory of the same source. Returns `(tmp, home, proj, bytes of r)`.
+fn stage_same_source() -> (tempfile::TempDir, PathBuf, PathBuf, Vec<u8>) {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    write_skill(&proj.join(".agents/skills/q"), "q", "# q");
+    fs::create_dir_all(proj.join(".agents/skills/x")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./.agents/skills", "--project", "--opencode"])
+        .args(["--as", "r"])
+        .assert()
+        .success();
+    let bytes = fs::read(proj.join(".agents/skills/r/SKILL.md")).unwrap();
+    (tmp, home, proj, bytes)
+}
+
+/// Add the source of [`stage_same_source`] again as `spelling`, excluding
+/// both items, so that the run installs nothing. The check of recorded files
+/// covers the items of another source only, so the run is not refused, and
+/// the recorded output of `r` is unchanged. No item is installed, so the
+/// conflict check does not apply and `--force` is not needed.
+fn assert_same_source_accepted(home: &Path, proj: &Path, spelling: &str, bytes: &[u8]) {
+    common::upskill_cmd(home)
+        .current_dir(proj)
+        .args(["add", spelling, "--project", "--claude"])
+        .args(["--exclude", "q", "--exclude", "r"])
+        .assert()
+        .success();
+    assert_eq!(
+        fs::read(proj.join(".agents/skills/r/SKILL.md")).unwrap(),
+        bytes
+    );
+}
+
+#[test]
+fn add_of_the_same_source_ignores_the_recorded_files_of_its_own_items() {
+    let (_tmp, home, proj, bytes) = stage_same_source();
+    assert_same_source_accepted(&home, &proj, "./.agents/skills", &bytes);
+}
+
+#[test]
+fn add_of_the_same_source_with_another_spelling_ignores_its_own_recorded_files() {
+    for spelling in ["./.agents/skills/", "./.agents/skills/x/.."] {
+        let (_tmp, home, proj, bytes) = stage_same_source();
+        assert_same_source_accepted(&home, &proj, spelling, &bytes);
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn add_of_the_same_source_through_a_symbolic_link_ignores_its_own_recorded_files() {
+    let (tmp, home, proj, bytes) = stage_same_source();
+    let link = tmp.path().join("skills-link");
+    std::os::unix::fs::symlink(proj.join(".agents/skills"), &link).unwrap();
+    assert_same_source_accepted(&home, &proj, &link.display().to_string(), &bytes);
+}
+
+#[test]
+fn remove_skips_a_recorded_local_source_that_does_not_exist() {
+    let (tmp, home, proj, _outer) = stage_layout(ISSUE);
+    let src_w = tmp.path().join("src-w");
+    write_skill(&src_w.join("w"), "w", "# w");
+    add(&home, &proj, "../src-w");
+    fs::remove_dir_all(&src_w).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["remove", "other", "--project"])
+        .assert()
+        .success();
+    assert!(!proj.join(".claude/skills/other").exists());
+}
+
+#[test]
+fn remove_refuses_also_when_the_recorded_file_inside_the_other_source_is_modified() {
+    // `remove` would keep the modified file, but the check compares every
+    // recorded file.
+    let (_tmp, home, proj, _outer) = stage_layout(ISSUE);
+    write_skill(&proj.join(".agents/skills/a/y"), "y", "# y, edited");
+    assert_remove_refused(&home, &proj, &[]);
+}
+
+#[cfg(unix)]
+#[test]
+fn remove_does_not_read_the_source_of_the_items_that_it_removes() {
+    use std::os::unix::fs::PermissionsExt;
+    // `remove` reads only the recorded local sources of the items that stay
+    // installed, so an unreadable source of the removed item does not fail.
+    let (tmp, home, proj, _outer) = stage_layout(ISSUE);
+    let src_w = tmp.path().join("src-w");
+    write_skill(&src_w.join("w"), "w", "# w");
+    add(&home, &proj, "../src-w");
+    fs::set_permissions(&src_w, fs::Permissions::from_mode(0o333)).unwrap();
+    // A process that runs as root reads the directory despite the mode, so
+    // the test has nothing to check there.
+    if fs::read_dir(&src_w).is_ok() {
+        fs::set_permissions(&src_w, fs::Permissions::from_mode(0o755)).unwrap();
+        eprintln!(
+            "skipped: this process can read {} despite mode 0o333",
+            src_w.display()
+        );
+        return;
+    }
+    let output = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["remove", "w", "--project"])
+        .output()
+        .unwrap();
+    fs::set_permissions(&src_w, fs::Permissions::from_mode(0o755)).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert_eq!(output.status.code(), Some(0), "{stderr}");
+    assert!(!proj.join(".claude/skills/w").exists());
 }

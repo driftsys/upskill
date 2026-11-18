@@ -122,11 +122,12 @@ marketplace: `claude plugin marketplace add driftsys/metapowers`, then
 `claude plugin install upskill@metapowers`. For Copilot CLI run
 `copilot plugin marketplace add driftsys/metapowers`, then
 `copilot plugin install upskill@metapowers`. Claude Code shows the line to the
-user and gives it to the agent; Copilot CLI gives it to the agent and does not
-display it, so the user may not have seen it. A hand-written hook that prints
-the plain line does not work: Claude Code does not display it and Copilot CLI
-ignores it. The plugin needs an `upskill` binary on `PATH` that has
-`update --notice`; without one it prints nothing.
+user and gives it to the agent; Copilot CLI gives it to the agent with a request
+to tell the user at the start of the first reply, and does not display it, so
+the user may not have seen it. A hand-written hook that prints the plain line
+does not work: Claude Code does not display it and Copilot CLI ignores it. The
+plugin needs an `upskill` binary on `PATH` that has `update --notice`; without
+one it prints nothing.
 
 When you receive the line:
 
