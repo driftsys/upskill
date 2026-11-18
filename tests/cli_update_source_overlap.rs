@@ -710,3 +710,77 @@ fn update_does_not_protect_the_parent_of_a_deleted_recorded_directory_source() {
         .assert()
         .success();
 }
+
+/// Rewrite the lockfile as schema 1 without `files` and `pending` records.
+fn downgrade_to_schema_1(root: &Path) {
+    let path = root.join(".upskill-lock.json");
+    let mut lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    lock["schema"] = 1.into();
+    for entry in lock["items"].as_array_mut().unwrap() {
+        let entry = entry.as_object_mut().unwrap();
+        entry.remove("files");
+        entry.remove("pending");
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+}
+
+#[test]
+fn update_with_a_schema_1_lockfile_refuses_to_delete_a_removed_item_file_inside_a_source() {
+    let (_tmp, home, proj, src_a) = stage_removed_item_layout(true);
+    downgrade_to_schema_1(&proj);
+    fs::remove_dir_all(src_a.join("a")).unwrap();
+    // `assert_update_refused` also compares the lockfile bytes, so the
+    // lockfile stays `schema: 1` and no backup file is written.
+    assert_update_refused(
+        &home,
+        &proj,
+        &[],
+        &["the source directory of skill 'y' (", "of skill 'a';"],
+    );
+}
+
+#[test]
+fn remove_with_a_schema_1_lockfile_refuses_to_delete_a_recorded_file_inside_a_source() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(true);
+    downgrade_to_schema_1(&proj);
+    assert_remove_refused(&home, &proj, &[]);
+}
+
+#[test]
+fn add_with_a_schema_1_lockfile_refuses_a_source_item_that_contains_a_recorded_file() {
+    let (_tmp, home, proj, _src_a) = stage_removed_item_layout(false);
+    downgrade_to_schema_1(&proj);
+    let before = files_under(&proj);
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./.agents/skills/a", "--project", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("of skill 'a';"), "{stderr}");
+    assert_eq!(files_under(&proj), before, "add changed a file");
+}
+
+#[test]
+fn add_of_the_same_source_with_another_spelling_of_its_path_is_not_refused() {
+    let (tmp, home, proj, _src_a) = stage_removed_item_layout(false);
+    // The lockfile records the source as `<proj>/../src-a`. Another spelling
+    // is a different label, which the conflict check refuses without
+    // `--force`; with `--force`, the recorded-file check must not refuse it.
+    let absolute = tmp.path().join("src-a");
+    for spelling in [absolute.display().to_string(), "../src-a/".to_string()] {
+        common::upskill_cmd(&home)
+            .current_dir(&proj)
+            .args([
+                "add",
+                &spelling,
+                "--project",
+                "--opencode",
+                "--claude",
+                "--force",
+            ])
+            .assert()
+            .success();
+    }
+}

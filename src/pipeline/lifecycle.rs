@@ -143,7 +143,10 @@ pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<Remove
 
 /// Refuse a `remove` when the source directory of another installed item,
 /// recorded from a local-path source, is inside, or contains, a recorded file
-/// of an item in `to_remove` (issue #550). The item directories are read as
+/// of an item in `to_remove` (issue #550). The recorded files are those of
+/// the lockfile after an adoption in memory (`adopt_schema1_in_memory`), so
+/// that a `schema: 1` lockfile is checked with the files that the adoption
+/// records; nothing is written. The item directories are read as
 /// in the overlap check of [`update`] (`collect_recorded_local_items`); a git
 /// source is not fetched, and a recorded source that cannot be read is
 /// skipped, because it holds no directory that the removal can delete.
@@ -157,8 +160,14 @@ fn check_removal_outside_sources(
             .iter()
             .any(|r| r.kind == e.kind && r.name == e.name)
     };
-    let recorded: Vec<super::output::RecordedPath> = to_remove
+    // The records are read after an adoption in memory, which writes
+    // nothing: a `schema: 1` lockfile has no `files` record before it.
+    let mut adopted_lock = lock.clone();
+    adopt_schema1_in_memory(target, &mut adopted_lock)?;
+    let recorded: Vec<super::output::RecordedPath> = adopted_lock
+        .items
         .iter()
+        .filter(|e| removed(e))
         .flat_map(super::output::recorded_paths)
         .collect();
     let others: Vec<&crate::lockfile::LockedItem> =
@@ -1161,12 +1170,23 @@ pub fn update(
         // The recorded files that the run deletes for an item that its
         // source no longer contains are checked against the same item
         // directories (issue #550).
+        // The records are read after an adoption in memory, which writes
+        // nothing: a `schema: 1` lockfile has no `files` record before it.
+        let mut adopted_lock = lock.clone();
+        adopt_schema1_in_memory(target, &mut adopted_lock)?;
         let mut deleted = Vec::new();
         for (_, source_entries, prepared) in &prepared_sources {
             let planned = prepared.planned_hashes();
             for entry in source_entries {
-                if !planned.contains_key(&(entry.kind, entry.name.clone())) {
-                    deleted.extend(super::output::recorded_paths(entry));
+                if planned.contains_key(&(entry.kind, entry.name.clone())) {
+                    continue;
+                }
+                if let Some(adopted) = adopted_lock
+                    .items
+                    .iter()
+                    .find(|i| i.kind == entry.kind && i.name == entry.name)
+                {
+                    deleted.extend(super::output::recorded_paths(adopted));
                 }
             }
         }

@@ -196,7 +196,10 @@ pub fn install_with_lockfile(
     // file of an item that the lockfile records from another source
     // (issue #550). Checked before the adoption and before any write.
     let label = source.to_string();
-    let lock = crate::lockfile::Lockfile::load(target)?;
+    // The records are read after an adoption in memory, which writes
+    // nothing: a `schema: 1` lockfile has no `files` record before it.
+    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    owned::adopt_schema1_in_memory(target, &mut lock)?;
     let recorded: Vec<output::RecordedPath> = lock
         .items
         .iter()

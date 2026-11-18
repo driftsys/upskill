@@ -759,7 +759,9 @@ code 1 when the source directory of another installed item, recorded from a
 local-path source, is inside, or contains, a recorded file of an item that it
 removes. The error names both items and asks you to remove the other item first.
 No file is deleted and the lockfile is not changed. A git source is not fetched
-for this check.
+for this check. With a `schema: 1` lockfile, this check and the checks of `add`
+and `update` above use the files that the adoption would record, without saving
+the adoption.
 
 `remove` adopts a `schema: 1` lockfile and prints the adoption notice, as
 described in [State files](#state-files). A name that is not in the lockfile is

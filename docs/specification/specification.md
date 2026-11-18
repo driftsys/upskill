@@ -127,7 +127,8 @@ client selection are not applied. The error names the item, its directory, the
 output path and the item of that output path. In the same way, and with the same
 error, `add` refuses a source whose item directory is inside, or contains, a
 file that the lockfile of the scope records (`files` or `pending`, §4) for an
-item from another source.
+item from another source. With a `schema: 1` lockfile, the recorded files are
+those that the adoption (§4) would record; the check saves nothing.
 
 Before any write, `add` classifies every destination of every item against the
 item's `files` and `pending` records (§4). A destination is a conflict when it
@@ -262,46 +263,48 @@ recorded in the lockfile that the run does not otherwise read. The same item
 directories are also compared with the recorded files (`files` and `pending`)
 that the run deletes for an item that its source no longer contains: a directory
 that is inside, or contains, such a file refuses the run with the error of §2.1
-and exit code 1, also in a dry run. A recorded directory source that no longer
-exists is skipped. For a recorded bundle file, also one that no longer exists,
-the items of the source directory that `add` resolves for it (§2.6) are
-protected; when that directory does not exist, nothing is protected for it. A
-recorded source that exists and cannot be read as a directory fails the step
-with an error that names its source label; the error suggests
-`upskill remove --source <label>` only when a lockfile item has that source. A
-git source is not fetched for this check; a skipped source (below) is protected
-by this rule as a recorded source that the run does not read. A source whose
-content cannot be fetched (a `git clone` that fails, for example because the
-host does not answer, the repository was deleted, the ref does not exist or the
-authentication is refused, or a local-path source whose path does not exist) is
-skipped, also when the source of a cross-source dependency that it requires
-cannot be fetched: none of its files is written, and its lockfile entries do not
-change, except the `files` record that the adoption of a `schema: 1` lockfile
-writes for every entry (see below); `update` prints on stderr, in every mode and
-also with `--quiet`, one line that names the source label, says that the source
-could not be fetched and was skipped, and gives the cause, and the other sources
-are handled. A prepared source whose plan would write an item that the lockfile
-records from a skipped source is skipped too, with a line that names its label,
-says that it was skipped (not that it could not be fetched), and names the item
-and the skipped source that the item comes from; this repeats until no further
-source is skipped. The run then exits with code 1, also when every other source
-was applied and in a dry run. After an interrupt, the prepare step fetches no
-further source and records no further skip, and the run exits with code 130; the
-lines of the sources skipped before the interrupt are still printed. Any other
-error in the prepare step stops the run before any source is applied. Then
-`update` handles the sources one at a time, sorted by source label. For each
-source it computes a preview from the fetched content, the files on disk and the
-lockfile, just before the source is applied. A preview **changes something**
-when applying the source writes or deletes a file, changes the lockfile record
-of an item (any field except `pending`, `required_by` and `commit`), completes
-an interrupted item (a non-empty `pending` record, §4), removes an item, or
-creates or changes a hand-shake file (§3.4). A write of a file that already
-holds the planned bytes is not a change, unless the executable bits (`0o111`) of
-the file differ from the target executable bits (Unix only): each executable bit
-of the source resource for which the file has the matching read bit (owner,
-group, other). The apply sets the executable bits to the target, so the file is
-a change. A difference in the other permission bits is not a change. A `skip`
-item and a `kept modified file` note are not changes.
+and exit code 1, also in a dry run. With a `schema: 1` lockfile, the recorded
+files are those that the adoption (§4) would record; the check saves nothing. A
+recorded directory source that no longer exists is skipped. For a recorded
+bundle file, also one that no longer exists, the items of the source directory
+that `add` resolves for it (§2.6) are protected; when that directory does not
+exist, nothing is protected for it. A recorded source that exists and cannot be
+read as a directory fails the step with an error that names its source label;
+the error suggests `upskill remove --source <label>` only when a lockfile item
+has that source. A git source is not fetched for this check; a skipped source
+(below) is protected by this rule as a recorded source that the run does not
+read. A source whose content cannot be fetched (a `git clone` that fails, for
+example because the host does not answer, the repository was deleted, the ref
+does not exist or the authentication is refused, or a local-path source whose
+path does not exist) is skipped, also when the source of a cross-source
+dependency that it requires cannot be fetched: none of its files is written, and
+its lockfile entries do not change, except the `files` record that the adoption
+of a `schema: 1` lockfile writes for every entry (see below); `update` prints on
+stderr, in every mode and also with `--quiet`, one line that names the source
+label, says that the source could not be fetched and was skipped, and gives the
+cause, and the other sources are handled. A prepared source whose plan would
+write an item that the lockfile records from a skipped source is skipped too,
+with a line that names its label, says that it was skipped (not that it could
+not be fetched), and names the item and the skipped source that the item comes
+from; this repeats until no further source is skipped. The run then exits with
+code 1, also when every other source was applied and in a dry run. After an
+interrupt, the prepare step fetches no further source and records no further
+skip, and the run exits with code 130; the lines of the sources skipped before
+the interrupt are still printed. Any other error in the prepare step stops the
+run before any source is applied. Then `update` handles the sources one at a
+time, sorted by source label. For each source it computes a preview from the
+fetched content, the files on disk and the lockfile, just before the source is
+applied. A preview **changes something** when applying the source writes or
+deletes a file, changes the lockfile record of an item (any field except
+`pending`, `required_by` and `commit`), completes an interrupted item (a
+non-empty `pending` record, §4), removes an item, or creates or changes a
+hand-shake file (§3.4). A write of a file that already holds the planned bytes
+is not a change, unless the executable bits (`0o111`) of the file differ from
+the target executable bits (Unix only): each executable bit of the source
+resource for which the file has the matching read bit (owner, group, other). The
+apply sets the executable bits to the target, so the file is a change. A
+difference in the other permission bits is not a change. A `skip` item and a
+`kept modified file` note are not changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action
@@ -583,10 +586,12 @@ item recorded from a local-path source is inside, or contains, a recorded file
 (`files` or `pending`) of an item that it removes; the error names both items
 and asks to remove the other item first, no file is deleted and the lockfile is
 not changed. A git source is not fetched for this check, and a recorded source
-that cannot be read as a directory is skipped. The lockfile entry of each
-removed item is dropped. `remove` adopts a `schema: 1` lockfile and prints the
-adoption notice, except when a name is not in the lockfile, which is an error,
-and when the check above refuses it.
+that cannot be read as a directory is skipped. With a `schema: 1` lockfile, the
+recorded files are those that the adoption (§4) would record; the check runs
+before the adoption and saves nothing. The lockfile entry of each removed item
+is dropped. `remove` adopts a `schema: 1` lockfile and prints the adoption
+notice, except when a name is not in the lockfile, which is an error, and when
+the check above refuses it.
 
 ### 2.4 `list` / `doctor`
 
