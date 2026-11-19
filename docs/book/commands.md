@@ -1190,8 +1190,11 @@ All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force` deletes
 and rebuilds that directory, including removal of files from an earlier run. A
 file or symbolic link at the client directory path is refused even with
-`--force`. An unknown bundle fails with exit code 1. A failed write after
-`--force` can leave the directory incomplete; run `pack` again.
+`--force`. An unknown bundle fails with exit code 1. Each client directory is
+first written in full to a staging directory next to it,
+`.<bundle>-<client>.upskill-stage`. A failed write removes the staging
+directories and leaves every client directory unchanged. When all are written,
+each staging directory replaces its client directory.
 
 `--source` must parse as an install source, must not start with a hyphen and
 must contain only ASCII letters, digits and `/ @ : . _ - ~ +`. Whitespace and

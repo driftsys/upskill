@@ -204,6 +204,11 @@ pub fn build(
 
 /// Check all target directories, then write each plugin directory.
 /// Return the path and file count of each written directory.
+///
+/// Each directory is first written in full to a staging directory next to
+/// its target (`.<name>.upskill-stage`). A failed write removes every
+/// staging directory and leaves every target unchanged. When all directories
+/// are written, each staging directory replaces its target by a rename.
 pub fn write_plugin_dirs(
     out: &Path,
     dirs: &[PluginDir],
@@ -225,27 +230,54 @@ pub fn write_plugin_dirs(
             Err(error) => return Err(error.into()),
         }
     }
+    let stages: Vec<PathBuf> = dirs
+        .iter()
+        .map(|directory| out.join(format!(".{}.upskill-stage", directory.dir_name)))
+        .collect();
+    let staged = dirs
+        .iter()
+        .zip(&stages)
+        .try_for_each(|(directory, stage)| write_stage(stage, directory));
+    if let Err(error) = staged {
+        for stage in &stages {
+            let _ = std::fs::remove_dir_all(stage);
+        }
+        return Err(error);
+    }
     let mut written = Vec::new();
-    for directory in dirs {
+    for (directory, stage) in dirs.iter().zip(&stages) {
         let target = out.join(&directory.dir_name);
-        if force && std::fs::symlink_metadata(&target).is_ok() {
+        if std::fs::symlink_metadata(&target).is_ok() {
             std::fs::remove_dir_all(&target)
                 .with_context(|| format!("removing {}", target.display()))?;
         }
-        for file in &directory.files {
-            let path = target.join(&file.rel);
-            std::fs::create_dir_all(path.parent().expect("output file has a parent"))?;
-            std::fs::write(&path, &file.bytes)
-                .with_context(|| format!("writing {}", path.display()))?;
-            #[cfg(unix)]
-            if let Some(mode) = file.mode {
-                use std::os::unix::fs::PermissionsExt;
-                std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode))?;
-            }
-        }
+        std::fs::rename(stage, &target)
+            .with_context(|| format!("renaming {} to {}", stage.display(), target.display()))?;
         written.push((target, directory.files.len()));
     }
     Ok(written)
+}
+
+/// Write the files of `directory` under `stage`, after the removal of a
+/// staging directory that an earlier run left.
+fn write_stage(stage: &Path, directory: &PluginDir) -> Result<()> {
+    if std::fs::symlink_metadata(stage).is_ok() {
+        std::fs::remove_dir_all(stage).with_context(|| format!("removing {}", stage.display()))?;
+    }
+    std::fs::create_dir_all(stage).with_context(|| format!("creating {}", stage.display()))?;
+    for file in &directory.files {
+        let path = stage.join(&file.rel);
+        std::fs::create_dir_all(path.parent().expect("output file has a parent"))
+            .with_context(|| format!("creating the directory of {}", path.display()))?;
+        std::fs::write(&path, &file.bytes)
+            .with_context(|| format!("writing {}", path.display()))?;
+        #[cfg(unix)]
+        if let Some(mode) = file.mode {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode))?;
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -257,6 +289,79 @@ mod tests {
             "../tests/fixtures/pack/registry/demo.bundle.yaml"
         ))
         .unwrap()
+    }
+
+    fn plugin_dir(name: &str, files: &[(&str, &str)]) -> PluginDir {
+        PluginDir {
+            dir_name: name.into(),
+            files: files
+                .iter()
+                .map(|(rel, text)| PackFile {
+                    rel: PathBuf::from(rel),
+                    bytes: text.as_bytes().to_vec(),
+                    mode: None,
+                })
+                .collect(),
+        }
+    }
+
+    /// The names in `out`, sorted, and the content of `<dir>/old.txt`.
+    fn state(out: &Path) -> (Vec<String>, Vec<String>) {
+        let mut names: Vec<String> = std::fs::read_dir(out)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        let old = names
+            .iter()
+            .map(|n| std::fs::read_to_string(out.join(n).join("old.txt")).unwrap_or_default())
+            .collect();
+        (names, old)
+    }
+
+    #[test]
+    fn force_failure_on_the_second_client_leaves_both_directories_unchanged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let out = tmp.path();
+        for name in ["b-claude", "b-copilot"] {
+            std::fs::create_dir_all(out.join(name)).unwrap();
+            std::fs::write(out.join(name).join("old.txt"), name).unwrap();
+        }
+        let before = state(out);
+        // `x/y` needs a directory `x`, but `x` is a file: the write fails.
+        let dirs = [
+            plugin_dir("b-claude", &[("new.txt", "new")]),
+            plugin_dir("b-copilot", &[("x", "file"), ("x/y", "fails")]),
+        ];
+        assert!(write_plugin_dirs(out, &dirs, true).is_err());
+        assert_eq!(state(out), before);
+    }
+
+    #[test]
+    fn force_replaces_each_directory_and_leaves_no_staging_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let out = tmp.path();
+        std::fs::create_dir_all(out.join("b-claude")).unwrap();
+        std::fs::write(out.join("b-claude").join("old.txt"), "old").unwrap();
+        // A staging directory that an earlier run left.
+        std::fs::create_dir_all(out.join(".b-claude.upskill-stage")).unwrap();
+        std::fs::write(out.join(".b-claude.upskill-stage").join("stale.txt"), "x").unwrap();
+        let dirs = [
+            plugin_dir("b-claude", &[("a/new.txt", "new")]),
+            plugin_dir("b-copilot", &[("new.txt", "new")]),
+        ];
+        let written = write_plugin_dirs(out, &dirs, true).unwrap();
+        assert_eq!(written.len(), 2);
+        assert_eq!(
+            state(out).0,
+            vec!["b-claude".to_string(), "b-copilot".to_string()]
+        );
+        assert!(!out.join("b-claude").join("old.txt").exists());
+        assert!(!out.join("b-claude").join("stale.txt").exists());
+        assert_eq!(
+            std::fs::read_to_string(out.join("b-claude").join("a/new.txt")).unwrap(),
+            "new"
+        );
     }
 
     #[test]
