@@ -27,7 +27,7 @@ fn write_skill(dir: &Path, name: &str) {
     .unwrap();
 }
 
-/// Every file under `dir`, relative to `dir`, sorted.
+/// Every file and directory under `dir`, relative to `dir`, sorted.
 fn files_under(dir: &Path) -> Vec<PathBuf> {
     fn walk(base: &Path, dir: &Path, out: &mut Vec<PathBuf>) {
         let Ok(entries) = fs::read_dir(dir) else {
@@ -36,6 +36,7 @@ fn files_under(dir: &Path) -> Vec<PathBuf> {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
+                out.push(path.strip_prefix(base).unwrap().to_path_buf());
                 walk(base, &path, out);
             } else {
                 out.push(path.strip_prefix(base).unwrap().to_path_buf());
@@ -103,7 +104,8 @@ fn add_of_an_item_directory_is_refused_and_writes_nothing() {
 }
 
 /// R3: a single-item source that is itself an output path is refused, the
-/// path is named and nothing is written.
+/// path is named, no `add <parent>` command is suggested, and nothing is
+/// written.
 #[test]
 fn add_of_an_installed_output_item_directory_is_refused() {
     let (tmp, home, _project) = env();
@@ -117,10 +119,208 @@ fn add_of_an_installed_output_item_directory_is_refused() {
         .code(1);
     let stderr = stderr_of(&assert);
     assert!(
-        stderr.contains(&format!("source {} is an item directory", item.display())),
+        stderr.contains(&format!(
+            "{} is an output path that upskill installs, not a source. Add the item from the \
+             source registry that it was installed from",
+            item.display()
+        )),
         "{stderr}"
     );
+    assert!(!stderr.contains("Use instead"), "{stderr}");
     assert_eq!(files_under(&home), before);
+}
+
+fn write_entry(dir: &Path, file: &str, name: &str) {
+    fs::create_dir_all(dir).unwrap();
+    fs::write(
+        dir.join(file),
+        format!("---\nname: {name}\ndescription: Use for testing add of an item directory\n---\n\nBody.\n"),
+    )
+    .unwrap();
+}
+
+/// Run `add <dir> --project --claude` in `project`; assert exit 1, nothing
+/// written, and return stderr.
+fn assert_refused(home: &Path, project: &Path, dir: &Path) -> String {
+    let before = files_under(project);
+    let assert = common::upskill_cmd(home)
+        .current_dir(project)
+        .args(["add", dir.to_str().unwrap(), "--project", "--claude"])
+        .assert()
+        .code(1);
+    assert_eq!(files_under(project), before, "files were written");
+    stderr_of(&assert)
+}
+
+/// R2 for the other entrypoints: the name in the suggested command is the
+/// name that `add <parent> <name>` accepts, and the suggestion succeeds.
+#[test]
+fn add_of_a_rule_or_agent_directory_is_refused_with_a_working_command() {
+    for (file, kind_dir) in [("RULE.md", "rules"), ("AGENT.md", "agents")] {
+        let (_tmp, home, project) = env();
+        let parent = project.join("reg");
+        let item = parent.join("folder");
+        write_entry(&item, file, "front");
+        let stderr = assert_refused(&home, &project, &item);
+        assert!(
+            stderr.contains(&format!("(it holds {file})")),
+            "{file}: {stderr}"
+        );
+        let suggested = format!("upskill add {} front", parent.display());
+        assert!(stderr.contains(&suggested), "{file}: {stderr}");
+        common::upskill_cmd(&home)
+            .current_dir(&project)
+            .args([
+                "add",
+                parent.to_str().unwrap(),
+                "front",
+                "--project",
+                "--claude",
+            ])
+            .assert()
+            .success();
+        assert!(
+            project.join(".claude").join(kind_dir).exists(),
+            "{file}: the suggested command installed nothing"
+        );
+    }
+}
+
+/// An item directory with an item in a grandchild directory is a source.
+#[test]
+fn add_of_an_item_directory_with_a_grandchild_item_is_accepted() {
+    let (_tmp, home, project) = env();
+    let src = project.join("src");
+    write_skill(&src, "src");
+    write_skill(&src.join("cat/bar"), "bar");
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args(["add", src.to_str().unwrap(), "--project", "--claude"])
+        .assert()
+        .success();
+    assert!(project.join(".claude/skills/bar/SKILL.md").is_file());
+}
+
+/// An item directory that holds a bundle file, or a bundle that a given name
+/// matches, is a source.
+#[test]
+fn add_of_an_item_directory_with_a_bundle_is_accepted() {
+    for (bundle_rel, names) in [
+        ("meta.bundle.yaml", vec![]),
+        ("bundles/meta.bundle.yaml", vec!["meta"]),
+    ] {
+        let (tmp, home, project) = env();
+        let dep = tmp.path().join("dep");
+        write_skill(&dep.join("q"), "q");
+        fs::write(
+            dep.join("dep.bundle.yaml"),
+            "schema: 1\nname: dep\ndescription: d\nitems:\n  skills:\n  - q\n",
+        )
+        .unwrap();
+        let reg = project.join("reg");
+        write_skill(&reg, "reg");
+        let bundle = reg.join(bundle_rel);
+        fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+        fs::write(
+            &bundle,
+            format!(
+                "schema: 1\nname: meta\ndescription: d\nitems: {{}}\nrequires:\n  - {{ name: dep, source: {} }}\n",
+                dep.display()
+            ),
+        )
+        .unwrap();
+        let mut args = vec!["add".to_string(), reg.to_str().unwrap().to_string()];
+        args.extend(names.iter().map(|n| n.to_string()));
+        args.extend(["--project".into(), "--claude".into()]);
+        common::upskill_cmd(&home)
+            .current_dir(&project)
+            .args(&args)
+            .assert()
+            .success();
+        // Without a name, `add` installs the items of the directory and not
+        // its bundles, as before: it is only not refused.
+        if !names.is_empty() {
+            assert!(
+                project.join(".claude/skills/q/SKILL.md").is_file(),
+                "{bundle_rel}: q not installed"
+            );
+        }
+    }
+}
+
+/// The suggested command quotes a parent with a space and has no `..`.
+#[test]
+fn suggested_command_is_quoted_and_normalised() {
+    let (_tmp, home, project) = env();
+    let parent = project.join("my reg");
+    write_skill(&parent.join("foo"), "foo");
+    fs::create_dir_all(parent.join("other")).unwrap();
+    let spelled = parent.join("other/../foo");
+    let stderr = assert_refused(&home, &project, &spelled);
+    assert!(
+        stderr.contains(&format!("upskill add '{}' foo", parent.display())),
+        "{stderr}"
+    );
+}
+
+/// The base message stays for a plain tree whose source root is inside a
+/// client directory: no symbolic link exists.
+#[test]
+fn overlap_in_a_plain_client_directory_keeps_the_base_message() {
+    let (tmp, home, _project) = env();
+    let registry = home.join(".claude/skills");
+    write_skill(&registry.join("x"), "x");
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", registry.to_str().unwrap(), "--global", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = stderr_of(&assert);
+    assert!(
+        stderr.contains("A source must not be rooted in a client directory or contain one"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("symbolic link"), "{stderr}");
+}
+
+/// Run `add <registry> --project --claude` and assert the symbolic-link
+/// message.
+fn assert_link_message(home: &Path, project: &Path, registry: &Path) {
+    let assert = common::upskill_cmd(home)
+        .current_dir(project)
+        .args(["add", registry.to_str().unwrap(), "--project", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = stderr_of(&assert);
+    assert!(
+        stderr.contains("is or passes through a symbolic link into the source root"),
+        "{stderr}"
+    );
+    assert!(
+        !stderr.contains("A source must not be rooted in a client directory"),
+        "{stderr}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn overlap_through_a_linked_middle_directory_names_the_link() {
+    let (tmp, home, project) = env();
+    let registry = tmp.path().join("registry");
+    write_skill(&registry.join("skills/x"), "x");
+    fs::create_dir_all(project.join(".claude")).unwrap();
+    std::os::unix::fs::symlink(registry.join("skills"), project.join(".claude/skills")).unwrap();
+    assert_link_message(&home, &project, &registry);
+}
+
+#[cfg(unix)]
+#[test]
+fn overlap_through_a_linked_client_directory_names_the_link() {
+    let (tmp, home, project) = env();
+    let registry = tmp.path().join("registry");
+    write_skill(&registry.join("skills/x"), "x");
+    std::os::unix::fs::symlink(&registry, project.join(".claude")).unwrap();
+    assert_link_message(&home, &project, &registry);
 }
 
 /// R4: when an output path is a hand-made symbolic link into the source

@@ -169,10 +169,10 @@ pub(super) fn check_source_outside_outputs(
                 if let Some((owned, client_dir, link)) =
                     output_inside_root(&target, &source, &root, rels)
                 {
-                    // The output path resolves into the source root, but the
-                    // client directory does not: a symbolic link below the
-                    // client directory points into the source root.
-                    if !canonical(&client_dir).starts_with(&root) {
+                    // A symbolic link on the output path (the client
+                    // directory or a directory or file below it) points into
+                    // the source root.
+                    if has_link_between(&client_dir, &link) {
                         anyhow::bail!(
                             "{prefix} The output path {} under the client directory {} is or \
                              passes through a symbolic link into the source root {}. Remove the \
@@ -200,6 +200,25 @@ pub(super) fn check_source_outside_outputs(
         }
     }
     Ok(())
+}
+
+/// True when `dir` is the same as, or is inside, a path that an install in
+/// `at` writes for `(kind, name)` for any client. Paths are compared in
+/// canonical form when they exist.
+pub(super) fn is_inside_output_path(
+    at: &ScopeRoot,
+    kind: ItemKind,
+    name: &str,
+    dir: &Path,
+) -> bool {
+    let canonical = |p: &Path| fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    let dir = canonical(dir);
+    let target = canonical(&at.root);
+    ALL_CLIENTS.into_iter().any(|client| {
+        checked_output_paths(at.scope, kind, client, name)
+            .iter()
+            .any(|rel| dir.starts_with(canonical(&target.join(rel))))
+    })
 }
 
 /// The per-item paths, relative to the scope root, that an install in
@@ -426,6 +445,26 @@ pub(super) fn check_outside_recorded_paths(
             rec.name
         ),
     }
+}
+
+/// True when `top`, or a path from `top` down to `path` (included), is a
+/// symbolic link. `path` must be below `top`.
+fn has_link_between(top: &Path, path: &Path) -> bool {
+    let is_link = |p: &Path| fs::symlink_metadata(p).is_ok_and(|m| m.file_type().is_symlink());
+    let Ok(rest) = path.strip_prefix(top) else {
+        return false;
+    };
+    let mut cursor = top.to_path_buf();
+    if is_link(&cursor) {
+        return true;
+    }
+    for component in rest.components() {
+        cursor.push(component);
+        if is_link(&cursor) {
+            return true;
+        }
+    }
+    false
 }
 
 /// Find an output path that contains `source` (or is `source`) and is inside

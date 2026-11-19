@@ -422,6 +422,13 @@ mod tests {
     }
 
     #[test]
+    fn parse_local_path_dot_alone() {
+        let source = parse_install_source(".").expect("must parse");
+        let expected = std::path::absolute(".").unwrap();
+        assert_eq!(source, InstallSource::LocalPath(expected));
+    }
+
+    #[test]
     fn parse_local_path_dot_dot_slash() {
         let source = parse_install_source("../shared/skills").expect("must parse");
         let expected = std::path::absolute("../shared/skills").unwrap();
