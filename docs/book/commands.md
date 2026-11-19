@@ -232,10 +232,13 @@ and add them from there.
 client-native plugins by shelling out to each client's own CLI
 (`claude plugin install`, `copilot plugin install`, `code
 --install-extension`,
-`opencode plugin`) — they are **not** rendered through the generation pipeline.
-If a client's CLI is not on `PATH`, the plugin is skipped (not an error) and
-recorded as `skipped` in the lockfile; `upskill doctor` reports skipped and
-missing plugins. Removing the bundle cleans up its plugins.
+`opencode plugin add`, which needs opencode 2 or later) — they are **not**
+rendered through the generation pipeline. A `plugin_uri` opencode plugin is
+written into the `plugin` array of `opencode.json` instead. If a client's CLI is
+not on `PATH`, or `opencode --version` reports a major version below 2, the
+plugin is skipped (not an error, with a warning) and recorded as `skipped` in
+the lockfile; `upskill doctor` reports skipped and missing plugins. Removing the
+bundle cleans up its plugins.
 
 **Bundle MCP servers.** When a bundle declares an `mcps:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` configures those
@@ -504,7 +507,21 @@ removed, but files were written or deleted, it prints
 `Changed <n> file(s) written or deleted`. It prints
 `everything is up to date — nothing to do` when nothing changed, no item was
 skipped, no source was skipped, no file was kept with a note and no lockfile was
-adopted. An item of a skipped source has the status line
+adopted. `update` prints the plugin results of the plugin step of each applied
+source and of the plugin repair (a recorded plugin that `doctor` reports
+missing, or one recorded as skipped, that the apply did not attempt) with the
+printer of `add`, once per attempted plugin: `Plugins: <n> plugin(s) installed`
+with one line per plugin on stdout, and on stderr, one line per plugin:
+`info: plugin <name> (<client>) — manual step required` followed by its
+instructions line, `warning: plugin <name> skipped — <client> CLI not found`,
+`warning: plugin <name> skipped — opencode 2 or later is needed, found:
+<version>`,
+and `warning: plugin <name> (<client>) failed (exit <code>):
+<stderr>`. A plugin
+install is not an item change, so a run whose only change is a plugin install
+prints these lines and then `everything is up to date — nothing to do`. A plugin
+install that fails prints a warning on stderr and does not change the exit code,
+as for `add`. An item of a skipped source has the status line
 `skipped — source not reachable` when its source could not be fetched, and
 `skipped — requires a source that was skipped` when its source requires an item
 of a skipped source.
@@ -550,24 +567,28 @@ The plugin and MCP steps of a bundle source run when the source is applied
 without a kind restriction. `update` skips both steps for a source under a kind
 restriction. They are not part of the preview and are not a reason to ask. A
 terminal run does not apply a source whose preview changes nothing, so it does
-not repair a missing plugin or MCP registration of that source; `upskill doctor`
-reports it and `update --yes` repairs it for a source without a kind
-restriction. A change of only the `required_by` field of an item record is not
-shown as a change and does not cause a question; it is saved when the source is
-applied, and also when the preview of the source changes nothing. It is not
-saved with `--dry-run` or for a source that the answer did not apply.
-`required_by` is refreshed when `add` writes its install, when `update` applies
-a source, and when `update` does not apply a source whose preview changes
-nothing; a dry run, a declined source and a source at which the run stops
-refresh nothing. A refresh computes `required_by` of every lockfile entry again,
-and rewrites an entry only where the new value differs. An install by item
-names, or of a whole directory source, evaluates every item in its item closure
-as a requirer, including required items. A bundle install, and a request that
-also names a bundle (resolved by name), evaluate no requirer. An update of a
-directory source with recorded bundles evaluates every item in the merged bundle
-and direct-item closure, including bundle members even when there are no direct
-items. The bundle closure itself contributes no item-level `requires` edges. A
-kind restriction retains only items of the selected kinds in the closure; a
+not repair a missing MCP registration of that source; `upskill doctor` reports
+it and `update --yes` repairs it for a source without a kind restriction. A
+plugin that `doctor` reports missing, or that the lockfile records as `skipped`,
+is installed again also for a source whose preview changes nothing, in a
+terminal run as well, but not for a source under a kind restriction, not for a
+source that the answer did not apply and not with `--dry-run` or `--check`. A
+change of only the `required_by` field of an item record is not shown as a
+change and does not cause a question; it is saved when the source is applied,
+and also when the preview of the source changes nothing. It is not saved with
+`--dry-run` or for a source that the answer did not apply. `required_by` is
+refreshed when `add` writes its install, when `update` applies a source, and
+when `update` does not apply a source whose preview changes nothing; a dry run,
+a declined source and a source at which the run stops refresh nothing. A refresh
+computes `required_by` of every lockfile entry again, and rewrites an entry only
+where the new value differs. An install by item names, or of a whole directory
+source, evaluates every item in its item closure as a requirer, including
+required items. A bundle install, and a request that also names a bundle
+(resolved by name), evaluate no requirer. An update of a directory source with
+recorded bundles evaluates every item in the merged bundle and direct-item
+closure, including bundle members even when there are no direct items. The
+bundle closure itself contributes no item-level `requires` edges. A kind
+restriction retains only items of the selected kinds in the closure; a
 restricted update leaves `required_by` unchanged on entries it does not plan,
 also in other sources. Within the entries being refreshed, an evaluated requirer
 is removed and added back where it still requires the item (also an item that
@@ -956,16 +977,33 @@ scope. For each scope it reports eleven independent buckets:
   dependency of items that are no longer installed. Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
   found in the client. Likely uninstalled out-of-band; `upskill update --yes`
-  reinstalls them for a source without a kind restriction. A run in a terminal
-  applies a source only when its preview changes something, and the plugin and
-  MCP steps are not part of the preview. A source under a kind restriction skips
-  both steps. Causes exit 1.
+  reinstalls them, also when no item changed, for a source without a kind
+  restriction (a source under a kind restriction skips the plugin and MCP
+  steps). An opencode plugin installed by a write to `opencode.json`
+  (`plugin_uri`, recorded with `config_write`) is checked in the scope's
+  `opencode.json` only, and `doctor` runs no opencode command for it, with any
+  opencode version or none. For another opencode plugin, an identifier in that
+  `plugin` array means installed; otherwise `doctor` runs
+  `opencode plugin list`. With opencode below version 2, `doctor` runs no
+  `opencode plugin` command and does not report that plugin missing. `update`
+  runs over the sources of the recorded items, so it does not reach a plugin
+  whose bundle's recorded source is the source of no recorded item (for example
+  a bundle with `items: {}`); for such a plugin, and for a plugin of a source
+  under a kind restriction, `doctor` names, on the plugin's line, the
+  `upskill add` command that installs it again. That command has no `--kind`, so
+  it also removes the kind restriction of the bundle. Causes exit 1.
 - **Skipped plugins** (informational) — recorded as `skipped` because the client
-  CLI was not on PATH at install time. Install the CLI then run
-  `upskill update --yes` to install them. A run in a terminal applies a source
-  only when its preview changes something, and the plugin and MCP steps are not
-  part of the preview. A source under a kind restriction skips both steps. Does
-  **not** cause exit 1.
+  CLI was not on PATH at install time, or `opencode --version` reported a major
+  version below 2 (or no version). Install the CLI, or opencode 2 or later, then
+  run `upskill update --yes`: it tries again every skipped plugin of a bundle
+  that the lockfile records for a source of the run, also when no item changed
+  and not for a source under a kind restriction, and records it as `installed`
+  when the install succeeds. When the CLI is still absent or opencode is still
+  below 2, the plugin stays `skipped` and the warning of `add` is printed again.
+  `update <name>` covers only the sources of the named items. A plugin that
+  needs a manual step (status `instructions`) is listed here too and keeps its
+  instructions: `update` runs no install for it, and prints its instructions
+  again when it applies the source. Does **not** cause exit 1.
 - **MCP servers** — each Claude-client MCP entry in the lockfile is checked
   against `claude mcp list`. A server in the lockfile but **not registered** in
   the client causes exit 1 (`upskill update --yes` reconfigures it; a run in a
@@ -1049,7 +1087,8 @@ Each element of `scopes` has these keys besides `scope` and `root`:
   ],
   "missing_plugins": [
     { "name": "superpowers", "client": "vscode",
-      "identifier": "anthropic.superpowers", "bundle": "baseline" }
+      "identifier": "anthropic.superpowers", "bundle": "baseline",
+      "repair_command": "upskill add ./registry baseline --project" }
   ],
   "skipped_plugins": [
     { "name": "superpowers", "client": "claude",
@@ -1074,7 +1113,11 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 `"ok"`, `"not-registered"`, `"cli-not-found"`, or
 `{ "query-failed": { "stderr": "..." } }`. The plugin and item arrays are always
 present (possibly empty); `mcp_entries` is omitted when no MCP servers are
-recorded.
+recorded. An entry of `missing_plugins` or `skipped_plugins` has the key
+`repair_command` only when `update` does not install the plugin (no recorded
+item comes from the recorded source of its bundle, or that source is under a
+kind restriction); the value is the `upskill add` command that installs it
+again.
 
 ### `upskill search <query>`
 

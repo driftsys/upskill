@@ -401,6 +401,51 @@ fn remove_selected(
     Ok(report)
 }
 
+/// The `upskill add` command that installs again the plugins of `bundle`,
+/// when `update` cannot. There are two cases. The lockfile records the
+/// bundle's source, but no item from it, and `update` runs over the sources
+/// of the recorded items. Or the source is under a kind restriction
+/// ([`source_is_kind_restricted`]), for which `update` runs no plugin step
+/// and no plugin repair; the command has no `--kind`, so it also removes the
+/// kind restriction of the bundle. `None` in every other case, and when the
+/// bundle is not recorded.
+fn add_command_for_bundle(
+    at: &ScopeRoot,
+    lock: &crate::lockfile::Lockfile,
+    bundle: &str,
+) -> Option<String> {
+    let recorded = lock.bundles.iter().find(|b| b.name == bundle)?;
+    if lock.items.iter().any(|i| i.source == recorded.source)
+        && !source_is_kind_restricted(lock, &recorded.source)
+    {
+        return None;
+    }
+    let label = recorded.source.as_str();
+    let source = label
+        .strip_prefix("local:")
+        .or_else(|| label.strip_prefix("github:"))
+        .unwrap_or(label);
+    let name = if label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
+        String::new()
+    } else {
+        format!(" {bundle}")
+    };
+    Some(format!("upskill add {source}{name} --{}", at.scope))
+}
+
+/// Whether `update` applies a kind restriction to `source`: the lockfile
+/// records at least one bundle for it, and every such bundle has recorded
+/// kinds (`add --kind`). With one unrestricted bundle, no restriction
+/// applies.
+fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> bool {
+    let mut recorded = lock
+        .bundles
+        .iter()
+        .filter(|b| b.source == source)
+        .peekable();
+    recorded.peek().is_some() && recorded.all(|b| !b.kinds.is_empty())
+}
+
 /// Verify installed-state consistency against `.upskill-lock.json`.
 /// The report has these buckets:
 /// - **missing outputs** — file paths the lockfile says should exist
@@ -427,7 +472,8 @@ fn remove_selected(
 /// - **missing plugins** — plugins recorded as installed that the client
 ///   no longer has.
 /// - **skipped plugins** (advisory) — plugins that were never installed
-///   because the client CLI was missing.
+///   because the client CLI was missing, or opencode was below version 2 or
+///   gave no version.
 /// - **MCP entries** — MCP server reconciliation against each client.
 /// - **interrupted** — items with a non-empty `pending` record: an `add` or
 ///   `update` failed or was stopped between its first and its last write.
@@ -624,16 +670,13 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     // installed plugin list.
     //
     // Two buckets:
-    // - skipped_plugins: status == Skipped (CLI was absent at install time).
+    // - skipped_plugins: status == Skipped (CLI was absent, or opencode was
+    //   below version 2, at install time).
     //   Always surface; does not affect is_clean().
     // - missing_plugins: status == Installed but the client no longer has the
     //   plugin.  This is drift → is_clean() returns false → exit 1.
     for plugin in &lock.plugins {
         use crate::lockfile::PluginInstallStatus;
-        use crate::plugin::{
-            PluginScope, check_claude_plugin_installed, check_opencode_plugin_installed,
-            check_vscode_extension_installed,
-        };
 
         match &plugin.status {
             PluginInstallStatus::Skipped | PluginInstallStatus::Instructions => {
@@ -645,33 +688,19 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     client: plugin.client.clone(),
                     identifier: plugin.identifier.clone(),
                     bundle: plugin.bundle.clone(),
+                    repair_command: add_command_for_bundle(at, &lock, &plugin.bundle),
                 });
             }
             PluginInstallStatus::Installed => {
-                // Query the client to verify the plugin is still there.
-                let check = match plugin.client.as_str() {
-                    "claude" => {
-                        let scope = match plugin.scope.as_deref() {
-                            Some("user") => PluginScope::User,
-                            _ => PluginScope::Project,
-                        };
-                        check_claude_plugin_installed(&plugin.name, scope)
-                    }
-                    "vscode" => check_vscode_extension_installed(&plugin.identifier),
-                    "opencode" => check_opencode_plugin_installed(&plugin.identifier),
-                    // Unknown client — skip silently.
-                    _ => continue,
-                };
-                if check.is_not_installed() {
+                if plugin_is_missing(target, plugin) {
                     report.missing_plugins.push(MissingPlugin {
                         name: plugin.name.clone(),
                         client: plugin.client.clone(),
                         identifier: plugin.identifier.clone(),
                         bundle: plugin.bundle.clone(),
+                        repair_command: add_command_for_bundle(at, &lock, &plugin.bundle),
                     });
                 }
-                // CliNotFound or QueryFailed: cannot determine state — skip
-                // silently to avoid false positives.
             }
         }
     }
@@ -806,6 +835,120 @@ fn reselect_from_entries(
     } else {
         ClientSelection::restrict(&set.into_iter().collect::<Vec<_>>())
     }
+}
+
+/// True when the client reports that `plugin`, recorded as installed, is
+/// not installed. Used by `doctor` and by the plugin repair of `update`.
+///
+/// An opencode plugin whose identifier is in the `plugin` array of
+/// `<target>/opencode.json` is installed, and no opencode command is run
+/// for it. An opencode plugin recorded with `config_write` and absent from
+/// that array is missing, also without any opencode command. Otherwise the
+/// client CLI is queried. A client CLI that is absent,
+/// that has an unsupported version, or whose query fails gives `false`: the
+/// state cannot be checked, and a false report of a missing plugin is
+/// avoided. An unknown client gives `false`.
+pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedPlugin) -> bool {
+    use crate::plugin::{
+        PluginScope, check_claude_plugin_installed, check_opencode_plugin_installed,
+        check_vscode_extension_installed,
+    };
+
+    let check = match plugin.client.as_str() {
+        "claude" => {
+            let scope = match plugin.scope.as_deref() {
+                Some("user") => PluginScope::User,
+                _ => PluginScope::Project,
+            };
+            check_claude_plugin_installed(&plugin.name, scope)
+        }
+        "vscode" => check_vscode_extension_installed(&plugin.identifier),
+        "opencode" => {
+            let listed = crate::ancillary::opencode_plugin_listed(target, &plugin.identifier);
+            // A plugin installed by a write to `opencode.json` is checked in
+            // that file only, with any opencode version or none.
+            if listed || plugin.config_write {
+                return !listed;
+            }
+            check_opencode_plugin_installed(&plugin.identifier)
+        }
+        _ => return false,
+    };
+    check.is_not_installed()
+}
+
+/// Install again every plugin of `bundles` that the lockfile records as
+/// skipped, or as installed when [`plugin_is_missing`] reports it missing,
+/// and record the results in the lockfile. `update` calls it for a source
+/// that it does not apply because its preview changes nothing; the plugin
+/// step of an applied source attempts every plugin itself. Only the missing or skipped client of a plugin is installed.
+/// Returns the results; empty when no plugin is missing or skipped, and then
+/// nothing is written.
+fn repair_missing_plugins(
+    target: &Path,
+    plugin_scope: crate::plugin::PluginScope,
+    bundles: &[crate::model::Bundle],
+) -> Result<Vec<super::PluginResult>> {
+    use crate::lockfile::PluginInstallStatus;
+
+    if bundles.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    let mut reduced = Vec::new();
+    for bundle in bundles {
+        let missing: Vec<(String, String)> = lock
+            .plugins
+            .iter()
+            .filter(|p| p.bundle == bundle.name)
+            .filter(|p| match p.status {
+                // A skipped plugin is tried again: its client CLI may be on
+                // PATH now (issue #229).
+                PluginInstallStatus::Skipped => true,
+                PluginInstallStatus::Installed => plugin_is_missing(target, p),
+                PluginInstallStatus::Instructions => false,
+            })
+            .map(|p| (p.name.clone(), p.client.clone()))
+            .collect();
+        if missing.is_empty() {
+            continue;
+        }
+        let is_missing =
+            |name: &str, client: &str| missing.iter().any(|(n, c)| n == name && c == client);
+        let mut repaired = bundle.clone();
+        repaired.plugins = bundle
+            .plugins
+            .iter()
+            .filter_map(|(name, entry)| {
+                let mut entry = entry.clone();
+                if !is_missing(name, "claude") {
+                    entry.claude = None;
+                }
+                if !is_missing(name, "copilot") {
+                    entry.copilot = None;
+                }
+                if !is_missing(name, "vscode") {
+                    entry.vscode = None;
+                }
+                if !is_missing(name, "opencode") {
+                    entry.opencode = None;
+                }
+                let empty = entry.claude.is_none()
+                    && entry.copilot.is_none()
+                    && entry.vscode.is_none()
+                    && entry.opencode.is_none();
+                (!empty).then(|| (name.clone(), entry))
+            })
+            .collect();
+        reduced.push(repaired);
+    }
+    if reduced.is_empty() {
+        return Ok(Vec::new());
+    }
+    let results = super::install::install_plugins_from_bundles(&reduced, plugin_scope, target);
+    super::prepared::record_plugin_results(&mut lock, &results, plugin_scope);
+    lock.save(target)?;
+    Ok(results)
 }
 
 /// Re-fetch every source recorded in `<target>/.upskill-lock.json` and
@@ -1284,6 +1427,21 @@ pub fn update(
         {
             let new_hashes = prepared.planned_hashes();
             guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
+            // The bundles that the lockfile records for this source, as the
+            // fetched source declares them now: the plugin repair below
+            // installs from them (issue #229). A source under a kind
+            // restriction (every recorded bundle of the source has recorded
+            // kinds) runs no plugin step, so it gets no repair either.
+            let repair_bundles: Vec<crate::model::Bundle> =
+                if source_is_kind_restricted(&lock, &source_label) {
+                    Vec::new()
+                } else {
+                    lock.bundles
+                        .iter()
+                        .filter(|b| b.source == source_label)
+                        .filter_map(|b| prepared.source_bundle(&b.name))
+                        .collect()
+                };
 
             let mut current = crate::lockfile::Lockfile::load(target)?;
             let adopted = if dry_run {
@@ -1403,6 +1561,11 @@ pub fn update(
                         .map(|e| (e.kind, e.name.clone()))
                         .collect();
                     prepared.record_commit(target, &selected)?;
+                    report.plugin_results.extend(repair_missing_plugins(
+                        target,
+                        plugin_scope,
+                        &repair_bundles,
+                    )?);
                 }
                 if !dry_run && decision == SourceDecision::Stop {
                     report.stopped = true;
@@ -1416,6 +1579,12 @@ pub fn update(
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
             let install_report = prepared.commit(target, plugin_scope)?;
+            // The plugin step of the apply attempts every plugin of the
+            // recorded bundles of the source, so an applied source needs no
+            // plugin repair.
+            report
+                .plugin_results
+                .extend(install_report.plugin_results.iter().cloned());
             report
                 .kept_modified
                 .extend(install_report.kept_modified.iter().cloned());
@@ -1810,6 +1979,74 @@ pub fn list_scopes(roots: &[ScopeRoot]) -> Result<Vec<ScopedList>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn lock_with_bundle(source: &str, item_source: Option<&str>) -> crate::lockfile::Lockfile {
+        let mut lock = crate::lockfile::Lockfile::new();
+        lock.bundles.push(crate::lockfile::LockedBundle {
+            name: "oc".into(),
+            source: source.into(),
+            git_ref: None,
+            items: vec![],
+            kinds: vec![],
+        });
+        if let Some(item_source) = item_source {
+            let mut lock2: crate::lockfile::Lockfile = serde_json::from_value(serde_json::json!({
+                "schema": 2,
+                "items": [{"kind": "skill", "name": "alpha", "source": item_source}]
+            }))
+            .unwrap();
+            lock2.bundles = lock.bundles;
+            return lock2;
+        }
+        lock
+    }
+
+    #[test]
+    fn add_command_for_bundle_names_the_command_update_cannot_run() {
+        let project = ScopeRoot {
+            scope: Scope::Project,
+            root: PathBuf::from("/p"),
+        };
+        let global = ScopeRoot {
+            scope: Scope::Global,
+            root: PathBuf::from("/h"),
+        };
+        let dir = lock_with_bundle("local:/r", None);
+        assert_eq!(
+            add_command_for_bundle(&project, &dir, "oc").as_deref(),
+            Some("upskill add /r oc --project")
+        );
+        assert_eq!(
+            add_command_for_bundle(&global, &dir, "oc").as_deref(),
+            Some("upskill add /r oc --global")
+        );
+        let file = lock_with_bundle("local:/r/oc.bundle.yaml", None);
+        assert_eq!(
+            add_command_for_bundle(&project, &file, "oc").as_deref(),
+            Some("upskill add /r/oc.bundle.yaml --project")
+        );
+        let github = lock_with_bundle("github:acme/skills", None);
+        assert_eq!(
+            add_command_for_bundle(&project, &github, "oc").as_deref(),
+            Some("upskill add acme/skills oc --project")
+        );
+        // An item from another source does not make `update` reach the bundle.
+        let other = lock_with_bundle("local:/r", Some("local:/other"));
+        assert_eq!(
+            add_command_for_bundle(&project, &other, "oc").as_deref(),
+            Some("upskill add /r oc --project")
+        );
+        let reached = lock_with_bundle("local:/r", Some("local:/r"));
+        assert_eq!(add_command_for_bundle(&project, &reached, "oc"), None);
+        // `update` reaches the source, but skips its plugins under a kind
+        // restriction.
+        let mut restricted = lock_with_bundle("local:/r", Some("local:/r"));
+        restricted.bundles[0].kinds = vec![ItemKind::Skill];
+        assert_eq!(
+            add_command_for_bundle(&project, &restricted, "oc").as_deref(),
+            Some("upskill add /r oc --project")
+        );
+    }
     use crate::plugin::PluginScope;
     use crate::select::ClientSelection;
     use crate::source::InstallSource;

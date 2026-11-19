@@ -173,11 +173,19 @@ pub struct LockedPlugin {
     pub bundle: String,
     /// Install outcome recorded at `upskill add` time.
     /// `installed` — CLI shellout succeeded.
-    /// `skipped`   — CLI was not on PATH (warn-skip); doctor surfaces these.
+    /// `skipped`   — CLI was not on PATH, or opencode was below version 2
+    ///               or gave no version (warn-skip); doctor surfaces these.
     /// Defaults to `installed` for backward-compatible lockfiles without
     /// this field (pre-v0.6.x entries were always successful installs).
     #[serde(default)]
     pub status: PluginInstallStatus,
+    /// True when upskill installed the plugin by a write of `identifier` to
+    /// the `plugin` array of the scope's `opencode.json` (an opencode
+    /// `plugin_uri` descriptor). `doctor` and the repair of `update` then
+    /// check that file only and run no opencode command. Omitted when false,
+    /// for every other install form; a lockfile without it reads as false.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub config_write: bool,
 }
 
 /// Install status of a plugin entry in the lockfile (ADR-0008 / issue #151).
@@ -187,8 +195,9 @@ pub enum PluginInstallStatus {
     /// Plugin was successfully installed via the client CLI.
     #[default]
     Installed,
-    /// Plugin was not installed because the client CLI was not on PATH at
-    /// install time (warn-skip outcome).  `upskill doctor` surfaces these
+    /// Plugin was not installed because the client CLI was not on PATH, or
+    /// opencode was below version 2 or gave no version, at install time
+    /// (warn-skip outcome).  `upskill doctor` surfaces these
     /// so the user can install the CLI and re-run `upskill update --yes`.
     Skipped,
     /// Plugin has manual installation instructions — user must follow a URL.
@@ -725,6 +734,7 @@ mod tests {
     fn upsert_plugin_adds_new_entry() {
         let mut lock = Lockfile::new();
         lock.upsert_plugin(LockedPlugin {
+            config_write: false,
             name: "superpowers".into(),
             client: "claude".into(),
             identifier: "superpowers@anthropics/claude-plugins".into(),
@@ -740,6 +750,7 @@ mod tests {
     fn upsert_plugin_replaces_by_name_and_client() {
         let mut lock = Lockfile::new();
         lock.upsert_plugin(LockedPlugin {
+            config_write: false,
             name: "superpowers".into(),
             client: "claude".into(),
             identifier: "superpowers@old-source".into(),
@@ -748,6 +759,7 @@ mod tests {
             status: PluginInstallStatus::Installed,
         });
         lock.upsert_plugin(LockedPlugin {
+            config_write: false,
             name: "superpowers".into(),
             client: "claude".into(),
             identifier: "superpowers@new-source".into(),
@@ -763,6 +775,7 @@ mod tests {
     fn upsert_plugin_keeps_different_clients_separate() {
         let mut lock = Lockfile::new();
         lock.upsert_plugin(LockedPlugin {
+            config_write: false,
             name: "superpowers".into(),
             client: "claude".into(),
             identifier: "superpowers@src".into(),
@@ -771,6 +784,7 @@ mod tests {
             status: PluginInstallStatus::Installed,
         });
         lock.upsert_plugin(LockedPlugin {
+            config_write: false,
             name: "superpowers".into(),
             client: "vscode".into(),
             identifier: "anthropic.superpowers".into(),
@@ -785,6 +799,7 @@ mod tests {
     fn remove_plugins_by_name_removes_all_clients() {
         let mut lock = Lockfile::new();
         lock.upsert_plugin(LockedPlugin {
+            config_write: false,
             name: "superpowers".into(),
             client: "claude".into(),
             identifier: "superpowers@src".into(),
@@ -793,6 +808,7 @@ mod tests {
             status: PluginInstallStatus::Installed,
         });
         lock.upsert_plugin(LockedPlugin {
+            config_write: false,
             name: "superpowers".into(),
             client: "vscode".into(),
             identifier: "anthropic.superpowers".into(),
@@ -809,6 +825,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let mut lock = Lockfile::new();
         lock.upsert_plugin(LockedPlugin {
+            config_write: false,
             name: "superpowers".into(),
             client: "claude".into(),
             identifier: "superpowers@anthropics/claude-plugins".into(),
@@ -826,6 +843,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let mut lock = Lockfile::new();
         lock.upsert_plugin(LockedPlugin {
+            config_write: false,
             name: "superpowers".into(),
             client: "vscode".into(),
             identifier: "anthropic.superpowers".into(),

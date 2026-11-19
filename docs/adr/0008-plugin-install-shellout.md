@@ -26,7 +26,7 @@ Each of the four target clients exposes a CLI for plugin/extension management:
 - `copilot plugin marketplace add <source>` +
   `copilot plugin install <plugin>@<marketplace>`
 - `code --install-extension <ext-id>`
-- `opencode plugin <module>`
+- `opencode plugin add <package>` (opencode 2 or later)
 
 These CLIs already implement the lifecycle work (marketplace registration,
 version pinning, scope semantics, idempotent updates) that upskill would
@@ -84,7 +84,7 @@ matching client targeted, upskill shells out:
 | claude   | `claude plugin marketplace add <source>` (idempotent — checked via `claude plugin marketplace list`), then `claude plugin install <plugin>@<marketplace> --scope <scope>` |
 | copilot  | `copilot plugin marketplace add <source>` (idempotent), then `copilot plugin install <plugin>@<marketplace>`                                                              |
 | vscode   | `code --install-extension <extension>` (naturally idempotent)                                                                                                             |
-| opencode | `opencode plugin <module>`                                                                                                                                                |
+| opencode | `opencode plugin add <module>`                                                                                                                                            |
 
 Claude's `--scope` derives from upskill's existing project/global flag:
 
@@ -113,6 +113,74 @@ The rules/skills/agents portion of the bundle still installs. Rationale: in
 mixed-client teams, the bundle's primary value (SSOT-derived content) is
 independent of whether every plugin lands. Failing the whole install for a
 missing tertiary tool is hostile.
+
+### opencode: version 2 or later only
+
+upskill uses the plugin commands of opencode 2 or later only:
+`opencode plugin add <package>` to install and `opencode plugin list` to check.
+upskill runs no `opencode plugin remove`: `remove` deletes the plugin's entry
+from the `plugin` array of `opencode.json` and runs no opencode command. Before
+it runs any `opencode plugin` command, upskill runs `opencode --version`. When
+the major version is below 2, or no version can be read, upskill runs no
+`opencode plugin` command: opencode 1.x reads `opencode plugin <word>` as an
+install of the module `<word>`, so `opencode plugin list` would install a module
+named `list`. An install then records the plugin as `skipped`, and `add` prints
+a warning that names `opencode 2` and the version found. `doctor` treats the
+plugin as a plugin whose state cannot be checked: it is not reported as missing.
+
+A plugin declared with `plugin_uri` is installed by a write to the `plugin`
+array of `opencode.json`, not by a command. Its lockfile record carries
+`"config_write": true` (omitted for every other install form; a record without
+it reads as `false`). For a record with `config_write`, `doctor` and the repair
+of `update` check the `opencode.json` that upskill writes for that scope only:
+the identifier in the `plugin` array means installed, its absence means missing,
+and no opencode command runs, with any opencode version or none. The repair
+writes the entry again. For an opencode record without the field (written before
+the field existed), `doctor` reads the file first and, when the identifier is
+absent, checks with `opencode plugin list` under the version check. When
+`update` applies or repairs such a plugin, it sets the field.
+
+### Repair by `update`
+
+The plugin step of an applied source attempts every plugin of the bundles that
+the lockfile records for the source, with every client of each plugin. An
+`update --yes` run applies every source, so it installs a missing or skipped
+plugin through that step.
+
+A terminal run does not apply a source whose preview changes nothing. For such a
+source the repair runs instead: it installs again every plugin of the bundles
+that the lockfile records for the source, when the lockfile records the plugin
+as installed and the check of `doctor` reports it missing, or records it as
+skipped. The repair installs only that client of the plugin. A skipped plugin
+whose install succeeds is recorded as installed; when the client CLI is still
+absent or opencode is still below 2, it stays skipped and the warning of `add`
+is printed again. The repair does not run for a source that the answer did not
+apply, with `--dry-run`, `--check` or `--notice`. A repair install that fails
+prints a warning and does not change the exit code of `update`, as for `add`.
+
+A source under a kind restriction (the lockfile records at least one bundle for
+the source, and every such bundle has recorded kinds, `add --kind`) runs no
+plugin step in `update`, and the repair does not run for it either. For a
+missing or skipped plugin of such a source, `doctor` names the `upskill add`
+command of the bundle on the plugin's line. That command has no `--kind`, so it
+also removes the kind restriction of the bundle.
+
+`update` runs over the sources of the items that the lockfile records. When no
+recorded item comes from the source that the lockfile records for a plugin's
+bundle (for example a bundle with `items: {}`), `update` does not reach that
+plugin; for such a plugin `doctor` names the `upskill add` command of the bundle
+on the plugin's line. The header of missing plugins says that
+`upskill update --yes` installs them unless a line names another command. The
+footer of skipped plugins says that `upskill update --yes` installs the plugins
+skipped for a missing CLI or an opencode version below 2, unless a line names
+another command, and that a plugin that needs a manual step (status
+`instructions`, listed with the skipped plugins) keeps its instructions: the
+repair never tries such a plugin again, and the plugin step of an applied source
+prints its instructions again.
+
+`update` prints the plugin results of the plugin step of each applied source and
+of the repair with the printer of `add`; each plugin is attempted, and reported,
+once per source of the run.
 
 ### Lockfile records the resolved triple
 

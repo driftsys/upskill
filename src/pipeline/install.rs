@@ -1037,6 +1037,7 @@ pub(super) fn install_plugins_from_bundles(
                         );
                         let identifier = format!("{plugin}@{marketplace}");
                         results.push(PluginResult {
+                            config_write: false,
                             name: plugin_name.clone(),
                             client: "claude".into(),
                             outcome,
@@ -1052,6 +1053,7 @@ pub(super) fn install_plugins_from_bundles(
                         summary,
                     } => {
                         results.push(PluginResult {
+                            config_write: false,
                             name: plugin_name.clone(),
                             client: "claude".into(),
                             outcome: crate::plugin::PluginOutcome::ManualInstructions,
@@ -1074,6 +1076,7 @@ pub(super) fn install_plugins_from_bundles(
                     } => {
                         let outcome = crate::plugin::install_vscode_extension(extension);
                         results.push(PluginResult {
+                            config_write: false,
                             name: plugin_name.clone(),
                             client: "vscode".into(),
                             outcome,
@@ -1089,6 +1092,7 @@ pub(super) fn install_plugins_from_bundles(
                         summary,
                     } => {
                         results.push(PluginResult {
+                            config_write: false,
                             name: plugin_name.clone(),
                             client: "vscode".into(),
                             outcome: crate::plugin::PluginOutcome::ManualInstructions,
@@ -1111,6 +1115,7 @@ pub(super) fn install_plugins_from_bundles(
                     } => {
                         let outcome = crate::plugin::install_opencode_plugin(module);
                         results.push(PluginResult {
+                            config_write: false,
                             name: plugin_name.clone(),
                             client: "opencode".into(),
                             outcome,
@@ -1126,6 +1131,7 @@ pub(super) fn install_plugins_from_bundles(
                         summary,
                     } => {
                         results.push(PluginResult {
+                            config_write: false,
                             name: plugin_name.clone(),
                             client: "opencode".into(),
                             outcome: crate::plugin::PluginOutcome::ManualInstructions,
@@ -1143,6 +1149,7 @@ pub(super) fn install_plugins_from_bundles(
                         let outcome =
                             crate::ancillary::write_opencode_plugin_uri(target, plugin_uri);
                         results.push(PluginResult {
+                            config_write: true,
                             name: plugin_name.clone(),
                             client: "opencode".into(),
                             outcome,
@@ -1169,6 +1176,7 @@ pub(super) fn install_plugins_from_bundles(
                             crate::plugin::install_copilot_plugin(source, marketplace, plugin);
                         let identifier = format!("{plugin}@{marketplace}");
                         results.push(PluginResult {
+                            config_write: false,
                             name: plugin_name.clone(),
                             client: "copilot".into(),
                             outcome,
@@ -1184,6 +1192,7 @@ pub(super) fn install_plugins_from_bundles(
                         summary,
                     } => {
                         results.push(PluginResult {
+                            config_write: false,
                             name: plugin_name.clone(),
                             client: "copilot".into(),
                             outcome: crate::plugin::PluginOutcome::ManualInstructions,

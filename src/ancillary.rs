@@ -383,6 +383,21 @@ pub fn write_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> PluginOutco
     }
 }
 
+/// True when the `plugin[]` array of `<target>/opencode.json` holds
+/// `identifier`. False when the file is absent, cannot be read or parsed,
+/// or has no such entry.
+pub fn opencode_plugin_listed(target: &Path, identifier: &str) -> bool {
+    let Ok(raw) = std::fs::read_to_string(target.join(OPENCODE_JSON)) else {
+        return false;
+    };
+    let Ok(doc) = serde_json::from_str::<Value>(&raw) else {
+        return false;
+    };
+    doc.get("plugin")
+        .and_then(Value::as_array)
+        .is_some_and(|a| a.iter().any(|v| v.as_str() == Some(identifier)))
+}
+
 /// Remove a plugin URI from the `plugin[]` array in `<target>/opencode.json`.
 ///
 /// No-op if the file is absent or the URI is not in the array.
@@ -1177,6 +1192,23 @@ mod tests {
         assert_eq!(plugins[0], "existing@foo");
         assert_eq!(plugins[1], "sp@git+https://example.com");
         assert!(content["instructions"].is_array());
+    }
+
+    #[test]
+    fn opencode_plugin_listed_reads_the_plugin_array() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(!opencode_plugin_listed(tmp.path(), "sp"));
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": ["other", "sp"]}"#,
+        )
+        .unwrap();
+        assert!(opencode_plugin_listed(tmp.path(), "sp"));
+        assert!(!opencode_plugin_listed(tmp.path(), "s"));
+        std::fs::write(tmp.path().join("opencode.json"), "not json").unwrap();
+        assert!(!opencode_plugin_listed(tmp.path(), "sp"));
+        std::fs::write(tmp.path().join("opencode.json"), r#"{"mcp": {}}"#).unwrap();
+        assert!(!opencode_plugin_listed(tmp.path(), "sp"));
     }
 
     #[test]

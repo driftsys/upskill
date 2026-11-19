@@ -208,6 +208,9 @@ pub struct PluginResult {
     pub instructions_url: Option<String>,
     /// Human-readable summary for manual instructions.
     pub summary: Option<String>,
+    /// True for an opencode `plugin_uri` install: a write to the `plugin`
+    /// array of `opencode.json`, recorded as `config_write` in the lockfile.
+    pub config_write: bool,
 }
 
 /// Result of a single MCP server configuration attempt, for reporting.
@@ -340,16 +343,29 @@ pub struct MissingPlugin {
     pub client: String,
     pub identifier: String,
     pub bundle: String,
+    /// The command that installs the plugin when `update` does not: the
+    /// lockfile records no item from the source of the plugin's bundle, so
+    /// that source is not part of an `update` run, or that source is under a
+    /// kind restriction. `None` otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repair_command: Option<String>,
 }
 
 /// Plugin in lockfile (status: skipped) because the client CLI was not on
-/// PATH at install time.  The plugin has never been installed.
+/// PATH, or opencode was below version 2 or gave no version, at install
+/// time.  The plugin has never been installed.
 #[derive(Debug, Clone, Serialize)]
 pub struct SkippedPlugin {
     pub name: String,
     pub client: String,
     pub identifier: String,
     pub bundle: String,
+    /// The command that installs the plugin when `update` does not: the
+    /// lockfile records no item from the source of the plugin's bundle, so
+    /// that source is not part of an `update` run, or that source is under a
+    /// kind restriction. `None` otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repair_command: Option<String>,
 }
 
 /// Reconciliation outcome for a single MCP server during `doctor`.
@@ -600,6 +616,15 @@ pub struct UpdateReport {
     pub sources_not_applied: usize,
     /// True when the observer returned [`SourceDecision::Stop`].
     pub stopped: bool,
+    /// The plugin results of the run, with any outcome (installed, client
+    /// CLI absent, unsupported version, failed, manual instructions), in the
+    /// order of the sources of the run. For an applied source: those of its
+    /// plugin step. For a source that is not applied because its preview
+    /// changes nothing: those of the plugin repair (issue #229), which tries
+    /// again every plugin recorded as skipped, or recorded as installed and
+    /// reported missing. Each plugin is attempted, and listed, at most once
+    /// per source of the run.
+    pub plugin_results: Vec<PluginResult>,
     /// Sources of the run that were not previewed because the observer
     /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the
     /// run did not stop.

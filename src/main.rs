@@ -727,34 +727,34 @@ fn print_selection_skipped(report: &InstallReport) {
 /// Follows the warn-skip policy: CLI-not-found prints a warning with an
 /// optional install URL; failures print the stderr output.
 fn print_plugin_results(report: &InstallReport) {
-    if style::is_quiet() || report.plugin_results.is_empty() {
+    print_plugin_result_list(&report.plugin_results);
+}
+
+/// Print plugin install results: successes to stdout, manual steps, skips
+/// and failures to stderr.
+fn print_plugin_result_list(results: &[PluginResult]) {
+    if style::is_quiet() || results.is_empty() {
         return;
     }
 
     use upskill::plugin::PluginOutcome;
 
-    let successes: Vec<&PluginResult> = report
-        .plugin_results
-        .iter()
-        .filter(|r| r.outcome.is_success())
-        .collect();
-    let skipped: Vec<&PluginResult> = report
-        .plugin_results
+    let successes: Vec<&PluginResult> = results.iter().filter(|r| r.outcome.is_success()).collect();
+    let skipped: Vec<&PluginResult> = results
         .iter()
         .filter(|r| r.outcome.is_cli_not_found())
         .collect();
-    let instructions: Vec<&PluginResult> = report
-        .plugin_results
+    let instructions: Vec<&PluginResult> = results
         .iter()
         .filter(|r| r.outcome.is_manual_instructions())
         .collect();
-    let failures: Vec<&PluginResult> = report
-        .plugin_results
+    let failures: Vec<&PluginResult> = results
         .iter()
         .filter(|r| {
             !r.outcome.is_success()
                 && !r.outcome.is_cli_not_found()
                 && !r.outcome.is_manual_instructions()
+                && !r.outcome.is_unsupported_version()
         })
         .collect();
 
@@ -804,6 +804,18 @@ fn print_plugin_results(report: &InstallReport) {
             r.client,
             url_hint
         );
+    }
+
+    for r in results {
+        if let PluginOutcome::UnsupportedVersion { required, found } = &r.outcome {
+            eprintln!(
+                "{} plugin {} skipped — {} or later is needed, found: {}",
+                style::warn("warning:"),
+                style::name(&r.name),
+                required,
+                found.as_deref().unwrap_or("no version")
+            );
+        }
     }
 
     for r in &failures {
@@ -863,7 +875,7 @@ fn print_mcp_results(report: &InstallReport) {
                     stderr.trim()
                 );
             }
-            PluginOutcome::ManualInstructions => {}
+            PluginOutcome::ManualInstructions | PluginOutcome::UnsupportedVersion { .. } => {}
         }
         for var in &mr.requires_env {
             if std::env::var_os(var).is_none() && warned_env.insert((&mr.name, var)) {
@@ -1136,6 +1148,9 @@ fn run_update(args: UpdateArgs) -> i32 {
     );
     match result {
         Ok(report) => {
+            // The plugin results of the run, with any outcome: the plugin step
+            // of each applied source and the plugin repair (issue #229).
+            print_plugin_result_list(&report.plugin_results);
             // A dry run writes no file, also not the notice cache.
             if !dry_run {
                 if let Some(path) = notice_cache_path() {
@@ -2058,16 +2073,17 @@ fn print_doctor_report(report: &DoctorReport) {
 
     if !report.missing_plugins.is_empty() {
         println!(
-            "{} {} plugin(s) recorded as installed but missing from client — `upskill update --yes` to fix",
+            "{} {} plugin(s) recorded as installed but missing from client — `upskill update --yes` installs them, unless a line below names another command",
             style::error_label("doctor:"),
             report.missing_plugins.len()
         );
         for p in &report.missing_plugins {
             println!(
-                "  {} {} ({})",
+                "  {} {} ({}){}",
                 style::dim("plugin"),
                 style::name(&p.name),
                 p.client,
+                repair_hint(p.repair_command.as_deref()),
             );
         }
     }
@@ -2123,22 +2139,35 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
         return;
     }
     println!(
-        "{} {} plugin(s) never installed — client CLI was missing at install time",
+        "{} {} plugin(s) never installed — client CLI was missing, or opencode was below version 2, at install time",
         style::warn("doctor:"),
         report.skipped_plugins.len()
     );
     for p in &report.skipped_plugins {
         println!(
-            "  {} {} ({})",
+            "  {} {} ({}){}",
             style::dim("plugin"),
             style::name(&p.name),
             p.client,
+            repair_hint(p.repair_command.as_deref()),
         );
     }
     println!(
         "  {}",
-        style::dim("install the missing CLI then run `upskill update --yes` to install them")
+        style::dim(
+            "install the missing CLI (or opencode 2 or later) then run `upskill update --yes` to install the plugins skipped for a missing CLI or an opencode version below 2, unless a line above names another command; a plugin that needs a manual step keeps its instructions"
+        )
     );
+}
+
+/// The text after a doctor plugin line: for a plugin that `update` does not
+/// install (no recorded item comes from its bundle's source, or that source
+/// is under a kind restriction), the command that installs it instead of
+/// `upskill update --yes`.
+fn repair_hint(command: Option<&str>) -> String {
+    command
+        .map(|c| format!(" — `update` does not install it; run `{c}`"))
+        .unwrap_or_default()
 }
 
 fn print_doctor_mcps(report: &DoctorReport) {

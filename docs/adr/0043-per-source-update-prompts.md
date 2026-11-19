@@ -140,9 +140,12 @@ failed until `update --force`.
 
 - A terminal run and an `update --yes` run reach the same end state when every
   answer is `y`, with two exceptions, each for a source whose preview changes
-  nothing: its plugin and MCP steps (both skipped under a kind restriction), and
-  a change confined to a `bundles` record of the lockfile (the preview does not
-  compare `bundles` records).
+  nothing: its MCP step and the install of a plugin that is neither missing nor
+  skipped (a terminal run still installs again a recorded plugin that `doctor`
+  reports missing or that is recorded as skipped, ADR-0008; the plugin and MCP
+  steps and this repair are all skipped under a kind restriction), and a change
+  confined to a `bundles` record of the lockfile (the preview does not compare
+  `bundles` records).
 - A run without a source change reports an edited file, asks to delete the files
   of a client that the flags no longer select, asks to complete an interrupted
   item, and adopts a `schema: 1` lockfile.
@@ -159,9 +162,10 @@ failed until `update --force`.
      source before its install is written.
 - Known limits:
   - A terminal run does not apply a source whose preview changes nothing, so it
-    does not repair a missing plugin or MCP registration of that source.
-    `doctor` reports it and `update --yes` repairs it for a source without a
-    kind restriction.
+    does not repair a missing MCP registration of that source. `doctor` reports
+    it and `update --yes` repairs it for a source without a kind restriction. A
+    missing or skipped plugin of that source is installed again by the plugin
+    repair of the run (ADR-0008), also only without a kind restriction.
   - A `--dry-run` block is exact for the current disk, but does not include the
     effect of applying an earlier source.
   - A change of only `required_by` in an item record is not shown and does not
