@@ -66,8 +66,9 @@ pub(super) fn is_item_dir(path: &Path) -> bool {
 /// `*.bundle.yaml` file, or when a name in `names` matches a bundle in it:
 /// then the source still has something to install.
 ///
-/// When the directory is inside an output path of the run (`at`), it is an
-/// installed copy, and the error says to add the item from its source
+/// When `inside_output` returns true for the kind and the folder name or
+/// the effective name, the directory is inside an output path of the run: it
+/// is an installed copy, and the error says to add the item from its source
 /// registry. Otherwise the error names the command that adds the item from
 /// the parent directory.
 pub(super) fn refuse_item_dir_source(

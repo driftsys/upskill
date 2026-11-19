@@ -238,8 +238,11 @@ fn add_of_an_item_directory_with_a_bundle_is_accepted() {
             .assert()
             .success();
         // Without a name, `add` installs the items of the directory and not
-        // its bundles, as before: it is only not refused.
-        if !names.is_empty() {
+        // its bundles, as before: it is not refused and installs nothing.
+        if names.is_empty() {
+            assert!(!project.join(".claude/skills").exists(), "{bundle_rel}");
+            assert!(project.join(".upskill-lock.json").is_file(), "{bundle_rel}");
+        } else {
             assert!(
                 project.join(".claude/skills/q/SKILL.md").is_file(),
                 "{bundle_rel}: q not installed"
@@ -365,4 +368,116 @@ fn overlap_through_a_symbolic_link_names_the_link() {
     );
     assert_eq!(files_under(&registry), before);
     assert!(!project.join(".upskill-lock.json").exists());
+}
+
+/// The installed-output message for the project scope and for clients other
+/// than Claude: a Copilot rule path, an OpenCode agent path matched by the
+/// folder name, and a path inside an OpenCode agent path matched by the
+/// frontmatter name.
+#[test]
+fn add_of_a_project_output_path_of_another_client_is_refused() {
+    let cases: [(&str, &str, &str); 3] = [
+        (".github/instructions/x", "RULE.md", "x"),
+        (".opencode/agents/x", "AGENT.md", "other"),
+        (".opencode/agents/n/sub", "AGENT.md", "n"),
+    ];
+    for (rel, file, name) in cases {
+        let (_tmp, home, project) = env();
+        let item = project.join(rel);
+        write_entry(&item, file, name);
+        let stderr = assert_refused(&home, &project, &item);
+        assert!(
+            stderr.contains("is an output path that upskill installs, not a source"),
+            "{rel}: {stderr}"
+        );
+        assert!(!stderr.contains("Use instead"), "{rel}: {stderr}");
+    }
+}
+
+/// A name that matches no bundle of the directory does not lift the refusal.
+#[test]
+fn add_of_an_item_directory_with_a_name_that_is_no_bundle_is_refused() {
+    let (_tmp, home, project) = env();
+    let item = project.join("reg/foo");
+    write_skill(&item, "foo");
+    fs::create_dir_all(item.join("bundles")).unwrap();
+    fs::write(
+        item.join("bundles/meta.bundle.yaml"),
+        "schema: 1\nname: meta\ndescription: d\nitems: {}\n",
+    )
+    .unwrap();
+    let before = files_under(&project);
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args([
+            "add",
+            item.to_str().unwrap(),
+            "foo",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .code(1);
+    let stderr = stderr_of(&assert);
+    assert!(stderr.contains("Use instead: upskill add"), "{stderr}");
+    assert_eq!(files_under(&project), before);
+}
+
+/// The item name in the suggested command is quoted, and a `'` in it is
+/// escaped.
+#[test]
+fn suggested_item_name_is_quoted() {
+    let (_tmp, home, project) = env();
+    let parent = project.join("reg");
+    let item = parent.join("r");
+    write_entry(&item, "RULE.md", "a b'c");
+    let stderr = assert_refused(&home, &project, &item);
+    assert!(
+        stderr.contains(&format!("upskill add {} 'a b'\\''c'", parent.display())),
+        "{stderr}"
+    );
+}
+
+/// An item directory with an item in a child directory is a source.
+#[test]
+fn add_of_an_item_directory_with_a_child_item_is_accepted() {
+    let (_tmp, home, project) = env();
+    let src = project.join("src");
+    write_skill(&src, "src");
+    write_skill(&src.join("child"), "child");
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .args(["add", src.to_str().unwrap(), "--project", "--claude"])
+        .assert()
+        .success();
+    assert!(project.join(".claude/skills/child/SKILL.md").is_file());
+}
+
+/// The output paths are those of the scope of the run: `.copilot/` is a
+/// Copilot output path in the global scope only.
+#[test]
+fn installed_output_check_uses_the_scope_of_the_run() {
+    // Global: `$HOME/.copilot/instructions/x` is an output path.
+    let (tmp, home, project) = env();
+    let item = home.join(".copilot/instructions/x");
+    write_entry(&item, "RULE.md", "x");
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", item.to_str().unwrap(), "--global", "--claude"])
+        .assert()
+        .code(1);
+    let stderr = stderr_of(&assert);
+    assert!(
+        stderr.contains("is an output path that upskill installs, not a source"),
+        "global: {stderr}"
+    );
+
+    // Project: `<project>/.copilot/instructions/x` is not an output path.
+    let item = project.join(".copilot/instructions/x");
+    write_entry(&item, "RULE.md", "x");
+    let stderr = assert_refused(&home, &project, &item);
+    assert!(
+        stderr.contains("Use instead: upskill add"),
+        "project: {stderr}"
+    );
 }

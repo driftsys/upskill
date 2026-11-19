@@ -70,11 +70,12 @@ and prints an error that names the path. When the path is inside an output path
 of the install, the error says that the path is an installed output of upskill,
 not a source, and that the item must be added from its source registry.
 Otherwise the error names the command to use instead,
-`upskill add <parent> <item-name>`, with the parent path in single quotes when
-it holds a shell-special character; for the file system root, which has no
-parent, the error says so. A source is the directory that contains the item
-directories. This check applies to `add` only: `update` and the sources of
-`requires` entries are not checked. `.` alone is a local path, the same as `./`.
+`upskill add <parent> <item-name>`, with the parent path and the item name each
+in single quotes when it holds a shell-special character; for the file system
+root, which has no parent, the error says so. A source is the directory that
+contains the item directories. This check applies to `add` only: `update` and
+the sources of `requires` entries are not checked. `.` alone is a local path,
+the same as `./`.
 
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a flag uses the project scope. Outside a
@@ -242,7 +243,11 @@ directory. Move the source items to a directory outside the client directories
 and add them from there. When the client directory, or a directory below it on
 the output path of an item, is a symbolic link made by hand into the source
 root, the error names that output path, its client directory and the source
-root, and asks to remove the symbolic link.
+root, and asks to remove the symbolic link. This also applies when the client
+directory itself is a symbolic link to a directory that contains the source root
+(for example `~/.claude` linked into a dotfiles directory that holds the
+registry): the error then asks to remove the symbolic link, not to move the
+source items.
 
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those

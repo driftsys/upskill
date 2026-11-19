@@ -143,7 +143,11 @@ pub(super) fn in_item_layout(kind: ItemKind, name: &str, rel: &str) -> bool {
 ///
 /// When `source_dir` is inside an output path that is itself inside
 /// `source_root`, the source root holds upskill's own output (for example a
-/// registry rooted at `~/.claude`), and the error says so.
+/// registry rooted at `~/.claude`), and the error says so. When the client
+/// directory, or a path below it down to that output path, is a symbolic
+/// link, the error asks to remove the link instead. This includes a client
+/// directory that is itself a link to a directory that contains the source
+/// root (a dotfiles layout).
 pub(super) fn check_source_outside_outputs(
     at: &ScopeRoot,
     kind: ItemKind,
@@ -171,7 +175,8 @@ pub(super) fn check_source_outside_outputs(
                 {
                     // A symbolic link on the output path (the client
                     // directory or a directory or file below it) points into
-                    // the source root.
+                    // the source root. A client directory that is itself a
+                    // link (a dotfiles layout) also gets this message.
                     if has_link_between(&client_dir, &link) {
                         anyhow::bail!(
                             "{prefix} The output path {} under the client directory {} is or \
