@@ -135,6 +135,8 @@ fn yes_then_yes_applies_both() {
         stdout(&result).contains("Updated 2 of 2 item(s) from 2 of 2 source(s)."),
         "{result}"
     );
+    // Items changed, so the summary is not followed by the file count.
+    assert!(!stdout(&result).contains("Changed "), "{result}");
 }
 
 #[test]
@@ -181,7 +183,9 @@ fn assert_stops_at_the_first_source(input: &str) {
     assert!(!stdout(&result).contains(&label_b), "{result}");
     assert!(
         stdout(&result).contains(
-            "Updated 0 of 1 item(s) from 0 of 1 source(s). 1 source(s) not applied. \
+            // `<m>` counts the item of the source that was not examined
+            // too (issue #506).
+            "Updated 0 of 2 item(s) from 0 of 1 source(s). 1 source(s) not applied. \
              Stopped; 1 source(s) not examined.\n"
         ),
         "{result}"
@@ -650,4 +654,361 @@ fn a_source_whose_only_outcome_is_a_skipped_dependency_exits_1() {
         "{result}"
     );
     assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+}
+
+/// The `Updated ...` summary line of a terminal run.
+fn summary(result: &serde_json::Value) -> &str {
+    stdout(result)
+        .lines()
+        .find(|line| line.starts_with("Updated "))
+        .unwrap_or_else(|| panic!("no summary: {result}"))
+}
+
+#[test]
+fn an_applied_cross_source_dependency_counts_as_updated() {
+    // `code-review` from `./reg-a` requires `sarif` from `reg-b`. Only the
+    // source of `sarif` changes, and `reg-a` comes first: its reinstall
+    // updates `sarif`, and `reg-b` then has no changes (issue #506).
+    let (tmp, home, _agent, sarif) = cross_source_with_a_skipped_dependency();
+    fs::remove_file(&sarif).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--force", "--yes"])
+        .assert()
+        .success();
+    write_skill(tmp.path(), "reg-b", "sarif", "Changed again.");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(stderr(&result).matches(QUESTION).count(), 1, "{result}");
+    assert!(
+        fs::read_to_string(&sarif)
+            .unwrap()
+            .contains("Changed again.")
+    );
+    assert!(
+        stdout(&result).contains("  1 updated, "),
+        "result line: {result}"
+    );
+    assert!(
+        summary(&result).starts_with("Updated 1 of 2 item(s) from 1 of 2 source(s)."),
+        "{result}"
+    );
+}
+
+#[test]
+fn an_item_skipped_in_two_ways_is_counted_once() {
+    // `reg-a` has changes and is declined, so `sarif` is not applied as a
+    // skip; `reg-b` has only the skip of `sarif`, so `sarif` is skipped.
+    let (tmp, home, agent, _sarif) = cross_source_with_a_skipped_dependency();
+    let text = fs::read_to_string(&agent).unwrap();
+    fs::write(&agent, format!("{text}Changed.\n")).unwrap();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "n\n");
+    assert_eq!(stderr(&result).matches(QUESTION).count(), 1, "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 0 of 2 item(s) from 0 of 2 source(s)."),
+        "{result}"
+    );
+}
+
+/// A project with `code-review` from `./reg-a`, which requires the skill
+/// `sarif` from `reg-b`, and the skill `other` from `reg-b`. No file is
+/// edited. Returns the project, the home and the agent source.
+fn cross_source_with_a_second_item() -> (tempfile::TempDir, PathBuf, PathBuf) {
+    let (tmp, home, agent, sarif) = cross_source_with_a_skipped_dependency();
+    // Undo the edit and the source change of the fixture.
+    write_skill(tmp.path(), "reg-b", "sarif", "Body.");
+    fs::remove_file(&sarif).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--force", "--yes"])
+        .assert()
+        .success();
+    write_skill(tmp.path(), "reg-b", "other", "Other.");
+    let reg_b = tmp.path().join("reg-b");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args([
+            "add",
+            reg_b.to_str().unwrap(),
+            "other",
+            "--claude",
+            "--project",
+        ])
+        .assert()
+        .success();
+    (tmp, home, agent)
+}
+
+#[test]
+fn the_owning_source_does_not_report_a_dependency_written_before_again() {
+    // `reg-a` writes the new `sarif`; `reg-b` is applied after it for
+    // `other` and finds `sarif` written (issue #506).
+    let (tmp, home, _agent) = cross_source_with_a_second_item();
+    assert_eq!(label(tmp.path(), "sarif"), label(tmp.path(), "other"));
+    write_skill(tmp.path(), "reg-b", "sarif", "Changed.");
+    write_skill(tmp.path(), "reg-b", "other", "Changed.");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\ny\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(stderr(&result).matches(QUESTION).count(), 2, "{result}");
+    let result_lines: Vec<&str> = stdout(&result)
+        .lines()
+        .filter(|l| l.starts_with("  ") && l.contains(" updated"))
+        .collect();
+    // One `1 updated` line per source: the sum equals `<n>`.
+    assert_eq!(result_lines.len(), 2, "{result}");
+    for line in &result_lines {
+        assert!(line.starts_with("  1 updated"), "{line}: {result}");
+    }
+    assert!(
+        summary(&result).starts_with("Updated 2 of 3 item(s) from 2 of 2 source(s)."),
+        "{result}"
+    );
+}
+
+#[test]
+fn a_changed_and_edited_dependency_is_skipped_and_not_updated() {
+    let (tmp, home, agent, sarif) = cross_source_with_a_skipped_dependency();
+    let text = fs::read_to_string(&agent).unwrap();
+    fs::write(&agent, format!("{text}Changed.\n")).unwrap();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\n");
+    assert_eq!(result["returncode"], 1, "{result}");
+    assert_eq!(fs::read(&sarif).unwrap(), b"my edit\n");
+    assert!(
+        stdout(&result).contains("  1 updated, 1 skipped"),
+        "{result}"
+    );
+    assert!(
+        summary(&result).starts_with("Updated 1 of 2 item(s)"),
+        "{result}"
+    );
+}
+
+#[test]
+fn an_interrupted_dependency_completed_by_another_source_counts_as_completed() {
+    let (tmp, home, _agent) = cross_source_with_a_second_item();
+    let path = tmp.path().join(".upskill-lock.json");
+    let mut lock = lockfile(tmp.path());
+    for entry in lock["items"].as_array_mut().unwrap() {
+        if entry["name"] == "sarif" {
+            entry["pending"] = entry["files"].clone();
+        }
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\ny\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        entry(tmp.path(), "sarif").get("pending").is_none(),
+        "{result}"
+    );
+    assert!(stdout(&result).contains("  1 completed"), "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 1 of 3 item(s)"),
+        "{result}"
+    );
+}
+
+#[test]
+fn an_added_cross_source_requires_counts_the_new_dependency() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_skill(tmp.path(), "reg-b", "sarif", "Body.");
+    let reg_a = tmp.path().join("reg-a").join("code-review");
+    fs::create_dir_all(&reg_a).unwrap();
+    let agent = reg_a.join("AGENT.md");
+    fs::write(
+        &agent,
+        "---\nschema: 1\nname: code-review\ndescription: Use for review\n---\nBody.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg-a", "code-review", "--claude", "--project"])
+        .assert()
+        .success();
+    fs::write(
+        &agent,
+        format!(
+            "---\nschema: 1\nname: code-review\ndescription: Use for review\nrequires:\n  \
+             skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+            tmp.path().join("reg-b").display()
+        ),
+    )
+    .unwrap();
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(claude_skill(tmp.path(), "sarif").is_file(), "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 2 of 2 item(s) from 1 of 1 source(s)."),
+        "{result}"
+    );
+}
+
+#[test]
+fn quit_counts_every_item_of_every_source() {
+    // Three sources with two items each; a skill and an agent share the
+    // name `one` and count as two items (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_skill(tmp.path(), "a", "one", "One.");
+    write_skill(tmp.path(), "a", "two", "Two.");
+    write_skill(tmp.path(), "b", "three", "Three.");
+    let agent = tmp.path().join("b").join("one");
+    fs::create_dir_all(&agent).unwrap();
+    fs::write(
+        agent.join("AGENT.md"),
+        "---\nschema: 1\nname: one\ndescription: Use for one\n---\nBody.\n",
+    )
+    .unwrap();
+    write_skill(tmp.path(), "c", "four", "Four.");
+    write_skill(tmp.path(), "c", "five", "Five.");
+    for dir in ["./a", "./b", "./c"] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["add", dir, "--claude", "--project"])
+            .assert()
+            .success();
+    }
+    change_source(tmp.path(), "a", "one");
+    change_source(tmp.path(), "b", "three");
+    change_source(tmp.path(), "c", "four");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "q\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(
+        summary(&result),
+        "Updated 0 of 6 item(s) from 0 of 1 source(s). 1 source(s) not applied. \
+         Stopped; 2 source(s) not examined.",
+        "{result}"
+    );
+}
+
+#[test]
+fn the_owning_source_does_not_complete_a_dependency_again() {
+    // `reg-a` completes the interrupted `sarif`; `reg-b` is applied after it
+    // for `other` and finds `sarif` completed (issue #506).
+    let (tmp, home, _agent) = cross_source_with_a_second_item();
+    let path = tmp.path().join(".upskill-lock.json");
+    let mut lock = lockfile(tmp.path());
+    for entry in lock["items"].as_array_mut().unwrap() {
+        if entry["name"] == "sarif" {
+            entry["pending"] = entry["files"].clone();
+        }
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+    write_skill(tmp.path(), "reg-b", "other", "Changed.");
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\ny\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(stderr(&result).matches(QUESTION).count(), 2, "{result}");
+    assert_eq!(stdout(&result).matches(" completed").count(), 1, "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 2 of 3 item(s) from 2 of 2 source(s)."),
+        "{result}"
+    );
+}
+
+/// The sum of the `<n> updated` counts of the result lines.
+fn updated_in_result_lines(result: &serde_json::Value) -> usize {
+    stdout(result)
+        .lines()
+        .filter_map(|l| {
+            let mut words = l.strip_prefix("  ")?.split(' ');
+            let n = words.next()?.parse::<usize>().ok()?;
+            words.next()?.starts_with("updated").then_some(n)
+        })
+        .sum()
+}
+
+/// Two sources, `reg-c` and `reg-d`, each require `sarif` of its owner,
+/// which also contains it. The owner is `reg-b` with `owner_first` and
+/// `reg-e` otherwise, so the order of the sources comes from the directory
+/// names. With `relative`, the requiring sources are added as `./<dir>`,
+/// otherwise by absolute path. Every path is under the canonical temporary
+/// directory: a relative path is recorded from the canonical working
+/// directory, and on macOS the temporary directory is reached through the
+/// symbolic link `/var`, so a non-canonical absolute path would sort
+/// differently.
+fn two_requiring_sources(owner_first: bool, relative: bool) {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().canonicalize().unwrap();
+    let home = root.join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(root.join(".git")).unwrap();
+    let owner = if owner_first { "reg-b" } else { "reg-e" };
+    write_skill(&root, owner, "sarif", "Body.");
+    let mut agents = Vec::new();
+    for (dir, name) in [("reg-c", "first"), ("reg-d", "second")] {
+        let folder = root.join(dir).join(name);
+        fs::create_dir_all(&folder).unwrap();
+        let agent = folder.join("AGENT.md");
+        fs::write(
+            &agent,
+            format!(
+                "---\nschema: 1\nname: {name}\ndescription: Use for {name}\nrequires:\n  \
+                 skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+                root.join(owner).display()
+            ),
+        )
+        .unwrap();
+        let source = if relative {
+            format!("./{dir}")
+        } else {
+            root.join(dir).display().to_string()
+        };
+        common::upskill_cmd(&home)
+            .current_dir(&root)
+            .args(["add", &source, name, "--claude", "--project"])
+            .assert()
+            .success();
+        agents.push(agent);
+    }
+    write_skill(&root, owner, "sarif", "Changed.");
+    for agent in &agents {
+        let text = fs::read_to_string(agent).unwrap();
+        fs::write(agent, format!("{text}Changed.\n")).unwrap();
+    }
+
+    let result = common::update_in_terminal(&root, &home, &["--project"], "y\ny\ny\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        summary(&result).starts_with("Updated 3 of 3 item(s)"),
+        "{result}"
+    );
+    // Every label has one form, so the blocks come in the order of the
+    // directory names.
+    let order: Vec<&str> = stdout(&result)
+        .lines()
+        .filter(|l| l.starts_with("local:"))
+        .map(|l| &l[l.len() - 5..])
+        .collect();
+    let expected = if owner_first {
+        ["reg-b", "reg-c", "reg-d"]
+    } else {
+        ["reg-c", "reg-d", "reg-e"]
+    };
+    assert_eq!(order, expected, "{result}");
+    // The per-source counts add up to `<n>`: `sarif` is counted once.
+    assert_eq!(updated_in_result_lines(&result), 3, "{result}");
+}
+
+#[test]
+fn two_requiring_sources_before_the_owner_count_the_dependency_once() {
+    two_requiring_sources(false, true);
+    two_requiring_sources(false, false);
+}
+
+#[test]
+fn two_requiring_sources_after_the_owner_count_the_dependency_once() {
+    two_requiring_sources(true, true);
+    two_requiring_sources(true, false);
 }

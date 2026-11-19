@@ -2061,3 +2061,177 @@ fn update_refuses_a_source_item_that_contains_the_output_path_of_another_item() 
         lock_before
     );
 }
+
+#[test]
+fn update_lists_a_dependency_updated_through_another_source_once() {
+    // `./reg-a` comes before `reg-b`: its reinstall updates `sarif`, and
+    // `reg-b` then finds `sarif` up to date (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let (_agent, sarif) = cross_source_project(tmp.path(), &home);
+    let source = tmp.path().join("reg-b").join("sarif").join("SKILL.md");
+    let text = fs::read_to_string(&source).unwrap();
+    fs::write(&source, format!("{text}Changed.\n")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--yes"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(fs::read_to_string(&sarif).unwrap().contains("Changed."));
+    let lines: Vec<&str> = stdout.lines().filter(|l| l.contains("sarif")).collect();
+    assert_eq!(lines.len(), 1, "{stdout}");
+    assert!(lines[0].contains("updated"), "{stdout}");
+}
+
+#[test]
+fn update_yes_counts_the_items_of_the_run_as_the_terminal_summary_does() {
+    // `update code-review` covers `code-review` and the dependency `sarif`
+    // that its plan installs; `<m>` is 2, as in a terminal run (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let (agent, _sarif) = cross_source_project(tmp.path(), &home);
+    let text = fs::read_to_string(&agent).unwrap();
+    fs::write(&agent, format!("{text}Changed.\n")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "code-review", "--project", "--yes"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(stdout.contains("Updated 1 of 2 item(s)"), "{stdout}");
+    // The unchanged dependency `sarif` counts in `<m>` but has no line.
+    assert!(!stdout.contains("sarif"), "{stdout}");
+}
+
+#[test]
+fn dry_run_counts_only_the_selected_entries_with_a_change() {
+    // `code-review` changes and now also requires the new skill `lint`;
+    // the source of its dependency `sarif` changes too. `<n>` counts
+    // `code-review` only; `<m>` counts the three items (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let (agent, _sarif) = cross_source_project(tmp.path(), &home);
+    let lint = tmp.path().join("reg-a").join("lint");
+    fs::create_dir_all(&lint).unwrap();
+    fs::write(
+        lint.join("SKILL.md"),
+        "---\nschema: 1\nname: lint\ndescription: Use for lint\n---\nBody.\n",
+    )
+    .unwrap();
+    fs::write(
+        &agent,
+        format!(
+            "---\nschema: 1\nname: code-review\ndescription: Use for review\nrequires:\n  \
+             skills: [lint, {{ name: sarif, source: {} }}]\n---\nChanged.\n",
+            tmp.path().join("reg-b").display()
+        ),
+    )
+    .unwrap();
+    let sarif_source = tmp.path().join("reg-b").join("sarif").join("SKILL.md");
+    let text = fs::read_to_string(&sarif_source).unwrap();
+    fs::write(&sarif_source, format!("{text}Changed.\n")).unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "code-review", "--project", "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(stdout.contains("would update 1 of 3 item(s)"), "{stdout}");
+}
+
+/// The canonical form of `path`. On Windows, `canonicalize` returns a
+/// verbatim path (`\\?\C:\...`), which a `requires` source does not
+/// accept as a local path; the prefix is removed there.
+fn canonical(path: &std::path::Path) -> std::path::PathBuf {
+    let path = path.canonicalize().unwrap();
+    if cfg!(windows) {
+        let text = path.display().to_string();
+        if let Some(rest) = text.strip_prefix(r"\\?\") {
+            return std::path::PathBuf::from(rest);
+        }
+    }
+    path
+}
+
+#[test]
+fn update_lists_a_dependency_planned_from_two_sources_once() {
+    // `first` and `second` require `sarif` from `reg-e`; `add` refuses a
+    // second source for `sarif`, so `second` names `reg-x` only after the
+    // install. `reg-d` then plans `sarif` from `reg-x` and `reg-e` plans it
+    // from `reg-e`: both change it, and it is listed once (issue #506).
+    let tmp = tempfile::tempdir().unwrap();
+    // The canonical path: a relative source is recorded from the canonical
+    // working directory, so every label has one form and the sources come
+    // in the order of their names: `reg-c`, `reg-d`, then the owner `reg-e`.
+    let root = canonical(tmp.path());
+    let home = root.join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(root.join(".git")).unwrap();
+    for reg in ["reg-e", "reg-x"] {
+        let dir = root.join(reg).join("sarif");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("SKILL.md"),
+            format!("---\nschema: 1\nname: sarif\ndescription: Use for sarif\n---\n{reg}.\n"),
+        )
+        .unwrap();
+    }
+    for (dir, name, reg) in [("reg-c", "first", "reg-e"), ("reg-d", "second", "reg-e")] {
+        let folder = root.join(dir).join(name);
+        fs::create_dir_all(&folder).unwrap();
+        fs::write(
+            folder.join("AGENT.md"),
+            format!(
+                "---\nschema: 1\nname: {name}\ndescription: Use for {name}\nrequires:\n  \
+                 skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
+                root.join(reg).display()
+            ),
+        )
+        .unwrap();
+        common::upskill_cmd(&home)
+            .current_dir(&root)
+            .args(["add", &format!("./{dir}"), name, "--claude", "--project"])
+            .assert()
+            .success();
+    }
+    let second = root.join("reg-d").join("second").join("AGENT.md");
+    let text = fs::read_to_string(&second).unwrap();
+    fs::write(
+        &second,
+        text.replace(
+            &root.join("reg-e").display().to_string(),
+            &root.join("reg-x").display().to_string(),
+        ),
+    )
+    .unwrap();
+    let out = common::upskill_cmd(&home)
+        .current_dir(&root)
+        .args(["update", "--project", "--yes"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let lines: Vec<&str> = stdout.lines().filter(|l| l.contains("sarif")).collect();
+    assert_eq!(lines.len(), 1, "{stdout}");
+    assert!(lines[0].contains("updated"), "{stdout}");
+    // The owner `reg-e` was applied last.
+    let sarif = root
+        .join(".claude")
+        .join("skills")
+        .join("sarif")
+        .join("SKILL.md");
+    assert!(
+        fs::read_to_string(&sarif).unwrap().contains("reg-e."),
+        "{stdout}"
+    );
+}

@@ -343,25 +343,34 @@ item and a `kept modified file` note are not changes.
   nothing is not applied and asks nothing. The apply decides again from the
   disk. After an applied source, `update` prints a result line with the non-zero
   counts of `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
-  `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`. After the
-  last source it prints `Updated <n> of <m> item(s) from <a> of <s> source(s).`,
-  followed by `<k> source(s) not applied.` when a source with changes was not
-  applied, by `<u> source(s) skipped.` when sources were skipped, for either
-  cause, and by `Stopped; <r> source(s) not examined.` or `Stopped.` after `q`
-  or end of input; then `Changed <n> file(s) written or deleted` when no item
-  was updated, completed or removed but files were written or deleted. It prints
-  `everything is up to date — nothing to do` instead when no source was applied,
-  no source with changes was declined, no file was kept with a note, no item was
-  skipped, no source was skipped and no lockfile was adopted. The exit code is 1
-  when an item is skipped in an applied source or in a source whose preview
-  changes nothing, when a source was skipped, or when a step fails; answers `n`
-  and `q` do not change it, and a `skip` line of a source that was not applied
-  does not cause exit code 1. With `--quiet`, the blocks, the notes, the result
-  lines and the closing summary are not printed; the question is
-  `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of the skipped
-  items that cause exit code 1, `Use --force to replace.` and the adoption
-  notice are printed on stderr. Without `--quiet`, a terminal run prints no
-  `skipped` line.
+  `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`; the
+  counts include a dependency from another source that the apply updated,
+  completed or skipped. After the last source it prints
+  `Updated <n> of <m> item(s) from <a> of <s> source(s).`: `<n>` is the number
+  of items that the run updated, completed or removed, also as a dependency of
+  another source, and `<m>` is the number of items that the run covers (the
+  lockfile entries that the run selects, which are all entries or with names
+  only the named entries, also of skipped sources and of sources not examined
+  after `q`, and the items that the plans of the sources that were fetched and
+  not skipped install). Each item, by kind and installed name, is counted once
+  in `<n>` and in `<m>`, and `<m>` does not depend on where the run stops. The
+  line is followed by `<k> source(s) not applied.` when a source with changes
+  was not applied, by `<u> source(s) skipped.` when sources were skipped, for
+  either cause, and by `Stopped; <r> source(s) not examined.` or `Stopped.`
+  after `q` or end of input; then `Changed <n> file(s) written or deleted` when
+  no item was updated, completed or removed but files were written or deleted.
+  It prints `everything is up to date — nothing to do` instead when no source
+  was applied, no source with changes was declined, no file was kept with a
+  note, no item was skipped, no source was skipped and no lockfile was adopted.
+  The exit code is 1 when an item is skipped in an applied source or in a source
+  whose preview changes nothing, when a source was skipped, or when a step
+  fails; answers `n` and `q` do not change it, and a `skip` line of a source
+  that was not applied does not cause exit code 1. With `--quiet`, the blocks,
+  the notes, the result lines and the closing summary are not printed; the
+  question is `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of
+  the skipped items that cause exit code 1, `Use --force to replace.` and the
+  adoption notice are printed on stderr. Without `--quiet`, a terminal run
+  prints no `skipped` line.
 - **`--yes`, or stdin is not a terminal.** Every source is applied without a
   question, also a source whose preview changes nothing, so its plugin and MCP
   steps run unless the source has a kind restriction, which skips both steps.
@@ -369,12 +378,14 @@ item and a `kept modified file` note are not changes.
   an item changed or was skipped, files were written or deleted, or a lockfile
   was adopted (a run whose only output is `kept modified file` notes prints
   nothing on stdout), and reports a completed interrupted item as
-  `completed — interrupted before`. When no item was updated, completed or
-  removed but files were written or deleted, it prints
-  `Changed <n> file(s) written or deleted`. It prints
-  `everything is up to date — nothing to do` when nothing changed, no item was
-  skipped, no source was skipped, no file was kept with a note and no lockfile
-  was adopted. An item of a skipped source has the status line
+  `completed — interrupted before`. `<n>` and `<m>` have the meaning of the
+  terminal summary above; `<m>` can be larger than the number of status lines,
+  because a dependency that the plan of a source installs unchanged has no
+  status line. When no item was updated, completed or removed but files were
+  written or deleted, it prints `Changed <n> file(s) written or deleted`. It
+  prints `everything is up to date — nothing to do` when nothing changed, no
+  item was skipped, no source was skipped, no file was kept with a note and no
+  lockfile was adopted. An item of a skipped source has the status line
   `skipped — source not reachable` when its source could not be fetched, and
   `skipped — requires a source that was skipped` when its source requires an
   item of a skipped source.
@@ -406,7 +417,11 @@ item and a `kept modified file` note are not changes.
   declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
-  in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
+  in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
+  is the number of selected lockfile entries that the block of their own source
+  lists with an action other than `skip`; a dependency from another source and
+  an item that is not in the lockfile are not counted; `<m>` has the meaning of
+  the terminal summary) and
   `Each block is computed for the current state; a later block does not include the effect of an earlier one.`,
   and exits with code 0 when no step fails and no source was skipped, for either
   cause (code 1 otherwise). `update --dry-run --quiet` prints nothing on stdout.

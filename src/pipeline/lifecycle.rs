@@ -995,6 +995,16 @@ pub fn update(
             .push(entry);
     }
 
+    // The items that the run covers: every lockfile entry that the run
+    // selects, and below the items that the plans of the sources that were
+    // fetched and not skipped install (a source skipped for `RequiresSkipped`
+    // is removed from `prepared_sources` before its plan is counted).
+    let mut run_items: std::collections::BTreeSet<(ItemKind, String)> = by_source
+        .values()
+        .flatten()
+        .map(|e| (e.kind, e.name.clone()))
+        .collect();
+
     let mut report = UpdateReport::default();
     // The adoption of a `schema: 1` lockfile is saved. A later error must
     // still carry the adopted paths for the adoption notice.
@@ -1201,6 +1211,10 @@ pub fn update(
             });
         }
         let total_sources = prepared_sources.len();
+        for (_, _, prepared) in &prepared_sources {
+            run_items.extend(prepared.planned_hashes().into_keys());
+        }
+        report.items_in_run = run_items.len();
 
         // The overlap check of `add`, applied to the items of every source
         // that the run reads and to the items of every recorded local-path
@@ -1460,15 +1474,24 @@ pub fn update(
                     .get(&(kind, entry.name.clone()))
                     .cloned()
                     .flatten();
+                // The record before this commit, not the record at the start
+                // of the run: an earlier source of the run can have written
+                // this item as its dependency, and that write is not reported
+                // again here.
+                let recorded = current
+                    .items
+                    .iter()
+                    .find(|i| i.kind == kind && i.name == entry.name)
+                    .unwrap_or(entry);
                 let status = if let Some(files) = skipped.remove(&(kind, entry.name.clone())) {
                     UpdateStatus::SkippedModified { files }
-                } else if new_hash == entry.hash && !entry.pending.is_empty() {
+                } else if new_hash == recorded.hash && !recorded.pending.is_empty() {
                     UpdateStatus::CompletedInterrupted
-                } else if new_hash == entry.hash {
+                } else if new_hash == recorded.hash {
                     UpdateStatus::UpToDate
                 } else {
                     UpdateStatus::Updated {
-                        old_hash: entry.hash.clone(),
+                        old_hash: recorded.hash.clone(),
                         new_hash,
                     }
                 };
@@ -1476,6 +1499,39 @@ pub fn update(
                     kind,
                     name: entry.name.clone(),
                     source: source_label.clone(),
+                    status,
+                });
+            }
+            // An item that is not an entry of this source and that the
+            // commit wrote: a dependency from another source. It is
+            // reported here, as for an entry, against the lockfile record
+            // before the commit.
+            for ((kind, name), new_hash) in &new_hashes {
+                if skipped.contains_key(&(*kind, name.clone()))
+                    || source_entries
+                        .iter()
+                        .any(|e| e.kind == *kind && &e.name == name)
+                {
+                    continue;
+                }
+                let recorded = current
+                    .items
+                    .iter()
+                    .find(|i| i.kind == *kind && &i.name == name);
+                let status = match recorded {
+                    Some(entry) if entry.hash == *new_hash && !entry.pending.is_empty() => {
+                        UpdateStatus::CompletedInterrupted
+                    }
+                    Some(entry) if entry.hash == *new_hash => continue,
+                    _ => UpdateStatus::Updated {
+                        old_hash: recorded.and_then(|e| e.hash.clone()),
+                        new_hash: new_hash.clone(),
+                    },
+                };
+                report.items.push(UpdatedItem {
+                    kind: *kind,
+                    name: name.clone(),
+                    source: source_of(&lock, *kind, name, &source_label),
                     status,
                 });
             }
@@ -1500,20 +1556,46 @@ pub fn update(
                 ..SourceResult::default()
             };
             for item in &report.items[first_item..] {
-                match item.status {
-                    UpdateStatus::Updated { .. } => result.updated += 1,
-                    UpdateStatus::CompletedInterrupted => result.completed += 1,
-                    UpdateStatus::Removed => result.removed += 1,
-                    UpdateStatus::SkippedModified { .. } => result.skipped += 1,
-                    UpdateStatus::UpToDate
-                    | UpdateStatus::NotApplied { .. }
-                    | UpdateStatus::SourceSkipped { .. } => {}
+                if item.status.is_change() {
+                    match item.status {
+                        UpdateStatus::Updated { .. } => result.updated += 1,
+                        UpdateStatus::CompletedInterrupted => result.completed += 1,
+                        UpdateStatus::Removed => result.removed += 1,
+                        UpdateStatus::UpToDate
+                        | UpdateStatus::SkippedModified { .. }
+                        | UpdateStatus::NotApplied { .. }
+                        | UpdateStatus::SourceSkipped { .. } => {}
+                    }
+                } else if matches!(item.status, UpdateStatus::SkippedModified { .. }) {
+                    result.skipped += 1;
                 }
             }
             observer.applied(&result);
         }
         Ok(())
     })();
+    // An item that a source changed as a dependency of another source can
+    // also have an `UpToDate` entry from a later source of the run (its own
+    // source, which then finds it written). An `UpToDate` entry of an item
+    // that has a change anywhere in the report is not reported. Only the
+    // first change of an item is reported: two sources can plan different
+    // content for one item when their `requires` name different sources or
+    // refs for it.
+    let changed_keys: std::collections::BTreeSet<(ItemKind, String)> = report
+        .items
+        .iter()
+        .filter(|i| i.status.is_change())
+        .map(|i| (i.kind, i.name.clone()))
+        .collect();
+    let mut seen_changed = std::collections::BTreeSet::new();
+    report.items.retain(|item| {
+        if item.status.is_change() {
+            seen_changed.insert((item.kind, item.name.clone()))
+        } else {
+            item.status != UpdateStatus::UpToDate
+                || !changed_keys.contains(&(item.kind, item.name.clone()))
+        }
+    });
     // An item skipped by the reinstall of two sources, or not applied as a
     // skip in two sources, is reported once.
     let mut seen_skipped = std::collections::BTreeSet::new();
