@@ -1,5 +1,73 @@
 # Changelog
 
+## [0.9.1] (2026-11-19)
+
+### Documentation
+
+- record the pack marketplace smoke test and the merge of [#569] ([#571])
+  ([058ac6d])
+- archive the gate 6 complete preflight plan ([#554]) ([efc8629])
+- name 0.9.0 as the release with update --notice and of the roadmap steps
+  ([#553]) ([799c42d])
+
+### Features
+
+- **pack:** build a bundle as a client plugin with upskill pack ([#563])
+  ([#569]) ([553590a])
+
+### Bug Fixes
+
+- **pack:** write the client directories to staging before replacing them
+  ([#574]) ([7c6669b]), refs [#570], [#570], [#570], [#570]
+- **plugins:** check opencode plugins in opencode.json and repair them on update
+  ([#229]) ([#567]) ([89166d3])
+- **update:** repeat the session notice for Copilot CLI until update runs
+  ([#530]) ([#568]) ([3a5c742])
+- **update:** count each item once in the closing summary ([#506]) ([#564])
+  ([8f1ec9d])
+- **plugins:** ask the Copilot model to tell the user about the notice ([#530])
+  ([#562]) ([2bd1967])
+- **update:** apply the overlap check to the files of a removed item ([#550])
+  ([#560]) ([2b95d8a])
+- **add:** refuse a local source path that does not exist ([#557]) ([#558])
+  ([0cec753])
+- **update:** skip a source that cannot be fetched and continue ([#551])
+  ([#555]) ([d70a290])
+
+[0.9.1]: https://github.com/driftsys/upskill/compare/v0.9.0...v0.9.1
+[058ac6d]: https://github.com/driftsys/upskill/commit/058ac6d
+[#569]: https://github.com/driftsys/upskill/issues/569
+[#571]: https://github.com/driftsys/upskill/issues/571
+[efc8629]: https://github.com/driftsys/upskill/commit/efc8629
+[#554]: https://github.com/driftsys/upskill/issues/554
+[799c42d]: https://github.com/driftsys/upskill/commit/799c42d
+[#553]: https://github.com/driftsys/upskill/issues/553
+[553590a]: https://github.com/driftsys/upskill/commit/553590a
+[#563]: https://github.com/driftsys/upskill/issues/563
+[7c6669b]: https://github.com/driftsys/upskill/commit/7c6669b
+[#574]: https://github.com/driftsys/upskill/issues/574
+[#570]: https://github.com/driftsys/upskill/issues/570
+[89166d3]: https://github.com/driftsys/upskill/commit/89166d3
+[#229]: https://github.com/driftsys/upskill/issues/229
+[#567]: https://github.com/driftsys/upskill/issues/567
+[3a5c742]: https://github.com/driftsys/upskill/commit/3a5c742
+[#530]: https://github.com/driftsys/upskill/issues/530
+[#568]: https://github.com/driftsys/upskill/issues/568
+[8f1ec9d]: https://github.com/driftsys/upskill/commit/8f1ec9d
+[#506]: https://github.com/driftsys/upskill/issues/506
+[#564]: https://github.com/driftsys/upskill/issues/564
+[2bd1967]: https://github.com/driftsys/upskill/commit/2bd1967
+[#562]: https://github.com/driftsys/upskill/issues/562
+[2b95d8a]: https://github.com/driftsys/upskill/commit/2b95d8a
+[#550]: https://github.com/driftsys/upskill/issues/550
+[#560]: https://github.com/driftsys/upskill/issues/560
+[0cec753]: https://github.com/driftsys/upskill/commit/0cec753
+[#557]: https://github.com/driftsys/upskill/issues/557
+[#558]: https://github.com/driftsys/upskill/issues/558
+[d70a290]: https://github.com/driftsys/upskill/commit/d70a290
+[#551]: https://github.com/driftsys/upskill/issues/551
+[#555]: https://github.com/driftsys/upskill/issues/555
+
 ## [0.9.0] (2026-11-16)
 
 ### Bug Fixes
