@@ -19,10 +19,13 @@
 //!   save is lost. A lost check of a notice run is made again at the next
 //!   session start, because the root is still due. A lost removal by `update`
 //!   is not: the root is not due, so the removed entries stay until the next
-//!   check that reaches the source.
+//!   check in which every source of the scope answers.
 //! - A notice run looks up a root while an `update` of that root saves. The
 //!   notice run writes its own state of the root, so the removed entries come
-//!   back until the next check that reaches the source.
+//!   back until the next check in which every source of the scope answers.
+//!
+//! A check that reaches only some sources keeps every stored entry that it did
+//! not find (see [`record_check`]), so it does not remove such an entry.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -636,8 +639,9 @@ mod tests {
         assert_eq!(decide(&mut merged, Scope::Project, &root(), false), None);
     }
 
-    /// Three runs of a plain notice in sequence, each loading the file the
-    /// previous one saved, with `checked` empty after the first run.
+    /// `runs` plain notice runs in sequence, each loading the file that the
+    /// previous one saved. No run looks up the root, so `checked` is empty in
+    /// every run.
     fn plain_runs(mut file: NoticeCache, runs: usize) -> (NoticeCache, usize) {
         let mut printed = 0;
         for _ in 0..runs {
@@ -688,6 +692,36 @@ mod tests {
         let state = &merged.scopes[&key(&root())];
         assert_eq!(state.updates, set(&["skill:b@c1"]));
         assert_eq!(state.reported, set(&["skill:b@c1"]));
+    }
+
+    #[test]
+    fn a_quiet_run_on_a_root_that_was_not_checked_leaves_the_set_unreported() {
+        // A quiet check stored a new set. A quiet run does not call `decide`,
+        // so its `reported` equals the one it loaded.
+        let mut file = recorded(&["skill:a@c1"]);
+        record_check(
+            &mut file,
+            &root(),
+            set(&["skill:a@c2"]),
+            Reached::Fully,
+            2_000,
+        );
+        let mine = file.clone();
+        let merged = merge_roots(file, &mine, &[root()], &[]);
+        assert!(merged.scopes[&key(&root())].reported.is_empty());
+        let (_, printed) = plain_runs(merged, 2);
+        assert_eq!(printed, 1);
+    }
+
+    #[test]
+    fn the_merged_reported_set_follows_the_order_of_the_updates() {
+        let mut fresh = recorded(&["agent:a", "rule:b@c1", "skill:c@c1"]);
+        fresh.scopes.get_mut(&key(&root())).unwrap().reported = set(&["agent:a"]);
+        let mut mine = fresh.clone();
+        mine.scopes.get_mut(&key(&root())).unwrap().reported = set(&["rule:b@c1", "skill:c@c1"]);
+        let merged = merge_roots(fresh, &mine, &[root()], &[]);
+        let state = &merged.scopes[&key(&root())];
+        assert_eq!(state.reported, state.updates);
     }
 
     #[test]

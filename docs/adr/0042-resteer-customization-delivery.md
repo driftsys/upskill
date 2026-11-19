@@ -3,7 +3,7 @@
 Status: **accepted**. Date: 2026-11-11. Amended on 2026-11-15 to state the
 delivered behaviour and to add Decision 8. Amended on 2026-11-19 to record in
 Decision 8 that the session notice repeats for Copilot CLI until
-`upskill update` runs.
+`upskill update` runs (the exact rule is in Decision 8).
 [MVP epic #283](https://github.com/driftsys/upskill/issues/283). The archived
 [re-steer design](https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-11-11-customization-resteer-design.md)
 holds the original design and delivery order. This record states the decisions
@@ -12,8 +12,9 @@ as delivered on `main`: delivery steps 0 to 8 are merged. The user guide
 [support levels](https://github.com/driftsys/upskill/blob/main/docs/book/support-levels.md))
 and the
 [specification](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md)
-describe the behaviour in detail. No release holds this work yet; the last
-release is v0.8.1.
+describe the behaviour in detail. Release v0.9.0 (tagged on 2026-11-16) holds
+this work up to `update --notice`; `update --notice --repeat` is not in a
+release yet.
 
 ## Context
 
@@ -138,11 +139,15 @@ and installed through a command.
    shows the hook output. Decision of 2026-11-19 (issue #530): for Copilot CLI
    the notice repeats at every session start until `upskill update` runs. The
    Copilot plugin calls `upskill update --notice --repeat`, which prints the
-   cached set at every run. Reason: Copilot CLI gives the hook output to the
-   model and does not show it to the user, and in a trial in its interactive
-   terminal the model passed the notice on in 0 of 3 runs, so a single print can
-   be used up without the user seeing it. The Claude Code plugin keeps the
-   single print, because Claude Code shows the line to the user.
+   cached set at every run. The repeat ends for an item when an applied `update`
+   reports the item as updated, up to date, completed after an interruption, or
+   removed; a dry run, an `update` that stops with an error, and a modified item
+   that `update` skips do not end it. Reason: Copilot CLI gives the hook output
+   to the model and does not show it to the user, and in a trial in its
+   interactive terminal the model passed the notice on in 0 of 3 runs, so a
+   single print can be used up without the user seeing it. The Claude Code
+   plugin keeps the single print, because Claude Code shows the line to the
+   user.
 
 This record replaces the following clauses of
 [AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md):

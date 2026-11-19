@@ -115,8 +115,11 @@ for each scope that has updates, for example
 `upskill: 2 updates available (project). Run "upskill update".`. It prints a
 given set of updates once (with `--repeat`, at every run until `upskill update`
 runs), contacts the sources at most once in 24 hours, never fetches or installs,
-and exits 0 in every case after argument parsing. When nothing is new it prints
-nothing.
+and exits 0 in every case after argument parsing. The repeat ends for an item
+when an applied `update` reports the item as updated, up to date, completed
+after an interruption, or removed; a dry run, an `update` that stops with an
+error, and a modified item that `update` skips do not end it. When nothing is
+new it prints nothing.
 
 To set it up, install the `upskill` plugin from the `driftsys/metapowers`
 marketplace: `claude plugin marketplace add driftsys/metapowers`, then
@@ -145,7 +148,10 @@ When you receive the line:
 
 In Claude Code the line is not printed again for the same set of updates, also
 when the user does not update. In Copilot CLI the line is given to the agent at
-every session start until `upskill update` runs.
+every session start until `upskill update` runs. The repeat ends for an item
+when an applied `update` reports the item as updated, up to date, completed
+after an interruption, or removed; a dry run, an `update` that stops with an
+error, and a modified item that `update` skips do not end it.
 
 ### Vendoring a third-party bundle (e.g., superpowers)
 

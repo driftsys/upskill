@@ -114,7 +114,10 @@ What you get depends on the client:
   so each time. In 3 runs in the interactive terminal of the same version, the
   agent did not do so in any run. For this reason the Copilot plugin calls
   `upskill update --notice --repeat`: the notice is given to the agent at every
-  session start until `upskill update` runs. Issue
+  session start until `upskill update` runs. The repeat ends for an item when an
+  applied `update` reports the item as updated, up to date, completed after an
+  interruption, or removed; a dry run, an `update` that stops with an error, and
+  a modified item that `update` skips do not end it. Issue
   [#530](https://github.com/driftsys/upskill/issues/530) records the trials.
 
 In Claude Code a given set of updates is announced once.

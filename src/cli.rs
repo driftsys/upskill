@@ -200,7 +200,7 @@ pub enum Commands {
         /// before. For a hook whose client gives the line to the model and
         /// does not show it to the user. The set is still recorded as
         /// printed. An `upskill update` that applies and returns a report (exit
-        /// code 0 or 1) removes from the cached set of its scope the items
+        /// code 0, 1 or 130) removes from the cached set of its scope the items
         /// that it reports as updated, up to date, completed after an
         /// interruption, or removed. An `update` that stops with an error
         /// removes nothing.

@@ -1076,7 +1076,7 @@ fn a_global_update_run_outside_its_root_removes_the_current_items_of_the_global_
 }
 
 #[test]
-fn an_update_that_exits_with_code_1_removes_the_items_that_it_updated() {
+fn an_update_that_exits_with_code_1_removes_the_up_to_date_item_and_keeps_the_skipped_one() {
     let e = env();
     run(&e, &e.repo, &["add", REMOTE, "--claude"]);
     advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
@@ -1093,16 +1093,33 @@ fn an_update_that_exits_with_code_1_removes_the_items_that_it_updated() {
 }
 
 #[test]
-fn an_update_that_fails_with_an_error_leaves_the_cache_file_unchanged() {
+fn an_update_that_stops_with_an_error_leaves_the_cache_file_unchanged() {
     let e = env();
     run(&e, &e.repo, &["add", REMOTE, "--claude"]);
     advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
     run(&e, &e.repo, &["update", "--notice", "--repeat"]);
     let before = fs::read(cache_path(&e)).unwrap();
-    // The upstream is no longer reachable, so the fetch fails.
+    // A lockfile that cannot be parsed makes `update` return an error and
+    // no report.
+    fs::write(e.repo.join(".upskill-lock.json"), "not json {").unwrap();
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    assert_eq!(applied.status.code(), Some(1), "{}", stderr(&applied));
+    assert!(stderr(&applied).contains("error"), "{}", stderr(&applied));
+    assert_eq!(fs::read(cache_path(&e)).unwrap(), before);
+}
+
+#[test]
+fn an_update_that_skips_an_unreachable_source_leaves_the_cache_file_unchanged() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    let before = fs::read(cache_path(&e)).unwrap();
+    // The upstream is no longer reachable: `update` skips the source and
+    // returns a report with the status `SourceSkipped` and exit code 1.
     fs::rename(&e.upstream, e.home.parent().unwrap().join("moved")).unwrap();
     let applied = run(&e, &e.repo, &["update", "--yes"]);
-    assert_ne!(applied.status.code(), Some(0), "{}", stderr(&applied));
+    assert_eq!(applied.status.code(), Some(1), "{}", stderr(&applied));
     assert_eq!(fs::read(cache_path(&e)).unwrap(), before);
 }
 
@@ -1124,6 +1141,22 @@ fn a_notice_run_that_overlaps_a_global_update_does_not_restore_the_removed_items
     blocked.release();
     assert_eq!(blocked.child.wait().unwrap().code(), Some(0));
     assert_eq!(cached_updates(&e, "home"), Vec::<String>::new());
+}
+
+#[test]
+fn a_quiet_notice_on_a_root_that_is_not_due_leaves_the_set_unreported() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    // The first quiet run checks the root; the second one finds it not due.
+    for _ in 0..2 {
+        let quiet = run(&e, &e.repo, &["--quiet", "update", "--notice"]);
+        assert_eq!(stdout(&quiet), "");
+    }
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice"])),
+        PROJECT_LINE
+    );
 }
 
 #[test]
