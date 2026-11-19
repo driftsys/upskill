@@ -2151,16 +2151,20 @@ fn dry_run_counts_only_the_selected_entries_with_a_change() {
 
 #[test]
 fn update_lists_a_dependency_planned_from_two_sources_once() {
-    // `first` and `second` require `sarif` from `reg-b`; `add` refuses a
+    // `first` and `second` require `sarif` from `reg-e`; `add` refuses a
     // second source for `sarif`, so `second` names `reg-x` only after the
-    // install. `reg-d` then plans `sarif` from `reg-x` and `reg-b` plans it
-    // from `reg-b`: both change it, and it is listed once (issue #506).
+    // install. `reg-d` then plans `sarif` from `reg-x` and `reg-e` plans it
+    // from `reg-e`: both change it, and it is listed once (issue #506).
     let tmp = tempfile::tempdir().unwrap();
-    let home = tmp.path().join("home");
+    // The canonical path: a relative source is recorded from the canonical
+    // working directory, so every label has one form and the sources come
+    // in the order of their names: `reg-c`, `reg-d`, then the owner `reg-e`.
+    let root = tmp.path().canonicalize().unwrap();
+    let home = root.join("home");
     fs::create_dir_all(&home).unwrap();
-    fs::create_dir_all(tmp.path().join(".git")).unwrap();
-    for reg in ["reg-b", "reg-x"] {
-        let dir = tmp.path().join(reg).join("sarif");
+    fs::create_dir_all(root.join(".git")).unwrap();
+    for reg in ["reg-e", "reg-x"] {
+        let dir = root.join(reg).join("sarif");
         fs::create_dir_all(&dir).unwrap();
         fs::write(
             dir.join("SKILL.md"),
@@ -2168,36 +2172,36 @@ fn update_lists_a_dependency_planned_from_two_sources_once() {
         )
         .unwrap();
     }
-    for (dir, name, reg) in [("reg-c", "first", "reg-b"), ("reg-d", "second", "reg-b")] {
-        let folder = tmp.path().join(dir).join(name);
+    for (dir, name, reg) in [("reg-c", "first", "reg-e"), ("reg-d", "second", "reg-e")] {
+        let folder = root.join(dir).join(name);
         fs::create_dir_all(&folder).unwrap();
         fs::write(
             folder.join("AGENT.md"),
             format!(
                 "---\nschema: 1\nname: {name}\ndescription: Use for {name}\nrequires:\n  \
                  skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
-                tmp.path().join(reg).display()
+                root.join(reg).display()
             ),
         )
         .unwrap();
         common::upskill_cmd(&home)
-            .current_dir(tmp.path())
+            .current_dir(&root)
             .args(["add", &format!("./{dir}"), name, "--claude", "--project"])
             .assert()
             .success();
     }
-    let second = tmp.path().join("reg-d").join("second").join("AGENT.md");
+    let second = root.join("reg-d").join("second").join("AGENT.md");
     let text = fs::read_to_string(&second).unwrap();
     fs::write(
         &second,
         text.replace(
-            &tmp.path().join("reg-b").display().to_string(),
-            &tmp.path().join("reg-x").display().to_string(),
+            &root.join("reg-e").display().to_string(),
+            &root.join("reg-x").display().to_string(),
         ),
     )
     .unwrap();
     let out = common::upskill_cmd(&home)
-        .current_dir(tmp.path())
+        .current_dir(&root)
         .args(["update", "--project", "--yes"])
         .output()
         .unwrap();
@@ -2206,4 +2210,14 @@ fn update_lists_a_dependency_planned_from_two_sources_once() {
     let lines: Vec<&str> = stdout.lines().filter(|l| l.contains("sarif")).collect();
     assert_eq!(lines.len(), 1, "{stdout}");
     assert!(lines[0].contains("updated"), "{stdout}");
+    // The owner `reg-e` was applied last.
+    let sarif = root
+        .join(".claude")
+        .join("skills")
+        .join("sarif")
+        .join("SKILL.md");
+    assert!(
+        fs::read_to_string(&sarif).unwrap().contains("reg-e."),
+        "{stdout}"
+    );
 }

@@ -929,18 +929,26 @@ fn updated_in_result_lines(result: &serde_json::Value) -> usize {
         .sum()
 }
 
-/// Two sources each require `sarif` of `reg-b`, which also contains it.
-/// With `absolute`, the requiring sources are added by absolute path and
-/// come after `reg-b`; otherwise they come before it.
-fn two_requiring_sources(absolute: bool) {
+/// Two sources, `reg-c` and `reg-d`, each require `sarif` of its owner,
+/// which also contains it. The owner is `reg-b` with `owner_first` and
+/// `reg-e` otherwise, so the order of the sources comes from the directory
+/// names. With `relative`, the requiring sources are added as `./<dir>`,
+/// otherwise by absolute path. Every path is under the canonical temporary
+/// directory: a relative path is recorded from the canonical working
+/// directory, and on macOS the temporary directory is reached through the
+/// symbolic link `/var`, so a non-canonical absolute path would sort
+/// differently.
+fn two_requiring_sources(owner_first: bool, relative: bool) {
     let tmp = tempfile::tempdir().unwrap();
-    let home = tmp.path().join("home");
+    let root = tmp.path().canonicalize().unwrap();
+    let home = root.join("home");
     fs::create_dir_all(&home).unwrap();
-    fs::create_dir_all(tmp.path().join(".git")).unwrap();
-    write_skill(tmp.path(), "reg-b", "sarif", "Body.");
+    fs::create_dir_all(root.join(".git")).unwrap();
+    let owner = if owner_first { "reg-b" } else { "reg-e" };
+    write_skill(&root, owner, "sarif", "Body.");
     let mut agents = Vec::new();
     for (dir, name) in [("reg-c", "first"), ("reg-d", "second")] {
-        let folder = tmp.path().join(dir).join(name);
+        let folder = root.join(dir).join(name);
         fs::create_dir_all(&folder).unwrap();
         let agent = folder.join("AGENT.md");
         fs::write(
@@ -948,45 +956,45 @@ fn two_requiring_sources(absolute: bool) {
             format!(
                 "---\nschema: 1\nname: {name}\ndescription: Use for {name}\nrequires:\n  \
                  skills: [{{ name: sarif, source: {} }}]\n---\nBody.\n",
-                tmp.path().join("reg-b").display()
+                root.join(owner).display()
             ),
         )
         .unwrap();
-        let source = if absolute {
-            tmp.path().join(dir).display().to_string()
-        } else {
+        let source = if relative {
             format!("./{dir}")
+        } else {
+            root.join(dir).display().to_string()
         };
         common::upskill_cmd(&home)
-            .current_dir(tmp.path())
+            .current_dir(&root)
             .args(["add", &source, name, "--claude", "--project"])
             .assert()
             .success();
         agents.push(agent);
     }
-    write_skill(tmp.path(), "reg-b", "sarif", "Changed.");
+    write_skill(&root, owner, "sarif", "Changed.");
     for agent in &agents {
         let text = fs::read_to_string(agent).unwrap();
         fs::write(agent, format!("{text}Changed.\n")).unwrap();
     }
 
-    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "y\ny\ny\n");
+    let result = common::update_in_terminal(&root, &home, &["--project"], "y\ny\ny\n");
     assert_eq!(result["returncode"], 0, "{result}");
     assert!(
         summary(&result).starts_with("Updated 3 of 3 item(s)"),
         "{result}"
     );
-    // The blocks come in the order that the test names: the owner `reg-b`
-    // after the requiring sources, or before them.
+    // Every label has one form, so the blocks come in the order of the
+    // directory names.
     let order: Vec<&str> = stdout(&result)
         .lines()
         .filter(|l| l.starts_with("local:"))
         .map(|l| &l[l.len() - 5..])
         .collect();
-    let expected = if absolute {
+    let expected = if owner_first {
         ["reg-b", "reg-c", "reg-d"]
     } else {
-        ["reg-c", "reg-d", "reg-b"]
+        ["reg-c", "reg-d", "reg-e"]
     };
     assert_eq!(order, expected, "{result}");
     // The per-source counts add up to `<n>`: `sarif` is counted once.
@@ -995,10 +1003,12 @@ fn two_requiring_sources(absolute: bool) {
 
 #[test]
 fn two_requiring_sources_before_the_owner_count_the_dependency_once() {
-    two_requiring_sources(false);
+    two_requiring_sources(false, true);
+    two_requiring_sources(false, false);
 }
 
 #[test]
 fn two_requiring_sources_after_the_owner_count_the_dependency_once() {
-    two_requiring_sources(true);
+    two_requiring_sources(true, true);
+    two_requiring_sources(true, false);
 }
