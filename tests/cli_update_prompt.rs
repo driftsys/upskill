@@ -497,6 +497,13 @@ fn quiet_prints_a_kept_note_on_stderr_in_a_terminal_and_with_yes() {
     assert_eq!(stderr(&result).matches(note).count(), 1, "{result}");
     assert_eq!(stderr(&result).matches(note_two).count(), 1, "{result}");
 
+    // Without `--quiet` the blocks on stdout name the notes, and stderr
+    // carries no note.
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(stdout(&result).matches(note).count(), 1, "{result}");
+    assert!(!stderr(&result).contains("kept modified file"), "{result}");
+
     let out = common::upskill_cmd(&home)
         .current_dir(tmp.path())
         .args(["update", "--project", "--quiet", "--yes"])
@@ -504,6 +511,7 @@ fn quiet_prints_a_kept_note_on_stderr_in_a_terminal_and_with_yes() {
         .success();
     let err = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
     assert_eq!(err.matches(note).count(), 1, "{err}");
+    assert_eq!(err.matches(note_two).count(), 1, "{err}");
     assert!(out.get_output().stdout.is_empty(), "{:?}", out.get_output());
 }
 
@@ -525,10 +533,16 @@ fn dry_run_quiet_prints_nothing_on_stdout() {
             .args(&args)
             .assert()
             .success();
-        String::from_utf8_lossy(&out.get_output().stdout).into_owned()
+        let output = out.get_output();
+        (
+            String::from_utf8_lossy(&output.stdout).into_owned(),
+            String::from_utf8_lossy(&output.stderr).into_owned(),
+        )
     };
-    assert_eq!(run(true), "");
-    let loud = run(false);
+    let (out, err) = run(true);
+    assert_eq!(out, "");
+    assert!(!err.contains("kept modified file"), "{err}");
+    let (loud, _) = run(false);
     assert!(loud.contains("kept modified file"), "{loud}");
 }
 
