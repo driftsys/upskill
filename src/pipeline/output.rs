@@ -166,8 +166,22 @@ pub(super) fn check_source_outside_outputs(
                     source_dir.display(),
                     out.display()
                 );
-                if let Some((owned, client_dir)) = output_inside_root(&target, &source, &root, rels)
+                if let Some((owned, client_dir, link)) =
+                    output_inside_root(&target, &source, &root, rels)
                 {
+                    // The output path resolves into the source root, but the
+                    // client directory does not: a symbolic link below the
+                    // client directory points into the source root.
+                    if !canonical(&client_dir).starts_with(&root) {
+                        anyhow::bail!(
+                            "{prefix} The output path {} under the client directory {} is or \
+                             passes through a symbolic link into the source root {}. Remove the \
+                             symbolic link, then add the source again",
+                            link.display(),
+                            client_dir.display(),
+                            root.display()
+                        );
+                    }
                     anyhow::bail!(
                         "{prefix} The source root {} contains the output path {} that upskill \
                          writes under the client directory {}. A source must not be rooted in a \
@@ -415,20 +429,22 @@ pub(super) fn check_outside_recorded_paths(
 }
 
 /// Find an output path that contains `source` (or is `source`) and is inside
-/// `root`. Returns that output path and its client directory (the first
-/// component of the output path under `target`).
+/// `root`. Returns that output path in canonical form, its client directory
+/// (the first component of the output path under `target`) and the output
+/// path as given (before symbolic links are resolved).
 fn output_inside_root(
     target: &Path,
     source: &Path,
     root: &Path,
     rels: impl Fn(Client) -> Vec<PathBuf>,
-) -> Option<(PathBuf, PathBuf)> {
+) -> Option<(PathBuf, PathBuf, PathBuf)> {
     for client in ALL_CLIENTS {
         for rel in rels(client) {
-            let out = fs::canonicalize(target.join(&rel)).unwrap_or_else(|_| target.join(&rel));
+            let given = target.join(&rel);
+            let out = fs::canonicalize(&given).unwrap_or_else(|_| given.clone());
             if source.starts_with(&out) && out.starts_with(root) {
                 let first = rel.components().next()?;
-                return Some((out, target.join(first)));
+                return Some((out, target.join(first), given));
             }
         }
     }

@@ -62,6 +62,13 @@ nothing. With no item name, `add` of a local path that exists and holds no item
 installs no item, still writes the lockfile and `CLAUDE.md`, and exits with code
 0.
 
+A local path whose directory is itself an item directory (it holds `SKILL.md`,
+`RULE.md` or `AGENT.md` at its root) and holds no item below it is refused:
+`add` writes nothing, exits with code 1, and prints an error that names the path
+and the command to use instead, `upskill add <parent> <item-name>`. A source is
+the directory that contains the item directories. `.` alone is a local path, the
+same as `./`.
+
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a flag uses the project scope. Outside a
 git repository, `add` without a flag installs nothing and stops with exit code 2
@@ -225,7 +232,10 @@ contains a client output directory is not supported. The first `add` succeeds,
 but its output is inside the source, so the next `add` and every `update` of
 that source are refused with a message that names the source root and the client
 directory. Move the source items to a directory outside the client directories
-and add them from there.
+and add them from there. When the output path of an item is a symbolic link made
+by hand into the source root (or passes through one), the error names that
+output path, its client directory and the source root, and asks to remove the
+symbolic link.
 
 **Bundle plugins.** When a bundle declares a `plugins:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` installs those

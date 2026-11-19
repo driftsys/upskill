@@ -58,6 +58,39 @@ pub(super) fn is_item_dir(path: &Path) -> bool {
         || path.join("AGENT.md").is_file()
 }
 
+/// Refuse a source directory that is itself an item directory and holds no
+/// item below it. Discovery reads the items below a source, not the source
+/// directory itself, so such a source would install no item (issues #472 and
+/// #488). The error names the path and the command that installs the item
+/// from the parent directory.
+pub(super) fn refuse_item_dir_source(source: &Path) -> Result<()> {
+    if !is_item_dir(source) || !scan_source_items(source).is_empty() {
+        return Ok(());
+    }
+    let (Some(parent), Some(folder)) =
+        (source.parent(), source.file_name().and_then(|n| n.to_str()))
+    else {
+        anyhow::bail!(
+            "source {} is an item directory; add it from its parent directory",
+            source.display()
+        );
+    };
+    let (entry, kind) = if source.join("SKILL.md").is_file() {
+        ("SKILL.md", ItemKind::Skill)
+    } else if source.join("RULE.md").is_file() {
+        ("RULE.md", ItemKind::Rule)
+    } else {
+        ("AGENT.md", ItemKind::Agent)
+    };
+    let name = probe_effective_name(&source.join(entry), kind, folder);
+    anyhow::bail!(
+        "source {} is an item directory (it holds {entry}); a source must be the directory \
+         that contains the item directories. Use instead: upskill add {} {name}",
+        source.display(),
+        parent.display()
+    )
+}
+
 pub(super) fn is_bundle_file(path: &Path) -> bool {
     path.is_file()
         && path

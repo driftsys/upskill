@@ -100,7 +100,7 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
     // same directory (`./reg` and `/abs/reg`) collapse to one canonical
     // `local:` label and resolve identically as a dependency source (issue
     // #212).
-    if source.starts_with("./") || source.starts_with("../") {
+    if source == "." || source.starts_with("./") || source.starts_with("../") {
         return Ok(InstallSource::LocalPath(absolutize_local(source)));
     }
     if source.starts_with('/') || is_windows_absolute(source) {

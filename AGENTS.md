@@ -241,18 +241,19 @@ the way you would for any manual `git clone`.
   ```
 
 - Existing test files:
-  - **CLI:** `cli_add`, `cli_alias_requires`, `cli_bundle_cross_source`,
-    `cli_bundle_install`, `cli_ci_mode`, `cli_client_filtering`,
-    `cli_colocation_remove`, `cli_conflict`, `cli_doctor`, `cli_doctor_orphan`,
-    `cli_doctor_source_lookup`, `cli_exit_codes`, `cli_fmt`, `cli_global_scope`,
-    `cli_install`, `cli_interrupted`, `cli_legacy_source_labels`, `cli_lint`,
-    `cli_list`, `cli_mangen`, `cli_mcp`, `cli_misc`, `cli_new`,
-    `cli_opencode_plugins`, `cli_ownership`, `cli_pack`, `cli_quiet`,
-    `cli_recorded_path_guard`, `cli_relaxed_naming`, `cli_remove`,
-    `cli_repeatable`, `cli_requires`, `cli_resources`, `cli_scope`,
-    `cli_search`, `cli_smoke_source`, `cli_stdio_discipline`,
-    `cli_support_levels`, `cli_update`, `cli_update_bundle`, `cli_update_check`,
-    `cli_update_notice`, `cli_update_prompt`, `cli_update_source_overlap`,
+  - **CLI:** `cli_add`, `cli_add_root_item`, `cli_alias_requires`,
+    `cli_bundle_cross_source`, `cli_bundle_install`, `cli_ci_mode`,
+    `cli_client_filtering`, `cli_colocation_remove`, `cli_conflict`,
+    `cli_doctor`, `cli_doctor_orphan`, `cli_doctor_source_lookup`,
+    `cli_exit_codes`, `cli_fmt`, `cli_global_scope`, `cli_install`,
+    `cli_interrupted`, `cli_legacy_source_labels`, `cli_lint`, `cli_list`,
+    `cli_mangen`, `cli_mcp`, `cli_misc`, `cli_new`, `cli_opencode_plugins`,
+    `cli_ownership`, `cli_pack`, `cli_quiet`, `cli_recorded_path_guard`,
+    `cli_relaxed_naming`, `cli_remove`, `cli_repeatable`, `cli_requires`,
+    `cli_resources`, `cli_scope`, `cli_search`, `cli_smoke_source`,
+    `cli_stdio_discipline`, `cli_support_levels`, `cli_update`,
+    `cli_update_bundle`, `cli_update_check`, `cli_update_notice`,
+    `cli_update_prompt`, `cli_update_source_overlap`,
     `cli_update_unreachable_source`, `cli_ux_polish`.
   - **Pipeline:** `pipeline_ignore`, `pipeline_local`, `pipeline_lockfile`,
     `pipeline_mcp`, `pipeline_source`.
