@@ -10,7 +10,16 @@ use std::path::{Path, PathBuf};
 fn env() -> (tempfile::TempDir, PathBuf, PathBuf) {
     let tmp = tempfile::tempdir().unwrap();
     // Canonical, so that a path printed from the current directory matches.
-    let base = fs::canonicalize(tmp.path()).unwrap();
+    // On Windows, `canonicalize` returns a verbatim path (`\\?\C:\...`),
+    // which upskill does not read as a local path (#561); the prefix is
+    // removed there.
+    let mut base = fs::canonicalize(tmp.path()).unwrap();
+    if cfg!(windows) {
+        let text = base.display().to_string();
+        if let Some(rest) = text.strip_prefix(r"\\?\") {
+            base = PathBuf::from(rest);
+        }
+    }
     let home = base.join("home");
     let project = base.join("project");
     fs::create_dir_all(&home).unwrap();
