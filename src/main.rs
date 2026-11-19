@@ -1181,6 +1181,7 @@ const NOTICE_TIME_LIMIT: Duration = Duration::from_secs(5);
 /// [`install_notice_signal_handler`]). A failed step prints nothing and writes
 /// nothing to stderr. Under `--quiet`, the checks and the cache update run,
 /// and no line is printed or marked as reported.
+/// A run exits without output when another run holds a lock younger than 60 seconds.
 fn run_update_notice() -> i32 {
     let _ = notice_lines();
     EXIT_SUCCESS

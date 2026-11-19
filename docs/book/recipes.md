@@ -230,3 +230,28 @@ installs the binary under the client's own "allow this command?" prompts — the
 retries. upskill is never in this loop after `add`: it configures the server and
 ships the installer agent as content, but the client's agent does the
 installing, gated by the client's permission prompts.
+
+## Publish a bundle as client plugins
+
+From the source registry, build both client directories:
+
+```bash
+upskill pack my-bundle --source owner/repo@v1 --out dist
+```
+
+Copy `dist/my-bundle-claude` and `dist/my-bundle-copilot` into your marketplace
+repository and configure publication there. upskill does not install, register
+or publish these plugins. Add README and LICENSE files yourself if needed;
+`pack --force` deletes and rebuilds the selected output directories.
+
+Install with the client's marketplace command. When the output includes rules,
+invoke its init command in each project to install only rules through
+`add --kind rule --project` for that client. Init reports third-party plugins
+and MCP servers for separate setup. Run `upskill update` in the project to
+update those rules; the client marketplace manages plugin content.
+
+Plugin output is experimental until marketplace-install smoke tests pass in both
+clients. Check for duplicate skills from an existing `add` install and check
+that Copilot does not also load the Claude directory. See
+[pack](commands.md#upskill-pack-bundle---source-source---out-dir) for the output
+layout and limits.

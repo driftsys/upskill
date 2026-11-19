@@ -1,4 +1,4 @@
-//! Build client plugin directories from a source bundle in memory.
+//! Build Claude Code and GitHub Copilot CLI plugin directories from a source bundle in memory.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -131,7 +131,8 @@ fn init_text(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient)
     text
 }
 
-/// Build a plugin directory; the caller validates the source and bundle name first.
+/// Build a Claude Code or GitHub Copilot CLI plugin directory.
+/// The caller validates the source and bundle name first.
 pub fn build(
     registry_root: &Path,
     bundle: &str,

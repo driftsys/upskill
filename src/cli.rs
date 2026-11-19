@@ -41,6 +41,7 @@ pub enum Commands {
     /// Build a bundle as a client plugin directory.
     ///
     /// Author command: reads the source registry in the current directory.
+    /// Without a client flag, writes both directories.
     #[command(display_order = 13)]
     Pack {
         bundle: String,
@@ -50,8 +51,10 @@ pub enum Commands {
         out: PathBuf,
         #[arg(long)]
         force: bool,
+        /// Write the Claude Code plugin directory.
         #[arg(long)]
         claude: bool,
+        /// Write the GitHub Copilot CLI plugin directory.
         #[arg(long)]
         copilot: bool,
     },

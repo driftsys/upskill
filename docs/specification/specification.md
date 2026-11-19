@@ -57,24 +57,32 @@ the same tree.
 
 No overlap between verbs.
 
-| Command  | Role     | Purpose                                             |
-| -------- | -------- | --------------------------------------------------- |
-| `add`    | Consumer | Install items or bundles from any source.           |
-| `remove` | Consumer | Remove installed content.                           |
-| `update` | Consumer | Pull latest, regenerate changed items.              |
-| `list`   | Consumer | Show installed content from the lock file.          |
-| `doctor` | Consumer | Verify installation consistency.                    |
-| `search` | Consumer | Look up skills via the public registry.             |
-| `index`  | Consumer | Build or manage the local registry index cache.     |
-| `new`    | Author   | Scaffold a new rule, skill, or agent.               |
-| `lint`   | Author   | Validate SSOT files against the format spec.        |
-| `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting). |
+| Command  | Role     | Purpose                                               |
+| -------- | -------- | ----------------------------------------------------- |
+| `add`    | Consumer | Install items or bundles from any source.             |
+| `remove` | Consumer | Remove installed content.                             |
+| `update` | Consumer | Pull latest, regenerate changed items.                |
+| `list`   | Consumer | Show installed content from the lock file.            |
+| `doctor` | Consumer | Verify installation consistency.                      |
+| `search` | Consumer | Look up skills via the public registry.               |
+| `index`  | Consumer | Build or manage the local registry index cache.       |
+| `new`    | Author   | Scaffold a new rule, skill, or agent.                 |
+| `lint`   | Author   | Validate SSOT files against the format spec.          |
+| `pack`   | Author   | Build Claude Code and Copilot CLI plugin directories. |
+| `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting).   |
 
 ### 2.1 `add`
 
 ```text
 upskill add <source> [items...] [--global|--project]
 ```
+
+`add --kind <kind>` (short `-k`, repeatable) restricts items to `rule`, `skill`
+or `agent`, including dependencies. It also applies without item names. An
+unknown kind is a usage error (exit 2); filtering out every named item is an
+error (exit 1). With any kind restriction, the plugin and MCP steps are skipped:
+no plugin or MCP registration or lockfile record is created by those steps. For
+example: `upskill add owner/repo my-bundle --kind rule --project --claude`.
 
 `<source>` accepts (parity with `npx skills add`):
 
@@ -379,15 +387,17 @@ item and a `kept modified file` note are not changes.
   requires (from the same source or from another one). For a directory source
   with recorded bundles, it reinstalls the members of those bundles and the
   items of that source installed directly; it installs no other item of the
-  source. It applies the kinds recorded by `add --kind`. A directly installed
-  item outside that restriction is kept unchanged and is not updated; to update
-  it, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
-  reinstalled as a whole. Each reinstalled entry gets the commit of its own
-  source (an entry from another source gets that source's commit), unless its
-  update is skipped, and any other entry keeps its recorded commit. The lockfile
-  is saved only when a value differs. This write is not a change of the source
-  (see the preview above) and does not count in the output. A dry run, a
-  declined source and a stopped run record no commit.
+  source. It applies a kind restriction only when every recorded bundle of the
+  source has recorded kinds, using their union. With one unrestricted bundle of
+  the source, no kind restriction applies. A directly installed item outside
+  that restriction is kept unchanged and is not updated; to update it, run
+  `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled as
+  a whole. Each reinstalled entry gets the commit of its own source (an entry
+  from another source gets that source's commit), unless its update is skipped,
+  and any other entry keeps its recorded commit. The lockfile is saved only when
+  a value differs. This write is not a change of the source (see the preview
+  above) and does not count in the output. A dry run, a declined source and a
+  stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
@@ -469,20 +479,31 @@ parsed. `--quiet` suppresses the output.
 `update --notice` prints a session notice for a session-start hook. It accepts
 no name and no other flag (exit code 2). Its roots are the scopes that
 `update --check` reports without a flag; a root without a lockfile is left out.
-It changes no lockfile and no installed file. The only file it keeps is the
-cache file `notice.json` in the upskill cache directory (it writes the file
-through a temporary file `notice.json.<pid>.tmp` and a rename):
-`$XDG_CACHE_HOME/upskill` when `XDG_CACHE_HOME` is an absolute path (an empty or
-relative value is ignored), else `~/.cache/upskill`. The cache file is a JSON
-object `{"scopes": {<root path>: <state>}}`; the key is the path of the scope
-root, and a state has these fields, each defaulting to zero or empty when
-absent:
+It changes no lockfile and no installed file. It keeps the cache file
+`notice.json` in the upskill cache directory (it writes the file through a
+temporary file `notice.json.<pid>.tmp` and a rename): `$XDG_CACHE_HOME/upskill`
+when `XDG_CACHE_HOME` is an absolute path (an empty or relative value is
+ignored), else `~/.cache/upskill`. The cache file is a JSON object
+`{"scopes": {<root path>: <state>}}`; the key is the path of the scope root, and
+a state has these fields, each defaulting to zero or empty when absent:
 
 | Field        | Type            | Meaning                                                                                                     |
 | ------------ | --------------- | ----------------------------------------------------------------------------------------------------------- |
 | `checked_at` | integer         | Unix time in seconds of the last check. A check that reached no source also sets it.                        |
 | `updates`    | array of string | The updates found by the checks that reached a source, sorted: `<kind>:<name>@<commit>` or `<kind>:<name>`. |
 | `reported`   | array of string | The set that the last printed notice reported, sorted.                                                      |
+
+Before reading `notice.json`, the command creates `notice.lock` in the same
+cache directory with create-only-if-absent semantics. A run that finds a lock
+younger than 60 seconds exits with code 0 without output, network requests or
+cache changes. A lock at least 60 seconds old, or dated in the future, is
+removed and creation is retried once. Other lock errors let the run continue
+without a lock. A completed run removes its lock; an interrupted or killed run
+can leave it until it expires. Install, update and removal have no writer lock.
+
+Two limits remain: concurrent runs reclaiming an expired lock can both print;
+sessions in different repositories sharing this cache also share the lock, so
+one can print no notice until its next session start.
 
 A file that is absent, unreadable or not valid JSON is an empty cache. The
 rules, in order:
@@ -511,9 +532,10 @@ rules, in order:
    whose root directory holds no `.upskill-lock.json`. The command reads the
    cache file again, applies the states of the roots of this run to that copy,
    and writes the copy, through a temporary file and a rename, only when its
-   content changed. A failed write is ignored. A run that saves between the
-   second read and the rename of this run loses its entries; its roots are
-   checked again at their next session start.
+   content changed. A failed write is ignored. When a run proceeds without a
+   lock, another run that saves between the second read and the rename of this
+   run can lose its entries; its roots are checked again at their next session
+   start.
 
 Every failure after argument parsing prints nothing and gives exit code 0;
 nothing is written to stderr. An interrupt (SIGINT) ends the command at once
@@ -704,6 +726,67 @@ behaviour:
 `add` does **not** alias to `install`. `remove` does **not** alias to
 `uninstall`. The unified verb names are canonical.
 
+### 2.8 `pack`
+
+Build plugin directories from a named bundle in the current source registry.
+`--source` is required and is written unchanged into init; it does not select or
+fetch the registry to pack. `--out` is required. With no client flag, both
+outputs are written; `--claude` or `--copilot` selects one, and both flags
+select both. `--quiet` suppresses the result lines.
+
+```bash
+upskill pack my-bundle --source owner/repo@v1 --out dist
+```
+
+| Content                                    | Claude Code output                     | GitHub Copilot CLI output              |
+| ------------------------------------------ | -------------------------------------- | -------------------------------------- |
+| Directory                                  | `<out>/<bundle>-claude/`               | `<out>/<bundle>-copilot/`              |
+| Manifest                                   | `.claude-plugin/plugin.json`           | `plugin.json`                          |
+| Skills and resources                       | `skills/<name>/SKILL.md` and resources | `skills/<name>/SKILL.md` and resources |
+| Agents                                     | `agents/<name>.md`                     | `agents/<name>.agent.md`               |
+| Init, when rules target this client        | `commands/init.md`                     | `commands/init.md`                     |
+| Notice hook, when rules target this client | `hooks/hooks.json`                     | `hooks.json`                           |
+
+Skills and agents include the bundle's `requires` closure and use the existing
+client generators. The manifest takes `name`, `description`, optional `license`
+and optional `metadata.version` (as `version`) from the bundle. No README and no
+LICENSE file is written, so `claude plugin validate` reports both as missing.
+
+All selected output directories are checked before writing. A non-empty client
+directory is refused with exit code 1 unless `--force` is set. `--force` deletes
+and rebuilds that directory, including removal of files from an earlier run. A
+file or symbolic link at the client directory path is refused even with
+`--force`. An unknown bundle fails with exit code 1.
+
+`--source` must parse as an install source, must not start with a hyphen and
+must contain only ASCII letters, digits and `/ @ : . _ - ~ +`. Whitespace and
+shell metacharacters are refused with exit code 2. The bundle name must be
+nonempty, must not start with a hyphen and may contain only ASCII letters,
+digits and `- _ .`.
+
+`pack` reads no lockfile and writes only below `--out`. It does not install or
+register the plugin, write a marketplace manifest, or publish it. The bundle
+schema is unchanged. Copy the outputs into a marketplace repository and install
+through the client. Plugin output is experimental pending marketplace smoke
+tests in both clients; `doctor` gains no row.
+
+No rule file is included. Init instructs the model to run
+`upskill add <source> <bundle> --kind rule --project --claude`, or the same
+command with `--copilot`, in the repository root and report the result. On
+failure it reports the error and runs no substitute command. It lists declared
+plugins for that client (with a Claude `install_url` when present) and MCP
+servers from the closure for the user, without installing them. An output with
+no rules for its client has neither init nor the notice hook. The hook is copied
+unchanged from the corresponding upskill notice plugin and runs
+`upskill update --notice`; it is silent when the upskill binary is absent.
+
+Known limits: init and the hook need the upskill binary on the host; installing
+the same skills with both a plugin and `add` exposes duplicates; references by
+short skill name are not verified to resolve to `<plugin>:<skill>`. When both
+outputs are published together, check that Copilot does not also load the Claude
+directory. Codex, OpenCode, VS Code, general hook authoring, plugin and MCP
+packaging, and duplicate detection are outside this command's scope.
+
 ## 3. Generation pipeline
 
 SSOT → per-client output runs on the developer's machine, on every install or
@@ -786,6 +869,11 @@ adoption changes these commands
 [handoff step 8](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-23-customization-delivery-implementation-spec.md#slice-1-qualification-of-the-gating-routes)).
 
 ## 4. State files
+
+Bundle entries in `.upskill-lock.json` have an optional `kinds` array, for
+example `"kinds": ["rule"]`, recording the restriction from `add --kind`. Absent
+or empty means unrestricted; an empty list is omitted on write. This field does
+not change the bundle source schema.
 
 `.upskill-lock.json` records what was installed, from where, at what resolved
 git ref, with what content hashes. Same schema in both locations. A new lockfile

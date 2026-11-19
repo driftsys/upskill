@@ -82,6 +82,7 @@ src/
 ├── select.rs            Consumer-side client selection (`--claude`, `--copilot`, ...)
 ├── target.rs            Stable identities for client configuration surfaces
 ├── conflict.rs          Item conflict detection for `upskill add`
+├── pack.rs              Build Claude Code and Copilot CLI plugin output from a bundle
 ├── plugin.rs            Client CLI shell-out for plugin installation
 ├── mcp.rs               Client-native MCP server configuration
 ├── style.rs             Output styling and the color disable chain
@@ -167,7 +168,11 @@ refusing. `update --notice` is built for a session-start hook: it exits 0 in
 every case after argument parsing, also on an interrupt, writes nothing to
 stderr, never fetches, and keeps for each scope root the time of the last check,
 the updates found and the printed set in `<cache>/upskill/notice.json`
-(`$XDG_CACHE_HOME` when absolute, else `~/.cache`).
+(`$XDG_CACHE_HOME` when absolute, else `~/.cache`). Before reading the cache, it
+creates `notice.lock` in the same directory. A lock younger than 60 seconds
+makes another run exit silently; expired or future-dated locks are replaced. A
+completed run removes its lock; an interrupted run can leave it to expire. Other
+lock errors allow the run to continue without a lock.
 
 ### Source format
 
@@ -234,9 +239,9 @@ the way you would for any manual `git clone`.
     `cli_doctor_source_lookup`, `cli_exit_codes`, `cli_fmt`, `cli_global_scope`,
     `cli_install`, `cli_interrupted`, `cli_legacy_source_labels`, `cli_lint`,
     `cli_list`, `cli_mangen`, `cli_mcp`, `cli_misc`, `cli_new`, `cli_ownership`,
-    `cli_quiet`, `cli_recorded_path_guard`, `cli_relaxed_naming`, `cli_remove`,
-    `cli_repeatable`, `cli_requires`, `cli_resources`, `cli_scope`,
-    `cli_search`, `cli_smoke_source`, `cli_stdio_discipline`,
+    `cli_pack`, `cli_quiet`, `cli_recorded_path_guard`, `cli_relaxed_naming`,
+    `cli_remove`, `cli_repeatable`, `cli_requires`, `cli_resources`,
+    `cli_scope`, `cli_search`, `cli_smoke_source`, `cli_stdio_discipline`,
     `cli_support_levels`, `cli_update`, `cli_update_bundle`, `cli_update_check`,
     `cli_update_notice`, `cli_update_prompt`, `cli_update_source_overlap`,
     `cli_update_unreachable_source`, `cli_ux_polish`.

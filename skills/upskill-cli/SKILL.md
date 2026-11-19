@@ -9,8 +9,8 @@ metadata:
 
 upskill manages the lifecycle of installable agent content. It does not make
 authoring decisions for you. This skill covers operations: add, update, remove,
-list, doctor, lint, fmt, new. For authoring decisions (where does this go, how
-do I write it), hand off to `upskill-prompt-distilling` and the writing-*
+list, doctor, lint, fmt, new, pack. For authoring decisions (where does this go,
+how do I write it), hand off to `upskill-prompt-distilling` and the writing-*
 skills.
 
 ## Two sides of the workflow
@@ -23,7 +23,7 @@ side you are on.
   `AGENT.md`) and bundle manifests (`skills/<name>.bundle.yaml`). The layout is
   documented in
   [Conventions](https://driftsys.github.io/upskill/conventions.html). Author
-  commands: `new`, `fmt`, `lint`.
+  commands: `new`, `fmt`, `lint`, `pack`.
 - **Consumer project** — a downstream repo that installs from one or more source
   registries. Holds generated per-client output under `.claude/`, `.github/`,
   `.opencode/`, etc., plus a `.upskill-lock.json` recording what is installed.
@@ -381,3 +381,26 @@ agent makes correct workflow decisions in both cases.
 - `upskill doctor` reports clean state (exit 0)
 - Generated per-client files are committed alongside `.upskill-lock.json`
 - No hand-edited generated files remain
+
+## Bundle plugin output and project rules
+
+`upskill pack <bundle> --source <source> --out <dir>` builds Claude Code and
+Copilot CLI plugin directories from the current registry. With no client flag it
+writes both; `--claude` and `--copilot` select clients. It reads no lockfile and
+does not install or publish the output. A non-empty client directory needs
+`--force`, which deletes and rebuilds it. Plugin output remains experimental
+pending marketplace-install smoke tests in both clients.
+
+The plugin carries skills and agents. Its init command, when rules target the
+client, runs `add --kind rule --project` for that client. `add --kind` is
+repeatable for `rule`, `skill` and `agent`; it skips plugin and MCP steps.
+Bundle lockfile entries record the selected `kinds`. `update` uses their union
+only when every recorded bundle of the source has recorded kinds; one
+unrestricted bundle leaves that source unrestricted. A directly installed item
+outside the restriction stays unchanged; reinstall it explicitly to update it.
+
+The embedded notice hook calls `update --notice`. Runs sharing a cache use
+`notice.lock`: a lock younger than 60 seconds makes another run exit silently. A
+session in another repository may therefore get no notice until its next session
+start. Concurrent reclamation of an expired lock can still duplicate a notice.
+This lock does not protect install, update or removal.

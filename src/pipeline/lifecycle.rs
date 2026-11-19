@@ -913,7 +913,9 @@ fn reselect_from_entries(
 /// requires (from this source or from another one). For a directory source
 /// with recorded bundles, it reinstalls the members of those bundles and the
 /// directly installed items of that source, and no other source items. It
-/// applies the kinds recorded by `add --kind`; a direct item outside that
+/// applies a kind restriction only when every recorded bundle of the source
+/// has recorded kinds, using their union. With one unrestricted bundle of the
+/// source, no restriction applies. A direct item outside that
 /// restriction is kept unchanged and is not updated. To update it, run
 /// `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled
 /// as a whole. Each reinstalled entry gets the commit of its own source,
