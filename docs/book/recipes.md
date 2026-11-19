@@ -259,8 +259,9 @@ invoke its init command in each project to install only rules through
 and MCP servers for separate setup. Run `upskill update` in the project to
 update those rules; the client marketplace manages plugin content.
 
-Plugin output is experimental until marketplace-install smoke tests pass in both
-clients. Check for duplicate skills from an existing `add` install and check
-that Copilot does not also load the Claude directory. See
+Plugin output is experimental until a smoke test with a hosted git marketplace
+passes in both clients (the local-marketplace smoke test of 2026-11-19 passed).
+Check for duplicate skills from an existing `add` install and check that Copilot
+does not also load the Claude directory. See
 [pack](commands.md#upskill-pack-bundle---source-source---out-dir) for the output
 layout and limits.

@@ -94,6 +94,8 @@ snapshot; a stable name does not imply that external research remains current.
   untrusted folder; Copilot CLI 1.0.112 interactive terminal, plugin with the
   request (2026-11-18): the model reported the notice in 0 of 3 runs and nothing
   on the screen showed it; the cause is not separated.
+- [Smoke test of `upskill pack` output with a marketplace install](t3-pack-marketplace-smoke.md):
+  Claude Code 2.1.308 and Copilot CLI 1.0.112, 2026-11-19; every check passed.
 - [Copilot visibility of duplicate installs](t1-copilot-duplicate-visibility.md):
   T1, Copilot 1.0.109; a rule installed for Claude and Copilot is listed twice
   (observed); that it is applied twice rests on the model's own statement; the

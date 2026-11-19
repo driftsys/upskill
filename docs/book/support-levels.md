@@ -190,7 +190,12 @@ updates the table above to match. A test fails when the two differ.
 ## Bundle plugin output
 
 `upskill pack` output for Claude Code and GitHub Copilot CLI is experimental
-until a maintainer runs a smoke test with a marketplace install in both clients.
-The test must check skill and agent visibility, init execution and the session
-notice for an available update. `doctor` gains no row for plugin output; the
-item support levels above do not qualify marketplace-installed plugins.
+until a smoke test with a hosted git marketplace passes in both clients. A smoke
+test with a marketplace install passed in both clients on 2026-11-19 (Claude
+Code 2.1.308, Copilot CLI 1.0.112, macOS): skill and agent visibility, init
+execution and the session notice for an available update
+([technote](https://github.com/driftsys/upskill/blob/main/docs/technotes/t3-pack-marketplace-smoke.md)).
+It used a local marketplace directory; a hosted git marketplace, other platforms
+and a plugin update through the client were not tested. `doctor` gains no row
+for plugin output; the item support levels above do not qualify
+marketplace-installed plugins.

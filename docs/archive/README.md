@@ -1088,15 +1088,17 @@ Source paths: `docs/wip/specs/2026-11-18-bundle-plugin-output-design.md` and
 relative link was changed to follow the moved files: the plan's link to the hook
 item kind design now points into `docs/wip/specs/`.
 
-Delivered on the branch `feat/upskill-pack` for story
-[#563](https://github.com/driftsys/upskill/issues/563); the pull request is not
-merged at the time of this entry. Completion evidence: `just verify` and
-`just sanity` passed at commit `e60ff40`. The delivered scope is `upskill pack`,
-`add --kind`, the run lock of `update --notice`, and the `kinds` record that
-`update` keeps for a bundle. The spec's open item "whether `pack` accepts a
-bundle from a remote source" was settled as follows: `pack` resolves the entry
-bundle in the current directory, and a `requires` entry with a `source` is
-fetched from that source.
+Delivered by pull request [#569](https://github.com/driftsys/upskill/pull/569),
+squash commit `553590a`, on 2026-11-19, for story
+[#563](https://github.com/driftsys/upskill/issues/563). Completion evidence: all
+CI checks of the pull request passed on its last commit `69b80e3`. Review
+findings that were not fixed are tracked in
+[#570](https://github.com/driftsys/upskill/issues/570). The delivered scope is
+`upskill pack`, `add --kind`, the run lock of `update --notice`, and the `kinds`
+record that `update` keeps for a bundle. The spec's open item "whether `pack`
+accepts a bundle from a remote source" was settled as follows: `pack` resolves
+the entry bundle in the current directory, and a `requires` entry with a
+`source` is fetched from that source.
 
 Durable successors: [AD-0044](../adr/0044-plugin-output-of-a-bundle.md), the
 [command guide](../book/commands.md#upskill-pack-bundle---source-source---out-dir),
