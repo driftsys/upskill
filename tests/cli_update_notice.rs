@@ -1101,10 +1101,15 @@ fn an_update_that_stops_with_an_error_leaves_the_cache_file_unchanged() {
     let before = fs::read(cache_path(&e)).unwrap();
     // A lockfile that cannot be parsed makes `update` return an error and
     // no report.
+    // The error comes before any item is applied, so this test does not cover
+    // a failure after a partial apply.
     fs::write(e.repo.join(".upskill-lock.json"), "not json {").unwrap();
     let applied = run(&e, &e.repo, &["update", "--yes"]);
     assert_eq!(applied.status.code(), Some(1), "{}", stderr(&applied));
-    assert!(stderr(&applied).contains("error"), "{}", stderr(&applied));
+    // The message names the canonical path, so only its end is matched.
+    let err = stderr(&applied);
+    assert!(err.contains("error: parse "), "{err}");
+    assert!(err.contains("/repo/.upskill-lock.json: expected"), "{err}");
     assert_eq!(fs::read(cache_path(&e)).unwrap(), before);
 }
 

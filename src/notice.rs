@@ -696,9 +696,11 @@ mod tests {
 
     #[test]
     fn a_quiet_run_on_a_root_that_was_not_checked_leaves_the_set_unreported() {
-        // A quiet check stored a new set. A quiet run does not call `decide`,
-        // so its `reported` equals the one it loaded.
+        // A plain run printed `skill:a@c1`, then a quiet check stored the new
+        // set `skill:a@c2`, so `reported` holds the stale entry. A quiet run
+        // does not call `decide`, so its `reported` equals the one it loaded.
         let mut file = recorded(&["skill:a@c1"]);
+        decide(&mut file, Scope::Project, &root(), false);
         record_check(
             &mut file,
             &root(),
@@ -716,9 +718,9 @@ mod tests {
     #[test]
     fn the_merged_reported_set_follows_the_order_of_the_updates() {
         let mut fresh = recorded(&["agent:a", "rule:b@c1", "skill:c@c1"]);
-        fresh.scopes.get_mut(&key(&root())).unwrap().reported = set(&["agent:a"]);
+        fresh.scopes.get_mut(&key(&root())).unwrap().reported = set(&["rule:b@c1"]);
         let mut mine = fresh.clone();
-        mine.scopes.get_mut(&key(&root())).unwrap().reported = set(&["rule:b@c1", "skill:c@c1"]);
+        mine.scopes.get_mut(&key(&root())).unwrap().reported = set(&["agent:a", "skill:c@c1"]);
         let merged = merge_roots(fresh, &mine, &[root()], &[]);
         let state = &merged.scopes[&key(&root())];
         assert_eq!(state.reported, state.updates);
