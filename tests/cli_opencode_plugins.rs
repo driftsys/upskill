@@ -619,6 +619,61 @@ fn doctor_gives_no_add_command_when_update_reaches_the_plugin() {
 }
 
 #[test]
+fn doctor_header_and_footer_of_plugins_name_the_condition() {
+    let env = Env::build(
+        &format!(
+            "  superpowers:\n    opencode:\n      module: {MODULE}\n  other:\n    vscode:\n      extension: acme.other\n"
+        ),
+        "  skills:\n    - alpha\n",
+        "v1.15.13",
+    );
+    env.add().success();
+    // `code` lists nothing: the vscode plugin is missing; opencode is skipped.
+    let out = env.run(&["doctor", "--project"]).code(1);
+    let text = stdout(&out);
+    assert!(
+        text.contains(
+            "`upskill update --yes` installs them, unless a line below names another command"
+        ),
+        "{text}"
+    );
+    assert!(
+        text.contains("to install the plugins skipped for a missing CLI or an opencode version below 2, unless a line above names another command; a plugin that needs a manual step keeps its instructions"),
+        "{text}"
+    );
+    // The skipped plugin is reached by `update`: no `repair_command` key.
+    let out = env.run(&["doctor", "--json", "--project"]).code(1);
+    assert!(!stdout(&out).contains("repair_command"), "{}", stdout(&out));
+}
+
+#[test]
+fn doctor_gives_the_add_command_when_only_another_source_has_items() {
+    let env = Env::build(
+        &format!("  superpowers:\n    opencode:\n      module: {MODULE}\n"),
+        "",
+        "v2.1.4",
+    );
+    env.add().success();
+    // Another skill source installed in the project.
+    let other = env.project.parent().unwrap().join("other");
+    let skill = other.join("beta").join("SKILL.md");
+    fs::create_dir_all(skill.parent().unwrap()).unwrap();
+    fs::write(
+        &skill,
+        "---\nschema: 1\nname: beta\ndescription: another skill.\n---\n\nText.\n",
+    )
+    .unwrap();
+    env.run(&["add", other.to_str().unwrap(), "--project"])
+        .success();
+    env.set_list("");
+
+    let out = env.run(&["doctor", "--project"]).code(1);
+    let registry = env.bundle.parent().unwrap().display().to_string();
+    let command = format!("upskill add {registry} oc --project");
+    assert!(stdout(&out).contains(&command), "{}", stdout(&out));
+}
+
+#[test]
 fn doctor_gives_the_add_command_for_a_skipped_plugin_update_does_not_reach() {
     let env = Env::build(
         &format!("  superpowers:\n    opencode:\n      module: {MODULE}\n"),

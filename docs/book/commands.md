@@ -490,14 +490,20 @@ adopted. `update` prints the plugin results of the plugin step of each applied
 source and of the plugin repair (a recorded plugin that `doctor` reports
 missing, or one recorded as skipped, that the apply did not attempt) with the
 printer of `add`, once per attempted plugin: `Plugins: <n> plugin(s) installed`
-with one line per plugin on stdout, and the skip, manual-step and failure
-warnings on stderr. A plugin install is not an item change, so a run whose only
-change is a plugin install prints these lines and then
-`everything is up to date — nothing to do`. A plugin install that fails prints a
-warning on stderr and does not change the exit code, as for `add`. An item of a
-skipped source has the status line `skipped — source not reachable` when its
-source could not be fetched, and `skipped — requires a source that was skipped`
-when its source requires an item of a skipped source.
+with one line per plugin on stdout, and on stderr, one line per plugin:
+`info: plugin <name> (<client>) — manual step required` followed by its
+instructions line, `warning: plugin <name> skipped — <client> CLI not found`,
+`warning: plugin <name> skipped — opencode 2 or later is needed, found:
+<version>`,
+and `warning: plugin <name> (<client>) failed (exit <code>):
+<stderr>`. A plugin
+install is not an item change, so a run whose only change is a plugin install
+prints these lines and then `everything is up to date — nothing to do`. A plugin
+install that fails prints a warning on stderr and does not change the exit code,
+as for `add`. An item of a skipped source has the status line
+`skipped — source not reachable` when its source could not be fetched, and
+`skipped — requires a source that was skipped` when its source requires an item
+of a skipped source.
 
 For a git source, `update` records the commit that it fetched in the lockfile
 entries of the source that the run selected, also when the source has no changes
@@ -912,7 +918,9 @@ scope. For each scope it reports eleven independent buckets:
   and records it as `installed` when the install succeeds. When the CLI is still
   absent or opencode is still below 2, the plugin stays `skipped` and the
   warning of `add` is printed again. `update <name>` covers only the sources of
-  the named items. Does **not** cause exit 1.
+  the named items. A plugin that needs a manual step (status `instructions`) is
+  listed here too; `update` never tries it again, and it keeps its instructions.
+  Does **not** cause exit 1.
 - **MCP servers** — each Claude-client MCP entry in the lockfile is checked
   against `claude mcp list`. A server in the lockfile but **not registered** in
   the client causes exit 1 (`upskill update --yes` reconfigures it; a run in a

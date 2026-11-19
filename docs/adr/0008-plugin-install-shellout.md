@@ -160,9 +160,13 @@ of `update`, as for `add`.
 recorded item comes from the source that the lockfile records for a plugin's
 bundle (for example a bundle with `items: {}`), `update` does not reach that
 plugin; for such a plugin `doctor` names the `upskill add` command of the bundle
-on the plugin's line. The header of missing plugins and the footer of skipped
-plugins say that `upskill update --yes` installs them unless a line names
-another command, so both are true.
+on the plugin's line. The header of missing plugins says that
+`upskill update --yes` installs them unless a line names another command. The
+footer of skipped plugins says that `upskill update --yes` installs the plugins
+skipped for a missing CLI or an opencode version below 2, unless a line names
+another command, and that a plugin that needs a manual step (status
+`instructions`, listed with the skipped plugins) keeps its instructions: the
+repair never tries such a plugin again.
 
 `update` prints the plugin results of the apply of each source and of the repair
 with the printer of `add`; each plugin is attempted, and reported, once per

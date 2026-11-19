@@ -1093,7 +1093,8 @@ fn run_update(args: UpdateArgs) -> i32 {
     );
     match result {
         Ok(report) => {
-            // Plugins that the run installed again (issue #229).
+            // The plugin results of the run, with any outcome: the plugin step
+            // of each applied source and the plugin repair (issue #229).
             print_plugin_result_list(&report.plugin_results);
             let code = if dry_run {
                 print_update_report(&report, true);
@@ -2112,7 +2113,7 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
     println!(
         "  {}",
         style::dim(
-            "install the missing CLI (or opencode 2 or later) then run `upskill update --yes` to install them, unless a line above names another command"
+            "install the missing CLI (or opencode 2 or later) then run `upskill update --yes` to install the plugins skipped for a missing CLI or an opencode version below 2, unless a line above names another command; a plugin that needs a manual step keeps its instructions"
         )
     );
 }

@@ -1878,6 +1878,12 @@ mod tests {
             add_command_for_bundle(&project, &github, "oc").as_deref(),
             Some("upskill add acme/skills oc --project")
         );
+        // An item from another source does not make `update` reach the bundle.
+        let other = lock_with_bundle("local:/r", Some("local:/other"));
+        assert_eq!(
+            add_command_for_bundle(&project, &other, "oc").as_deref(),
+            Some("upskill add /r oc --project")
+        );
         let reached = lock_with_bundle("local:/r", Some("local:/r"));
         assert_eq!(add_command_for_bundle(&project, &reached, "oc"), None);
     }
