@@ -1723,8 +1723,8 @@ fn closing_summary(report: &UpdateReport) -> String {
 /// otherwise the closing summary ([`closing_summary`]), followed by `Changed <n> file(s) written or
 /// deleted` when files changed but no item was updated, completed or
 /// removed. Without `--quiet` the blocks named the kept and the skipped
-/// files; with `--quiet` it prints the `skipped` lines of
-/// [`print_skipped`] to stderr. With a skipped item it then prints
+/// files; with `--quiet` it prints each `kept modified file` note and the
+/// `skipped` lines of [`print_skipped`] to stderr. With a skipped item it then prints
 /// `Use --force to replace.` to stderr.
 fn finish_terminal_update(report: &UpdateReport) -> i32 {
     let skipped = report
@@ -1732,6 +1732,9 @@ fn finish_terminal_update(report: &UpdateReport) -> i32 {
         .iter()
         .any(|i| matches!(i.status, UpdateStatus::SkippedModified { .. }));
     if style::is_quiet() {
+        // The blocks are not printed, so the kept notes go to stderr, as in
+        // `update --yes --quiet` (issue #508).
+        print_kept_modified(&report.kept_modified);
         print_skipped(report);
     } else if report.items.is_empty() {
         println!("nothing to update — lockfile is empty");
