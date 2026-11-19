@@ -401,7 +401,8 @@ Copilot CLI plugin directories from the current registry. With no client flag it
 writes both; `--claude` and `--copilot` select clients. It reads no lockfile and
 does not install or publish the output. A non-empty client directory needs
 `--force`, which deletes and rebuilds it. Plugin output remains experimental
-pending marketplace-install smoke tests in both clients.
+until a smoke test with a hosted git marketplace passes in both clients (the
+local-marketplace smoke test of 2026-11-19 passed).
 
 The plugin carries skills and agents. Its init command, when rules target the
 client, runs `add --kind rule --project` for that client. `add --kind` is

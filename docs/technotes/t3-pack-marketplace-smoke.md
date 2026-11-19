@@ -22,16 +22,16 @@ between runs.
 
 ## Results
 
-| Check                                         | Claude Code                                                     | Copilot CLI                                                           |
-| --------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Install from the marketplace                  | pass (`claude plugin install demo@demomarket --scope local`)    | pass (`copilot plugin install demo@demomarket`, "Installed 2 skills") |
-| Skills visible                                | pass: `demo:alpha`, `demo:beta`                                 | pass: `alpha`, `beta` (no plugin prefix), shown by `/skills list`     |
-| Agent visible                                 | pass: `demo:helper`                                             | pass: `demo:helper`                                                   |
-| Init command visible                          | pass: `/demo:init`                                              | pass: skill `init`                                                    |
-| Init ran and wrote only rules                 | pass: `.claude/rules/style.md`, `naming.md`; no skill or agent  | pass: `.github/instructions/*.instructions.md`; no skill or agent     |
-| Lockfile records the restriction              | pass: bundles `base` and `demo` with `"kinds": ["rule"]`        | pass: same                                                            |
-| Session notice after a change of rule `style` | pass: `upskill: 1 update available (project)` reached the model | pass: the line was printed before the reply, and the model relayed it |
-| Uninstall and marketplace removal             | pass                                                            | pass                                                                  |
+| Check                                         | Claude Code                                                     | Copilot CLI                                                                       |
+| --------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Install from the marketplace                  | pass (`claude plugin install demo@demomarket --scope local`)    | pass (`copilot plugin install demo@demomarket`, "Installed 2 skills")             |
+| Skills visible                                | pass: `demo:alpha`, `demo:beta`                                 | pass on a second prompt: `alpha`, `beta` (no plugin prefix), and `/skills list`   |
+| Agent visible                                 | pass: `demo:helper`                                             | pass: `demo:helper`                                                               |
+| Init command visible                          | pass: `/demo:init`                                              | pass: skill `init`                                                                |
+| Init ran and wrote only rules                 | pass: `.claude/rules/style.md`, `naming.md`; no skill or agent  | pass: `.github/instructions/*.instructions.md`; no skill or agent                 |
+| Lockfile records the restriction              | pass: bundles `base` and `demo` with `"kinds": ["rule"]`        | pass: same                                                                        |
+| Session notice after a change of rule `style` | pass: `upskill: 1 update available (project)` reached the model | pass (prompt mode, `copilot -p "Say OK."`): the line was printed before the reply |
+| Uninstall and marketplace removal             | pass                                                            | pass                                                                              |
 
 Copilot CLI read only `.github/plugin/marketplace.json` and installed
 `plugins/demo-copilot`; it did not load the Claude directory of the same
