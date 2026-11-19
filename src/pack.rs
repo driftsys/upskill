@@ -209,9 +209,12 @@ pub fn build(
 /// its target (`.<name>.upskill-stage`). When all are written, each existing
 /// target is renamed to `.<name>.upskill-old` and its staging directory is
 /// renamed into place; then the `.upskill-old` directories are removed. A
-/// failure while writing or renaming undoes the renames already made and
-/// tries to remove the staging directories, so every target keeps its
-/// earlier content. An existing empty target is also replaced.
+/// failure while writing or renaming tries to undo the renames already made
+/// and to remove the staging directories, so every target keeps its earlier
+/// content unless an undo rename also fails (then the earlier content is at
+/// `.<name>.upskill-old`). A `.upskill-old` directory that cannot be removed
+/// after a successful run is left in place. An existing empty target is also
+/// replaced.
 pub fn write_plugin_dirs(
     out: &Path,
     dirs: &[PluginDir],
@@ -313,8 +316,8 @@ fn remove_leftover(path: &Path) -> Result<()> {
     removed.with_context(|| format!("removing {}", path.display()))
 }
 
-/// Write the files of `directory` under `stage`, after the removal of a
-/// staging directory that an earlier run left.
+/// Write the files of `directory` under `stage`, after the removal of what
+/// an earlier run left at that path (a directory, a file or a link).
 fn write_stage(stage: &Path, directory: &PluginDir) -> Result<()> {
     remove_leftover(stage)?;
     std::fs::create_dir_all(stage).with_context(|| format!("creating {}", stage.display()))?;
@@ -348,6 +351,26 @@ mod tests {
             anyhow::bail!("injected rename failure at {index}");
         }
         Ok(())
+    }
+
+    /// The first client had no directory before the run: the rollback moves
+    /// its new directory away again.
+    #[test]
+    fn rename_failure_removes_a_new_client_directory_that_did_not_exist() {
+        let tmp = tempfile::tempdir().unwrap();
+        let out = tmp.path();
+        std::fs::create_dir_all(out.join("b-copilot")).unwrap();
+        std::fs::write(out.join("b-copilot").join("old.txt"), "b-copilot").unwrap();
+        let before = state(out);
+        let dirs = [
+            plugin_dir("b-claude", &[("new.txt", "new")]),
+            plugin_dir("b-copilot", &[("new.txt", "new")]),
+        ];
+        FAIL_SWAP_AT.with(|f| f.set(Some(1)));
+        let result = write_plugin_dirs(out, &dirs, true);
+        FAIL_SWAP_AT.with(|f| f.set(None));
+        assert!(result.is_err());
+        assert_eq!(state(out), before);
     }
 
     #[test]
@@ -444,10 +467,13 @@ mod tests {
         std::fs::write(out.join(".b-copilot.upskill-stage"), "x").unwrap();
         let dirs = [
             plugin_dir("b-claude", &[("a/new.txt", "new")]),
-            plugin_dir("b-copilot", &[("new.txt", "new")]),
+            plugin_dir("b-copilot", &[("new.txt", "new"), ("two.txt", "2")]),
         ];
         let written = write_plugin_dirs(out, &dirs, true).unwrap();
-        assert_eq!(written.len(), 2);
+        assert_eq!(
+            written,
+            vec![(out.join("b-claude"), 1), (out.join("b-copilot"), 2)]
+        );
         assert_eq!(
             state(out).0,
             vec!["b-claude".to_string(), "b-copilot".to_string()]
