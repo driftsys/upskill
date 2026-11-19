@@ -82,6 +82,7 @@ src/
 ├── select.rs            Consumer-side client selection (`--claude`, `--copilot`, ...)
 ├── target.rs            Stable identities for client configuration surfaces
 ├── conflict.rs          Item conflict detection for `upskill add`
+├── pack.rs              Build Claude Code and Copilot CLI plugin output from a bundle
 ├── plugin.rs            Client CLI shell-out for plugin installation
 ├── mcp.rs               Client-native MCP server configuration
 ├── style.rs             Output styling and the color disable chain
@@ -96,8 +97,9 @@ src/
 ├── fmt.rs               Author command — canonicalise YAML frontmatter
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
 ├── support.rs           Support level table (client x kind), printed by `doctor`
-├── notice.rs            `update --notice`: when a session notice line prints, and
-│                        the cache file that records it
+├── notice.rs            `update --notice`: when a session notice line prints,
+│                        its cache file and run lock; removal of current items
+│                        from the cache after an applying `update`
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
 └── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)
@@ -105,9 +107,11 @@ src/
 
 Outside `src/`, `plugins/` holds the sources of the session-notice hook plugins
 for Claude Code and Copilot CLI. Each plugin calls `upskill update --notice`
-from a session-start hook. These directories are the sources. A copy is
-published in the repository `driftsys/metapowers`, which holds the marketplace
-manifests (`.claude-plugin/marketplace.json` for Claude Code,
+from a session-start hook; the Copilot plugin adds `--repeat`, because Copilot
+CLI gives the line to the model and does not show it to the user. These
+directories are the sources. A copy is published in the repository
+`driftsys/metapowers`, which holds the marketplace manifests
+(`.claude-plugin/marketplace.json` for Claude Code,
 `.github/plugin/marketplace.json` for Copilot CLI). A change to `plugins/` must
 be copied there. The Claude Code hook uses the matcher `startup` because the
 notice is meant for a new session: a resumed, cleared, compacted or forked
@@ -167,7 +171,16 @@ refusing. `update --notice` is built for a session-start hook: it exits 0 in
 every case after argument parsing, also on an interrupt, writes nothing to
 stderr, never fetches, and keeps for each scope root the time of the last check,
 the updates found and the printed set in `<cache>/upskill/notice.json`
-(`$XDG_CACHE_HOME` when absolute, else `~/.cache`).
+(`$XDG_CACHE_HOME` when absolute, else `~/.cache`). Before reading the cache, it
+creates `notice.lock` in the same directory. A lock younger than 60 seconds
+makes another run exit silently; expired or future-dated locks are replaced. A
+completed run removes its lock; an interrupted run can leave it to expire. Other
+lock errors allow the run to continue without a lock. It prints a set once; with
+`--repeat` (valid only with `--notice`) it prints at every run that can proceed
+past the run lock while cached updates remain. An applied `update` removes from
+the cached updates of its scope root the items that it reports as updated, up to
+date, completed after an interruption, or removed; a cache failure there prints
+nothing.
 
 ### Source format
 
@@ -234,7 +247,7 @@ the way you would for any manual `git clone`.
     `cli_doctor_source_lookup`, `cli_exit_codes`, `cli_fmt`, `cli_global_scope`,
     `cli_install`, `cli_interrupted`, `cli_legacy_source_labels`, `cli_lint`,
     `cli_list`, `cli_mangen`, `cli_mcp`, `cli_misc`, `cli_new`,
-    `cli_opencode_plugins`, `cli_ownership`, `cli_quiet`,
+    `cli_opencode_plugins`, `cli_ownership`, `cli_pack`, `cli_quiet`,
     `cli_recorded_path_guard`, `cli_relaxed_naming`, `cli_remove`,
     `cli_repeatable`, `cli_requires`, `cli_resources`, `cli_scope`,
     `cli_search`, `cli_smoke_source`, `cli_stdio_discipline`,

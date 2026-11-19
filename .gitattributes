@@ -1,3 +1,6 @@
 # Ensure consistent line endings across platforms.
 # Fixture files must use LF so string-match tests pass on Windows.
 tests/fixtures/** text eol=lf
+# The hook files in plugins/ are embedded in the binary by `upskill pack`
+# (include_str!). They must use LF so that every platform writes the same bytes.
+plugins/** text eol=lf

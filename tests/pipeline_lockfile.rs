@@ -743,3 +743,30 @@ fn doctor_reports_multiple_skipped_plugins() {
     assert!(names.contains(&"plugin-b"), "plugin-b missing: {names:?}");
     assert!(report.is_clean());
 }
+
+#[test]
+fn bundles_with_kinds_are_sorted_by_name_and_write_name_first() {
+    use upskill::lockfile::{LockedBundle, Lockfile};
+    use upskill::pipeline::ItemKind;
+    let tmp = tempfile::tempdir().unwrap();
+    let mut lock = Lockfile::default();
+    for (name, kinds) in [("alpha", vec![ItemKind::Rule]), ("zeta", vec![])] {
+        lock.upsert_bundle(LockedBundle {
+            name: name.into(),
+            source: "local:/registry".into(),
+            git_ref: None,
+            items: vec!["r".into()],
+            kinds,
+        });
+    }
+    lock.save(tmp.path()).unwrap();
+    let text = fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap();
+    let value: serde_json::Value = serde_json::from_str(&text).unwrap();
+    assert_eq!(value["bundles"][0]["name"], "alpha");
+    assert_eq!(value["bundles"][1]["name"], "zeta");
+    let bundles = text.split("\"bundles\": [").nth(1).unwrap();
+    assert!(
+        bundles.trim_start().starts_with("{\n      \"name\":"),
+        "{bundles}"
+    );
+}

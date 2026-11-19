@@ -68,7 +68,7 @@ upskill fmt
 ## Two roles, no overlap
 
 - **Source registry** — repo where SSOT items live. Author commands run here:
-  `new`, `lint`, `fmt`.
+  `new`, `lint`, `fmt`, `pack`.
 - **Consumer project** — repo where generated outputs land. Consumer commands
   run here: `add`, `remove`, `update`, `list`, `doctor`, `search`.
 

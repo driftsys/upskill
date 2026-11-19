@@ -1,0 +1,40 @@
+schema: 1
+name: demo
+description: Demo bundle
+license: MIT
+metadata:
+  version: 1.2.0
+items:
+  skills: [alpha]
+  agents: [helper]
+  rules: [style]
+requires: [{ name: base }]
+plugins:
+  tool:
+    claude:
+      source: example/tools
+      marketplace: tools
+      plugin: tool
+      install_url: https://example.com/tool
+  cotool:
+    copilot:
+      source: example/tools
+      marketplace: tools
+      plugin: cotool
+      install_url: https://example.com/cotool
+  manual:
+    claude:
+      instructions_url: https://example.com/claude-manual
+    copilot:
+      instructions_url: https://example.com/copilot-manual
+  vscode-only:
+    vscode:
+      instructions_url: https://example.com/vscode
+  opencode-only:
+    opencode:
+      instructions_url: https://example.com/opencode
+mcps:
+  srv:
+    remote:
+      type: http
+      url: https://example.com/mcp

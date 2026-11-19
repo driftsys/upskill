@@ -557,6 +557,23 @@ pub enum UpdateStatus {
     SourceSkipped { cause: SkipCause },
 }
 
+impl UpdateStatus {
+    /// True for a status that counts as a change of the item in the
+    /// summaries of `update`: [`UpdateStatus::Updated`],
+    /// [`UpdateStatus::CompletedInterrupted`] and [`UpdateStatus::Removed`].
+    pub fn is_change(&self) -> bool {
+        match self {
+            UpdateStatus::Updated { .. }
+            | UpdateStatus::CompletedInterrupted
+            | UpdateStatus::Removed => true,
+            UpdateStatus::UpToDate
+            | UpdateStatus::SkippedModified { .. }
+            | UpdateStatus::NotApplied { .. }
+            | UpdateStatus::SourceSkipped { .. } => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct UpdatedItem {
     pub kind: ItemKind,
@@ -612,6 +629,28 @@ pub struct UpdateReport {
     /// Sources that were skipped, with their [`SkipCause`]. They were not
     /// previewed and are not counted in [`UpdateReport::sources_considered`].
     pub skipped_sources: Vec<SkippedSource>,
+    /// The number of distinct items that the run covers, by `(kind,
+    /// installed name)`: the lockfile entries that the run selects (every
+    /// entry, or with names only the named entries), also of a skipped
+    /// source, and the items that the plans of the sources that were fetched
+    /// and not skipped install. A skipped source adds no planned item. The
+    /// number is computed before the first
+    /// source is previewed, so it does not depend on where the run stops.
+    pub items_in_run: usize,
+}
+
+impl UpdateReport {
+    /// The number of distinct items, by `(kind, installed name)`, that have
+    /// an entry in [`UpdateReport::items`] whose status is a change
+    /// ([`UpdateStatus::is_change`]).
+    pub fn changed_items(&self) -> usize {
+        self.items
+            .iter()
+            .filter(|i| i.status.is_change())
+            .map(|i| (i.kind, i.name.as_str()))
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+    }
 }
 
 /// What applying one source of `update` would do now, computed after the
@@ -931,5 +970,76 @@ mod tests {
             },
         });
         assert!(report.is_clean());
+    }
+
+    #[test]
+    fn is_change_is_true_for_updated_completed_and_removed_only() {
+        let changes = [
+            UpdateStatus::Updated {
+                old_hash: None,
+                new_hash: None,
+            },
+            UpdateStatus::CompletedInterrupted,
+            UpdateStatus::Removed,
+        ];
+        for status in &changes {
+            assert!(status.is_change(), "{status:?}");
+        }
+        let others = [
+            UpdateStatus::UpToDate,
+            UpdateStatus::SkippedModified { files: vec![] },
+            UpdateStatus::NotApplied {
+                action: PreviewAction::Update,
+            },
+            UpdateStatus::SourceSkipped {
+                cause: SkipCause::Unreachable,
+            },
+        ];
+        for status in &others {
+            assert!(!status.is_change(), "{status:?}");
+        }
+    }
+
+    #[test]
+    fn changed_items_counts_an_item_once() {
+        let mut report = UpdateReport::default();
+        for status in [
+            UpdateStatus::Updated {
+                old_hash: None,
+                new_hash: None,
+            },
+            UpdateStatus::Updated {
+                old_hash: None,
+                new_hash: None,
+            },
+        ] {
+            report.items.push(UpdatedItem {
+                kind: ItemKind::Skill,
+                name: "x".into(),
+                source: "s".into(),
+                status,
+            });
+        }
+        report.items.push(UpdatedItem {
+            kind: ItemKind::Skill,
+            name: "y".into(),
+            source: "s".into(),
+            status: UpdateStatus::UpToDate,
+        });
+        assert_eq!(report.changed_items(), 1);
+    }
+
+    #[test]
+    fn changed_items_tells_two_kinds_with_one_name_apart() {
+        let mut report = UpdateReport::default();
+        for kind in [ItemKind::Skill, ItemKind::Agent] {
+            report.items.push(UpdatedItem {
+                kind,
+                name: "x".into(),
+                source: "s".into(),
+                status: UpdateStatus::Removed,
+            });
+        }
+        assert_eq!(report.changed_items(), 2);
     }
 }

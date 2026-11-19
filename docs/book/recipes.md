@@ -80,10 +80,11 @@ is compared by content and has no commit).
 ## Report available updates when a session starts
 
 `upskill update --notice` prints one line for each scope that has updates,
-prints a given set of updates once, contacts the sources at most once in 24
-hours, and exits with code 0 in every case after the arguments are parsed (also
-when it is interrupted), so that it cannot make a hook fail. When it has nothing
-to report it prints nothing.
+prints a given set of updates once (with `--repeat`, at every run until
+`upskill update` runs), contacts the sources at most once in 24 hours, and exits
+with code 0 in every case after the arguments are parsed (also when it is
+interrupted), so that it cannot make a hook fail. When it has nothing to report
+it prints nothing.
 
 The recommended way to call it from a session-start hook is the `upskill`
 plugin, which the `driftsys/metapowers` marketplace publishes. Install it for
@@ -106,18 +107,26 @@ What you get depends on the client:
 - Claude Code shows one line at session start. You see it, and the agent
   receives it.
 - Copilot CLI gives the notice to the agent. It has no documented way to show
-  the output of a session-start hook to you, and it did not print the notice in
-  the runs made in prompt mode. The plugin therefore asks the agent to tell you
-  at the start of its first reply. In 5 runs in prompt mode with Copilot CLI
-  1.0.112 and the plugin loaded from a directory, the agent did so each time.
-  The interactive terminal was not tested, and an agent can ignore the request.
-  Issue [#530](https://github.com/driftsys/upskill/issues/530) tracks this.
+  the output of a session-start hook to you. The plugin therefore asks the agent
+  to tell you at the start of its first reply. **In Copilot CLI you see the
+  notice only when the agent follows the request.** In 5 runs in prompt mode
+  with Copilot CLI 1.0.112 and the plugin loaded from a directory, the agent did
+  so each time. In 3 runs in the interactive terminal of the same version, the
+  agent did not do so in any run. For this reason the Copilot plugin calls
+  `upskill update --notice --repeat`: the notice is given to the agent at every
+  session start until `upskill update` runs. The repeat ends for an item when an
+  applied `update` reports the item as updated, up to date, completed after an
+  interruption, or removed; a dry run, an `update` that stops with an error, and
+  a modified item that `update` skips do not end it. Issue
+  [#530](https://github.com/driftsys/upskill/issues/530) records the trials.
 
-A given set of updates is announced once.
+In Claude Code a given set of updates is announced once.
 
 The plugin needs an `upskill` binary on `PATH` that has `update --notice`.
-Release 0.9.0 is the first release that has it. When the binary is missing or
-older, the hook prints nothing.
+Release 0.9.0 is the first release that has it. The Copilot plugin needs a
+binary that has `update --notice --repeat`, and release 0.9.0 does not have it:
+with release 0.9.0, the Copilot hook prints nothing. When the binary is missing
+or older, the hook prints nothing.
 
 A hand-written hook that only runs `upskill update --notice` does not show the
 notice to you in either client. Claude Code gives a plain line to the agent and
@@ -230,3 +239,28 @@ installs the binary under the client's own "allow this command?" prompts — the
 retries. upskill is never in this loop after `add`: it configures the server and
 ships the installer agent as content, but the client's agent does the
 installing, gated by the client's permission prompts.
+
+## Publish a bundle as client plugins
+
+From the source registry, build both client directories:
+
+```bash
+upskill pack my-bundle --source owner/repo@v1 --out dist
+```
+
+Copy `dist/my-bundle-claude` and `dist/my-bundle-copilot` into your marketplace
+repository and configure publication there. upskill does not install, register
+or publish these plugins. Add README and LICENSE files yourself if needed;
+`pack --force` deletes and rebuilds the selected output directories.
+
+Install with the client's marketplace command. When the output includes rules,
+invoke its init command in each project to install only rules through
+`add --kind rule --project` for that client. Init reports third-party plugins
+and MCP servers for separate setup. Run `upskill update` in the project to
+update those rules; the client marketplace manages plugin content.
+
+Plugin output is experimental until marketplace-install smoke tests pass in both
+clients. Check for duplicate skills from an existing `add` install and check
+that Copilot does not also load the Claude directory. See
+[pack](commands.md#upskill-pack-bundle---source-source---out-dir) for the output
+layout and limits.

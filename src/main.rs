@@ -2,6 +2,7 @@ use anyhow::Context;
 use clap::{Parser, error::ErrorKind};
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -46,6 +47,30 @@ fn main() {
         }
     };
 
+    // `--repeat` is valid only with `--notice`. The flag in `cli.rs` has no
+    // `requires = "notice"`, because clap would not enforce it here: clap
+    // accepts a missing required argument when a present argument conflicts
+    // with it (`is_missing_required_ok` in clap_builder's validator), and
+    // `--notice` conflicts with the names, `--yes`, `--global`, `--dry-run`
+    // and the other flags. Such an attribute would reject only a bare
+    // `--repeat`, so the rule is checked here.
+    if matches!(
+        cli.command,
+        Commands::Update {
+            repeat: true,
+            notice: false,
+            ..
+        }
+    ) {
+        let err = <Cli as clap::CommandFactory>::command().error(
+            ErrorKind::MissingRequiredArgument,
+            "the argument '--repeat' requires '--notice'",
+        );
+        let code = map_clap_error(&err);
+        let _ = err.print();
+        std::process::exit(code);
+    }
+
     style::init(cli.no_color);
     style::set_quiet(cli.quiet);
 
@@ -65,6 +90,7 @@ fn main() {
             force,
             alias,
             exclude,
+            kind,
             claude,
             copilot,
             vscode,
@@ -77,6 +103,7 @@ fn main() {
             force,
             aliases: &alias,
             excludes: &exclude,
+            kinds: &kind,
             flag_clients: client_flags(claude, copilot, vscode, opencode),
         }),
         Commands::Remove {
@@ -92,6 +119,7 @@ fn main() {
             dry_run,
             check,
             notice,
+            repeat,
             global,
             project,
             yes,
@@ -105,6 +133,7 @@ fn main() {
             dry_run,
             check,
             notice,
+            repeat,
             yes,
             global,
             project,
@@ -127,6 +156,14 @@ fn main() {
             registry,
             kind,
         } => run_search(&query, limit, registry.as_deref(), kind.as_deref()),
+        Commands::Pack {
+            bundle,
+            source,
+            out,
+            force,
+            claude,
+            copilot,
+        } => run_pack(&bundle, &source, &out, force, claude, copilot),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
         Commands::New { kind, name } => run_new(&kind, &name),
@@ -229,6 +266,7 @@ struct AddArgs<'a> {
     force: bool,
     aliases: &'a [String],
     excludes: &'a [String],
+    kinds: &'a [String],
     /// Clients named by `--claude`/`--copilot`/`--vscode`/`--opencode`.
     /// Empty means no client flag was passed (fall back to config / all).
     flag_clients: Vec<SelectedClient>,
@@ -285,8 +323,20 @@ fn run_add(args: AddArgs) -> i32 {
         force,
         aliases,
         excludes,
+        kinds,
         flag_clients,
     } = args;
+    let kinds = match kinds
+        .iter()
+        .map(|kind| ItemKind::from_str(kind))
+        .collect::<anyhow::Result<Vec<_>>>()
+    {
+        Ok(kinds) => kinds,
+        Err(err) => {
+            print_error(&err);
+            return EXIT_USAGE;
+        }
+    };
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
         Err(err) => {
@@ -312,6 +362,8 @@ fn run_add(args: AddArgs) -> i32 {
         overwrite: force,
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
+        bundles: Vec::new(),
+        kinds,
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
         keep_unwithheld_edits: false,
         scope: at.scope,
@@ -966,6 +1018,8 @@ struct UpdateArgs<'a> {
     check: bool,
     /// `--notice`: print the session notice of available updates.
     notice: bool,
+    /// `--repeat`: with `--notice`, print a set also when it was printed.
+    repeat: bool,
     yes: bool,
     global: bool,
     project: bool,
@@ -1045,6 +1099,7 @@ fn run_update(args: UpdateArgs) -> i32 {
         dry_run,
         check,
         notice,
+        repeat,
         yes,
         global,
         project,
@@ -1052,7 +1107,7 @@ fn run_update(args: UpdateArgs) -> i32 {
         flag_clients,
     } = args;
     if notice {
-        return run_update_notice();
+        return run_update_notice(repeat);
     }
     if check {
         return run_update_check(names, global, project);
@@ -1096,6 +1151,12 @@ fn run_update(args: UpdateArgs) -> i32 {
             // The plugin results of the run, with any outcome: the plugin step
             // of each applied source and the plugin repair (issue #229).
             print_plugin_result_list(&report.plugin_results);
+            // A dry run writes no file, also not the notice cache.
+            if !dry_run {
+                if let Some(path) = notice_cache_path() {
+                    notice::mark_current_in_file(&path, &at.root, &notice::current_items(&report));
+                }
+            }
             let code = if dry_run {
                 print_update_report(&report, true);
                 EXIT_SUCCESS
@@ -1166,18 +1227,28 @@ fn run_update_check(names: &[String], global: bool, project: bool) -> i32 {
 const NOTICE_TIME_LIMIT: Duration = Duration::from_secs(5);
 
 /// `update --notice`: print one line for each scope whose set of available
-/// updates was not reported yet. Exits with code 0 in every case after the
+/// updates was not reported yet, or, with `repeat`, that has available
+/// updates. Exits with code 0 in every case after the
 /// arguments are parsed, also on an interrupt (see
 /// [`install_notice_signal_handler`]). A failed step prints nothing and writes
 /// nothing to stderr. Under `--quiet`, the checks and the cache update run,
 /// and no line is printed or marked as reported.
-fn run_update_notice() -> i32 {
-    let _ = notice_lines();
+/// A run exits without output when another run holds a lock younger than 60 seconds.
+fn run_update_notice(repeat: bool) -> i32 {
+    let _ = notice_lines(repeat);
     EXIT_SUCCESS
 }
 
-fn notice_lines() -> Option<()> {
+fn notice_lines(repeat: bool) -> Option<()> {
     let cache_path = notice_cache_path()?;
+    let _run_lock = match notice::acquire_run_lock(
+        &cache_path.with_file_name(notice::LOCK_FILE_NAME),
+        std::time::SystemTime::now(),
+    ) {
+        notice::LockAttempt::Held(lock) => Some(lock),
+        notice::LockAttempt::Busy => return Some(()),
+        notice::LockAttempt::Unavailable => None,
+    };
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .ok()?
@@ -1207,7 +1278,7 @@ fn notice_lines() -> Option<()> {
     }
     if !style::is_quiet() {
         for at in &roots {
-            if let Some(line) = notice::decide(&mut cache, at.scope, &at.root) {
+            if let Some(line) = notice::decide(&mut cache, at.scope, &at.root, repeat) {
                 // A closed pipe is not an error of the notice.
                 let _ = writeln!(std::io::stdout().lock(), "{line}");
             }
@@ -1219,7 +1290,8 @@ fn notice_lines() -> Option<()> {
     // removes it.
     let handled: Vec<PathBuf> = roots.iter().map(|at| at.root.clone()).collect();
     let fresh = notice::NoticeCache::load(&cache_path);
-    let mut merged = notice::merge_roots(fresh.clone(), &cache, &handled);
+    let checked: Vec<PathBuf> = due.iter().map(|at| at.root.clone()).collect();
+    let mut merged = notice::merge_roots(fresh.clone(), &cache, &handled, &checked);
     notice::prune(&mut merged, has_lockfile);
     if merged != fresh {
         let _ = merged.save(&cache_path);
@@ -1599,28 +1671,18 @@ fn render_result(result: &SourceResult) -> String {
 }
 
 /// The closing summary of a terminal run: the items updated, completed or
-/// removed out of the items considered, and the sources applied out of the
+/// removed ([`UpdateReport::changed_items`]) out of the items that the run
+/// covers ([`UpdateReport::items_in_run`]), and the sources applied out of the
 /// sources considered, then ` <k> source(s) not applied.` when a source with
 /// changes was not applied, then ` <u> source(s) skipped.` when a source
 /// was skipped (for either [`upskill::pipeline::SkipCause`]), then
 /// ` Stopped; <r> source(s) not examined.` (or ` Stopped.` when no source
 /// remained) after `q` or end of input.
 fn closing_summary(report: &UpdateReport) -> String {
-    let changed = report
-        .items
-        .iter()
-        .filter(|i| {
-            matches!(
-                i.status,
-                UpdateStatus::Updated { .. }
-                    | UpdateStatus::CompletedInterrupted
-                    | UpdateStatus::Removed
-            )
-        })
-        .count();
     let mut line = format!(
-        "Updated {changed} of {} item(s) from {} of {} source(s).",
-        report.items.len(),
+        "Updated {} of {} item(s) from {} of {} source(s).",
+        report.changed_items(),
+        report.items_in_run,
         report.sources_applied,
         report.sources_considered
     );
@@ -1685,15 +1747,7 @@ fn finish_terminal_update(report: &UpdateReport) -> i32 {
     } else {
         println!();
         println!("{}", closing_summary(report));
-        let changed_items = report.items.iter().any(|i| {
-            matches!(
-                i.status,
-                UpdateStatus::Updated { .. }
-                    | UpdateStatus::CompletedInterrupted
-                    | UpdateStatus::Removed
-            )
-        });
-        if !changed_items && !report.changed.is_empty() {
+        if report.changed_items() == 0 && !report.changed.is_empty() {
             print_changed_files(report.changed.len());
         }
     }
@@ -1728,25 +1782,13 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             "{} {} of {} item(s)",
             style::warn("Dry-run: would update"),
             changes,
-            report.items.len()
+            report.items_in_run
         );
         println!("{DRY_RUN_LAST_LINE}");
         return;
     }
     // An applied run counts the items it changed.
-    let changes = report
-        .items
-        .iter()
-        .filter(|i| {
-            !matches!(
-                i.status,
-                UpdateStatus::UpToDate
-                    | UpdateStatus::SkippedModified { .. }
-                    | UpdateStatus::NotApplied { .. }
-                    | UpdateStatus::SourceSkipped { .. }
-            )
-        })
-        .count();
+    let changes = report.changed_items();
     let skipped = report
         .items
         .iter()
@@ -1769,7 +1811,7 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         "{} {} of {} item(s)",
         style::success("Updated"),
         changes,
-        report.items.len()
+        report.items_in_run
     );
     for item in &report.items {
         let kind_label = match item.kind {
@@ -2363,6 +2405,47 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
             style::name(&bundle.name),
             style::dim(&format!("{}{pinned}", bundle.source))
         );
+    }
+}
+
+fn run_pack(
+    bundle: &str,
+    source: &str,
+    out: &std::path::Path,
+    force: bool,
+    claude: bool,
+    copilot: bool,
+) -> i32 {
+    use upskill::pack::{self, PackClient};
+
+    if let Err(error) =
+        pack::validate_source(source).and_then(|()| pack::validate_bundle_name(bundle))
+    {
+        print_error(format!("{error:#}"));
+        return EXIT_USAGE;
+    }
+    let result = (|| -> anyhow::Result<()> {
+        let root = std::env::current_dir()?;
+        let mut directories = Vec::new();
+        if claude || !copilot {
+            directories.push(pack::build(&root, bundle, source, PackClient::Claude)?);
+        }
+        if copilot || !claude {
+            directories.push(pack::build(&root, bundle, source, PackClient::Copilot)?);
+        }
+        for (target, count) in pack::write_plugin_dirs(out, &directories, force)? {
+            if !style::is_quiet() {
+                println!("Wrote {} ({} files)", target.display(), count);
+            }
+        }
+        Ok(())
+    })();
+    match result {
+        Ok(()) => EXIT_SUCCESS,
+        Err(error) => {
+            print_error(format!("{error:#}"));
+            EXIT_ERROR
+        }
     }
 }
 
@@ -3018,6 +3101,10 @@ mod tests {
         let mut report = UpdateReport {
             sources_considered: 2,
             sources_applied: 1,
+            // The two entries below are of one item; 3 is the number of
+            // items that the run covers, for example with planned
+            // dependencies that have no status line.
+            items_in_run: 3,
             ..UpdateReport::default()
         };
         for status in [
@@ -3038,12 +3125,12 @@ mod tests {
         }
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s)."
+            "Updated 1 of 3 item(s) from 1 of 2 source(s)."
         );
         report.sources_not_applied = 1;
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied."
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied."
         );
         report
             .skipped_sources
@@ -3054,19 +3141,19 @@ mod tests {
             });
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
              1 source(s) skipped."
         );
         report.skipped_sources.clear();
         report.stopped = true;
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. Stopped."
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied. Stopped."
         );
         report.sources_remaining = 3;
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
              Stopped; 3 source(s) not examined."
         );
     }

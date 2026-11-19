@@ -158,6 +158,22 @@ impl Env {
     }
 }
 
+/// `update --project` in a terminal, with end of input as the answer. No
+/// source has a change in these tests, so the run applies no source and only
+/// the plugin repair can run a plugin command.
+fn terminal_update(env: &Env) -> serde_json::Value {
+    let path = format!("{}:/usr/bin:/bin", env.bin.display());
+    let result = common::update_in_terminal_with_env(
+        &env.project,
+        &env.home,
+        &["--project"],
+        "\u{4}",
+        &[("PATH", path)],
+    );
+    assert_eq!(result["returncode"], 0, "{result}");
+    result
+}
+
 fn write_script(path: &std::path::Path, body: &str) {
     fs::write(path, body).unwrap();
     use std::os::unix::fs::PermissionsExt;
@@ -276,6 +292,40 @@ fn update_yes_installs_a_missing_module_plugin_again_and_dry_run_does_not() {
     );
 }
 
+/// A source under a kind restriction runs no plugin step in `update`, so the
+/// plugin repair does not run for it either.
+#[test]
+fn update_yes_does_not_repair_a_plugin_of_a_source_under_a_kind_restriction() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    env.add().success();
+    // The second `add` records the kind restriction on the bundle. The
+    // plugin record of the first `add` stays in the lockfile.
+    let registry = env.bundle.parent().unwrap().to_path_buf();
+    env.run(&[
+        "add",
+        registry.to_str().unwrap(),
+        "oc",
+        "--project",
+        "--kind",
+        "skill",
+    ])
+    .success();
+    let lock = env.lock();
+    assert_eq!(lock["bundles"][0]["kinds"][0], "skill", "{lock}");
+    assert_eq!(lock["plugins"][0]["status"], "installed", "{lock}");
+
+    env.set_list("");
+    env.clear_log();
+    env.run(&["update", "--yes", "--project"]).code(0);
+    assert!(
+        !plugin_lines(&env.log())
+            .iter()
+            .any(|l| l.starts_with("plugin add")),
+        "{}",
+        env.log()
+    );
+}
+
 #[test]
 fn opencode_1x_runs_no_plugin_command_and_warns() {
     let env = Env::new(&format!("module: {MODULE}"), "v1.15.13");
@@ -297,7 +347,7 @@ fn opencode_1x_runs_no_plugin_command_and_warns() {
 }
 
 #[test]
-fn update_yes_repair_runs_no_plugin_command_when_opencode_is_1x() {
+fn terminal_repair_runs_no_plugin_command_when_opencode_is_1x() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
     env.add().success();
     let lock = fs::read_to_string(env.project.join(".upskill-lock.json")).unwrap();
@@ -307,11 +357,12 @@ fn update_yes_repair_runs_no_plugin_command_when_opencode_is_1x() {
     env.set_version("opencode v1.15.13\n", 0);
     env.clear_log();
 
-    let out = env.run(&["update", "--yes", "--project"]).code(0);
+    // A terminal run applies no source here, so only the repair could run.
+    let result = terminal_update(&env);
     assert!(plugin_lines(&env.log()).is_empty(), "{}", env.log());
     // The doctor check cannot run under 1.x, so the plugin is not selected
     // for the repair and the user is told nothing about it.
-    assert!(!stderr(&out).contains("superpowers"), "{}", stderr(&out));
+    assert!(!result.to_string().contains("superpowers"), "{result}");
     let lock = fs::read_to_string(env.project.join(".upskill-lock.json")).unwrap();
     assert!(lock.contains("\"installed\""), "{lock}");
 }
@@ -484,7 +535,8 @@ fn repair_installs_only_the_missing_client_of_a_plugin() {
     env.clear_log();
     let _ = fs::remove_file(env.bin.join("code-log.txt"));
 
-    let out = env.run(&["update", "--yes", "--project"]).code(0);
+    // A terminal run applies no source here: the repair alone installs.
+    let result = terminal_update(&env);
     assert!(
         plugin_lines(&env.log()).contains(&format!("plugin add {MODULE}").as_str()),
         "{}",
@@ -496,7 +548,7 @@ fn repair_installs_only_the_missing_client_of_a_plugin() {
         env.code_log()
     );
     // The output of a run whose only change is the repair.
-    let text = stdout(&out);
+    let text = result["stdout"].as_str().unwrap().to_string();
     assert!(text.contains("Plugins: 1 plugin(s) installed"), "{text}");
     assert!(text.contains("nothing to do"), "{text}");
 }
@@ -548,8 +600,9 @@ fn instructions_record_is_not_tried_again() {
     let env = Env::new("instructions_url: https://example.com/sp", "v2.1.4");
     env.add().success();
     assert_eq!(env.lock()["plugins"][0]["status"], "instructions");
-    let out = env.run(&["update", "--yes", "--project"]).code(0);
-    assert!(!stderr(&out).contains("manual step"), "{}", stderr(&out));
+    // A terminal run applies no source here: the repair does not try it.
+    let result = terminal_update(&env);
+    assert!(!result.to_string().contains("manual step"), "{result}");
 }
 
 #[test]

@@ -9,8 +9,8 @@ metadata:
 
 upskill manages the lifecycle of installable agent content. It does not make
 authoring decisions for you. This skill covers operations: add, update, remove,
-list, doctor, lint, fmt, new. For authoring decisions (where does this go, how
-do I write it), hand off to `upskill-prompt-distilling` and the writing-*
+list, doctor, lint, fmt, new, pack. For authoring decisions (where does this go,
+how do I write it), hand off to `upskill-prompt-distilling` and the writing-*
 skills.
 
 ## Two sides of the workflow
@@ -23,7 +23,7 @@ side you are on.
   `AGENT.md`) and bundle manifests (`skills/<name>.bundle.yaml`). The layout is
   documented in
   [Conventions](https://driftsys.github.io/upskill/conventions.html). Author
-  commands: `new`, `fmt`, `lint`.
+  commands: `new`, `fmt`, `lint`, `pack`.
 - **Consumer project** — a downstream repo that installs from one or more source
   registries. Holds generated per-client output under `.claude/`, `.github/`,
   `.opencode/`, etc., plus a `.upskill-lock.json` recording what is installed.
@@ -113,9 +113,13 @@ content you authored and understand, and always lint after.
 `upskill update --notice` is made for a session-start hook. It prints one line
 for each scope that has updates, for example
 `upskill: 2 updates available (project). Run "upskill update".`. It prints a
-given set of updates once, contacts the sources at most once in 24 hours, never
-fetches or installs, and exits 0 in every case after argument parsing. When
-nothing is new it prints nothing.
+given set of updates once (with `--repeat`, at every run until `upskill update`
+runs), contacts the sources at most once in 24 hours, never fetches or installs,
+and exits 0 in every case after argument parsing. The repeat ends for an item
+when an applied `update` reports the item as updated, up to date, completed
+after an interruption, or removed; a dry run, an `update` that stops with an
+error, and a modified item that `update` skips do not end it. When nothing is
+new it prints nothing.
 
 To set it up, install the `upskill` plugin from the `driftsys/metapowers`
 marketplace: `claude plugin marketplace add driftsys/metapowers`, then
@@ -124,10 +128,13 @@ marketplace: `claude plugin marketplace add driftsys/metapowers`, then
 `copilot plugin install upskill@metapowers`. Claude Code shows the line to the
 user and gives it to the agent; Copilot CLI gives it to the agent with a request
 to tell the user at the start of the first reply, and does not display it, so
-the user may not have seen it. A hand-written hook that prints the plain line
-does not work: Claude Code does not display it and Copilot CLI ignores it. The
-plugin needs an `upskill` binary on `PATH` that has `update --notice`; without
-one it prints nothing.
+the user sees it only when the agent follows the request. The Copilot plugin
+calls `upskill update --notice --repeat`, so the line is given to the agent at
+every session start until `upskill update` runs. A hand-written hook that prints
+the plain line does not work: Claude Code does not display it and Copilot CLI
+ignores it. The plugin needs an `upskill` binary on `PATH` that has
+`update --notice`; the Copilot plugin also needs `update --notice --repeat`.
+Without such a binary the hook prints nothing.
 
 When you receive the line:
 
@@ -139,8 +146,12 @@ When you receive the line:
    `upskill update`, or `upskill update --global` for the global scope. Follow
    "Updating installed content" above.
 
-The line is not printed again for the same set of updates, also when the user
-does not update.
+In Claude Code the line is not printed again for the same set of updates, also
+when the user does not update. In Copilot CLI the line is given to the agent at
+every session start until `upskill update` runs. The repeat ends for an item
+when an applied `update` reports the item as updated, up to date, completed
+after an interruption, or removed; a dry run, an `update` that stops with an
+error, and a modified item that `update` skips do not end it.
 
 ### Vendoring a third-party bundle (e.g., superpowers)
 
@@ -221,9 +232,11 @@ findings:
 - Orphan per-client files not recorded in the lockfile (a previous install or
   hand-creation that needs reconciling)
 - Plugin recorded as installed but missing from the client (uninstalled
-  out-of-band → `update` reinstalls it, also in a terminal run for a source
-  whose preview changes nothing; when no recorded item comes from the source of
-  the plugin's bundle, `doctor` names the `upskill add` command to run instead)
+  out-of-band → `update` reinstalls it for a source without a kind restriction,
+  also in a terminal run for a source whose preview changes nothing; a source
+  under a kind restriction skips the plugin and MCP steps and this repair; when
+  no recorded item comes from the source of the plugin's bundle, `doctor` names
+  the `upskill add` command to run instead)
 - Plugin skipped at install time because the client CLI was not on PATH, or
   opencode was below version 2 or gave no version (informational warning —
   install the CLI, or opencode 2 or later, then run `update --yes`)
@@ -382,3 +395,27 @@ agent makes correct workflow decisions in both cases.
 - `upskill doctor` reports clean state (exit 0)
 - Generated per-client files are committed alongside `.upskill-lock.json`
 - No hand-edited generated files remain
+
+## Bundle plugin output and project rules
+
+`upskill pack <bundle> --source <source> --out <dir>` builds Claude Code and
+Copilot CLI plugin directories from the current registry. With no client flag it
+writes both; `--claude` and `--copilot` select clients. It reads no lockfile and
+does not install or publish the output. A non-empty client directory needs
+`--force`, which deletes and rebuilds it. Plugin output remains experimental
+pending marketplace-install smoke tests in both clients.
+
+The plugin carries skills and agents. Its init command, when rules target the
+client, runs `add --kind rule --project` for that client. `add --kind` is
+repeatable for `rule`, `skill` and `agent`; it skips plugin and MCP steps.
+Bundle lockfile entries record the selected `kinds`. `update` uses their union
+only when every recorded bundle of the source has recorded kinds; one
+unrestricted bundle leaves that source unrestricted. Every entry of that source
+whose kind is outside the restriction stays unchanged; reinstall it explicitly
+to update it.
+
+The embedded notice hook calls `update --notice`. Runs sharing a cache use
+`notice.lock`: a lock younger than 60 seconds makes another run exit silently. A
+session in another repository may therefore get no notice until its next session
+start. Concurrent reclamation of an expired lock can still duplicate a notice.
+This lock does not protect install, update or removal.

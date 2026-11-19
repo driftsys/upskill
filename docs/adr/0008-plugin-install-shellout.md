@@ -156,6 +156,14 @@ the source attempted in the same run, whatever the outcome, is not tried again.
 A repair install that fails prints a warning and does not change the exit code
 of `update`, as for `add`.
 
+A source under a kind restriction (every bundle that the lockfile records for
+the source has recorded kinds, `add --kind`) runs no plugin step in `update`,
+and the repair does not run for it either. The plugin step of an applied source
+without a kind restriction attempts every plugin of the recorded bundles of the
+source, so an `update --yes` run installs a plugin through that step, and the
+repair covers the source that a terminal run does not apply because its preview
+changes nothing.
+
 `update` runs over the sources of the items that the lockfile records. When no
 recorded item comes from the source that the lockfile records for a plugin's
 bundle (for example a bundle with `items: {}`), `update` does not reach that

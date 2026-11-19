@@ -17,7 +17,7 @@ upskill new skill code-review        # scaffold a new SSOT skill (in a registry)
 | Role         | Lives in                          | Commands                                              |
 | ------------ | --------------------------------- | ----------------------------------------------------- |
 | **Consumer** | A project that uses AI assistance | `add`, `remove`, `update`, `list`, `doctor`, `search` |
-| **Author**   | A source-registry repo            | `new`, `lint`, `fmt`                                  |
+| **Author**   | A source-registry repo            | `new`, `lint`, `fmt`, `pack`                          |
 
 Consumer projects only ever contain **generated** per-client files. Source
 registries hold the canonical SSOT items (`RULE.md`, `SKILL.md`, `AGENT.md`,

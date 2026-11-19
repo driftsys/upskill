@@ -119,11 +119,14 @@ failed until `update --force`.
 4. **Hand-shake files are previewed; plugin and MCP steps are not.** A
    `CLAUDE.md`, `opencode.json` or `.vscode/settings.json` change is listed in
    the block and is a reason to ask. The plugin and MCP steps of a bundle source
-   run when the source is applied and are not a reason to ask.
+   run when the source is applied without a kind restriction and are not a
+   reason to ask. `update` skips both steps for a source under a kind
+   restriction.
 5. **`--yes` applies every source.** With `--yes`, or when stdin is not a
    terminal, every source is applied without a question, also a source whose
-   preview changes nothing, so its plugin and MCP steps run. `--dry-run` prints
-   the same blocks and applies nothing.
+   preview changes nothing. Its plugin and MCP steps run unless the source has a
+   kind restriction, which skips both steps. `--dry-run` prints the same blocks
+   and applies nothing.
 6. **A `schema: 1` lockfile is adopted once per run, without a question**, after
    every source that was not skipped (because it could not be fetched, or
    because it requires an item of a skipped source) passed the checks of the
@@ -139,7 +142,8 @@ failed until `update --force`.
   answer is `y`, with two exceptions, each for a source whose preview changes
   nothing: its MCP step and the install of a plugin that is neither missing nor
   skipped (a terminal run still installs again a recorded plugin that `doctor`
-  reports missing or that is recorded as skipped, ADR-0008), and a change
+  reports missing or that is recorded as skipped, ADR-0008; the plugin and MCP
+  steps and this repair are all skipped under a kind restriction), and a change
   confined to a `bundles` record of the lockfile (the preview does not compare
   `bundles` records).
 - A run without a source change reports an edited file, asks to delete the files
@@ -159,8 +163,9 @@ failed until `update --force`.
 - Known limits:
   - A terminal run does not apply a source whose preview changes nothing, so it
     does not repair a missing MCP registration of that source. `doctor` reports
-    it and `update --yes` repairs it. A missing or skipped plugin of that source
-    is installed again by the plugin repair of the run (ADR-0008).
+    it and `update --yes` repairs it for a source without a kind restriction. A
+    missing or skipped plugin of that source is installed again by the plugin
+    repair of the run (ADR-0008), also only without a kind restriction.
   - A `--dry-run` block is exact for the current disk, but does not include the
     effect of applying an earlier source.
   - A change of only `required_by` in an item record is not shown and does not

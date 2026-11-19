@@ -186,3 +186,11 @@ exits with code 0 whenever it ran, whatever the results.
 After a run, a maintainer sets each client and kind with the level `supported`
 in `src/support.rs`, with the client version and the date of the run, and
 updates the table above to match. A test fails when the two differ.
+
+## Bundle plugin output
+
+`upskill pack` output for Claude Code and GitHub Copilot CLI is experimental
+until a maintainer runs a smoke test with a marketplace install in both clients.
+The test must check skill and agent visibility, init execution and the session
+notice for an available update. `doctor` gains no row for plugin output; the
+item support levels above do not qualify marketplace-installed plugins.

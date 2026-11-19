@@ -1036,8 +1036,15 @@ fn repair_missing_plugins(
 /// its recorded commit. An entry of the source that `names` did not select
 /// keeps its recorded commit on this path. In an applied source the
 /// reinstall covers the selected entries, the entries that a selected item
-/// requires (from this source or from another one), and every member for a
-/// bundle source. Each reinstalled entry gets the commit of its own source,
+/// requires (from this source or from another one). For a directory source
+/// with recorded bundles, it reinstalls the members of those bundles and the
+/// directly installed items of that source, and no other source items. It
+/// applies a kind restriction only when every recorded bundle of the source
+/// has recorded kinds, using their union. With one unrestricted bundle of the
+/// source, no restriction applies. Every entry of that source whose kind is
+/// outside the restriction is kept unchanged and is not updated. To update it,
+/// run `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled
+/// as a whole. Each reinstalled entry gets the commit of its own source,
 /// unless its update is skipped; any other entry keeps its recorded commit.
 /// Every source without changes that is not applied, in a run that is not
 /// a dry run and not stopped, a git source or a local path, also gets
@@ -1114,6 +1121,16 @@ pub fn update(
             .push(entry);
     }
 
+    // The items that the run covers: every lockfile entry that the run
+    // selects, and below the items that the plans of the sources that were
+    // fetched and not skipped install (a source skipped for `RequiresSkipped`
+    // is removed from `prepared_sources` before its plan is counted).
+    let mut run_items: std::collections::BTreeSet<(ItemKind, String)> = by_source
+        .values()
+        .flatten()
+        .map(|e| (e.kind, e.name.clone()))
+        .collect();
+
     let mut report = UpdateReport::default();
     // The adoption of a `schema: 1` lockfile is saved. A later error must
     // still carry the adopted paths for the adoption notice.
@@ -1156,11 +1173,38 @@ pub fn update(
             } else {
                 selection.clone()
             };
+            let recorded_bundles: Vec<_> = lock
+                .bundles
+                .iter()
+                .filter(|bundle| bundle.source == source_label)
+                .collect();
+            let kinds = if recorded_bundles
+                .iter()
+                .all(|bundle| !bundle.kinds.is_empty())
+            {
+                recorded_bundles
+                    .iter()
+                    .flat_map(|bundle| bundle.kinds.iter().copied())
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .into_iter()
+                    .collect()
+            } else {
+                Vec::new()
+            };
             let options = AddOptions {
                 force: true,
                 overwrite,
                 aliases,
                 excludes: vec![],
+                kinds,
+                bundles: if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
+                    Vec::new()
+                } else {
+                    recorded_bundles
+                        .iter()
+                        .map(|bundle| bundle.name.clone())
+                        .collect()
+                },
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
                 scope: at.scope,
@@ -1174,20 +1218,29 @@ pub fn update(
             // resolved and refreshed because `prepare_install` re-expands
             // the closure for each requested item.
             //
-            // Bundle sources are exempt: a bundle is its own unit and must
-            // be reinstalled as a whole (an empty filter routes it through
-            // the bundle-resolution path), so scoping to item names there
-            // would mis-route a `.bundle.yaml` source into name resolution.
-            let is_bundle_source = source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
-                || lock.bundles.iter().any(|b| b.source == source_label);
-            let item_filter: Vec<String> = if is_bundle_source {
-                Vec::new()
-            } else {
-                source_entries
-                    .iter()
-                    .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
-                    .collect()
-            };
+            // Bundle-file sources resolve as a whole. Directory sources with
+            // recorded bundles resolve those bundles and their direct items.
+            let item_filter: Vec<String> =
+                if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
+                    Vec::new()
+                } else if !recorded_bundles.is_empty() {
+                    source_entries
+                        .iter()
+                        .filter(|entry| entry.required_by.is_empty())
+                        .map(|entry| entry.source_name.as_ref().unwrap_or(&entry.name))
+                        .filter(|name| {
+                            !recorded_bundles
+                                .iter()
+                                .any(|bundle| bundle.items.contains(name))
+                        })
+                        .cloned()
+                        .collect()
+                } else {
+                    source_entries
+                        .iter()
+                        .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
+                        .collect()
+                };
 
             // A source that cannot be fetched (a [`FetchFailed`] in the
             // error chain, also for a dependency source) is skipped: it is
@@ -1218,6 +1271,22 @@ pub fn update(
                 }
                 Err(err) => return Err(err),
             };
+            // Every entry outside the recorded kinds is kept unchanged.
+            let source_entries: Vec<_> = source_entries
+                .into_iter()
+                .filter(|entry| {
+                    let keep = !options.kinds.is_empty() && !options.kinds.contains(&entry.kind);
+                    if keep {
+                        report.items.push(UpdatedItem {
+                            kind: entry.kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status: UpdateStatus::UpToDate,
+                        });
+                    }
+                    !keep
+                })
+                .collect();
             prepared_sources.push((source_label, source_entries, prepared));
         }
         // One verdict per source: a prepared source whose plan writes an item
@@ -1268,6 +1337,10 @@ pub fn update(
             });
         }
         let total_sources = prepared_sources.len();
+        for (_, _, prepared) in &prepared_sources {
+            run_items.extend(prepared.planned_hashes().into_keys());
+        }
+        report.items_in_run = run_items.len();
 
         // The overlap check of `add`, applied to the items of every source
         // that the run reads and to the items of every recorded local-path
@@ -1339,13 +1412,23 @@ pub fn update(
             guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
             // The bundles that the lockfile records for this source, as the
             // fetched source declares them now: the plugin repair below
-            // installs from them (issue #229).
-            let repair_bundles: Vec<crate::model::Bundle> = lock
+            // installs from them (issue #229). A source under a kind
+            // restriction (every recorded bundle of the source has recorded
+            // kinds) runs no plugin step, so it gets no repair either.
+            let recorded: Vec<&crate::lockfile::LockedBundle> = lock
                 .bundles
                 .iter()
                 .filter(|b| b.source == source_label)
-                .filter_map(|b| prepared.source_bundle(&b.name))
                 .collect();
+            let restricted = !recorded.is_empty() && recorded.iter().all(|b| !b.kinds.is_empty());
+            let repair_bundles: Vec<crate::model::Bundle> = if restricted {
+                Vec::new()
+            } else {
+                recorded
+                    .iter()
+                    .filter_map(|b| prepared.source_bundle(&b.name))
+                    .collect()
+            };
 
             let mut current = crate::lockfile::Lockfile::load(target)?;
             let adopted = if dry_run {
@@ -1554,15 +1637,24 @@ pub fn update(
                     .get(&(kind, entry.name.clone()))
                     .cloned()
                     .flatten();
+                // The record before this commit, not the record at the start
+                // of the run: an earlier source of the run can have written
+                // this item as its dependency, and that write is not reported
+                // again here.
+                let recorded = current
+                    .items
+                    .iter()
+                    .find(|i| i.kind == kind && i.name == entry.name)
+                    .unwrap_or(entry);
                 let status = if let Some(files) = skipped.remove(&(kind, entry.name.clone())) {
                     UpdateStatus::SkippedModified { files }
-                } else if new_hash == entry.hash && !entry.pending.is_empty() {
+                } else if new_hash == recorded.hash && !recorded.pending.is_empty() {
                     UpdateStatus::CompletedInterrupted
-                } else if new_hash == entry.hash {
+                } else if new_hash == recorded.hash {
                     UpdateStatus::UpToDate
                 } else {
                     UpdateStatus::Updated {
-                        old_hash: entry.hash.clone(),
+                        old_hash: recorded.hash.clone(),
                         new_hash,
                     }
                 };
@@ -1570,6 +1662,39 @@ pub fn update(
                     kind,
                     name: entry.name.clone(),
                     source: source_label.clone(),
+                    status,
+                });
+            }
+            // An item that is not an entry of this source and that the
+            // commit wrote: a dependency from another source. It is
+            // reported here, as for an entry, against the lockfile record
+            // before the commit.
+            for ((kind, name), new_hash) in &new_hashes {
+                if skipped.contains_key(&(*kind, name.clone()))
+                    || source_entries
+                        .iter()
+                        .any(|e| e.kind == *kind && &e.name == name)
+                {
+                    continue;
+                }
+                let recorded = current
+                    .items
+                    .iter()
+                    .find(|i| i.kind == *kind && &i.name == name);
+                let status = match recorded {
+                    Some(entry) if entry.hash == *new_hash && !entry.pending.is_empty() => {
+                        UpdateStatus::CompletedInterrupted
+                    }
+                    Some(entry) if entry.hash == *new_hash => continue,
+                    _ => UpdateStatus::Updated {
+                        old_hash: recorded.and_then(|e| e.hash.clone()),
+                        new_hash: new_hash.clone(),
+                    },
+                };
+                report.items.push(UpdatedItem {
+                    kind: *kind,
+                    name: name.clone(),
+                    source: source_of(&lock, *kind, name, &source_label),
                     status,
                 });
             }
@@ -1600,20 +1725,46 @@ pub fn update(
                 ..SourceResult::default()
             };
             for item in &report.items[first_item..] {
-                match item.status {
-                    UpdateStatus::Updated { .. } => result.updated += 1,
-                    UpdateStatus::CompletedInterrupted => result.completed += 1,
-                    UpdateStatus::Removed => result.removed += 1,
-                    UpdateStatus::SkippedModified { .. } => result.skipped += 1,
-                    UpdateStatus::UpToDate
-                    | UpdateStatus::NotApplied { .. }
-                    | UpdateStatus::SourceSkipped { .. } => {}
+                if item.status.is_change() {
+                    match item.status {
+                        UpdateStatus::Updated { .. } => result.updated += 1,
+                        UpdateStatus::CompletedInterrupted => result.completed += 1,
+                        UpdateStatus::Removed => result.removed += 1,
+                        UpdateStatus::UpToDate
+                        | UpdateStatus::SkippedModified { .. }
+                        | UpdateStatus::NotApplied { .. }
+                        | UpdateStatus::SourceSkipped { .. } => {}
+                    }
+                } else if matches!(item.status, UpdateStatus::SkippedModified { .. }) {
+                    result.skipped += 1;
                 }
             }
             observer.applied(&result);
         }
         Ok(())
     })();
+    // An item that a source changed as a dependency of another source can
+    // also have an `UpToDate` entry from a later source of the run (its own
+    // source, which then finds it written). An `UpToDate` entry of an item
+    // that has a change anywhere in the report is not reported. Only the
+    // first change of an item is reported: two sources can plan different
+    // content for one item when their `requires` name different sources or
+    // refs for it.
+    let changed_keys: std::collections::BTreeSet<(ItemKind, String)> = report
+        .items
+        .iter()
+        .filter(|i| i.status.is_change())
+        .map(|i| (i.kind, i.name.clone()))
+        .collect();
+    let mut seen_changed = std::collections::BTreeSet::new();
+    report.items.retain(|item| {
+        if item.status.is_change() {
+            seen_changed.insert((item.kind, item.name.clone()))
+        } else {
+            item.status != UpdateStatus::UpToDate
+                || !changed_keys.contains(&(item.kind, item.name.clone()))
+        }
+    });
     // An item skipped by the reinstall of two sources, or not applied as a
     // skip in two sources, is reported once.
     let mut seen_skipped = std::collections::BTreeSet::new();
@@ -1836,6 +1987,7 @@ mod tests {
             source: source.into(),
             git_ref: None,
             items: vec![],
+            kinds: vec![],
         });
         if let Some(item_source) = item_source {
             let mut lock2: crate::lockfile::Lockfile = serde_json::from_value(serde_json::json!({

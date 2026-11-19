@@ -45,7 +45,7 @@ of the `HOME` environment variable, or of `USERPROFILE` when `HOME` is not set.
 
 - **Source registry** — repository where SSOT items are authored. Holds the
   canonical `RULE.md` / `SKILL.md` / `AGENT.md` files and `*.bundle.yaml`
-  manifests. Author commands (`new`, `lint`, `fmt`) operate here.
+  manifests. Author commands (`new`, `lint`, `fmt`, `pack`) operate here.
 - **Consumer project** — repository where generated outputs are installed for
   use by AI clients. Holds only generated per-client files. Consumer commands
   (`add`, `remove`, `update`, `list`, `doctor`, `search`) operate here.
@@ -57,24 +57,33 @@ the same tree.
 
 No overlap between verbs.
 
-| Command  | Role     | Purpose                                             |
-| -------- | -------- | --------------------------------------------------- |
-| `add`    | Consumer | Install items or bundles from any source.           |
-| `remove` | Consumer | Remove installed content.                           |
-| `update` | Consumer | Pull latest, regenerate changed items.              |
-| `list`   | Consumer | Show installed content from the lock file.          |
-| `doctor` | Consumer | Verify installation consistency.                    |
-| `search` | Consumer | Look up skills via the public registry.             |
-| `index`  | Consumer | Build or manage the local registry index cache.     |
-| `new`    | Author   | Scaffold a new rule, skill, or agent.               |
-| `lint`   | Author   | Validate SSOT files against the format spec.        |
-| `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting). |
+| Command  | Role     | Purpose                                               |
+| -------- | -------- | ----------------------------------------------------- |
+| `add`    | Consumer | Install items or bundles from any source.             |
+| `remove` | Consumer | Remove installed content.                             |
+| `update` | Consumer | Pull latest, regenerate changed items.                |
+| `list`   | Consumer | Show installed content from the lock file.            |
+| `doctor` | Consumer | Verify installation consistency.                      |
+| `search` | Consumer | Look up skills via the public registry.               |
+| `index`  | Consumer | Build or manage the local registry index cache.       |
+| `new`    | Author   | Scaffold a new rule, skill, or agent.                 |
+| `lint`   | Author   | Validate SSOT files against the format spec.          |
+| `pack`   | Author   | Build Claude Code and Copilot CLI plugin directories. |
+| `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting).   |
 
 ### 2.1 `add`
 
 ```text
 upskill add <source> [items...] [--global|--project]
 ```
+
+`add --kind <kind>` (short `-k`, repeatable) restricts items to `rule`, `skill`
+or `agent`. A required item of another kind is not installed. It also applies
+without item names. An unknown kind is a usage error (exit 2); filtering out
+every named item is an error (exit 1). With any kind restriction, the plugin and
+MCP steps are skipped: no plugin or MCP registration or lockfile record is
+created by those steps. For example:
+`upskill add owner/repo my-bundle --kind rule --project --claude`.
 
 `<source>` accepts (parity with `npx skills add`):
 
@@ -186,7 +195,7 @@ error that names the item.
 ```text
 upskill update [name...] [--global|--project] [--dry-run] [--force]
 upskill update --check [name...] [--global|--project]
-upskill update --notice
+upskill update --notice [--repeat]
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
@@ -334,37 +343,49 @@ item and a `kept modified file` note are not changes.
   nothing is not applied and asks nothing. The apply decides again from the
   disk. After an applied source, `update` prints a result line with the non-zero
   counts of `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
-  `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`. After the
-  last source it prints `Updated <n> of <m> item(s) from <a> of <s> source(s).`,
-  followed by `<k> source(s) not applied.` when a source with changes was not
-  applied, by `<u> source(s) skipped.` when sources were skipped, for either
-  cause, and by `Stopped; <r> source(s) not examined.` or `Stopped.` after `q`
-  or end of input; then `Changed <n> file(s) written or deleted` when no item
-  was updated, completed or removed but files were written or deleted. It prints
-  `everything is up to date — nothing to do` instead when no source was applied,
-  no source with changes was declined, no file was kept with a note, no item was
-  skipped, no source was skipped and no lockfile was adopted. The exit code is 1
-  when an item is skipped in an applied source or in a source whose preview
-  changes nothing, when a source was skipped, or when a step fails; answers `n`
-  and `q` do not change it, and a `skip` line of a source that was not applied
-  does not cause exit code 1. With `--quiet`, the blocks, the notes, the result
-  lines and the closing summary are not printed; the question is
-  `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of the skipped
-  items that cause exit code 1, `Use --force to replace.` and the adoption
-  notice are printed on stderr. Without `--quiet`, a terminal run prints no
-  `skipped` line.
+  `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`; the
+  counts include a dependency from another source that the apply updated,
+  completed or skipped. After the last source it prints
+  `Updated <n> of <m> item(s) from <a> of <s> source(s).`: `<n>` is the number
+  of items that the run updated, completed or removed, also as a dependency of
+  another source, and `<m>` is the number of items that the run covers (the
+  lockfile entries that the run selects, which are all entries or with names
+  only the named entries, also of skipped sources and of sources not examined
+  after `q`, and the items that the plans of the sources that were fetched and
+  not skipped install). Each item, by kind and installed name, is counted once
+  in `<n>` and in `<m>`, and `<m>` does not depend on where the run stops. The
+  line is followed by `<k> source(s) not applied.` when a source with changes
+  was not applied, by `<u> source(s) skipped.` when sources were skipped, for
+  either cause, and by `Stopped; <r> source(s) not examined.` or `Stopped.`
+  after `q` or end of input; then `Changed <n> file(s) written or deleted` when
+  no item was updated, completed or removed but files were written or deleted.
+  It prints `everything is up to date — nothing to do` instead when no source
+  was applied, no source with changes was declined, no file was kept with a
+  note, no item was skipped, no source was skipped and no lockfile was adopted.
+  The exit code is 1 when an item is skipped in an applied source or in a source
+  whose preview changes nothing, when a source was skipped, or when a step
+  fails; answers `n` and `q` do not change it, and a `skip` line of a source
+  that was not applied does not cause exit code 1. With `--quiet`, the blocks,
+  the notes, the result lines and the closing summary are not printed; the
+  question is `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of
+  the skipped items that cause exit code 1, `Use --force to replace.` and the
+  adoption notice are printed on stderr. Without `--quiet`, a terminal run
+  prints no `skipped` line.
 - **`--yes`, or stdin is not a terminal.** Every source is applied without a
   question, also a source whose preview changes nothing, so its plugin and MCP
-  steps run. `update` prints `Updated <n> of <m> item(s)` and one status line
-  per item when an item changed or was skipped, files were written or deleted,
-  or a lockfile was adopted (a run whose only output is `kept modified file`
-  notes prints nothing on stdout), and reports a completed interrupted item as
-  `completed — interrupted before`. When no item was updated, completed or
-  removed but files were written or deleted, it prints
-  `Changed <n> file(s) written or deleted`. It prints
-  `everything is up to date — nothing to do` when nothing changed, no item was
-  skipped, no source was skipped, no file was kept with a note and no lockfile
-  was adopted. An item of a skipped source has the status line
+  steps run unless the source has a kind restriction, which skips both steps.
+  `update` prints `Updated <n> of <m> item(s)` and one status line per item when
+  an item changed or was skipped, files were written or deleted, or a lockfile
+  was adopted (a run whose only output is `kept modified file` notes prints
+  nothing on stdout), and reports a completed interrupted item as
+  `completed — interrupted before`. `<n>` and `<m>` have the meaning of the
+  terminal summary above; `<m>` can be larger than the number of status lines,
+  because a dependency that the plan of a source installs unchanged has no
+  status line. When no item was updated, completed or removed but files were
+  written or deleted, it prints `Changed <n> file(s) written or deleted`. It
+  prints `everything is up to date — nothing to do` when nothing changed, no
+  item was skipped, no source was skipped, no file was kept with a note and no
+  lockfile was adopted. An item of a skipped source has the status line
   `skipped — source not reachable` when its source could not be fetched, and
   `skipped — requires a source that was skipped` when its source requires an
   item of a skipped source.
@@ -376,16 +397,31 @@ item and a `kept modified file` note are not changes.
   skipped keeps its recorded commit. An entry that the names did not select
   keeps its recorded commit when the source is not applied. When the source is
   applied, the reinstall covers the named items, the items that a named item
-  requires (from the same source or from another one), and every member of a
-  bundle source; each reinstalled entry gets the commit of its own source (an
-  entry from another source gets that source's commit), unless its update is
-  skipped, and any other entry keeps its recorded commit. The lockfile is saved
-  only when a value differs. This write is not a change of the source (see the
-  preview above) and does not count in the output. A dry run, a declined source
-  and a stopped run record no commit.
+  requires (from the same source or from another one). For a directory source
+  with recorded bundles, it reinstalls the members of those bundles and the
+  items of that source installed directly, including their `requires` closure;
+  it installs no unrelated item of the source. It applies a kind restriction
+  only when every recorded bundle of the source has recorded kinds, using their
+  union. With one unrestricted bundle of the source, no kind restriction
+  applies. Every lockfile entry of that source whose kind is outside the
+  restriction is left untouched and reported as up to date, regardless of bundle
+  membership or `required_by`; to update such an item, run
+  `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled as
+  a whole. Recorded bundle names resolve only as bundles. A missing bundle
+  causes `bundle '<name>' is no longer in source <label>` before any write, even
+  if an item has that name. Each reinstalled entry gets the commit of its own
+  source (an entry from another source gets that source's commit), unless its
+  update is skipped, and any other entry keeps its recorded commit. The lockfile
+  is saved only when a value differs. This write is not a change of the source
+  (see the preview above) and does not count in the output. A dry run, a
+  declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
-  in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
+  in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
+  is the number of selected lockfile entries that the block of their own source
+  lists with an action other than `skip`; a dependency from another source and
+  an item that is not in the lockfile are not counted; `<m>` has the meaning of
+  the terminal summary) and
   `Each block is computed for the current state; a later block does not include the effect of an earlier one.`,
   and exits with code 0 when no step fails and no source was skipped, for either
   cause (code 1 otherwise). `update --dry-run --quiet` prints nothing on stdout.
@@ -404,29 +440,36 @@ is skipped, nothing is adopted. When a later step fails after a source was
 skipped, the line of the skipped source is still printed, before the error.
 
 Known limits: the plugin and MCP steps of a bundle source run when the source is
-applied, are not part of the preview and are not a reason to ask, so a terminal
-run does not repair a missing MCP registration of a source whose preview changes
-nothing (`doctor` reports it, `update --yes` repairs it). A plugin that the
-lockfile records for a bundle of a source of the run as installed, when the
-check of `doctor` reports it missing, or as skipped, is installed again when the
-source is applied and also when its preview changes nothing, in a terminal run
-as well; not for a source that the answer did not apply, not with `--dry-run`
-and not with `--check` (ADR-0008). A change of only `required_by` in an item
-record is not shown and does not cause a question; it is saved when the source
-is applied, and also when the preview of the source changes nothing, but not
-with `--dry-run` or for a declined source. `required_by` is refreshed when `add`
-writes its install, when `update` applies a source, and when `update` does not
-apply a source whose preview changes nothing; a dry run, a declined source and a
-source at which the run stops refresh nothing. A refresh computes `required_by`
-of every lockfile entry again, and rewrites an entry only where the new value
-differs. A requirer is evaluated by the run when the run resolved its
-`requires`: every item of an install by item names, or of a whole directory
-source, and every item that such an item requires. A bundle install, and a
-request that also names a bundle (resolved by name), evaluate no requirer. An
-evaluated requirer is removed from every entry and added back where it still
-requires the item (also an item that `--exclude` leaves out). Every other
-requirer is kept, also when it is not installed. The result does not depend on
-the order of the sources or of two `add` commands.
+applied without a kind restriction. `update` skips both steps for a source under
+a kind restriction. The steps are not part of the preview and are not a reason
+to ask, so a terminal run does not repair a missing MCP registration of a source
+whose preview changes nothing (`doctor` reports it, `update --yes` repairs it
+without a kind restriction). A plugin that the lockfile records for a bundle of
+a source of the run as installed, when the check of `doctor` reports it missing,
+or as skipped, is installed again when the source is applied and also when its
+preview changes nothing, in a terminal run as well; not for a source under a
+kind restriction, not for a source that the answer did not apply, not with
+`--dry-run` and not with `--check` (ADR-0008). A change of only `required_by` in
+an item record is not shown and does not cause a question; it is saved when the
+source is applied, and also when the preview of the source changes nothing, but
+not with `--dry-run` or for a declined source. `required_by` is refreshed when
+`add` writes its install, when `update` applies a source, and when `update` does
+not apply a source whose preview changes nothing; a dry run, a declined source
+and a source at which the run stops refresh nothing. A refresh computes
+`required_by` of every lockfile entry again, and rewrites an entry only where
+the new value differs. An install by item names, or of a whole directory source,
+evaluates every item in its item closure as a requirer, including required
+items. A bundle install, and a request that also names a bundle (resolved by
+name), evaluate no requirer. An update of a directory source with recorded
+bundles evaluates every item in the merged bundle and direct-item closure,
+including bundle members even when there are no direct items. The bundle closure
+itself contributes no item-level `requires` edges. A kind restriction retains
+only items of the selected kinds in the closure; a restricted update leaves
+`required_by` unchanged on entries it does not plan, also in other sources.
+Within the entries being refreshed, an evaluated requirer is removed and added
+back where it still requires the item (also an item that `--exclude` leaves
+out). Every other requirer is kept, also when it is not installed. The result
+does not depend on the order of the sources or of two `add` commands.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
@@ -467,22 +510,35 @@ ran, also when a source is not reachable; 1 when a lockfile cannot be read or
 parsed. `--quiet` suppresses the output.
 
 `update --notice` prints a session notice for a session-start hook. It accepts
-no name and no other flag (exit code 2). Its roots are the scopes that
+no name and no other flag except `--repeat` (exit code 2). `--repeat` without
+`--notice` is a usage error (exit code 2). Its roots are the scopes that
 `update --check` reports without a flag; a root without a lockfile is left out.
-It changes no lockfile and no installed file. The only file it keeps is the
-cache file `notice.json` in the upskill cache directory (it writes the file
-through a temporary file `notice.json.<pid>.tmp` and a rename):
-`$XDG_CACHE_HOME/upskill` when `XDG_CACHE_HOME` is an absolute path (an empty or
-relative value is ignored), else `~/.cache/upskill`. The cache file is a JSON
-object `{"scopes": {<root path>: <state>}}`; the key is the path of the scope
-root, and a state has these fields, each defaulting to zero or empty when
-absent:
+It changes no lockfile and no installed file. It keeps the cache file
+`notice.json` in the upskill cache directory (it writes the file through a
+temporary file `notice.json.<pid>.tmp` and a rename): `$XDG_CACHE_HOME/upskill`
+when `XDG_CACHE_HOME` is an absolute path (an empty or relative value is
+ignored), else `~/.cache/upskill`. The cache file is a JSON object
+`{"scopes": {<root path>: <state>}}`; the key is the path of the scope root, and
+a state has these fields, each defaulting to zero or empty when absent:
 
 | Field        | Type            | Meaning                                                                                                     |
 | ------------ | --------------- | ----------------------------------------------------------------------------------------------------------- |
 | `checked_at` | integer         | Unix time in seconds of the last check. A check that reached no source also sets it.                        |
 | `updates`    | array of string | The updates found by the checks that reached a source, sorted: `<kind>:<name>@<commit>` or `<kind>:<name>`. |
 | `reported`   | array of string | The set that the last printed notice reported, sorted.                                                      |
+
+Before reading `notice.json`, the command creates `notice.lock` in the same
+cache directory with create-only-if-absent semantics. A run that finds a lock
+younger than 60 seconds exits with code 0 without output, network requests or
+cache changes, also with `--repeat`. A lock at least 60 seconds old, or dated in
+the future, is removed and creation is retried once. Other lock errors let the
+run continue without a lock. A completed run removes its lock; an interrupted or
+killed run can leave it until it expires. Install, update and removal have no
+writer lock.
+
+Two limits remain: concurrent runs reclaiming an expired lock can both print;
+sessions in different repositories sharing this cache also share the lock, so
+one can print no notice until its next session start.
 
 A file that is absent, unreadable or not valid JSON is an empty cache. The
 rules, in order:
@@ -501,8 +557,8 @@ rules, in order:
    `updates` stays.
 2. For each root, project then global, the command compares `updates` with
    `reported`. When `updates` is empty, it empties `reported` and prints
-   nothing. When they are equal, it prints nothing. Otherwise it sets `reported`
-   to `updates` and prints
+   nothing. When they are equal and `--repeat` is not given, it prints nothing.
+   Otherwise it sets `reported` to `updates` and prints
    `upskill: <n> update(s) available (<scope>). Run "<command>".`, where `<n>`
    is the number of distinct entries of `updates` and `<command>` is
    `upskill update` for the project scope and `upskill update --global` for the
@@ -511,9 +567,27 @@ rules, in order:
    whose root directory holds no `.upskill-lock.json`. The command reads the
    cache file again, applies the states of the roots of this run to that copy,
    and writes the copy, through a temporary file and a rename, only when its
-   content changed. A failed write is ignored. A run that saves between the
-   second read and the rename of this run loses its entries; its roots are
-   checked again at their next session start.
+   content changed. For a root that this run did not check and that the copy
+   holds, it keeps `checked_at` and `updates` of the copy and sets `reported` to
+   the entries of those `updates` that the `reported` of the copy or of this run
+   holds. An entry that is no longer in `updates` is dropped, so a removal by an
+   `update` that saved during this run stays removed, a set that another run
+   printed stays recorded as printed, and an entry of an older set does not keep
+   `reported` different from `updates`. For a root that the copy does not hold,
+   the state of this run is added. For a root that this run checked, its own
+   state replaces the state of the copy: when an `update` of that root saved
+   during the lookups, the entries that the `update` removed come back and stay
+   until the next check in which every source of the scope answers. A failed
+   write is ignored. An applying `update`, or another notice run that proceeds
+   without a lock, loses its save when it saves between the second read and the
+   rename of this run. This also applies to an `update` that removes entries:
+   its removal is lost when a notice run renames after it, and a notice run is
+   lost when the `update` saves between its own load and rename. A lost check of
+   a notice run is made again at the next session start, because the root is
+   still due. A lost removal is not: the root is not due, so the removed entries
+   stay until the next check in which every source of the scope answers. The
+   notice run lock does not cover applying `update` or notice runs that proceed
+   without a lock.
 
 Every failure after argument parsing prints nothing and gives exit code 0;
 nothing is written to stderr. An interrupt (SIGINT) ends the command at once
@@ -532,6 +606,18 @@ failed read or write of the cache file is ignored. When the cache directory
 cannot be written, nothing is stored, so the check runs and the line is printed
 at every session start. With `--quiet`, rule 1 and rule 3 apply, and rule 2
 prints nothing and leaves `reported` unchanged.
+
+An `update` that applies (not `--dry-run`, `--check` or `--notice`) and returns
+its report, with exit code 0, 1 or 130 (an interrupt), removes from `updates`
+and `reported` of its scope root every entry whose `<kind>:<name>` part is an
+item that the run reports as updated, up to date, completed after an
+interruption, or removed. It loads the file, applies the change and saves the
+file at once, without a lookup between the load and the save. Without this step,
+`--repeat` would print updates that are already installed until the next check.
+An `update` that stops with an error removes nothing: the items that it had
+updated stay in `updates` until the next check in which every source of the
+scope answers. A failed read or write of the cache file does not change the exit
+code of `update` and prints nothing.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -630,36 +716,39 @@ the check above refuses it.
   §2.1), recorded files that could not be inspected (`doctor` continues with the
   others), SSOT hash drift on `local:` sources (`update` fixes), lockfile
   entries with no recoverable source (`remove` fixes), installed plugins missing
-  from the client (`update --yes` reinstalls them, also when no item changed; an
-  opencode plugin recorded with `config_write` is checked in the scope's
-  `opencode.json` only, and no opencode command is run for it; for another
-  opencode plugin, an identifier in that file's `plugin` array means installed,
-  and otherwise, with an opencode version below 2, no `opencode plugin` command
-  is run and the plugin is not reported missing; for a plugin whose bundle's
-  recorded source is the source of no recorded item, which `update` does not
-  reach, `doctor` names the `upskill add` command instead), skipped plugins
-  (informational — CLI was absent, or opencode was below version 2, at install
-  time; `update --yes` tries them again and records `installed` when the install
-  succeeds; a plugin that needs a manual step, status `instructions`, is listed
-  with them, is never tried again and keeps its instructions), orphaned
-  dependencies (informational), MCP server reconciliation, and interrupted items
-  (an item with a non-empty `pending` record: run the same command again to
-  complete it), and, for the global scope only, files at the earlier global
-  Copilot paths (`earlier_layout`; `upskill update --global` moves them).
-  `doctor` also prints a note for each item that the lockfiles of both scopes
-  record; the note does not change the exit code. After the scope reports,
-  `doctor` prints the support level of each client and kind (`Support levels:`;
-  the compiled table in `src/support.rs`, stated in the user guide page "Support
-  levels"); the section does not change the exit code and is not based on a
-  detection of client versions (the plugin check runs `opencode --version`
-  before any `opencode plugin list`, ADR-0008). Exit 0 when clean, 1 when any
-  drift bucket is non-empty, including `earlier_layout`. Skipped plugins are
-  warnings and do not affect the exit code. Missing, modified and unreadable
-  files are checked against the `files` record; a recorded path that `remove`
-  would never delete (outside the client roots, fewer than three components, or
-  with a `..` component) is skipped without a report. For an item with an empty
-  or missing `files` record (a `schema: 1` lockfile, or a `schema: 2` item with
-  an empty list), `doctor` checks each per-client entry file instead.
+  from the client (`update --yes` reinstalls them, also when no item changed,
+  for a source without a kind restriction; a source under a kind restriction
+  skips the plugin and MCP steps and this repair; an opencode plugin recorded
+  with `config_write` is checked in the scope's `opencode.json` only, and no
+  opencode command is run for it; for another opencode plugin, an identifier in
+  that file's `plugin` array means installed, and otherwise, with an opencode
+  version below 2, no `opencode plugin` command is run and the plugin is not
+  reported missing; for a plugin whose bundle's recorded source is the source of
+  no recorded item, which `update` does not reach, `doctor` names the
+  `upskill add` command instead), skipped plugins (informational — CLI was
+  absent, or opencode was below version 2, at install time; `update --yes` tries
+  them again and records `installed` when the install succeeds; a plugin that
+  needs a manual step, status `instructions`, is listed with them and keeps its
+  instructions: `update` runs no install for it and prints its instructions
+  again when it applies the source), orphaned dependencies (informational), MCP
+  server reconciliation, and interrupted items (an item with a non-empty
+  `pending` record: run the same command again to complete it), and, for the
+  global scope only, files at the earlier global Copilot paths
+  (`earlier_layout`; `upskill update --global` moves them). `doctor` also prints
+  a note for each item that the lockfiles of both scopes record; the note does
+  not change the exit code. After the scope reports, `doctor` prints the support
+  level of each client and kind (`Support levels:`; the compiled table in
+  `src/support.rs`, stated in the user guide page "Support levels"); the section
+  does not change the exit code and is not based on a detection of client
+  versions (the plugin check runs `opencode --version` before any
+  `opencode plugin list`, ADR-0008). Exit 0 when clean, 1 when any drift bucket
+  is non-empty, including `earlier_layout`. Skipped plugins are warnings and do
+  not affect the exit code. Missing, modified and unreadable files are checked
+  against the `files` record; a recorded path that `remove` would never delete
+  (outside the client roots, fewer than three components, or with a `..`
+  component) is skipped without a report. For an item with an empty or missing
+  `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
+  list), `doctor` checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -712,6 +801,70 @@ behaviour:
 
 `add` does **not** alias to `install`. `remove` does **not** alias to
 `uninstall`. The unified verb names are canonical.
+
+### 2.8 `pack`
+
+Build plugin directories from a named bundle in the current source registry.
+`--source` is required and is written unchanged into init; it does not select or
+fetch the registry to pack. The entry bundle is resolved in the current
+directory; a `requires` entry with a `source` is fetched from that source.
+`--out` is required. With no client flag, both outputs are written; `--claude`
+or `--copilot` selects one, and both flags select both. `--quiet` suppresses the
+result lines.
+
+```bash
+upskill pack my-bundle --source owner/repo@v1 --out dist
+```
+
+| Content                                    | Claude Code output                     | GitHub Copilot CLI output              |
+| ------------------------------------------ | -------------------------------------- | -------------------------------------- |
+| Directory                                  | `<out>/<bundle>-claude/`               | `<out>/<bundle>-copilot/`              |
+| Manifest                                   | `.claude-plugin/plugin.json`           | `plugin.json`                          |
+| Skills and resources                       | `skills/<name>/SKILL.md` and resources | `skills/<name>/SKILL.md` and resources |
+| Agents                                     | `agents/<name>.md`                     | `agents/<name>.agent.md`               |
+| Init, when rules target this client        | `commands/init.md`                     | `commands/init.md`                     |
+| Notice hook, when rules target this client | `hooks/hooks.json`                     | `hooks.json`                           |
+
+Skills and agents include the bundle's `requires` closure and use the existing
+client generators. The manifest takes `name`, `description`, optional `license`
+and optional `metadata.version` (as `version`) from the bundle. No README and no
+LICENSE file is written, so `claude plugin validate` reports both as missing.
+
+All selected output directories are checked before writing. A non-empty client
+directory is refused with exit code 1 unless `--force` is set. `--force` deletes
+and rebuilds that directory, including removal of files from an earlier run. A
+file or symbolic link at the client directory path is refused even with
+`--force`. An unknown bundle fails with exit code 1.
+
+`--source` must parse as an install source, must not start with a hyphen and
+must contain only ASCII letters, digits and `/ @ : . _ - ~ +`. Whitespace and
+shell metacharacters are refused with exit code 2. The bundle name must be
+nonempty, must not start with a hyphen and may contain only ASCII letters,
+digits and `- _ .`.
+
+`pack` reads no lockfile and writes only below `--out`. It does not install or
+register the plugin, write a marketplace manifest, or publish it. The bundle
+schema is unchanged. Copy the outputs into a marketplace repository and install
+through the client. Plugin output is experimental pending marketplace smoke
+tests in both clients; `doctor` gains no row.
+
+No rule file is included. Init instructs the model to run
+`upskill add <source> <bundle> --kind rule --project --claude`, or the same
+command with `--copilot`, in the repository root and report the result. On
+failure it reports the error and runs no substitute command. It lists declared
+plugins for that client (with its `install_url` or manual `instructions_url`
+when present, otherwise by name) and MCP servers from the closure for the user,
+without installing them. An output with no rules for its client has neither init
+nor the notice hook. The hook is copied unchanged from the corresponding upskill
+notice plugin and runs `upskill update --notice`; it is silent when the upskill
+binary is absent.
+
+Known limits: init and the hook need the upskill binary on the host; installing
+the same skills with both a plugin and `add` exposes duplicates; references by
+short skill name are not verified to resolve to `<plugin>:<skill>`. When both
+outputs are published together, check that Copilot does not also load the Claude
+directory. Codex, OpenCode, VS Code, general hook authoring, plugin and MCP
+packaging, and duplicate detection are outside this command's scope.
 
 ## 3. Generation pipeline
 
@@ -795,6 +948,12 @@ adoption changes these commands
 [handoff step 8](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-23-customization-delivery-implementation-spec.md#slice-1-qualification-of-the-gating-routes)).
 
 ## 4. State files
+
+Bundle entries in `.upskill-lock.json` have an optional `kinds` array, for
+example `"kinds": ["rule"]`, recording the restriction from `add --kind`. Absent
+or empty means unrestricted; an empty list is omitted on write. Recorded kinds
+are sorted without duplicates. Bundle entries are sorted by name. This field
+does not change the bundle source schema.
 
 `.upskill-lock.json` records what was installed, from where, at what resolved
 git ref, with what content hashes. Same schema in both locations. A new lockfile
@@ -1104,11 +1263,11 @@ to any depth (`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ### 6.3 Environment variables
 
-| Variable         | Purpose                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------ |
-| `NO_COLOR`       | Disable colored output.                                                                                |
-| `HTTPS_PROXY`    | HTTP proxy for network requests.                                                                       |
-| `XDG_CACHE_HOME` | Override cache directory (an absolute path) for registry indexes and the `update --notice` cache file. |
+| Variable         | Purpose                                                                                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NO_COLOR`       | Disable colored output.                                                                                                                                                |
+| `HTTPS_PROXY`    | HTTP proxy for network requests.                                                                                                                                       |
+| `XDG_CACHE_HOME` | Override cache directory (an absolute path) for registry indexes and the notice cache file, which `update --notice` reads and writes and an applying `update` updates. |
 
 ## 7. Out of scope
 
