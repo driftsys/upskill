@@ -114,11 +114,12 @@ pub(super) fn collect_source_items(
                 continue;
             }
             let name = probe_effective_name(&entry_path, kind, &folder);
-            let installed = if filter.is_some_and(|items| !items.contains(kind, &name)) {
-                None
-            } else {
-                Some(names.alias_for(&name).unwrap_or(&name).clone())
-            };
+            let installed =
+                if !names.takes(kind) || filter.is_some_and(|items| !items.contains(kind, &name)) {
+                    None
+                } else {
+                    Some(names.alias_for(&name).unwrap_or(&name).clone())
+                };
             out.push(SourceItem {
                 kind,
                 excluded: names.excludes.contains(&name),
@@ -325,6 +326,73 @@ pub(super) struct DependencyClosure {
     /// it is dropped.
     #[allow(dead_code)]
     pub guards: Vec<tempfile::TempDir>,
+}
+
+impl DependencyClosure {
+    /// Merge an item closure into a bundle closure, retaining fetch guards.
+    pub(super) fn merge(&mut self, other: Self) -> Result<()> {
+        for (item, source) in other.item_source {
+            if let Some(existing) = self.item_source.get(&item) {
+                anyhow::ensure!(
+                    existing == &source,
+                    "{} '{}' resolves from both {} and {}",
+                    item.0,
+                    item.1,
+                    existing,
+                    source
+                );
+            }
+            self.item_source.insert(item, source);
+        }
+        for (label, source) in other.by_source {
+            if let Some(existing) = self.by_source.get_mut(&label) {
+                for (target, incoming) in [
+                    (&mut existing.items.rules, source.items.rules),
+                    (&mut existing.items.skills, source.items.skills),
+                    (&mut existing.items.agents, source.items.agents),
+                ] {
+                    for name in incoming {
+                        if !target.contains(&name) {
+                            target.push(name);
+                        }
+                    }
+                }
+            } else {
+                self.by_source.insert(label, source);
+            }
+        }
+        // Keep the roots of the bundle closure for shared sources. Each source's
+        // planned items then use the same root as its overlap check.
+        for (label, root) in other.source_roots {
+            self.source_roots.entry(label).or_insert(root);
+        }
+        for (item, requirers) in other.required_by {
+            self.required_by.entry(item).or_default().extend(requirers);
+        }
+        self.guards.extend(other.guards);
+        Ok(())
+    }
+
+    /// Remove every item whose kind is not in `kinds` from `by_source`,
+    /// `item_source` and the keys of `required_by`. No-op for an empty slice.
+    pub(super) fn retain_kinds(&mut self, kinds: &[ItemKind]) {
+        if kinds.is_empty() {
+            return;
+        }
+        for source in self.by_source.values_mut() {
+            if !kinds.contains(&ItemKind::Rule) {
+                source.items.rules.clear();
+            }
+            if !kinds.contains(&ItemKind::Skill) {
+                source.items.skills.clear();
+            }
+            if !kinds.contains(&ItemKind::Agent) {
+                source.items.agents.clear();
+            }
+        }
+        self.item_source.retain(|(kind, _), _| kinds.contains(kind));
+        self.required_by.retain(|(kind, _), _| kinds.contains(kind));
+    }
 }
 
 /// One source's contribution to a [`DependencyClosure`].
@@ -1286,6 +1354,9 @@ fn install_items_of_kind(
     names: &PlanNames,
     scope: Scope,
 ) -> Result<()> {
+    if !names.takes(kind) {
+        return Ok(());
+    }
     let entrypoint = kind.entrypoint_filename();
     for (folder, dir) in iter_item_dirs(source)? {
         let entry_path = dir.join(entrypoint);
@@ -1488,6 +1559,64 @@ fn audience_matches(client: Client, a: Audience) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn merge_rejects_the_same_item_from_different_sources() {
+        let first = tempfile::tempdir().unwrap();
+        let second = tempfile::tempdir().unwrap();
+        for root in [first.path(), second.path()] {
+            write_item(root, ItemKind::Skill, "s", "");
+        }
+        let items = [(ItemKind::Skill, "s".to_string())];
+        let mut closure =
+            resolve_requires_closure("local:first", first.path(), None, None, &items).unwrap();
+        let other =
+            resolve_requires_closure("local:second", second.path(), None, None, &items).unwrap();
+        assert_eq!(
+            closure.merge(other).unwrap_err().to_string(),
+            "skill 's' resolves from both local:first and local:second"
+        );
+    }
+
+    #[test]
+    fn merge_keeps_one_copy_of_each_shared_item_in_by_source() {
+        let root = tempfile::tempdir().unwrap();
+        let items = [
+            (ItemKind::Rule, "r".to_string()),
+            (ItemKind::Skill, "s".to_string()),
+            (ItemKind::Agent, "a".to_string()),
+        ];
+        for (kind, name) in &items {
+            write_item(root.path(), *kind, name, "");
+        }
+        let mut closure =
+            resolve_requires_closure("local:shared", root.path(), None, None, &items).unwrap();
+        let other =
+            resolve_requires_closure("local:shared", root.path(), None, None, &items).unwrap();
+        closure.merge(other).unwrap();
+        let source = &closure.by_source["local:shared"];
+        assert_eq!(source.items.rules, ["r"]);
+        assert_eq!(source.items.skills, ["s"]);
+        assert_eq!(source.items.agents, ["a"]);
+    }
+
+    #[test]
+    fn merge_keeps_the_fetch_guards_of_both_closures() {
+        let first = tempfile::tempdir().unwrap();
+        let second = tempfile::tempdir().unwrap();
+        let paths = [first.path().to_path_buf(), second.path().to_path_buf()];
+        let mut closure = DependencyClosure {
+            guards: vec![first],
+            ..DependencyClosure::default()
+        };
+        let other = DependencyClosure {
+            guards: vec![second],
+            ..DependencyClosure::default()
+        };
+        closure.merge(other).unwrap();
+        assert_eq!(closure.guards.len(), 2);
+        assert!(paths.iter().all(|path| path.exists()));
+    }
 
     #[test]
     fn audience_none_targets_all_clients() {

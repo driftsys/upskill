@@ -38,6 +38,27 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    /// Build a bundle as a client plugin directory.
+    ///
+    /// Author command: reads the source registry in the current directory.
+    /// Without a client flag, writes both directories.
+    /// A `requires` entry with a `source` is fetched from that source.
+    #[command(display_order = 13)]
+    Pack {
+        bundle: String,
+        #[arg(long)]
+        source: String,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        force: bool,
+        /// Write the Claude Code plugin directory.
+        #[arg(long)]
+        claude: bool,
+        /// Write the GitHub Copilot CLI plugin directory.
+        #[arg(long)]
+        copilot: bool,
+    },
     /// Install rules, skills, or agents from a git repo or local path.
     ///
     /// Parses each item from the source, renders per-client output, and
@@ -85,6 +106,9 @@ pub enum Commands {
         /// Skip specific items during install (repeatable).
         #[arg(long = "exclude", value_name = "NAME")]
         exclude: Vec<String>,
+        /// Restrict installed item kinds to rule, skill, agent (repeatable); skip plugins and MCP servers.
+        #[arg(short = 'k', long = "kind", value_name = "KIND")]
+        kind: Vec<String>,
         /// Restrict output to Claude Code. Combine client flags to target
         /// several; no client flag emits for all clients (the default).
         #[arg(long = "claude", help_heading = "Client selection")]

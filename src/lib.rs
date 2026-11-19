@@ -22,6 +22,7 @@ pub mod lockfile;
 pub mod mcp;
 pub mod model;
 pub mod notice;
+pub mod pack;
 pub mod parse;
 pub mod pipeline;
 pub mod plugin;

@@ -910,8 +910,15 @@ fn reselect_from_entries(
 /// its recorded commit. An entry of the source that `names` did not select
 /// keeps its recorded commit on this path. In an applied source the
 /// reinstall covers the selected entries, the entries that a selected item
-/// requires (from this source or from another one), and every member for a
-/// bundle source. Each reinstalled entry gets the commit of its own source,
+/// requires (from this source or from another one). For a directory source
+/// with recorded bundles, it reinstalls the members of those bundles and the
+/// directly installed items of that source, and no other source items. It
+/// applies a kind restriction only when every recorded bundle of the source
+/// has recorded kinds, using their union. With one unrestricted bundle of the
+/// source, no restriction applies. Every entry of that source whose kind is
+/// outside the restriction is kept unchanged and is not updated. To update it,
+/// run `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled
+/// as a whole. Each reinstalled entry gets the commit of its own source,
 /// unless its update is skipped; any other entry keeps its recorded commit.
 /// Every source without changes that is not applied, in a run that is not
 /// a dry run and not stopped, a git source or a local path, also gets
@@ -1040,11 +1047,38 @@ pub fn update(
             } else {
                 selection.clone()
             };
+            let recorded_bundles: Vec<_> = lock
+                .bundles
+                .iter()
+                .filter(|bundle| bundle.source == source_label)
+                .collect();
+            let kinds = if recorded_bundles
+                .iter()
+                .all(|bundle| !bundle.kinds.is_empty())
+            {
+                recorded_bundles
+                    .iter()
+                    .flat_map(|bundle| bundle.kinds.iter().copied())
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .into_iter()
+                    .collect()
+            } else {
+                Vec::new()
+            };
             let options = AddOptions {
                 force: true,
                 overwrite,
                 aliases,
                 excludes: vec![],
+                kinds,
+                bundles: if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
+                    Vec::new()
+                } else {
+                    recorded_bundles
+                        .iter()
+                        .map(|bundle| bundle.name.clone())
+                        .collect()
+                },
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
                 scope: at.scope,
@@ -1058,20 +1092,29 @@ pub fn update(
             // resolved and refreshed because `prepare_install` re-expands
             // the closure for each requested item.
             //
-            // Bundle sources are exempt: a bundle is its own unit and must
-            // be reinstalled as a whole (an empty filter routes it through
-            // the bundle-resolution path), so scoping to item names there
-            // would mis-route a `.bundle.yaml` source into name resolution.
-            let is_bundle_source = source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX)
-                || lock.bundles.iter().any(|b| b.source == source_label);
-            let item_filter: Vec<String> = if is_bundle_source {
-                Vec::new()
-            } else {
-                source_entries
-                    .iter()
-                    .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
-                    .collect()
-            };
+            // Bundle-file sources resolve as a whole. Directory sources with
+            // recorded bundles resolve those bundles and their direct items.
+            let item_filter: Vec<String> =
+                if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
+                    Vec::new()
+                } else if !recorded_bundles.is_empty() {
+                    source_entries
+                        .iter()
+                        .filter(|entry| entry.required_by.is_empty())
+                        .map(|entry| entry.source_name.as_ref().unwrap_or(&entry.name))
+                        .filter(|name| {
+                            !recorded_bundles
+                                .iter()
+                                .any(|bundle| bundle.items.contains(name))
+                        })
+                        .cloned()
+                        .collect()
+                } else {
+                    source_entries
+                        .iter()
+                        .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
+                        .collect()
+                };
 
             // A source that cannot be fetched (a [`FetchFailed`] in the
             // error chain, also for a dependency source) is skipped: it is
@@ -1102,6 +1145,22 @@ pub fn update(
                 }
                 Err(err) => return Err(err),
             };
+            // Every entry outside the recorded kinds is kept unchanged.
+            let source_entries: Vec<_> = source_entries
+                .into_iter()
+                .filter(|entry| {
+                    let keep = !options.kinds.is_empty() && !options.kinds.contains(&entry.kind);
+                    if keep {
+                        report.items.push(UpdatedItem {
+                            kind: entry.kind,
+                            name: entry.name.clone(),
+                            source: source_label.clone(),
+                            status: UpdateStatus::UpToDate,
+                        });
+                    }
+                    !keep
+                })
+                .collect();
             prepared_sources.push((source_label, source_entries, prepared));
         }
         // One verdict per source: a prepared source whose plan writes an item

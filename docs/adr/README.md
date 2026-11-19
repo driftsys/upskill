@@ -50,6 +50,7 @@ decision explicitly; documentation moves do not change its status.
 | [0041 — Separate client representations as the design baseline](0041-separate-client-representations-as-design-baseline.md)    | Accepted; amended by [AD-0042](0042-resteer-customization-delivery.md) |
 | [0042 — Re-steer customization delivery to reliable install, update and removal](0042-resteer-customization-delivery.md)       | Accepted                                                               |
 | [0043 — One exact preview and one question per source for `update`](0043-per-source-update-prompts.md)                         | Accepted                                                               |
+| [0044 — Plugin output of a bundle](0044-plugin-output-of-a-bundle.md)                                                          | Accepted                                                               |
 
 AD-0015 to AD-0039 describe library code that was removed from `main` and is
 kept on the branch `archive/lifecycle-2026-11`. They are retained as history.

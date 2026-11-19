@@ -1,6 +1,6 @@
 # Commands
 
-`upskill` ships eleven commands. They split cleanly into **consumer** (run
+`upskill` ships twelve commands. They split cleanly into **consumer** (run
 inside a project that consumes AI-assistance content) and **author** (run inside
 a source-registry repo).
 
@@ -16,6 +16,7 @@ a source-registry repo).
 | `index`      | Consumer | Build or manage the local registry index cache.             |
 | `new`        | Author   | Scaffold a new rule, skill, or agent.                       |
 | `lint`       | Author   | Validate SSOT files against the format spec.                |
+| `pack`       | Author   | Build Claude Code and Copilot CLI plugin directories.       |
 | `fmt`        | Author   | Canonicalise YAML frontmatter and format the markdown body. |
 
 ## Global flags
@@ -79,6 +80,14 @@ is refused there.
 the scope and its root, for example `scope: global (/home/alice)`. `--quiet`
 hides it. `update --check` and `update --notice` print no such line: the block
 of each scope in `update --check` names the scope and its root.
+
+`add --kind <kind>` (short `-k`, repeatable) restricts items to `rule`, `skill`
+or `agent`. A required item of another kind is not installed. It also applies
+without item names. An unknown kind is a usage error (exit 2); filtering out
+every named item is an error (exit 1). With any kind restriction, the plugin and
+MCP steps are skipped: no plugin or MCP registration or lockfile record is
+created by those steps. For example:
+`upskill add owner/repo my-bundle --kind rule --project --claude`.
 
 **Client selection.** By default `add` emits output for **every** client.
 Restrict it to the clients you actually use with one or more of `--claude`,
@@ -505,10 +514,22 @@ entries of the source that the run selected, also when the source has no changes
 and is not applied, except the entry of an item whose update is skipped, which
 keeps its recorded commit. With names, an entry that the names did not select
 keeps its commit when the source is not applied. In an applied source, the
-reinstall covers the named items, the items that a named item requires, and
-every member of a bundle source; each reinstalled entry gets the commit of its
-own source, unless its update is skipped, and any other entry keeps its commit.
-For a source that is not applied, only a changed commit value, or a changed
+reinstall covers the named items and the items that a named item requires. For a
+directory source with recorded bundles, it reinstalls the members of those
+bundles and the items of that source installed directly, including their
+`requires` closure; it installs no unrelated item of the source. It applies a
+kind restriction only when every recorded bundle of the source has recorded
+kinds, using their union. With one unrestricted bundle of the source, no kind
+restriction applies. Every lockfile entry of that source whose kind is outside
+the restriction is left untouched and reported as up to date, regardless of
+bundle membership or `required_by`; to update such an item, run
+`upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled as a
+whole. Each reinstalled entry gets the commit of its own source, unless its
+update is skipped, and any other entry keeps its commit. If a recorded bundle is
+missing from the source, update fails before any write with
+`bundle '<name>' is no longer in source <label>`, even if an item has that name;
+remove the bundle's items with `upskill remove` or restore the bundle. For a
+source that is not applied, only a changed commit value, or a changed
 `required_by` value, causes a lockfile write. This write is not a change: it
 does not count in the output above, and `update --dry-run` and a declined source
 record no commit.
@@ -525,26 +546,34 @@ later block does not include the effect of applying an earlier source. With a
 `schema: 1` lockfile, the previews are computed from an adoption held in memory,
 and nothing is written.
 
-The plugin and MCP steps of a bundle source run when the source is applied. They
-are not part of the preview and are not a reason to ask. A terminal run does not
-apply a source whose preview changes nothing, so it does not repair a missing
-plugin or MCP registration of that source; `upskill doctor` reports it and
-`update --yes` repairs it. A change of only the `required_by` field of an item
-record is not shown as a change and does not cause a question; it is saved when
-the source is applied, and also when the preview of the source changes nothing.
-It is not saved with `--dry-run` or for a source that the answer did not apply.
+The plugin and MCP steps of a bundle source run when the source is applied
+without a kind restriction. `update` skips both steps for a source under a kind
+restriction. They are not part of the preview and are not a reason to ask. A
+terminal run does not apply a source whose preview changes nothing, so it does
+not repair a missing plugin or MCP registration of that source; `upskill doctor`
+reports it and `update --yes` repairs it for a source without a kind
+restriction. A change of only the `required_by` field of an item record is not
+shown as a change and does not cause a question; it is saved when the source is
+applied, and also when the preview of the source changes nothing. It is not
+saved with `--dry-run` or for a source that the answer did not apply.
 `required_by` is refreshed when `add` writes its install, when `update` applies
 a source, and when `update` does not apply a source whose preview changes
 nothing; a dry run, a declined source and a source at which the run stops
 refresh nothing. A refresh computes `required_by` of every lockfile entry again,
-and rewrites an entry only where the new value differs. A requirer is evaluated
-by the run when the run resolved its `requires`: every item of an install by
-item names, or of a whole directory source, and every item that such an item
-requires. A bundle install, and a request that also names a bundle (resolved by
-name), evaluate no requirer. An evaluated requirer is removed from every entry
-and added back where it still requires the item (also an item that `--exclude`
-leaves out). Every other requirer is kept, also when it is not installed. The
-result does not depend on the order of the sources or of two `add` commands.
+and rewrites an entry only where the new value differs. An install by item
+names, or of a whole directory source, evaluates every item in its item closure
+as a requirer, including required items. A bundle install, and a request that
+also names a bundle (resolved by name), evaluate no requirer. An update of a
+directory source with recorded bundles evaluates every item in the merged bundle
+and direct-item closure, including bundle members even when there are no direct
+items. The bundle closure itself contributes no item-level `requires` edges. A
+kind restriction retains only items of the selected kinds in the closure; a
+restricted update leaves `required_by` unchanged on entries it does not plan,
+also in other sources. Within the entries being refreshed, an evaluated requirer
+is removed and added back where it still requires the item (also an item that
+`--exclude` leaves out). Every other requirer is kept, also when it is not
+installed. The result does not depend on the order of the sources or of two
+`add` commands.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.
@@ -675,12 +704,12 @@ The command is quiet by design:
 - A set of updates is printed once. The command prints the line again only when
   the set of available updates changes. When no update is available, it prints
   nothing.
-- With `--repeat`, the line is printed at every run while the cache holds
-  available updates for the scope, also when the set was printed before. This is
-  for a client that gives the line to the agent and does not show it to the
-  user: the Copilot CLI plugin uses it. The run still records the set as
-  printed, so a later run without `--repeat` prints it only when it changes.
-  Nothing else changes.
+- With `--repeat`, the line is printed at every run that passes the run lock
+  while the cache holds available updates for the scope, also when the set was
+  printed before. This is for a client that gives the line to the agent and does
+  not show it to the user: the Copilot CLI plugin uses it. The run still records
+  the set as printed, so a later run without `--repeat` prints it only when it
+  changes. Nothing else changes.
 - An `upskill update` that applies (not `--dry-run`, `--check` or `--notice`)
   and returns its report, with exit code 0, 1 or 130 (an interrupt), removes
   from the cached updates of its scope the items that it reports as updated, up
@@ -718,22 +747,35 @@ The command is quiet by design:
   command: an invalid cache file is treated as an empty one, and a failed write
   is ignored. When the cache directory cannot be written, nothing is stored, so
   the check runs and the line is printed at every session start.
-- It changes no lockfile and no installed file. The only file it keeps is the
-  cache file `notice.json` in the upskill cache directory (it writes it through
-  a temporary file `notice.json.<pid>.tmp` and a rename), which is
-  `$XDG_CACHE_HOME/upskill` when `XDG_CACHE_HOME` is an absolute path (an empty
-  or relative value is ignored) and `~/.cache/upskill` otherwise. The file
-  records for each scope root the time of the last lookup, the updates found and
-  the set that was printed. The entry of a root that has no lockfile is removed.
-  Before the command saves the file, it reads the file again and applies only
-  the entries of its own roots, so that a run that overlaps another run keeps
-  the entries of that run. A run that saves between that read and the save of
-  the command can still lose its save. A lost check is made again at the next
-  session start; a lost removal by `update` stays lost until the next check in
-  which every source of the scope answers. When neither directory is known, the
-  command uses no cache and prints nothing.
+- It changes no lockfile and no installed file. It keeps the cache file
+  `notice.json` in the upskill cache directory (it writes it through a temporary
+  file `notice.json.<pid>.tmp` and a rename), which is `$XDG_CACHE_HOME/upskill`
+  when `XDG_CACHE_HOME` is an absolute path (an empty or relative value is
+  ignored) and `~/.cache/upskill` otherwise. The file records for each scope
+  root the time of the last lookup, the updates found and the set that was
+  printed. The entry of a root that has no lockfile is removed. Before the
+  command saves the file, it reads the file again and applies only the entries
+  of its own roots, preserving entries saved before that read. An applying
+  `update`, or another notice run that proceeds without a lock, can still lose
+  its save when it saves between that read and the save of the command. A lost
+  check is made again at the next session start; a lost removal by `update`
+  stays lost until the next check in which every source of the scope answers.
+  When neither directory is known, the command uses no cache and prints nothing.
 - With `--quiet` it prints no line. The lookups and the cache update still run,
   and the set stays unreported, so a later run without `--quiet` prints it.
+
+Before reading `notice.json`, the command creates `notice.lock` in the same
+cache directory with create-only-if-absent semantics. A run that finds a lock
+younger than 60 seconds exits with code 0 without output, network requests or
+cache changes, also with `--repeat`. A lock at least 60 seconds old, or dated in
+the future, is removed and creation is retried once. Other lock errors let the
+run continue without a lock. A completed run removes its lock; an interrupted or
+killed run can leave it until it expires. Install, update and removal have no
+writer lock.
+
+Two limits remain: concurrent runs reclaiming an expired lock can both print;
+sessions in different repositories sharing this cache also share the lock, so
+one can print no notice until its next session start.
 
 ### `upskill remove [name...] [--source <label>] [--force]`
 
@@ -914,20 +956,23 @@ scope. For each scope it reports eleven independent buckets:
   dependency of items that are no longer installed. Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
   found in the client. Likely uninstalled out-of-band; `upskill update --yes`
-  reinstalls them. A run in a terminal applies a source only when its preview
-  changes something, and the plugin and MCP steps are not part of the preview.
-  Causes exit 1.
+  reinstalls them for a source without a kind restriction. A run in a terminal
+  applies a source only when its preview changes something, and the plugin and
+  MCP steps are not part of the preview. A source under a kind restriction skips
+  both steps. Causes exit 1.
 - **Skipped plugins** (informational) — recorded as `skipped` because the client
   CLI was not on PATH at install time. Install the CLI then run
   `upskill update --yes` to install them. A run in a terminal applies a source
   only when its preview changes something, and the plugin and MCP steps are not
-  part of the preview. Does **not** cause exit 1.
+  part of the preview. A source under a kind restriction skips both steps. Does
+  **not** cause exit 1.
 - **MCP servers** — each Claude-client MCP entry in the lockfile is checked
   against `claude mcp list`. A server in the lockfile but **not registered** in
   the client causes exit 1 (`upskill update --yes` reconfigures it; a run in a
   terminal applies a source only when its preview changes something, and the
-  plugin and MCP steps are not part of the preview). A missing `claude` CLI or a
-  failed query is advisory and does **not** cause exit 1.
+  plugin and MCP steps are not part of the preview; a source under a kind
+  restriction skips both steps). A missing `claude` CLI or a failed query is
+  advisory and does **not** cause exit 1.
 - **Interrupted** — items with a non-empty `pending` record: an `add` or
   `update` failed or was stopped before it completed. Run the same command again
   to complete it. Causes exit 1.
@@ -1065,9 +1110,75 @@ Without flags, rebuilds the index for all configured registries.
 
 ## Author commands
 
-Run inside a **source-registry** working tree. Each refuses to run inside a
-consumer project (detected by `.upskill-lock.json` at the path's root) so you
-don't accidentally lint generated outputs or scaffold into the wrong tree.
+Run inside a **source-registry** working tree. `new`, `lint` and `fmt` refuse to
+run inside a consumer project (detected by `.upskill-lock.json` at the path's
+root) so you don't accidentally lint generated outputs or scaffold into the
+wrong tree.
+
+### `upskill pack <bundle> --source <source> --out <dir>`
+
+Build plugin directories from a named bundle in the current source registry.
+`--source` is required and is written unchanged into init; it does not select or
+fetch the registry to pack. The entry bundle is resolved in the current
+directory; a `requires` entry with a `source` is fetched from that source.
+`--out` is required. With no client flag, both outputs are written; `--claude`
+or `--copilot` selects one, and both flags select both. `--quiet` suppresses the
+result lines.
+
+```bash
+upskill pack my-bundle --source owner/repo@v1 --out dist
+```
+
+| Content                                    | Claude Code output                     | GitHub Copilot CLI output              |
+| ------------------------------------------ | -------------------------------------- | -------------------------------------- |
+| Directory                                  | `<out>/<bundle>-claude/`               | `<out>/<bundle>-copilot/`              |
+| Manifest                                   | `.claude-plugin/plugin.json`           | `plugin.json`                          |
+| Skills and resources                       | `skills/<name>/SKILL.md` and resources | `skills/<name>/SKILL.md` and resources |
+| Agents                                     | `agents/<name>.md`                     | `agents/<name>.agent.md`               |
+| Init, when rules target this client        | `commands/init.md`                     | `commands/init.md`                     |
+| Notice hook, when rules target this client | `hooks/hooks.json`                     | `hooks.json`                           |
+
+Skills and agents include the bundle's `requires` closure and use the existing
+client generators. The manifest takes `name`, `description`, optional `license`
+and optional `metadata.version` (as `version`) from the bundle. No README and no
+LICENSE file is written, so `claude plugin validate` reports both as missing.
+
+All selected output directories are checked before writing. A non-empty client
+directory is refused with exit code 1 unless `--force` is set. `--force` deletes
+and rebuilds that directory, including removal of files from an earlier run. A
+file or symbolic link at the client directory path is refused even with
+`--force`. An unknown bundle fails with exit code 1. A failed write after
+`--force` can leave the directory incomplete; run `pack` again.
+
+`--source` must parse as an install source, must not start with a hyphen and
+must contain only ASCII letters, digits and `/ @ : . _ - ~ +`. Whitespace and
+shell metacharacters are refused with exit code 2. The bundle name must be
+nonempty, must not start with a hyphen and may contain only ASCII letters,
+digits and `- _ .`.
+
+`pack` reads no lockfile and writes only below `--out`. It does not install or
+register the plugin, write a marketplace manifest, or publish it. The bundle
+schema is unchanged. Copy the outputs into a marketplace repository and install
+through the client. Plugin output is experimental pending marketplace smoke
+tests in both clients; `doctor` gains no row.
+
+No rule file is included. Init instructs the model to run
+`upskill add <source> <bundle> --kind rule --project --claude`, or the same
+command with `--copilot`, in the repository root and report the result. On
+failure it reports the error and runs no substitute command. It lists declared
+plugins for that client (with its `install_url` or manual `instructions_url`
+when present, otherwise by name) and MCP servers from the closure for the user,
+without installing them. An output with no rules for its client has neither init
+nor the notice hook. The hook is copied unchanged from the corresponding upskill
+notice plugin and runs `upskill update --notice`; it is silent when the upskill
+binary is absent.
+
+Known limits: init and the hook need the upskill binary on the host; installing
+the same skills with both a plugin and `add` exposes duplicates; references by
+short skill name are not verified to resolve to `<plugin>:<skill>`. When both
+outputs are published together, check that Copilot does not also load the Claude
+directory. Codex, OpenCode, VS Code, general hook authoring, plugin and MCP
+packaging, and duplicate detection are outside this command's scope.
 
 ### `upskill new <kind> <name>`
 
@@ -1143,6 +1254,12 @@ Files whose frontmatter and body are already canonical are left untouched (no
 `mtime` thrash).
 
 ## State files
+
+Bundle entries in `.upskill-lock.json` have an optional `kinds` array, for
+example `"kinds": ["rule"]`, recording the restriction from `add --kind`. Absent
+or empty means unrestricted; an empty list is omitted on write. Recorded kinds
+are sorted without duplicates. Bundle entries are sorted by name. This field
+does not change the bundle source schema.
 
 `.upskill-lock.json` lives in one of two places depending on scope:
 

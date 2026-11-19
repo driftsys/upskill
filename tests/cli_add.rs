@@ -1368,3 +1368,375 @@ fn add_of_an_item_that_requires_a_missing_local_source_fails_and_writes_nothing(
     assert!(!proj.join("CLAUDE.md").exists());
     assert_eq!(entry_names(&proj), before);
 }
+
+fn stage_kind_source() -> (
+    tempfile::TempDir,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+) {
+    let (tmp, home, source, target) = stage_single_item(
+        "r",
+        "RULE.md",
+        "---\nname: r\ndescription: A rule.\n---\nRule body.\n",
+    );
+    write_files(
+        &source,
+        &[
+            (
+                "s/SKILL.md",
+                "---\nname: s\ndescription: A skill.\n---\nSkill body.\n",
+            ),
+            (
+                "g/AGENT.md",
+                "---\nname: g\ndescription: An agent.\n---\nAgent body.\n",
+            ),
+            (
+                "bundles/bun.bundle.yaml",
+                "schema: 1\nname: bun\ndescription: A mixed bundle.\nitems:\n  rules: [r]\n  skills: [s]\n  agents: [g]\nplugins:\n  kind-plugin:\n    claude:\n      source: example/plugins\n      marketplace: kind-marketplace\n      plugin: kind-plugin\nmcps:\n  kind-server:\n    local:\n      command: kind-server-command\n",
+            ),
+        ],
+    );
+    (tmp, home, source, target)
+}
+
+fn read_kind_lock(target: &Path) -> serde_json::Value {
+    serde_json::from_slice(&fs::read(target.join(".upskill-lock.json")).unwrap()).unwrap()
+}
+
+#[test]
+fn add_kind_rule_installs_only_the_rules_of_a_bundle() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "bun",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(target.join(".claude/rules/r.md").exists());
+    assert!(!target.join(".claude/skills").exists());
+    assert!(!target.join(".claude/agents").exists());
+    let lock = read_kind_lock(&target);
+    let items = lock["items"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["kind"], "rule");
+    assert_eq!(items[0]["name"], "r");
+}
+
+#[test]
+fn add_kind_is_repeatable() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "bun",
+            "--kind",
+            "rule",
+            "--kind",
+            "agent",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(target.join(".claude/rules/r.md").exists());
+    assert!(target.join(".claude/agents/g.md").exists());
+    assert!(!target.join(".claude/skills").exists());
+    assert_eq!(
+        read_kind_lock(&target)["items"].as_array().unwrap().len(),
+        2
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn add_kind_skips_the_plugins_and_mcp_servers_of_a_bundle() {
+    use std::os::unix::fs::PermissionsExt;
+    let (tmp, home, source, target) = stage_kind_source();
+    let bin = tmp.path().join("bin");
+    fs::create_dir_all(&bin).unwrap();
+    let script = bin.join("claude");
+    let marker = tmp.path().join("claude-called");
+    fs::write(&script, "#!/bin/sh\n: > \"$KIND_MARKER\"\n").unwrap();
+    fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+    let path = std::env::join_paths(std::iter::once(bin).chain(std::env::split_paths(
+        &std::env::var_os("PATH").unwrap_or_default(),
+    )))
+    .unwrap();
+    let result = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .env("PATH", path)
+        .env("KIND_MARKER", &marker)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "bun",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(!marker.exists());
+    assert!(!target.join(".mcp.json").exists());
+    let lock = read_kind_lock(&target);
+    assert!(lock.get("plugins").is_none());
+    assert!(lock.get("mcps").is_none());
+    for bytes in [&result.get_output().stdout, &result.get_output().stderr] {
+        let text = String::from_utf8_lossy(bytes);
+        assert!(!text.contains("kind-plugin"), "{text}");
+        assert!(!text.contains("kind-server"), "{text}");
+    }
+}
+
+#[test]
+fn add_kind_applies_to_a_source_without_item_names() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "--kind",
+            "skill",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(target.join(".claude/skills/s/SKILL.md").exists());
+    assert!(!target.join(".claude/rules").exists());
+    assert!(!target.join(".claude/agents").exists());
+    let lock = read_kind_lock(&target);
+    assert_eq!(lock["items"].as_array().unwrap().len(), 1);
+    assert_eq!(lock["items"][0]["kind"], "skill");
+}
+
+#[test]
+fn add_kind_does_not_install_a_required_item_of_another_kind() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    write_files(
+        &source,
+        &[(
+            "r2/RULE.md",
+            "---\nname: r2\ndescription: A dependent rule.\nrequires:\n  skills: [s]\n---\nRule body.\n",
+        )],
+    );
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "r2",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(target.join(".claude/rules/r2.md").exists());
+    assert!(!target.join(".claude/skills").exists());
+    assert_eq!(
+        read_kind_lock(&target)["items"].as_array().unwrap().len(),
+        1
+    );
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["doctor", "--project"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn add_with_an_unknown_kind_is_a_usage_error() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "bun",
+            "--kind",
+            "hook",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .code(2)
+        .stderr(predicates::str::contains("unknown item kind: hook"));
+    assert!(!target.join(".claude").exists());
+    assert!(!target.join(".upskill-lock.json").exists());
+    assert!(!target.join(".mcp.json").exists());
+}
+
+#[test]
+fn add_kind_that_removes_every_named_item_is_an_error() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "s",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("no item of kind rule matches: s"));
+    assert!(!target.join(".claude").exists());
+    assert!(!target.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_kind_records_sorted_unique_kinds_independent_of_flag_order() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    let mut previous = None;
+    for flags in [
+        vec!["rule", "rule"],
+        vec!["rule", "agent", "rule"],
+        vec!["agent", "rule"],
+    ] {
+        let mut cmd = common::upskill_cmd(&home);
+        cmd.current_dir(&target).args([
+            "add",
+            source.to_str().unwrap(),
+            "bun",
+            "--project",
+            "--claude",
+        ]);
+        for kind in &flags {
+            cmd.args(["--kind", kind]);
+        }
+        cmd.assert().success();
+        let expected = if flags.contains(&"agent") {
+            serde_json::json!(["rule", "agent"])
+        } else {
+            serde_json::json!(["rule"])
+        };
+        assert_eq!(read_kind_lock(&target)["bundles"][0]["kinds"], expected);
+        if flags.contains(&"agent") {
+            let bytes = fs::read(target.join(".upskill-lock.json")).unwrap();
+            if let Some(previous) = &previous {
+                assert_eq!(&bytes, previous);
+            }
+            previous = Some(bytes);
+        }
+    }
+}
+
+#[test]
+fn add_kind_has_no_false_conflict_for_a_bundle_or_plain_item_request() {
+    for request in ["bun", "r"] {
+        let (tmp, home, source, target) = stage_kind_source();
+        if request == "r" {
+            write_files(
+                &source,
+                &[(
+                    "r/RULE.md",
+                    "---\nname: r\ndescription: A dependent rule.\nrequires:\n  skills: [s]\n---\nRule body.\n",
+                )],
+            );
+        }
+        let other = tmp.path().join("other");
+        write_files(
+            &other,
+            &[(
+                "s/SKILL.md",
+                "---\nname: s\ndescription: Another source skill.\n---\nOriginal skill.\n",
+            )],
+        );
+        common::upskill_cmd(&home)
+            .current_dir(&target)
+            .args(["add", other.to_str().unwrap(), "s", "--project", "--claude"])
+            .assert()
+            .success();
+        let old_skill = fs::read(target.join(".claude/skills/s/SKILL.md")).unwrap();
+        common::upskill_cmd(&home)
+            .current_dir(&target)
+            .args([
+                "add",
+                source.to_str().unwrap(),
+                request,
+                "--kind",
+                "rule",
+                "--project",
+                "--claude",
+            ])
+            .assert()
+            .success();
+        assert_eq!(
+            fs::read(target.join(".claude/skills/s/SKILL.md")).unwrap(),
+            old_skill
+        );
+        assert!(target.join(".claude/rules/r.md").is_file());
+    }
+}
+
+#[test]
+fn add_kind_records_kinds_on_a_mixed_bundle_and_item_request() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    write_files(
+        &source,
+        &[(
+            "x/RULE.md",
+            "---\nname: x\ndescription: Another rule.\n---\nRule body.\n",
+        )],
+    );
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "bun",
+            "x",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert_eq!(
+        read_kind_lock(&target)["bundles"][0]["kinds"],
+        serde_json::json!(["rule"])
+    );
+    assert!(target.join(".claude/rules/x.md").is_file());
+}
+
+#[test]
+fn add_kind_short_flag_installs_only_rules() {
+    let (_tmp, home, source, target) = stage_kind_source();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "bun",
+            "-k",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(target.join(".claude/rules/r.md").is_file());
+    assert!(!target.join(".claude/skills").exists());
+    assert_eq!(
+        read_kind_lock(&target)["bundles"][0]["kinds"],
+        serde_json::json!(["rule"])
+    );
+}

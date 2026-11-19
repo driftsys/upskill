@@ -2,6 +2,7 @@ use anyhow::Context;
 use clap::{Parser, error::ErrorKind};
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -89,6 +90,7 @@ fn main() {
             force,
             alias,
             exclude,
+            kind,
             claude,
             copilot,
             vscode,
@@ -101,6 +103,7 @@ fn main() {
             force,
             aliases: &alias,
             excludes: &exclude,
+            kinds: &kind,
             flag_clients: client_flags(claude, copilot, vscode, opencode),
         }),
         Commands::Remove {
@@ -153,6 +156,14 @@ fn main() {
             registry,
             kind,
         } => run_search(&query, limit, registry.as_deref(), kind.as_deref()),
+        Commands::Pack {
+            bundle,
+            source,
+            out,
+            force,
+            claude,
+            copilot,
+        } => run_pack(&bundle, &source, &out, force, claude, copilot),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
         Commands::New { kind, name } => run_new(&kind, &name),
@@ -255,6 +266,7 @@ struct AddArgs<'a> {
     force: bool,
     aliases: &'a [String],
     excludes: &'a [String],
+    kinds: &'a [String],
     /// Clients named by `--claude`/`--copilot`/`--vscode`/`--opencode`.
     /// Empty means no client flag was passed (fall back to config / all).
     flag_clients: Vec<SelectedClient>,
@@ -311,8 +323,20 @@ fn run_add(args: AddArgs) -> i32 {
         force,
         aliases,
         excludes,
+        kinds,
         flag_clients,
     } = args;
+    let kinds = match kinds
+        .iter()
+        .map(|kind| ItemKind::from_str(kind))
+        .collect::<anyhow::Result<Vec<_>>>()
+    {
+        Ok(kinds) => kinds,
+        Err(err) => {
+            print_error(&err);
+            return EXIT_USAGE;
+        }
+    };
     let parsed = match parse_install_source(source) {
         Ok(s) => s,
         Err(err) => {
@@ -338,6 +362,8 @@ fn run_add(args: AddArgs) -> i32 {
         overwrite: force,
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
+        bundles: Vec::new(),
+        kinds,
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
         keep_unwithheld_edits: false,
         scope: at.scope,
@@ -1192,6 +1218,7 @@ const NOTICE_TIME_LIMIT: Duration = Duration::from_secs(5);
 /// [`install_notice_signal_handler`]). A failed step prints nothing and writes
 /// nothing to stderr. Under `--quiet`, the checks and the cache update run,
 /// and no line is printed or marked as reported.
+/// A run exits without output when another run holds a lock younger than 60 seconds.
 fn run_update_notice(repeat: bool) -> i32 {
     let _ = notice_lines(repeat);
     EXIT_SUCCESS
@@ -1199,6 +1226,14 @@ fn run_update_notice(repeat: bool) -> i32 {
 
 fn notice_lines(repeat: bool) -> Option<()> {
     let cache_path = notice_cache_path()?;
+    let _run_lock = match notice::acquire_run_lock(
+        &cache_path.with_file_name(notice::LOCK_FILE_NAME),
+        std::time::SystemTime::now(),
+    ) {
+        notice::LockAttempt::Held(lock) => Some(lock),
+        notice::LockAttempt::Busy => return Some(()),
+        notice::LockAttempt::Unavailable => None,
+    };
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .ok()?
@@ -2342,6 +2377,47 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
             style::name(&bundle.name),
             style::dim(&format!("{}{pinned}", bundle.source))
         );
+    }
+}
+
+fn run_pack(
+    bundle: &str,
+    source: &str,
+    out: &std::path::Path,
+    force: bool,
+    claude: bool,
+    copilot: bool,
+) -> i32 {
+    use upskill::pack::{self, PackClient};
+
+    if let Err(error) =
+        pack::validate_source(source).and_then(|()| pack::validate_bundle_name(bundle))
+    {
+        print_error(format!("{error:#}"));
+        return EXIT_USAGE;
+    }
+    let result = (|| -> anyhow::Result<()> {
+        let root = std::env::current_dir()?;
+        let mut directories = Vec::new();
+        if claude || !copilot {
+            directories.push(pack::build(&root, bundle, source, PackClient::Claude)?);
+        }
+        if copilot || !claude {
+            directories.push(pack::build(&root, bundle, source, PackClient::Copilot)?);
+        }
+        for (target, count) in pack::write_plugin_dirs(out, &directories, force)? {
+            if !style::is_quiet() {
+                println!("Wrote {} ({} files)", target.display(), count);
+            }
+        }
+        Ok(())
+    })();
+    match result {
+        Ok(()) => EXIT_SUCCESS,
+        Err(error) => {
+            print_error(format!("{error:#}"));
+            EXIT_ERROR
+        }
     }
 }
 

@@ -32,6 +32,7 @@ use crate::generate::Client;
 use crate::source::InstallSource;
 
 mod apply;
+mod bundle_plan;
 mod check;
 mod discovery;
 mod git;
@@ -46,6 +47,7 @@ mod prepared;
 mod report;
 
 pub use apply::{ConflictState, FileConflict};
+pub use bundle_plan::{BundleFile, BundleOutput, plan_bundle_output};
 pub use check::{
     CheckedSource, GitRemote, LookupError, RemoteLookup, ScopedCheck, SourceStatus, check_scopes,
 };
@@ -115,6 +117,12 @@ pub struct AddOptions {
     pub aliases: Vec<(String, String)>,
     /// Item names to skip during install.
     pub excludes: Vec<String>,
+    /// Item kinds to install. Empty means every kind. When it is not empty, the
+    /// install runs no plugin step and no MCP step.
+    pub kinds: Vec<ItemKind>,
+    /// Bundle names that the run resolves as bundles only; set by `update`;
+    /// `add` leaves it empty.
+    pub bundles: Vec<String>,
     /// Consumer-side client selection (ADR-0012). Default targets all
     /// clients, preserving the emit-for-everyone behaviour.
     pub selection: crate::select::ClientSelection,

@@ -38,8 +38,8 @@ fn every_subcommand_renders_a_man_page() {
     // update the assert and the docs.
     assert_eq!(
         names.len(),
-        11,
-        "expected 11 subcommands, got {}: {names:?}",
+        12,
+        "expected 12 subcommands, got {}: {names:?}",
         names.len()
     );
 
@@ -65,4 +65,18 @@ fn root_man_page_documents_quiet_flag() {
         page.contains(r"\-\-quiet"),
         "expected --quiet in root man page, got:\n{page}"
     );
+}
+
+#[test]
+fn pack_man_page_documents_client_selection() {
+    let root = Cli::command();
+    let pack = root.find_subcommand("pack").unwrap();
+    let page = render(pack.clone());
+    for text in [
+        "Without a client flag, writes both directories.",
+        "Write the Claude Code plugin directory",
+        "Write the GitHub Copilot CLI plugin directory",
+    ] {
+        assert!(page.contains(text), "missing {text}: {page}");
+    }
 }
