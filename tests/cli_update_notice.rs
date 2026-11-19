@@ -1165,6 +1165,7 @@ fn a_quiet_notice_on_a_root_that_is_not_due_leaves_the_set_unreported() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn update_succeeds_and_prints_nothing_more_when_the_cache_cannot_be_written() {
     use std::os::unix::fs::PermissionsExt;
