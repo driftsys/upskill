@@ -142,27 +142,28 @@ absent, checks with `opencode plugin list` under the version check. When
 
 ### Repair by `update`
 
-`update`, also when no item of a source changes, installs again every plugin of
-the bundles that the lockfile records for a source of the run, when the lockfile
-records the plugin as installed and the check of `doctor` reports it missing, or
-records it as skipped. Only that client of the plugin is installed. A skipped
-plugin whose install succeeds is recorded as installed; when the client CLI is
-still absent or opencode is still below 2, it stays skipped and the warning of
-`add` is printed again. A plugin that the apply of the source installed in the
-same run is not installed again. This runs when the source is applied, and when
-its preview changes nothing; it does not run for a source that the answer did
-not apply, with `--dry-run`, `--check` or `--notice`. A plugin that the apply of
-the source attempted in the same run, whatever the outcome, is not tried again.
-A repair install that fails prints a warning and does not change the exit code
-of `update`, as for `add`.
+The plugin step of an applied source attempts every plugin of the bundles that
+the lockfile records for the source, with every client of each plugin. An
+`update --yes` run applies every source, so it installs a missing or skipped
+plugin through that step.
 
-A source under a kind restriction (every bundle that the lockfile records for
-the source has recorded kinds, `add --kind`) runs no plugin step in `update`,
-and the repair does not run for it either. The plugin step of an applied source
-without a kind restriction attempts every plugin of the recorded bundles of the
-source, so an `update --yes` run installs a plugin through that step, and the
-repair covers the source that a terminal run does not apply because its preview
-changes nothing.
+A terminal run does not apply a source whose preview changes nothing. For such a
+source the repair runs instead: it installs again every plugin of the bundles
+that the lockfile records for the source, when the lockfile records the plugin
+as installed and the check of `doctor` reports it missing, or records it as
+skipped. The repair installs only that client of the plugin. A skipped plugin
+whose install succeeds is recorded as installed; when the client CLI is still
+absent or opencode is still below 2, it stays skipped and the warning of `add`
+is printed again. The repair does not run for a source that the answer did not
+apply, with `--dry-run`, `--check` or `--notice`. A repair install that fails
+prints a warning and does not change the exit code of `update`, as for `add`.
+
+A source under a kind restriction (the lockfile records at least one bundle for
+the source, and every such bundle has recorded kinds, `add --kind`) runs no
+plugin step in `update`, and the repair does not run for it either. For a
+missing or skipped plugin of such a source, `doctor` names the `upskill add`
+command of the bundle on the plugin's line. That command has no `--kind`, so it
+also removes the kind restriction of the bundle.
 
 `update` runs over the sources of the items that the lockfile records. When no
 recorded item comes from the source that the lockfile records for a plugin's
@@ -174,11 +175,12 @@ footer of skipped plugins says that `upskill update --yes` installs the plugins
 skipped for a missing CLI or an opencode version below 2, unless a line names
 another command, and that a plugin that needs a manual step (status
 `instructions`, listed with the skipped plugins) keeps its instructions: the
-repair never tries such a plugin again.
+repair never tries such a plugin again, and the plugin step of an applied source
+prints its instructions again.
 
-`update` prints the plugin results of the apply of each source and of the repair
-with the printer of `add`; each plugin is attempted, and reported, once per
-source of the run.
+`update` prints the plugin results of the plugin step of each applied source and
+of the repair with the printer of `add`; each plugin is attempted, and reported,
+once per source of the run.
 
 ### Lockfile records the resolved triple
 

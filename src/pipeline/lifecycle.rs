@@ -402,17 +402,22 @@ fn remove_selected(
 }
 
 /// The `upskill add` command that installs again the plugins of `bundle`,
-/// when `update` cannot: the lockfile records the bundle's source, but no
-/// item from it, and `update` runs over the sources of the recorded items.
-/// `None` when an item comes from that source, or the bundle is not
-/// recorded.
+/// when `update` cannot. There are two cases. The lockfile records the
+/// bundle's source, but no item from it, and `update` runs over the sources
+/// of the recorded items. Or the source is under a kind restriction
+/// ([`source_is_kind_restricted`]), for which `update` runs no plugin step
+/// and no plugin repair; the command has no `--kind`, so it also removes the
+/// kind restriction of the bundle. `None` in every other case, and when the
+/// bundle is not recorded.
 fn add_command_for_bundle(
     at: &ScopeRoot,
     lock: &crate::lockfile::Lockfile,
     bundle: &str,
 ) -> Option<String> {
     let recorded = lock.bundles.iter().find(|b| b.name == bundle)?;
-    if lock.items.iter().any(|i| i.source == recorded.source) {
+    if lock.items.iter().any(|i| i.source == recorded.source)
+        && !source_is_kind_restricted(lock, &recorded.source)
+    {
         return None;
     }
     let label = recorded.source.as_str();
@@ -426,6 +431,19 @@ fn add_command_for_bundle(
         format!(" {bundle}")
     };
     Some(format!("upskill add {source}{name} --{}", at.scope))
+}
+
+/// Whether `update` applies a kind restriction to `source`: the lockfile
+/// records at least one bundle for it, and every such bundle has recorded
+/// kinds (`add --kind`). With one unrestricted bundle, no restriction
+/// applies.
+fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> bool {
+    let mut recorded = lock
+        .bundles
+        .iter()
+        .filter(|b| b.source == source)
+        .peekable();
+    recorded.peek().is_some() && recorded.all(|b| !b.kinds.is_empty())
 }
 
 /// Verify installed-state consistency against `.upskill-lock.json`.
@@ -861,15 +879,15 @@ pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedP
 
 /// Install again every plugin of `bundles` that the lockfile records as
 /// skipped, or as installed when [`plugin_is_missing`] reports it missing,
-/// except the `(name, client)` pairs in `done`, and record the results in the
-/// lockfile. Only the missing or skipped client of a plugin is installed.
+/// and record the results in the lockfile. `update` calls it for a source
+/// that it does not apply because its preview changes nothing; the plugin
+/// step of an applied source attempts every plugin itself. Only the missing or skipped client of a plugin is installed.
 /// Returns the results; empty when no plugin is missing or skipped, and then
 /// nothing is written.
 fn repair_missing_plugins(
     target: &Path,
     plugin_scope: crate::plugin::PluginScope,
     bundles: &[crate::model::Bundle],
-    done: &std::collections::BTreeSet<(String, String)>,
 ) -> Result<Vec<super::PluginResult>> {
     use crate::lockfile::PluginInstallStatus;
 
@@ -883,7 +901,6 @@ fn repair_missing_plugins(
             .plugins
             .iter()
             .filter(|p| p.bundle == bundle.name)
-            .filter(|p| !done.contains(&(p.name.clone(), p.client.clone())))
             .filter(|p| match p.status {
                 // A skipped plugin is tried again: its client CLI may be on
                 // PATH now (issue #229).
@@ -1415,20 +1432,16 @@ pub fn update(
             // installs from them (issue #229). A source under a kind
             // restriction (every recorded bundle of the source has recorded
             // kinds) runs no plugin step, so it gets no repair either.
-            let recorded: Vec<&crate::lockfile::LockedBundle> = lock
-                .bundles
-                .iter()
-                .filter(|b| b.source == source_label)
-                .collect();
-            let restricted = !recorded.is_empty() && recorded.iter().all(|b| !b.kinds.is_empty());
-            let repair_bundles: Vec<crate::model::Bundle> = if restricted {
-                Vec::new()
-            } else {
-                recorded
-                    .iter()
-                    .filter_map(|b| prepared.source_bundle(&b.name))
-                    .collect()
-            };
+            let repair_bundles: Vec<crate::model::Bundle> =
+                if source_is_kind_restricted(&lock, &source_label) {
+                    Vec::new()
+                } else {
+                    lock.bundles
+                        .iter()
+                        .filter(|b| b.source == source_label)
+                        .filter_map(|b| prepared.source_bundle(&b.name))
+                        .collect()
+                };
 
             let mut current = crate::lockfile::Lockfile::load(target)?;
             let adopted = if dry_run {
@@ -1552,7 +1565,6 @@ pub fn update(
                         target,
                         plugin_scope,
                         &repair_bundles,
-                        &std::collections::BTreeSet::new(),
                     )?);
                 }
                 if !dry_run && decision == SourceDecision::Stop {
@@ -1567,15 +1579,9 @@ pub fn update(
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
             let install_report = prepared.commit(target, plugin_scope)?;
-            // A plugin that the commit attempted, whatever the outcome, is not
-            // tried again by the repair of the same run.
-            let reinstalled: std::collections::BTreeSet<(String, String)> = install_report
-                .plugin_results
-                .iter()
-                .map(|r| (r.name.clone(), r.client.clone()))
-                .collect();
-            // The plugin results of the apply are reported with those of the
-            // repair; each plugin is attempted once in a run.
+            // The plugin step of the apply attempts every plugin of the
+            // recorded bundles of the source, so an applied source needs no
+            // plugin repair.
             report
                 .plugin_results
                 .extend(install_report.plugin_results.iter().cloned());
@@ -1711,12 +1717,6 @@ pub fn update(
                     status: UpdateStatus::SkippedModified { files },
                 });
             }
-            report.plugin_results.extend(repair_missing_plugins(
-                target,
-                plugin_scope,
-                &repair_bundles,
-                &reinstalled,
-            )?);
             report.sources_applied += 1;
             let mut result = SourceResult {
                 source: source_label.clone(),
@@ -2038,6 +2038,14 @@ mod tests {
         );
         let reached = lock_with_bundle("local:/r", Some("local:/r"));
         assert_eq!(add_command_for_bundle(&project, &reached, "oc"), None);
+        // `update` reaches the source, but skips its plugins under a kind
+        // restriction.
+        let mut restricted = lock_with_bundle("local:/r", Some("local:/r"));
+        restricted.bundles[0].kinds = vec![ItemKind::Skill];
+        assert_eq!(
+            add_command_for_bundle(&project, &restricted, "oc").as_deref(),
+            Some("upskill add /r oc --project")
+        );
     }
     use crate::plugin::PluginScope;
     use crate::select::ClientSelection;

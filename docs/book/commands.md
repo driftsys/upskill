@@ -988,8 +988,10 @@ scope. For each scope it reports eleven independent buckets:
   `opencode plugin` command and does not report that plugin missing. `update`
   runs over the sources of the recorded items, so it does not reach a plugin
   whose bundle's recorded source is the source of no recorded item (for example
-  a bundle with `items: {}`); for such a plugin `doctor` names, on the plugin's
-  line, the `upskill add` command that installs it again. Causes exit 1.
+  a bundle with `items: {}`); for such a plugin, and for a plugin of a source
+  under a kind restriction, `doctor` names, on the plugin's line, the
+  `upskill add` command that installs it again. That command has no `--kind`, so
+  it also removes the kind restriction of the bundle. Causes exit 1.
 - **Skipped plugins** (informational) — recorded as `skipped` because the client
   CLI was not on PATH at install time, or `opencode --version` reported a major
   version below 2 (or no version). Install the CLI, or opencode 2 or later, then
@@ -1112,9 +1114,10 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 `{ "query-failed": { "stderr": "..." } }`. The plugin and item arrays are always
 present (possibly empty); `mcp_entries` is omitted when no MCP servers are
 recorded. An entry of `missing_plugins` or `skipped_plugins` has the key
-`repair_command` only when `update` does not reach the plugin (no recorded item
-comes from the recorded source of its bundle); the value is the `upskill add`
-command that installs it again.
+`repair_command` only when `update` does not install the plugin (no recorded
+item comes from the recorded source of its bundle, or that source is under a
+kind restriction); the value is the `upskill add` command that installs it
+again.
 
 ### `upskill search <query>`
 

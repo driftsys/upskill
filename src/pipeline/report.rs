@@ -343,9 +343,10 @@ pub struct MissingPlugin {
     pub client: String,
     pub identifier: String,
     pub bundle: String,
-    /// The command that installs the plugin when `update` cannot: the
+    /// The command that installs the plugin when `update` does not: the
     /// lockfile records no item from the source of the plugin's bundle, so
-    /// that source is not part of an `update` run. `None` otherwise.
+    /// that source is not part of an `update` run, or that source is under a
+    /// kind restriction. `None` otherwise.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repair_command: Option<String>,
 }
@@ -359,9 +360,10 @@ pub struct SkippedPlugin {
     pub client: String,
     pub identifier: String,
     pub bundle: String,
-    /// The command that installs the plugin when `update` cannot: the
+    /// The command that installs the plugin when `update` does not: the
     /// lockfile records no item from the source of the plugin's bundle, so
-    /// that source is not part of an `update` run. `None` otherwise.
+    /// that source is not part of an `update` run, or that source is under a
+    /// kind restriction. `None` otherwise.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repair_command: Option<String>,
 }
@@ -615,12 +617,13 @@ pub struct UpdateReport {
     /// True when the observer returned [`SourceDecision::Stop`].
     pub stopped: bool,
     /// The plugin results of the run, with any outcome (installed, client
-    /// CLI absent, unsupported version, failed, manual instructions): those
-    /// of the plugin step of each applied source, followed by those of the
-    /// plugin repair (issue #229), which tries again every plugin recorded as
-    /// skipped, or recorded as installed and reported missing, that the
-    /// apply did not attempt. Each plugin is attempted, and listed, at most
-    /// once per source of the run.
+    /// CLI absent, unsupported version, failed, manual instructions), in the
+    /// order of the sources of the run. For an applied source: those of its
+    /// plugin step. For a source that is not applied because its preview
+    /// changes nothing: those of the plugin repair (issue #229), which tries
+    /// again every plugin recorded as skipped, or recorded as installed and
+    /// reported missing. Each plugin is attempted, and listed, at most once
+    /// per source of the run.
     pub plugin_results: Vec<PluginResult>,
     /// Sources of the run that were not previewed because the observer
     /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the

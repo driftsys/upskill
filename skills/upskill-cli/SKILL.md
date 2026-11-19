@@ -234,9 +234,9 @@ findings:
 - Plugin recorded as installed but missing from the client (uninstalled
   out-of-band → `update` reinstalls it for a source without a kind restriction,
   also in a terminal run for a source whose preview changes nothing; a source
-  under a kind restriction skips the plugin and MCP steps and this repair; when
-  no recorded item comes from the source of the plugin's bundle, `doctor` names
-  the `upskill add` command to run instead)
+  under a kind restriction skips the plugin and MCP steps and this repair; for
+  such a source, and when no recorded item comes from the source of the plugin's
+  bundle, `doctor` names the `upskill add` command to run instead)
 - Plugin skipped at install time because the client CLI was not on PATH, or
   opencode was below version 2 or gave no version (informational warning —
   install the CLI, or opencode 2 or later, then run `update --yes`)

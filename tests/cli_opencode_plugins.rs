@@ -1,6 +1,12 @@
 //! opencode plugins (issue #229): the `doctor` check, the install command
 //! form of opencode 2.x, the version check before any `opencode plugin`
-//! command, and the repair of a missing plugin by `update --yes`.
+//! command, and the install of a missing or skipped plugin by `update`.
+//!
+//! `update --yes` applies every source, and the plugin step of the apply
+//! attempts every plugin of the recorded bundles. A terminal run does not
+//! apply a source whose preview changes nothing; there the plugin repair
+//! installs a missing or skipped plugin. The tests named `terminal_...`, and
+//! those that call `terminal_update`, cover the repair.
 //!
 //! A fake `opencode` script, first on `PATH`, records every argument list in
 //! a log file, answers `--version` with a fixed version, and answers
@@ -171,6 +177,11 @@ fn terminal_update(env: &Env) -> serde_json::Value {
         &[("PATH", path)],
     );
     assert_eq!(result["returncode"], 0, "{result}");
+    // The precondition: no source is applied.
+    assert!(
+        result["stdout"].as_str().unwrap().contains("nothing to do"),
+        "{result}"
+    );
     result
 }
 
@@ -316,11 +327,62 @@ fn update_yes_does_not_repair_a_plugin_of_a_source_under_a_kind_restriction() {
 
     env.set_list("");
     env.clear_log();
+    terminal_update(&env);
     env.run(&["update", "--yes", "--project"]).code(0);
     assert!(
         !plugin_lines(&env.log())
             .iter()
             .any(|l| l.starts_with("plugin add")),
+        "{}",
+        env.log()
+    );
+    // `update` does not install it, so `doctor` names the `add` command.
+    let out = env.run(&["doctor", "--project"]).code(1);
+    let text = stdout(&out);
+    assert!(
+        text.contains(&format!("upskill add {} oc --project", registry.display())),
+        "{text}"
+    );
+}
+
+/// With one unrestricted bundle of the source, no kind restriction applies,
+/// and the repair runs.
+#[test]
+fn terminal_repair_runs_when_one_bundle_of_the_source_is_unrestricted() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    let registry = env.bundle.parent().unwrap().to_path_buf();
+    // Two bundles of one source cannot hold the same item.
+    fs::create_dir_all(registry.join("beta")).unwrap();
+    fs::write(
+        registry.join("beta").join("SKILL.md"),
+        "---\nschema: 1\nname: beta\ndescription: second skill for the issue 229 tests.\n---\n\n## Body\n\nText.\n",
+    )
+    .unwrap();
+    fs::write(
+        registry.join("two.bundle.yaml"),
+        "schema: 1\nname: two\ndescription: second bundle of the source.\nitems:\n  skills:\n    - beta\n",
+    )
+    .unwrap();
+    let source = registry.to_str().unwrap();
+    env.add().success();
+    env.run(&["add", source, "two", "--project"]).success();
+    env.run(&["add", source, "oc", "--project", "--kind", "skill"])
+        .success();
+    let lock = env.lock();
+    let kinds: Vec<usize> = lock["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["kinds"].as_array().map_or(0, Vec::len))
+        .collect();
+    assert_eq!(kinds.iter().filter(|n| **n == 0).count(), 1, "{lock}");
+    assert_eq!(kinds.len(), 2, "{lock}");
+
+    env.set_list("");
+    env.clear_log();
+    terminal_update(&env);
+    assert!(
+        plugin_lines(&env.log()).contains(&format!("plugin add {MODULE}").as_str()),
         "{}",
         env.log()
     );
@@ -429,6 +491,100 @@ fn update_yes_keeps_a_skipped_plugin_skipped_when_opencode_is_1x() {
     assert!(stderr(&out).contains("opencode 2"), "{}", stderr(&out));
     let lock = fs::read_to_string(env.project.join(".upskill-lock.json")).unwrap();
     assert!(lock.contains("\"skipped\""), "{lock}");
+}
+
+#[test]
+fn terminal_repair_installs_a_skipped_plugin_and_records_it_installed() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    hide_opencode(&env);
+    env.add().success();
+    assert_eq!(env.lock()["plugins"][0]["status"], "skipped");
+
+    restore_opencode(&env, "v2.1.4");
+    env.clear_log();
+    terminal_update(&env);
+    assert!(
+        plugin_lines(&env.log()).contains(&format!("plugin add {MODULE}").as_str()),
+        "{}",
+        env.log()
+    );
+    assert_eq!(env.lock()["plugins"][0]["status"], "installed");
+}
+
+#[test]
+fn terminal_repair_keeps_a_skipped_plugin_skipped_when_opencode_is_1x() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    hide_opencode(&env);
+    env.add().success();
+
+    restore_opencode(&env, "v1.15.13");
+    env.clear_log();
+    let result = terminal_update(&env);
+    assert!(plugin_lines(&env.log()).is_empty(), "{}", env.log());
+    // The warning of `add` is printed again.
+    assert!(result.to_string().contains("opencode 2"), "{result}");
+    assert_eq!(env.lock()["plugins"][0]["status"], "skipped");
+}
+
+#[test]
+fn terminal_repair_sets_config_write_on_a_plugin_uri_record_without_it() {
+    let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
+    env.add().success();
+    // A record written before the field existed.
+    let mut lock = env.lock();
+    lock["plugins"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("config_write");
+    fs::write(
+        env.project.join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&lock).unwrap(),
+    )
+    .unwrap();
+    env.write_opencode_json(&serde_json::json!({ "plugin": [] }));
+
+    terminal_update(&env);
+    assert_eq!(env.lock()["plugins"][0]["config_write"], true);
+    assert!(has_uri(&env.opencode_json()));
+}
+
+/// The plugin step of an applied source attempts every plugin of the
+/// recorded bundles: every client, and a plugin that needs a manual step.
+#[test]
+fn update_yes_attempts_every_client_and_prints_instructions_again() {
+    let env = Env::build(
+        &format!(
+            "  superpowers:\n    opencode:\n      module: {MODULE}\n    vscode:\n      extension: acme.sp\n"
+        ),
+        "  skills:\n    - alpha\n",
+        "v2.1.4",
+    );
+    env.add().success();
+    fs::write(env.bin.join("code-list.txt"), "acme.sp\n").unwrap();
+    env.set_list(&format!("{MODULE}\n"));
+    env.clear_log();
+    let _ = fs::remove_file(env.bin.join("code-log.txt"));
+    let out = env.run(&["update", "--yes", "--project"]).code(0);
+    assert!(
+        plugin_lines(&env.log()).contains(&format!("plugin add {MODULE}").as_str()),
+        "{}",
+        env.log()
+    );
+    assert!(
+        env.code_log().contains("--install-extension acme.sp"),
+        "{}",
+        env.code_log()
+    );
+    assert!(
+        stdout(&out).contains("Plugins: 2 plugin(s) installed"),
+        "{}",
+        stdout(&out)
+    );
+
+    let env = Env::new("instructions_url: https://example.com/sp", "v2.1.4");
+    env.add().success();
+    let out = env.run(&["update", "--yes", "--project"]).code(0);
+    assert!(stderr(&out).contains("manual step"), "{}", stderr(&out));
 }
 
 #[test]

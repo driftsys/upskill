@@ -2160,12 +2160,13 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
     );
 }
 
-/// The text after a doctor plugin line: for a plugin that `update` cannot
-/// reach (no recorded item comes from its bundle's source), the command
-/// that installs it instead of `upskill update --yes`.
+/// The text after a doctor plugin line: for a plugin that `update` does not
+/// install (no recorded item comes from its bundle's source, or that source
+/// is under a kind restriction), the command that installs it instead of
+/// `upskill update --yes`.
 fn repair_hint(command: Option<&str>) -> String {
     command
-        .map(|c| format!(" — `update` does not reach it; run `{c}`"))
+        .map(|c| format!(" — `update` does not install it; run `{c}`"))
         .unwrap_or_default()
 }
 
