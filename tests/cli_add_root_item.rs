@@ -118,7 +118,7 @@ fn add_of_an_item_directory_is_refused_and_writes_nothing() {
 #[test]
 fn add_of_an_installed_output_item_directory_is_refused() {
     let (tmp, home, _project) = env();
-    let item = home.join(".claude/skills/x");
+    let item = home.join(".claude").join("skills").join("x");
     write_skill(&item, "x");
     let before = files_under(&home);
     let assert = common::upskill_cmd(&home)
@@ -280,7 +280,7 @@ fn suggested_command_is_quoted_and_normalised() {
 #[test]
 fn overlap_in_a_plain_client_directory_keeps_the_base_message() {
     let (tmp, home, _project) = env();
-    let registry = home.join(".claude/skills");
+    let registry = home.join(".claude").join("skills");
     write_skill(&registry.join("x"), "x");
     let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
@@ -468,7 +468,7 @@ fn add_of_an_item_directory_with_a_child_item_is_accepted() {
 fn installed_output_check_uses_the_scope_of_the_run() {
     // Global: `$HOME/.copilot/instructions/x` is an output path.
     let (tmp, home, project) = env();
-    let item = home.join(".copilot/instructions/x");
+    let item = home.join(".copilot").join("instructions").join("x");
     write_entry(&item, "RULE.md", "x");
     let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
@@ -482,7 +482,7 @@ fn installed_output_check_uses_the_scope_of_the_run() {
     );
 
     // Project: `<project>/.copilot/instructions/x` is not an output path.
-    let item = project.join(".copilot/instructions/x");
+    let item = project.join(".copilot").join("instructions").join("x");
     write_entry(&item, "RULE.md", "x");
     let stderr = assert_refused(&home, &project, &item);
     assert!(

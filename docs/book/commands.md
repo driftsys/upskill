@@ -71,11 +71,11 @@ of the install, the error says that the path is an installed output of upskill,
 not a source, and that the item must be added from its source registry.
 Otherwise the error names the command to use instead,
 `upskill add <parent> <item-name>`, with the parent path and the item name each
-in single quotes when it holds a shell-special character; for the file system
-root, which has no parent, the error says so. A source is the directory that
-contains the item directories. This check applies to `add` only: `update` and
-the sources of `requires` entries are not checked. `.` alone is a local path,
-the same as `./`.
+in single quotes when it holds a shell-special character (on Windows, the path
+separator `\` is not one); for the file system root, which has no parent, the
+error says so. A source is the directory that contains the item directories.
+This check applies to `add` only: `update` and the sources of `requires` entries
+are not checked. `.` alone is a local path, the same as `./`.
 
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a flag uses the project scope. Outside a

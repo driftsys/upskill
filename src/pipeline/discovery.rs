@@ -142,12 +142,13 @@ fn normalize_lexically(path: &Path) -> PathBuf {
 }
 
 /// Quote `word` for a POSIX shell with single quotes when it holds a
-/// character other than a letter, a digit or one of `_-./:@%+=,~`.
+/// character other than a letter, a digit or one of `_-./:@%+=,~` (on
+/// Windows also `\\`, the path separator).
 fn shell_quote(word: &str) -> String {
     let plain = !word.is_empty()
-        && word
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || "_-./:@%+=,~".contains(c));
+        && word.chars().all(|c| {
+            c.is_ascii_alphanumeric() || "_-./:@%+=,~".contains(c) || (cfg!(windows) && c == '\\')
+        });
     if plain {
         word.to_string()
     } else {
