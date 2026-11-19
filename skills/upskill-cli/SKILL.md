@@ -222,8 +222,8 @@ findings:
   hand-creation that needs reconciling)
 - Plugin recorded as installed but missing from the client (uninstalled
   out-of-band → `update` reinstalls it, also in a terminal run for a source
-  whose preview changes nothing; for a bundle without items, `doctor` names the
-  `upskill add` command to run instead)
+  whose preview changes nothing; when no recorded item comes from the source of
+  the plugin's bundle, `doctor` names the `upskill add` command to run instead)
 - Plugin skipped at install time because the client CLI was not on PATH, or
   opencode was below version 2 or gave no version (informational warning —
   install the CLI, or opencode 2 or later, then run `update --yes`)
@@ -242,7 +242,7 @@ Each client and kind has a support level, which `doctor` prints in the section
 
 - `supported` — the smoke test passed on a recorded client version and date. It
   records one smoke run on that version; it does not promise that other client
-  versions work, and `doctor` does not detect the installed client version.
+  versions work, and the level does not depend on the installed client version.
 - `experimental` — implemented; the smoke test is missing, failing or older than
   the client.
 - `unsupported` — not implemented or known not to work. No client flag exists

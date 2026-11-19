@@ -42,8 +42,9 @@ date of that run. `-` marks an absent version or date.
 section `Support levels:`, and `upskill doctor --json` holds it in the key
 `support`. The table does not depend on the version of an installed client: the
 recorded version is the one of the smoke run. (The plugin check of `doctor` runs
-`opencode --version` for a recorded opencode plugin; that does not change the
-table.)
+`opencode --version` for a recorded opencode plugin whose record has no
+`config_write` and whose identifier is not in `opencode.json`; that does not
+change the table.)
 
 ## Known limits of the experimental OpenCode level
 

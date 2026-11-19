@@ -2030,7 +2030,7 @@ fn print_doctor_report(report: &DoctorReport) {
 
     if !report.missing_plugins.is_empty() {
         println!(
-            "{} {} plugin(s) recorded as installed but missing from client — `upskill update --yes` to fix",
+            "{} {} plugin(s) recorded as installed but missing from client — `upskill update --yes` installs them, unless a line below names another command",
             style::error_label("doctor:"),
             report.missing_plugins.len()
         );
@@ -2112,7 +2112,7 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
     println!(
         "  {}",
         style::dim(
-            "install the missing CLI (or opencode 2 or later) then run `upskill update --yes` to install them"
+            "install the missing CLI (or opencode 2 or later) then run `upskill update --yes` to install them, unless a line above names another command"
         )
     );
 }

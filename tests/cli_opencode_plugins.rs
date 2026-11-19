@@ -577,3 +577,76 @@ fn doctor_names_the_add_command_for_a_bundle_without_items() {
         env.log()
     );
 }
+
+#[test]
+fn update_reports_a_still_skipped_plugin_of_a_bundle_file_source_once() {
+    let env = Env::new(&format!("module: {MODULE}"), "v1.15.13");
+    env.add_bundle_file().success();
+    assert_eq!(env.lock()["plugins"][0]["status"], "skipped");
+    env.clear_log();
+
+    // The apply of the source attempts the plugin again; the repair does not.
+    let out = env.run(&["update", "--yes", "--project"]).code(0);
+    let err = stderr(&out);
+    assert_eq!(
+        err.matches("opencode 2 or later is needed").count(),
+        1,
+        "{err}"
+    );
+    assert!(plugin_lines(&env.log()).is_empty(), "{}", env.log());
+}
+
+#[test]
+fn update_reports_a_plugin_installed_by_the_apply_once() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    env.add_bundle_file().success();
+    let out = env.run(&["update", "--yes", "--project"]).code(0);
+    let text = stdout(&out);
+    assert!(text.contains("Plugins: 1 plugin(s) installed"), "{text}");
+    assert_eq!(text.matches("superpowers").count(), 1, "{text}");
+}
+
+#[test]
+fn doctor_gives_no_add_command_when_update_reaches_the_plugin() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    env.add().success();
+    env.set_list("");
+    let out = env.run(&["doctor", "--project"]).code(1);
+    assert!(stdout(&out).contains("missing"), "{}", stdout(&out));
+    assert!(!stdout(&out).contains("does not reach"), "{}", stdout(&out));
+    let out = env.run(&["doctor", "--json", "--project"]).code(1);
+    assert!(!stdout(&out).contains("repair_command"), "{}", stdout(&out));
+}
+
+#[test]
+fn doctor_gives_the_add_command_for_a_skipped_plugin_update_does_not_reach() {
+    let env = Env::build(
+        &format!("  superpowers:\n    opencode:\n      module: {MODULE}\n"),
+        "",
+        "v2.1.4",
+    );
+    hide_opencode(&env);
+    env.add().success();
+    let registry = env.bundle.parent().unwrap().display().to_string();
+    let command = format!("upskill add {registry} oc --project");
+
+    let out = env.run(&["doctor", "--project"]).code(0);
+    let text = stdout(&out);
+    assert!(text.contains("never installed"), "{text}");
+    assert!(text.contains(&command), "{text}");
+    let out = env.run(&["doctor", "--json", "--project"]).code(0);
+    let json: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    let text = json.to_string();
+    assert!(
+        text.contains(&format!("\"repair_command\":\"{command}\"")),
+        "{text}"
+    );
+}
+
+#[test]
+fn module_plugin_record_has_no_config_write_key() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    env.add().success();
+    let plugin = &env.lock()["plugins"][0];
+    assert!(plugin.get("config_write").is_none(), "{plugin}");
+}

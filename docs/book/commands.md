@@ -486,10 +486,14 @@ was updated, completed or removed, but files were written or deleted, it prints
 `Changed <n> file(s) written or deleted`. It prints
 `everything is up to date — nothing to do` when nothing changed, no item was
 skipped, no source was skipped, no file was kept with a note and no lockfile was
-adopted. A plugin installed again by the repair (a recorded plugin that `doctor`
-reports missing, or one recorded as skipped) is not an item change: the run
-prints `Plugins: <n> plugin(s) installed` with one line per plugin, and then
-`everything is up to date — nothing to do`. A repair install that fails prints a
+adopted. `update` prints the plugin results of the plugin step of each applied
+source and of the plugin repair (a recorded plugin that `doctor` reports
+missing, or one recorded as skipped, that the apply did not attempt) with the
+printer of `add`, once per attempted plugin: `Plugins: <n> plugin(s) installed`
+with one line per plugin on stdout, and the skip, manual-step and failure
+warnings on stderr. A plugin install is not an item change, so a run whose only
+change is a plugin install prints these lines and then
+`everything is up to date — nothing to do`. A plugin install that fails prints a
 warning on stderr and does not change the exit code, as for `add`. An item of a
 skipped source has the status line `skipped — source not reachable` when its
 source could not be fetched, and `skipped — requires a source that was skipped`
@@ -895,9 +899,11 @@ scope. For each scope it reports eleven independent buckets:
   plugin, an identifier in that `plugin` array means installed; otherwise
   `doctor` runs `opencode plugin list`. With opencode below version 2, `doctor`
   runs no `opencode plugin` command and does not report that plugin missing.
-  `update` runs over the sources of the recorded items, so it does not reach the
-  plugin of a bundle without items (`items: {}`); for such a plugin `doctor`
-  names the `upskill add` command that installs it again. Causes exit 1.
+  `update` runs over the sources of the recorded items, so it does not reach a
+  plugin whose bundle's recorded source is the source of no recorded item (for
+  example a bundle with `items: {}`); for such a plugin `doctor` names, on the
+  plugin's line, the `upskill add` command that installs it again. Causes exit
+  1.
 - **Skipped plugins** (informational) — recorded as `skipped` because the client
   CLI was not on PATH at install time, or `opencode --version` reported a major
   version below 2 (or no version). Install the CLI, or opencode 2 or later, then
@@ -989,7 +995,8 @@ Each element of `scopes` has these keys besides `scope` and `root`:
   ],
   "missing_plugins": [
     { "name": "superpowers", "client": "vscode",
-      "identifier": "anthropic.superpowers", "bundle": "baseline" }
+      "identifier": "anthropic.superpowers", "bundle": "baseline",
+      "repair_command": "upskill add ./registry baseline --project" }
   ],
   "skipped_plugins": [
     { "name": "superpowers", "client": "claude",
@@ -1014,7 +1021,10 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 `"ok"`, `"not-registered"`, `"cli-not-found"`, or
 `{ "query-failed": { "stderr": "..." } }`. The plugin and item arrays are always
 present (possibly empty); `mcp_entries` is omitted when no MCP servers are
-recorded.
+recorded. An entry of `missing_plugins` or `skipped_plugins` has the key
+`repair_command` only when `update` does not reach the plugin (no recorded item
+comes from the recorded source of its bundle); the value is the `upskill add`
+command that installs it again.
 
 ### `upskill search <query>`
 

@@ -156,12 +156,17 @@ the source attempted in the same run, whatever the outcome, is not tried again.
 A repair install that fails prints a warning and does not change the exit code
 of `update`, as for `add`.
 
-`update` runs over the sources of the items that the lockfile records. A bundle
-without items (`items: {}`) has no such source, so its plugins are not repaired
-by `update`; for such a plugin `doctor` names the `upskill add` command of the
-bundle instead. Otherwise the hint `upskill update --yes` to fix that `doctor`
-prints for a missing plugin, and the advice to run `upskill update --yes` for a
-skipped plugin, are true.
+`update` runs over the sources of the items that the lockfile records. When no
+recorded item comes from the source that the lockfile records for a plugin's
+bundle (for example a bundle with `items: {}`), `update` does not reach that
+plugin; for such a plugin `doctor` names the `upskill add` command of the bundle
+on the plugin's line. The header of missing plugins and the footer of skipped
+plugins say that `upskill update --yes` installs them unless a line names
+another command, so both are true.
+
+`update` prints the plugin results of the apply of each source and of the repair
+with the printer of `add`; each plugin is attempted, and reported, once per
+source of the run.
 
 ### Lockfile records the resolved triple
 

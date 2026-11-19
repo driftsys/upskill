@@ -403,8 +403,9 @@ pub(super) fn prepare_install(
 impl PreparedInstall {
     /// The bundle `name` as the fetched entry source declares it now: a
     /// bundle that this install resolved (always the case for a bundle-file
-    /// source), else the bundle file of that name in a directory source. `None` when the source has no such bundle or its
-    /// manifest cannot be read.
+    /// source), else the bundle file of that name in a directory source.
+    /// `None` when the source has no such bundle or its manifest cannot be
+    /// read.
     pub fn source_bundle(&self, name: &str) -> Option<crate::model::Bundle> {
         if let Some(rb) = self
             .resolved_bundles

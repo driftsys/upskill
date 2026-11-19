@@ -597,11 +597,13 @@ pub struct UpdateReport {
     pub sources_not_applied: usize,
     /// True when the observer returned [`SourceDecision::Stop`].
     pub stopped: bool,
-    /// The results of the plugin repair of the run (issue #229): every
-    /// plugin recorded as skipped, or recorded as installed and reported
-    /// missing, that was tried again, with any outcome (installed, client
-    /// CLI absent, unsupported version, failed). The plugin install that is
-    /// part of the apply of a source is not listed.
+    /// The plugin results of the run, with any outcome (installed, client
+    /// CLI absent, unsupported version, failed, manual instructions): those
+    /// of the plugin step of each applied source, followed by those of the
+    /// plugin repair (issue #229), which tries again every plugin recorded as
+    /// skipped, or recorded as installed and reported missing, that the
+    /// apply did not attempt. Each plugin is attempted, and listed, at most
+    /// once per source of the run.
     pub plugin_results: Vec<PluginResult>,
     /// Sources of the run that were not previewed because the observer
     /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the

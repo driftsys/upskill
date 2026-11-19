@@ -401,6 +401,33 @@ fn remove_selected(
     Ok(report)
 }
 
+/// The `upskill add` command that installs again the plugins of `bundle`,
+/// when `update` cannot: the lockfile records the bundle's source, but no
+/// item from it, and `update` runs over the sources of the recorded items.
+/// `None` when an item comes from that source, or the bundle is not
+/// recorded.
+fn add_command_for_bundle(
+    at: &ScopeRoot,
+    lock: &crate::lockfile::Lockfile,
+    bundle: &str,
+) -> Option<String> {
+    let recorded = lock.bundles.iter().find(|b| b.name == bundle)?;
+    if lock.items.iter().any(|i| i.source == recorded.source) {
+        return None;
+    }
+    let label = recorded.source.as_str();
+    let source = label
+        .strip_prefix("local:")
+        .or_else(|| label.strip_prefix("github:"))
+        .unwrap_or(label);
+    let name = if label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
+        String::new()
+    } else {
+        format!(" {bundle}")
+    };
+    Some(format!("upskill add {source}{name} --{}", at.scope))
+}
+
 /// Verify installed-state consistency against `.upskill-lock.json`.
 /// The report has these buckets:
 /// - **missing outputs** — file paths the lockfile says should exist
@@ -443,33 +470,6 @@ fn remove_selected(
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by `update --check`, which
 /// does not fetch, and by `update --dry-run`, which does fetch.
-/// The `upskill add` command that installs again the plugins of `bundle`,
-/// when `update` cannot: the lockfile records the bundle's source, but no
-/// item from it, and `update` runs over the sources of the recorded items.
-/// `None` when an item comes from that source, or the bundle is not
-/// recorded.
-fn add_command_for_bundle(
-    at: &ScopeRoot,
-    lock: &crate::lockfile::Lockfile,
-    bundle: &str,
-) -> Option<String> {
-    let recorded = lock.bundles.iter().find(|b| b.name == bundle)?;
-    if lock.items.iter().any(|i| i.source == recorded.source) {
-        return None;
-    }
-    let label = recorded.source.as_str();
-    let source = label
-        .strip_prefix("local:")
-        .or_else(|| label.strip_prefix("github:"))
-        .unwrap_or(label);
-    let name = if label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
-        String::new()
-    } else {
-        format!(" {bundle}")
-    };
-    Some(format!("upskill add {source}{name} --{}", at.scope))
-}
-
 pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     let target = at.root.as_path();
     let lock = crate::lockfile::Lockfile::load(target)?;
@@ -1491,6 +1491,11 @@ pub fn update(
                 .iter()
                 .map(|r| (r.name.clone(), r.client.clone()))
                 .collect();
+            // The plugin results of the apply are reported with those of the
+            // repair; each plugin is attempted once in a run.
+            report
+                .plugin_results
+                .extend(install_report.plugin_results.iter().cloned());
             report
                 .kept_modified
                 .extend(install_report.kept_modified.iter().cloned());
@@ -1823,6 +1828,59 @@ pub fn list_scopes(roots: &[ScopeRoot]) -> Result<Vec<ScopedList>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn lock_with_bundle(source: &str, item_source: Option<&str>) -> crate::lockfile::Lockfile {
+        let mut lock = crate::lockfile::Lockfile::new();
+        lock.bundles.push(crate::lockfile::LockedBundle {
+            name: "oc".into(),
+            source: source.into(),
+            git_ref: None,
+            items: vec![],
+        });
+        if let Some(item_source) = item_source {
+            let mut lock2: crate::lockfile::Lockfile = serde_json::from_value(serde_json::json!({
+                "schema": 2,
+                "items": [{"kind": "skill", "name": "alpha", "source": item_source}]
+            }))
+            .unwrap();
+            lock2.bundles = lock.bundles;
+            return lock2;
+        }
+        lock
+    }
+
+    #[test]
+    fn add_command_for_bundle_names_the_command_update_cannot_run() {
+        let project = ScopeRoot {
+            scope: Scope::Project,
+            root: PathBuf::from("/p"),
+        };
+        let global = ScopeRoot {
+            scope: Scope::Global,
+            root: PathBuf::from("/h"),
+        };
+        let dir = lock_with_bundle("local:/r", None);
+        assert_eq!(
+            add_command_for_bundle(&project, &dir, "oc").as_deref(),
+            Some("upskill add /r oc --project")
+        );
+        assert_eq!(
+            add_command_for_bundle(&global, &dir, "oc").as_deref(),
+            Some("upskill add /r oc --global")
+        );
+        let file = lock_with_bundle("local:/r/oc.bundle.yaml", None);
+        assert_eq!(
+            add_command_for_bundle(&project, &file, "oc").as_deref(),
+            Some("upskill add /r/oc.bundle.yaml --project")
+        );
+        let github = lock_with_bundle("github:acme/skills", None);
+        assert_eq!(
+            add_command_for_bundle(&project, &github, "oc").as_deref(),
+            Some("upskill add acme/skills oc --project")
+        );
+        let reached = lock_with_bundle("local:/r", Some("local:/r"));
+        assert_eq!(add_command_for_bundle(&project, &reached, "oc"), None);
+    }
     use crate::plugin::PluginScope;
     use crate::select::ClientSelection;
     use crate::source::InstallSource;

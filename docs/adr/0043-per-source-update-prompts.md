@@ -158,8 +158,9 @@ failed until `update --force`.
      source before its install is written.
 - Known limits:
   - A terminal run does not apply a source whose preview changes nothing, so it
-    does not repair a missing plugin or MCP registration of that source.
-    `doctor` reports it and `update --yes` repairs it.
+    does not repair a missing MCP registration of that source. `doctor` reports
+    it and `update --yes` repairs it. A missing or skipped plugin of that source
+    is installed again by the plugin repair of the run (ADR-0008).
   - A `--dry-run` block is exact for the current disk, but does not include the
     effect of applying an earlier source.
   - A change of only `required_by` in an item record is not shown and does not
