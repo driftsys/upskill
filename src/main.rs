@@ -46,6 +46,30 @@ fn main() {
         }
     };
 
+    // `--repeat` is valid only with `--notice`. The flag in `cli.rs` has no
+    // `requires = "notice"`, because clap would not enforce it here: clap
+    // accepts a missing required argument when a present argument conflicts
+    // with it (`is_missing_required_ok` in clap_builder's validator), and
+    // `--notice` conflicts with the names, `--yes`, `--global`, `--dry-run`
+    // and the other flags. Such an attribute would reject only a bare
+    // `--repeat`, so the rule is checked here.
+    if matches!(
+        cli.command,
+        Commands::Update {
+            repeat: true,
+            notice: false,
+            ..
+        }
+    ) {
+        let err = <Cli as clap::CommandFactory>::command().error(
+            ErrorKind::MissingRequiredArgument,
+            "the argument '--repeat' requires '--notice'",
+        );
+        let code = map_clap_error(&err);
+        let _ = err.print();
+        std::process::exit(code);
+    }
+
     style::init(cli.no_color);
     style::set_quiet(cli.quiet);
 
@@ -92,6 +116,7 @@ fn main() {
             dry_run,
             check,
             notice,
+            repeat,
             global,
             project,
             yes,
@@ -105,6 +130,7 @@ fn main() {
             dry_run,
             check,
             notice,
+            repeat,
             yes,
             global,
             project,
@@ -954,6 +980,8 @@ struct UpdateArgs<'a> {
     check: bool,
     /// `--notice`: print the session notice of available updates.
     notice: bool,
+    /// `--repeat`: with `--notice`, print a set also when it was printed.
+    repeat: bool,
     yes: bool,
     global: bool,
     project: bool,
@@ -1033,6 +1061,7 @@ fn run_update(args: UpdateArgs) -> i32 {
         dry_run,
         check,
         notice,
+        repeat,
         yes,
         global,
         project,
@@ -1040,7 +1069,7 @@ fn run_update(args: UpdateArgs) -> i32 {
         flag_clients,
     } = args;
     if notice {
-        return run_update_notice();
+        return run_update_notice(repeat);
     }
     if check {
         return run_update_check(names, global, project);
@@ -1081,6 +1110,12 @@ fn run_update(args: UpdateArgs) -> i32 {
     );
     match result {
         Ok(report) => {
+            // A dry run writes no file, also not the notice cache.
+            if !dry_run {
+                if let Some(path) = notice_cache_path() {
+                    notice::mark_current_in_file(&path, &at.root, &notice::current_items(&report));
+                }
+            }
             let code = if dry_run {
                 print_update_report(&report, true);
                 EXIT_SUCCESS
@@ -1151,17 +1186,18 @@ fn run_update_check(names: &[String], global: bool, project: bool) -> i32 {
 const NOTICE_TIME_LIMIT: Duration = Duration::from_secs(5);
 
 /// `update --notice`: print one line for each scope whose set of available
-/// updates was not reported yet. Exits with code 0 in every case after the
+/// updates was not reported yet, or, with `repeat`, that has available
+/// updates. Exits with code 0 in every case after the
 /// arguments are parsed, also on an interrupt (see
 /// [`install_notice_signal_handler`]). A failed step prints nothing and writes
 /// nothing to stderr. Under `--quiet`, the checks and the cache update run,
 /// and no line is printed or marked as reported.
-fn run_update_notice() -> i32 {
-    let _ = notice_lines();
+fn run_update_notice(repeat: bool) -> i32 {
+    let _ = notice_lines(repeat);
     EXIT_SUCCESS
 }
 
-fn notice_lines() -> Option<()> {
+fn notice_lines(repeat: bool) -> Option<()> {
     let cache_path = notice_cache_path()?;
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -1192,7 +1228,7 @@ fn notice_lines() -> Option<()> {
     }
     if !style::is_quiet() {
         for at in &roots {
-            if let Some(line) = notice::decide(&mut cache, at.scope, &at.root) {
+            if let Some(line) = notice::decide(&mut cache, at.scope, &at.root, repeat) {
                 // A closed pipe is not an error of the notice.
                 let _ = writeln!(std::io::stdout().lock(), "{line}");
             }
@@ -1204,7 +1240,8 @@ fn notice_lines() -> Option<()> {
     // removes it.
     let handled: Vec<PathBuf> = roots.iter().map(|at| at.root.clone()).collect();
     let fresh = notice::NoticeCache::load(&cache_path);
-    let mut merged = notice::merge_roots(fresh.clone(), &cache, &handled);
+    let checked: Vec<PathBuf> = due.iter().map(|at| at.root.clone()).collect();
+    let mut merged = notice::merge_roots(fresh.clone(), &cache, &handled, &checked);
     notice::prune(&mut merged, has_lockfile);
     if merged != fresh {
         let _ = merged.save(&cache_path);

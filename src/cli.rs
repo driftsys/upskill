@@ -163,6 +163,7 @@ pub enum Commands {
             upskill update --dry-run\n  \
             upskill update --check\n  \
             upskill update --notice\n  \
+            upskill update --notice --repeat\n  \
             upskill update --global"
     )]
     Update {
@@ -177,23 +178,34 @@ pub enum Commands {
         /// source is compared by content. The lookups end after 10 seconds.
         #[arg(
             long = "check",
-            conflicts_with_all = ["dry_run", "yes", "force", "claude", "copilot", "vscode", "opencode", "notice"]
+            conflicts_with_all = ["dry_run", "yes", "force", "claude", "copilot", "vscode", "opencode", "notice", "repeat"]
         )]
         check: bool,
         /// Print one line for each scope that has available updates, for a
         /// session-start hook of an AI client. A set of updates is printed
-        /// once. The sources are contacted at most once in 24 hours, for
-        /// 5 seconds at most, and without a fetch. After the arguments are
+        /// once (see `--repeat`). The sources are contacted at most once in
+        /// 24 hours, for 5 seconds at most, and without a fetch. After the arguments are
         /// parsed, it exits with code 0 in every case, also when a step fails
         /// or the process is interrupted. A failed step prints nothing; an
         /// interrupt during the lookups prints nothing and an interrupt after
         /// the line was written lets it print again in the next session.
-        /// Accepts no other argument or flag.
+        /// Accepts no other argument or flag except `--repeat`.
         #[arg(
             long = "notice",
             conflicts_with_all = ["names", "dry_run", "check", "global", "project", "yes", "force", "claude", "copilot", "vscode", "opencode"]
         )]
         notice: bool,
+        /// With `--notice`: print the line at every run while the cache holds
+        /// available updates for the scope, also when the set was printed
+        /// before. For a hook whose client gives the line to the model and
+        /// does not show it to the user. The set is still recorded as
+        /// printed. An `upskill update` that applies and returns a report (exit
+        /// code 0, 1 or 130) removes from the cached set of its scope the items
+        /// that it reports as updated, up to date, completed after an
+        /// interruption, or removed. An `update` that stops with an error
+        /// removes nothing.
+        #[arg(long = "repeat")]
+        repeat: bool,
         /// Operate on `$HOME` instead of the current directory.
         #[arg(short = 'g', long = "global", conflicts_with = "project")]
         global: bool,

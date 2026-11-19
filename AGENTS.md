@@ -97,7 +97,8 @@ src/
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
 ├── support.rs           Support level table (client x kind), printed by `doctor`
 ├── notice.rs            `update --notice`: when a session notice line prints, and
-│                        the cache file that records it
+│                        the cache file that records it; the removal of current
+│                        items from that file after an applying `update`
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
 └── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)
@@ -105,9 +106,11 @@ src/
 
 Outside `src/`, `plugins/` holds the sources of the session-notice hook plugins
 for Claude Code and Copilot CLI. Each plugin calls `upskill update --notice`
-from a session-start hook. These directories are the sources. A copy is
-published in the repository `driftsys/metapowers`, which holds the marketplace
-manifests (`.claude-plugin/marketplace.json` for Claude Code,
+from a session-start hook; the Copilot plugin adds `--repeat`, because Copilot
+CLI gives the line to the model and does not show it to the user. These
+directories are the sources. A copy is published in the repository
+`driftsys/metapowers`, which holds the marketplace manifests
+(`.claude-plugin/marketplace.json` for Claude Code,
 `.github/plugin/marketplace.json` for Copilot CLI). A change to `plugins/` must
 be copied there. The Claude Code hook uses the matcher `startup` because the
 notice is meant for a new session: a resumed, cleared, compacted or forked
@@ -167,7 +170,11 @@ refusing. `update --notice` is built for a session-start hook: it exits 0 in
 every case after argument parsing, also on an interrupt, writes nothing to
 stderr, never fetches, and keeps for each scope root the time of the last check,
 the updates found and the printed set in `<cache>/upskill/notice.json`
-(`$XDG_CACHE_HOME` when absolute, else `~/.cache`).
+(`$XDG_CACHE_HOME` when absolute, else `~/.cache`). It prints a set once; with
+`--repeat` (valid only with `--notice`) it prints the set at every run. An
+applied `update` removes from the cached updates of its scope root the items
+that it reports as updated, up to date, completed after an interruption, or
+removed; a cache failure there prints nothing.
 
 ### Source format
 

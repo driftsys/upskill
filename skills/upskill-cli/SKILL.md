@@ -113,9 +113,13 @@ content you authored and understand, and always lint after.
 `upskill update --notice` is made for a session-start hook. It prints one line
 for each scope that has updates, for example
 `upskill: 2 updates available (project). Run "upskill update".`. It prints a
-given set of updates once, contacts the sources at most once in 24 hours, never
-fetches or installs, and exits 0 in every case after argument parsing. When
-nothing is new it prints nothing.
+given set of updates once (with `--repeat`, at every run until `upskill update`
+runs), contacts the sources at most once in 24 hours, never fetches or installs,
+and exits 0 in every case after argument parsing. The repeat ends for an item
+when an applied `update` reports the item as updated, up to date, completed
+after an interruption, or removed; a dry run, an `update` that stops with an
+error, and a modified item that `update` skips do not end it. When nothing is
+new it prints nothing.
 
 To set it up, install the `upskill` plugin from the `driftsys/metapowers`
 marketplace: `claude plugin marketplace add driftsys/metapowers`, then
@@ -124,10 +128,13 @@ marketplace: `claude plugin marketplace add driftsys/metapowers`, then
 `copilot plugin install upskill@metapowers`. Claude Code shows the line to the
 user and gives it to the agent; Copilot CLI gives it to the agent with a request
 to tell the user at the start of the first reply, and does not display it, so
-the user may not have seen it. A hand-written hook that prints the plain line
-does not work: Claude Code does not display it and Copilot CLI ignores it. The
-plugin needs an `upskill` binary on `PATH` that has `update --notice`; without
-one it prints nothing.
+the user sees it only when the agent follows the request. The Copilot plugin
+calls `upskill update --notice --repeat`, so the line is given to the agent at
+every session start until `upskill update` runs. A hand-written hook that prints
+the plain line does not work: Claude Code does not display it and Copilot CLI
+ignores it. The plugin needs an `upskill` binary on `PATH` that has
+`update --notice`; the Copilot plugin also needs `update --notice --repeat`.
+Without such a binary the hook prints nothing.
 
 When you receive the line:
 
@@ -139,8 +146,12 @@ When you receive the line:
    `upskill update`, or `upskill update --global` for the global scope. Follow
    "Updating installed content" above.
 
-The line is not printed again for the same set of updates, also when the user
-does not update.
+In Claude Code the line is not printed again for the same set of updates, also
+when the user does not update. In Copilot CLI the line is given to the agent at
+every session start until `upskill update` runs. The repeat ends for an item
+when an applied `update` reports the item as updated, up to date, completed
+after an interruption, or removed; a dry run, an `update` that stops with an
+error, and a modified item that `update` skips do not end it.
 
 ### Vendoring a third-party bundle (e.g., superpowers)
 

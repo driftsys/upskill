@@ -186,7 +186,7 @@ error that names the item.
 ```text
 upskill update [name...] [--global|--project] [--dry-run] [--force]
 upskill update --check [name...] [--global|--project]
-upskill update --notice
+upskill update --notice [--repeat]
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
@@ -477,7 +477,8 @@ ran, also when a source is not reachable; 1 when a lockfile cannot be read or
 parsed. `--quiet` suppresses the output.
 
 `update --notice` prints a session notice for a session-start hook. It accepts
-no name and no other flag (exit code 2). Its roots are the scopes that
+no name and no other flag except `--repeat` (exit code 2). `--repeat` without
+`--notice` is a usage error (exit code 2). Its roots are the scopes that
 `update --check` reports without a flag; a root without a lockfile is left out.
 It changes no lockfile and no installed file. The only file it keeps is the
 cache file `notice.json` in the upskill cache directory (it writes the file
@@ -511,8 +512,8 @@ rules, in order:
    `updates` stays.
 2. For each root, project then global, the command compares `updates` with
    `reported`. When `updates` is empty, it empties `reported` and prints
-   nothing. When they are equal, it prints nothing. Otherwise it sets `reported`
-   to `updates` and prints
+   nothing. When they are equal and `--repeat` is not given, it prints nothing.
+   Otherwise it sets `reported` to `updates` and prints
    `upskill: <n> update(s) available (<scope>). Run "<command>".`, where `<n>`
    is the number of distinct entries of `updates` and `<command>` is
    `upskill update` for the project scope and `upskill update --global` for the
@@ -521,9 +522,25 @@ rules, in order:
    whose root directory holds no `.upskill-lock.json`. The command reads the
    cache file again, applies the states of the roots of this run to that copy,
    and writes the copy, through a temporary file and a rename, only when its
-   content changed. A failed write is ignored. A run that saves between the
-   second read and the rename of this run loses its entries; its roots are
-   checked again at their next session start.
+   content changed. For a root that this run did not check and that the copy
+   holds, it keeps `checked_at` and `updates` of the copy and sets `reported` to
+   the entries of those `updates` that the `reported` of the copy or of this run
+   holds. An entry that is no longer in `updates` is dropped, so a removal by an
+   `update` that saved during this run stays removed, a set that another run
+   printed is not printed again, and an entry of an older set does not keep
+   `reported` different from `updates`. For a root that the copy does not hold,
+   the state of this run is added. For a root that this run checked, its own
+   state replaces the state of the copy: when an `update` of that root saved
+   during the lookups, the entries that the `update` removed come back and stay
+   until the next check in which every source of the scope answers. A failed
+   write is ignored. A run that saves between the second read and the rename of
+   this run loses its save. This also applies to an `update` that removes
+   entries: its removal is lost when a notice run renames after it, and a notice
+   run is lost when the `update` saves between its own load and rename. A lost
+   check of a notice run is made again at the next session start, because the
+   root is still due. A lost removal is not: the root is not due, so the removed
+   entries stay until the next check in which every source of the scope answers.
+   Closing these cases needs a file lock, which the command does not use.
 
 Every failure after argument parsing prints nothing and gives exit code 0;
 nothing is written to stderr. An interrupt (SIGINT) ends the command at once
@@ -542,6 +559,18 @@ failed read or write of the cache file is ignored. When the cache directory
 cannot be written, nothing is stored, so the check runs and the line is printed
 at every session start. With `--quiet`, rule 1 and rule 3 apply, and rule 2
 prints nothing and leaves `reported` unchanged.
+
+An `update` that applies (not `--dry-run`, `--check` or `--notice`) and returns
+its report, with exit code 0, 1 or 130 (an interrupt), removes from `updates`
+and `reported` of its scope root every entry whose `<kind>:<name>` part is an
+item that the run reports as updated, up to date, completed after an
+interruption, or removed. It loads the file, applies the change and saves the
+file at once, without a lookup between the load and the save. Without this step,
+`--repeat` would print updates that are already installed until the next check.
+An `update` that stops with an error removes nothing: the items that it had
+updated stay in `updates` until the next check in which every source of the
+scope answers. A failed read or write of the cache file does not change the exit
+code of `update` and prints nothing.
 
 Persisted schema-1 `gitlab:` and `gitlab+<host>:` source labels remain readable
 for updates. Unambiguous historical labels decode to generic HTTPS sources,
@@ -1095,11 +1124,11 @@ to any depth (`https://git.mycompany.com/group/subgroup/team/repo`).
 
 ### 6.3 Environment variables
 
-| Variable         | Purpose                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------ |
-| `NO_COLOR`       | Disable colored output.                                                                                |
-| `HTTPS_PROXY`    | HTTP proxy for network requests.                                                                       |
-| `XDG_CACHE_HOME` | Override cache directory (an absolute path) for registry indexes and the `update --notice` cache file. |
+| Variable         | Purpose                                                                                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NO_COLOR`       | Disable colored output.                                                                                                                                                |
+| `HTTPS_PROXY`    | HTTP proxy for network requests.                                                                                                                                       |
+| `XDG_CACHE_HOME` | Override cache directory (an absolute path) for registry indexes and the notice cache file, which `update --notice` reads and writes and an applying `update` updates. |
 
 ## 7. Out of scope
 
