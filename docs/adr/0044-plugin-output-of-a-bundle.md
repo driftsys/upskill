@@ -31,7 +31,9 @@ bundle; it does not replace the bundle or change its schema.
    `upskill add <source> <bundle> --kind rule --project --claude` (or
    `--copilot`) and report the result. `--kind` skips plugin and MCP steps and
    their lockfile records. Init lists the client's declared third-party plugins
-   and the declared MCP servers for the user; it does not install them.
+   with an `install_url` or manual `instructions_url` when present, otherwise by
+   name, and the declared MCP servers from the closure for the user; it does not
+   install them. Descriptors only for another client are omitted.
 5. A client output with rules includes the existing notice hook unchanged.
    Without rules for that client, it has neither init nor the hook.
    `update --notice` creates `notice.lock` before reading the cache. A run
@@ -40,18 +42,25 @@ bundle; it does not replace the bundle or change its schema.
    A completed run removes its lock; an interrupted run can leave it to expire.
    This is not a writer lock for install, update or removal.
 6. A lockfile bundle entry records the selected `kinds`; absent or empty means
-   unrestricted, and empty is omitted on write. `update` restricts a source only
-   when every recorded bundle of that source has recorded kinds, using their
-   union. One unrestricted bundle makes the source unrestricted.
+   unrestricted, and empty is omitted on write. Recorded kinds are sorted
+   without duplicates, and bundle entries are sorted by name. `update` restricts
+   a source only when every recorded bundle of that source has recorded kinds,
+   using their union. One unrestricted bundle makes the source unrestricted.
+   Under a kind restriction, `update` skips both the plugin and MCP steps.
 7. For a directory source with recorded bundles, `update` passes the recorded
-   bundle names and the directly installed item names of that source, and
-   installs no other item of the source. Before this decision, `update` after
-   `add <dir> <bundle>` installed every item of the source. A directly installed
-   item of a kind outside the recorded restriction is kept unchanged and is not
-   updated; `add <source> <item>` updates it. A recorded bundle that is no
-   longer in its source makes `update` fail before any write.
-8. `pack` resolves the bundle in the current directory only. `--source` must
-   parse as an install source and, like the bundle name, is limited to a safe
+   bundle names separately from the directly installed item names of that
+   source. Bundle names resolve only as bundles, including cross-source
+   `requires`. Direct items resolve their item `requires` closure, which is
+   merged with the bundle closure. Before this decision, `update` after
+   `add <dir> <bundle>` installed every item of the source. Every lockfile entry
+   of that source whose kind is outside the restriction is left untouched and
+   reported as up to date, regardless of bundle membership or `required_by`;
+   `add <source> <item>` updates it. A recorded bundle that is no longer in its
+   source causes `bundle '<name>' is no longer in source <label>` before any
+   write, even if an item has the same name.
+8. `pack` resolves the entry bundle in the current directory. A `requires` entry
+   with a `source` is fetched from that source. The init `--source` must parse
+   as an install source and, like the bundle name, is limited to a safe
    character set, because both are written into a command line that a model
    runs. A plugin URL in the init text is written in angle brackets.
 

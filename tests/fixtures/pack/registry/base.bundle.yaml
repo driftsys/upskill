@@ -4,3 +4,17 @@ description: Base bundle
 items:
   skills: [beta]
   rules: [naming]
+plugins:
+  base-tool:
+    claude:
+      source: example/tools
+      marketplace: tools
+      plugin: base-tool
+    copilot:
+      source: example/tools
+      marketplace: tools
+      plugin: base-tool
+mcps:
+  base-server:
+    local:
+      command: base-command

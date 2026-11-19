@@ -136,9 +136,6 @@ pub struct LockedItem {
 /// to the items it resolved to.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LockedBundle {
-    /// The kinds that `add --kind` restricted this bundle to. Empty: every kind.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub kinds: Vec<ItemKind>,
     pub name: String,
     pub source: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -150,6 +147,9 @@ pub struct LockedBundle {
     /// only that bundle's contribution.
     #[serde(default)]
     pub items: Vec<String>,
+    /// The kinds that `add --kind` restricted this bundle to. Empty: every kind.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub kinds: Vec<ItemKind>,
 }
 
 /// Plugin entry recorded when a bundle's `plugins:` map is installed via

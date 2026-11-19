@@ -15,5 +15,8 @@ place.
 The command does not install the following. After the install, give this list
 to the user:
 
+- plugin `base-tool`
+- plugin `manual`: <https://example.com/claude-manual>
 - plugin `tool`: <https://example.com/tool>
+- MCP server `base-server`
 - MCP server `srv`

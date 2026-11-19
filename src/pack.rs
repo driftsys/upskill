@@ -1,14 +1,14 @@
-//! Build Claude Code and GitHub Copilot CLI plugin directories from a source bundle in memory.
+//! Build and write Claude Code and GitHub Copilot CLI plugin directories from a source bundle.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use serde::Serialize;
 
 use crate::generate::Client;
 use crate::model::Bundle;
-use crate::model::bundle::ClaudePluginDescriptor;
+use crate::model::bundle::{ClaudePluginDescriptor, CopilotPluginDescriptor};
 use crate::pipeline::plan_bundle_output;
 
 /// A client whose plugin directory can be built.
@@ -101,14 +101,24 @@ fn init_text(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient)
                             ClaudePluginDescriptor::Install { install_url, .. } => {
                                 install_url.as_deref()
                             }
-                            ClaudePluginDescriptor::Instructions { .. } => None,
+                            ClaudePluginDescriptor::Instructions {
+                                instructions_url, ..
+                            } => Some(instructions_url.as_str()),
                         };
                         plugins.insert(name, url);
                     }
                 }
                 PackClient::Copilot => {
-                    if entry.copilot.is_some() {
-                        plugins.insert(name, None);
+                    if let Some(descriptor) = &entry.copilot {
+                        let url = match descriptor {
+                            CopilotPluginDescriptor::Install { install_url, .. } => {
+                                install_url.as_deref()
+                            }
+                            CopilotPluginDescriptor::Instructions {
+                                instructions_url, ..
+                            } => Some(instructions_url.as_str()),
+                        };
+                        plugins.insert(name, url);
                     }
                 }
             }
@@ -192,6 +202,52 @@ pub fn build(
     })
 }
 
+/// Check all target directories, then write each plugin directory.
+/// Return the path and file count of each written directory.
+pub fn write_plugin_dirs(
+    out: &Path,
+    dirs: &[PluginDir],
+    force: bool,
+) -> Result<Vec<(PathBuf, usize)>> {
+    for directory in dirs {
+        let target = out.join(&directory.dir_name);
+        match std::fs::symlink_metadata(&target) {
+            Ok(metadata) => {
+                anyhow::ensure!(metadata.is_dir(), "{} is not a directory", target.display());
+                if !force && std::fs::read_dir(&target)?.next().transpose()?.is_some() {
+                    anyhow::bail!(
+                        "{} is not empty; use --force to replace it",
+                        target.display()
+                    );
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+    }
+    let mut written = Vec::new();
+    for directory in dirs {
+        let target = out.join(&directory.dir_name);
+        if force && std::fs::symlink_metadata(&target).is_ok() {
+            std::fs::remove_dir_all(&target)
+                .with_context(|| format!("removing {}", target.display()))?;
+        }
+        for file in &directory.files {
+            let path = target.join(&file.rel);
+            std::fs::create_dir_all(path.parent().expect("output file has a parent"))?;
+            std::fs::write(&path, &file.bytes)
+                .with_context(|| format!("writing {}", path.display()))?;
+            #[cfg(unix)]
+            if let Some(mode) = file.mode {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode))?;
+            }
+        }
+        written.push((target, directory.files.len()));
+    }
+    Ok(written)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,12 +261,64 @@ mod tests {
 
     #[test]
     fn init_with_list_matches_golden() {
-        let text = init_text("demo", "driftsys/demo@v1", &[demo()], PackClient::Claude);
+        let base: Bundle = serde_yaml_ng::from_str(include_str!(
+            "../tests/fixtures/pack/registry/base.bundle.yaml"
+        ))
+        .unwrap();
+        let text = init_text(
+            "demo",
+            "driftsys/demo@v1",
+            &[base, demo()],
+            PackClient::Claude,
+        );
         assert!(text.contains("- plugin `tool`: <https://example.com/tool>\n"));
         assert_eq!(
             text,
             include_str!("../tests/fixtures/pack/expected/demo-claude/commands/init.md")
         );
+    }
+
+    #[test]
+    fn init_lists_all_descriptor_forms_for_each_client_and_required_bundle() {
+        let base: Bundle = serde_yaml_ng::from_str(include_str!(
+            "../tests/fixtures/pack/registry/base.bundle.yaml"
+        ))
+        .unwrap();
+        for (client, name) in [
+            (PackClient::Claude, "claude"),
+            (PackClient::Copilot, "copilot"),
+        ] {
+            let text = init_text("demo", "driftsys/demo@v1", &[base.clone(), demo()], client);
+            assert!(text.contains("- plugin `base-tool`\n"));
+            assert!(text.contains("- MCP server `base-server`\n"));
+            assert!(text.contains(&format!(
+                "- plugin `manual`: <https://example.com/{name}-manual>\n"
+            )));
+            let tool = if client == PackClient::Claude {
+                "tool"
+            } else {
+                "cotool"
+            };
+            assert!(text.contains(&format!(
+                "- plugin `{tool}`: <https://example.com/{tool}>\n"
+            )));
+            assert!(!text.contains("vscode-only"));
+            assert!(!text.contains("opencode-only"));
+            let expected = if client == PackClient::Claude {
+                include_str!("../tests/fixtures/pack/expected/demo-claude/commands/init.md")
+            } else {
+                include_str!("../tests/fixtures/pack/expected/demo-copilot/commands/init.md")
+            };
+            assert_eq!(text, expected);
+        }
+    }
+
+    #[test]
+    fn validators_accept_safe_bundle_names_and_install_sources() {
+        validate_bundle_name("bundle.name_with-hyphen").unwrap();
+        for source in ["owner/repo@v1.2:sub/dir", "~/x", "https://host/a/b"] {
+            validate_source(source).unwrap();
+        }
     }
 
     #[test]

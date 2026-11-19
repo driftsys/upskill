@@ -21,6 +21,18 @@ plugins:
       source: example/tools
       marketplace: tools
       plugin: cotool
+      install_url: https://example.com/cotool
+  manual:
+    claude:
+      instructions_url: https://example.com/claude-manual
+    copilot:
+      instructions_url: https://example.com/copilot-manual
+  vscode-only:
+    vscode:
+      instructions_url: https://example.com/vscode
+  opencode-only:
+    opencode:
+      instructions_url: https://example.com/opencode
 mcps:
   srv:
     remote:

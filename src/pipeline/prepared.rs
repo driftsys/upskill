@@ -15,7 +15,8 @@ use super::discovery::{self, scan_source_items};
 use super::install::{
     self, DependencyClosure, ResolvedBundle, install_from_local_path_selective,
     install_mcps_from_bundles, install_plugins_from_bundles,
-    install_with_name_resolution_from_local, resolve_bundle_request, resolve_requires_closure,
+    install_with_name_resolution_from_local, resolve_bundle_closure, resolve_bundle_request,
+    resolve_requires_closure,
 };
 use super::plan::{self, PlannedItem};
 use super::{
@@ -56,6 +57,8 @@ pub(super) struct PreparedInstall {
 struct RequiresProvenance {
     evaluated: BTreeSet<String>,
     required_by: BTreeMap<(ItemKind, String), Vec<String>>,
+    /// A restricted update leaves entries of other kinds in this source untouched.
+    restriction: Option<(String, Vec<ItemKind>)>,
 }
 
 /// What [`PreparedInstall::commit`] would do now. Computed without any
@@ -116,7 +119,7 @@ pub(super) fn prepare_install(
             .iter()
             .filter(|(_, n)| !options.excludes.contains(n))
             .filter(|(kind, _)| options.kinds.is_empty() || options.kinds.contains(kind))
-            .filter(|(_, n)| items.is_empty() || items.contains(n))
+            .filter(|(_, n)| (items.is_empty() && options.bundles.is_empty()) || items.contains(n))
             .filter(|(kind, name)| seen.insert((*kind, name.clone())))
             .map(|(kind, name)| (*kind, name.clone()))
             .collect()
@@ -145,8 +148,32 @@ pub(super) fn prepare_install(
     // item-level path uses, so the install + item-lockfile machinery is shared;
     // `resolved_bundles` carries each bundle's own source for the bundle
     // lockfile recording and plugin/MCP install.
-    let bundle_resolution =
-        resolve_bundle_request(&label, &local_source, git_ref, commit.as_deref(), items)?;
+    let bundle_resolution = if options.bundles.is_empty() {
+        resolve_bundle_request(&label, &local_source, git_ref, commit.as_deref(), items)?
+    } else {
+        for name in &options.bundles {
+            if discovery::find_bundle_by_name(&local_source, name).is_none() {
+                anyhow::bail!("bundle '{name}' is no longer in source {label}");
+            }
+        }
+        let (mut closure, bundles) = resolve_bundle_closure(
+            &label,
+            &local_source,
+            git_ref,
+            commit.as_deref(),
+            &options.bundles,
+        )?;
+        if !items.is_empty() {
+            closure.merge(resolve_requires_closure(
+                &label,
+                &local_source,
+                git_ref,
+                commit.as_deref(),
+                &requested,
+            )?)?;
+        }
+        Some((closure, bundles))
+    };
     let (mut closure, resolved_bundles): (Option<DependencyClosure>, Vec<ResolvedBundle>) =
         if let Some((c, bundles)) = bundle_resolution {
             (Some(c), bundles)
@@ -370,11 +397,14 @@ pub(super) fn prepare_install(
     });
     apply::check_installed_names(&report.planned)?;
 
+    let mut options = options.clone();
+    options.kinds.sort();
+    options.kinds.dedup();
     Ok(PreparedInstall {
         label,
         git_ref: git_ref.map(str::to_string),
         commit,
-        options: options.clone(),
+        options,
         report,
         closure,
         resolved_bundles,
@@ -459,7 +489,8 @@ impl PreparedInstall {
     /// `evaluated` holds the label `"kind:name"` of each item whose
     /// `requires` this run resolved: every item of the item closure. A
     /// bundle install and a name-resolution install resolve no item
-    /// `requires`, so their `evaluated` set is empty. `required_by` maps each
+    /// `requires`, so their `evaluated` set is empty, except when update merges
+    /// a direct item closure with its recorded bundle closure. `required_by` maps each
     /// dependency that the closure reached, also an excluded one, to its
     /// requirers.
     fn requires_provenance(&self) -> RequiresProvenance {
@@ -487,12 +518,16 @@ impl PreparedInstall {
                 None => label.to_string(),
             }
         };
-        let mut provenance = RequiresProvenance::default();
-        // A bundle closure has resolved bundles and reads no item `requires`.
+        let mut provenance = RequiresProvenance {
+            restriction: (self.options.keep_unwithheld_edits && !self.options.kinds.is_empty())
+                .then(|| (self.label.clone(), self.options.kinds.clone())),
+            ..RequiresProvenance::default()
+        };
+        // Update can merge an item closure into its recorded bundle closure.
         let Some(closure) = self
             .closure
             .as_ref()
-            .filter(|_| self.resolved_bundles.is_empty())
+            .filter(|_| self.resolved_bundles.is_empty() || !self.options.bundles.is_empty())
         else {
             return provenance;
         };
@@ -827,6 +862,13 @@ impl PreparedInstall {
 fn refresh_required_by(lock: &mut Lockfile, provenance: &RequiresProvenance) -> bool {
     let mut changed = false;
     for entry in &mut lock.items {
+        if provenance
+            .restriction
+            .as_ref()
+            .is_some_and(|(source, kinds)| entry.source == *source && !kinds.contains(&entry.kind))
+        {
+            continue;
+        }
         let mut merged: BTreeSet<String> = entry
             .required_by
             .iter()
@@ -1532,6 +1574,7 @@ mod tests {
     /// `items`, with the `required_by` of each item.
     fn provenance_of(items: &[LockedItem]) -> RequiresProvenance {
         RequiresProvenance {
+            restriction: None,
             evaluated: items
                 .iter()
                 .map(|i| format!("{}:{}", i.kind, i.name))

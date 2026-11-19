@@ -364,10 +364,11 @@ item and a `kept modified file` note are not changes.
   `skipped` line.
 - **`--yes`, or stdin is not a terminal.** Every source is applied without a
   question, also a source whose preview changes nothing, so its plugin and MCP
-  steps run. `update` prints `Updated <n> of <m> item(s)` and one status line
-  per item when an item changed or was skipped, files were written or deleted,
-  or a lockfile was adopted (a run whose only output is `kept modified file`
-  notes prints nothing on stdout), and reports a completed interrupted item as
+  steps run unless the source has a kind restriction, which skips both steps.
+  `update` prints `Updated <n> of <m> item(s)` and one status line per item when
+  an item changed or was skipped, files were written or deleted, or a lockfile
+  was adopted (a run whose only output is `kept modified file` notes prints
+  nothing on stdout), and reports a completed interrupted item as
   `completed — interrupted before`. When no item was updated, completed or
   removed but files were written or deleted, it prints
   `Changed <n> file(s) written or deleted`. It prints
@@ -387,18 +388,22 @@ item and a `kept modified file` note are not changes.
   applied, the reinstall covers the named items, the items that a named item
   requires (from the same source or from another one). For a directory source
   with recorded bundles, it reinstalls the members of those bundles and the
-  items of that source installed directly; it installs no other item of the
-  source. It applies a kind restriction only when every recorded bundle of the
-  source has recorded kinds, using their union. With one unrestricted bundle of
-  the source, no kind restriction applies. A directly installed item outside
-  that restriction is kept unchanged and is not updated; to update it, run
+  items of that source installed directly, including their `requires` closure;
+  it installs no unrelated item of the source. It applies a kind restriction
+  only when every recorded bundle of the source has recorded kinds, using their
+  union. With one unrestricted bundle of the source, no kind restriction
+  applies. Every lockfile entry of that source whose kind is outside the
+  restriction is left untouched and reported as up to date, regardless of bundle
+  membership or `required_by`; to update such an item, run
   `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled as
-  a whole. Each reinstalled entry gets the commit of its own source (an entry
-  from another source gets that source's commit), unless its update is skipped,
-  and any other entry keeps its recorded commit. The lockfile is saved only when
-  a value differs. This write is not a change of the source (see the preview
-  above) and does not count in the output. A dry run, a declined source and a
-  stopped run record no commit.
+  a whole. Recorded bundle names resolve only as bundles. A missing bundle
+  causes `bundle '<name>' is no longer in source <label>` before any write, even
+  if an item has that name. Each reinstalled entry gets the commit of its own
+  source (an entry from another source gets that source's commit), unless its
+  update is skipped, and any other entry keeps its recorded commit. The lockfile
+  is saved only when a value differs. This write is not a change of the source
+  (see the preview above) and does not count in the output. A dry run, a
+  declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` and
@@ -420,24 +425,26 @@ is skipped, nothing is adopted. When a later step fails after a source was
 skipped, the line of the skipped source is still printed, before the error.
 
 Known limits: the plugin and MCP steps of a bundle source run when the source is
-applied, are not part of the preview and are not a reason to ask, so a terminal
-run does not repair a missing plugin or MCP registration of a source whose
-preview changes nothing (`doctor` reports it, `update --yes` repairs it). A
-change of only `required_by` in an item record is not shown and does not cause a
-question; it is saved when the source is applied, and also when the preview of
-the source changes nothing, but not with `--dry-run` or for a declined source.
-`required_by` is refreshed when `add` writes its install, when `update` applies
-a source, and when `update` does not apply a source whose preview changes
-nothing; a dry run, a declined source and a source at which the run stops
-refresh nothing. A refresh computes `required_by` of every lockfile entry again,
-and rewrites an entry only where the new value differs. A requirer is evaluated
-by the run when the run resolved its `requires`: every item of an install by
-item names, or of a whole directory source, and every item that such an item
-requires. A bundle install, and a request that also names a bundle (resolved by
-name), evaluate no requirer. An evaluated requirer is removed from every entry
-and added back where it still requires the item (also an item that `--exclude`
-leaves out). Every other requirer is kept, also when it is not installed. The
-result does not depend on the order of the sources or of two `add` commands.
+applied without a kind restriction. `update` skips both steps for a source under
+a kind restriction. The steps are not part of the preview and are not a reason
+to ask, so a terminal run does not repair a missing plugin or MCP registration
+of a source whose preview changes nothing (`doctor` reports it, `update --yes`
+repairs it without a kind restriction). A change of only `required_by` in an
+item record is not shown and does not cause a question; it is saved when the
+source is applied, and also when the preview of the source changes nothing, but
+not with `--dry-run` or for a declined source. `required_by` is refreshed when
+`add` writes its install, when `update` applies a source, and when `update` does
+not apply a source whose preview changes nothing; a dry run, a declined source
+and a source at which the run stops refresh nothing. A refresh computes
+`required_by` of every lockfile entry again, and rewrites an entry only where
+the new value differs. A requirer is evaluated by the run when the run resolved
+its `requires`: every item of an install by item names, or of a whole directory
+source, and every item that such an item requires. A bundle install, and a
+request that also names a bundle (resolved by name), evaluate no requirer. An
+evaluated requirer is removed from every entry and added back where it still
+requires the item (also an item that `--exclude` leaves out). Every other
+requirer is kept, also when it is not installed. The result does not depend on
+the order of the sources or of two `add` commands.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
@@ -655,25 +662,25 @@ the check above refuses it.
   entries with no recoverable source (`remove` fixes), installed plugins missing
   from the client (`update --yes` reinstalls: a run in a terminal applies a
   source only when its preview changes something, and the plugin and MCP steps
-  are not part of the preview), skipped plugins (informational — CLI was absent
-  at install time), orphaned dependencies (informational), MCP server
-  reconciliation, and interrupted items (an item with a non-empty `pending`
-  record: run the same command again to complete it), and, for the global scope
-  only, files at the earlier global Copilot paths (`earlier_layout`;
-  `upskill update --global` moves them). `doctor` also prints a note for each
-  item that the lockfiles of both scopes record; the note does not change the
-  exit code. After the scope reports, `doctor` prints the support level of each
-  client and kind (`Support levels:`; the compiled table in `src/support.rs`,
-  stated in the user guide page "Support levels"); the section does not change
-  the exit code and `doctor` does not detect client versions. Exit 0 when clean,
-  1 when any drift bucket is non-empty, including `earlier_layout`. Skipped
-  plugins are warnings and do not affect the exit code. Missing, modified and
-  unreadable files are checked against the `files` record; a recorded path that
-  `remove` would never delete (outside the client roots, fewer than three
-  components, or with a `..` component) is skipped without a report. For an item
-  with an empty or missing `files` record (a `schema: 1` lockfile, or a
-  `schema: 2` item with an empty list), `doctor` checks each per-client entry
-  file instead.
+  are not part of the preview; a source under a kind restriction skips both
+  steps), skipped plugins (informational — CLI was absent at install time),
+  orphaned dependencies (informational), MCP server reconciliation, and
+  interrupted items (an item with a non-empty `pending` record: run the same
+  command again to complete it), and, for the global scope only, files at the
+  earlier global Copilot paths (`earlier_layout`; `upskill update --global`
+  moves them). `doctor` also prints a note for each item that the lockfiles of
+  both scopes record; the note does not change the exit code. After the scope
+  reports, `doctor` prints the support level of each client and kind
+  (`Support levels:`; the compiled table in `src/support.rs`, stated in the user
+  guide page "Support levels"); the section does not change the exit code and
+  `doctor` does not detect client versions. Exit 0 when clean, 1 when any drift
+  bucket is non-empty, including `earlier_layout`. Skipped plugins are warnings
+  and do not affect the exit code. Missing, modified and unreadable files are
+  checked against the `files` record; a recorded path that `remove` would never
+  delete (outside the client roots, fewer than three components, or with a `..`
+  component) is skipped without a report. For an item with an empty or missing
+  `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
+  list), `doctor` checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -731,9 +738,11 @@ behaviour:
 
 Build plugin directories from a named bundle in the current source registry.
 `--source` is required and is written unchanged into init; it does not select or
-fetch the registry to pack. `--out` is required. With no client flag, both
-outputs are written; `--claude` or `--copilot` selects one, and both flags
-select both. `--quiet` suppresses the result lines.
+fetch the registry to pack. The entry bundle is resolved in the current
+directory; a `requires` entry with a `source` is fetched from that source.
+`--out` is required. With no client flag, both outputs are written; `--claude`
+or `--copilot` selects one, and both flags select both. `--quiet` suppresses the
+result lines.
 
 ```bash
 upskill pack my-bundle --source owner/repo@v1 --out dist
@@ -775,11 +784,12 @@ No rule file is included. Init instructs the model to run
 `upskill add <source> <bundle> --kind rule --project --claude`, or the same
 command with `--copilot`, in the repository root and report the result. On
 failure it reports the error and runs no substitute command. It lists declared
-plugins for that client (with a Claude `install_url` when present) and MCP
-servers from the closure for the user, without installing them. An output with
-no rules for its client has neither init nor the notice hook. The hook is copied
-unchanged from the corresponding upskill notice plugin and runs
-`upskill update --notice`; it is silent when the upskill binary is absent.
+plugins for that client (with its `install_url` or manual `instructions_url`
+when present, otherwise by name) and MCP servers from the closure for the user,
+without installing them. An output with no rules for its client has neither init
+nor the notice hook. The hook is copied unchanged from the corresponding upskill
+notice plugin and runs `upskill update --notice`; it is silent when the upskill
+binary is absent.
 
 Known limits: init and the hook need the upskill binary on the host; installing
 the same skills with both a plugin and `add` exposes duplicates; references by
@@ -873,8 +883,9 @@ adoption changes these commands
 
 Bundle entries in `.upskill-lock.json` have an optional `kinds` array, for
 example `"kinds": ["rule"]`, recording the restriction from `add --kind`. Absent
-or empty means unrestricted; an empty list is omitted on write. This field does
-not change the bundle source schema.
+or empty means unrestricted; an empty list is omitted on write. Recorded kinds
+are sorted without duplicates. Bundle entries are sorted by name. This field
+does not change the bundle source schema.
 
 `.upskill-lock.json` records what was installed, from where, at what resolved
 git ref, with what content hashes. Same schema in both locations. A new lockfile

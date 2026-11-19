@@ -119,11 +119,14 @@ failed until `update --force`.
 4. **Hand-shake files are previewed; plugin and MCP steps are not.** A
    `CLAUDE.md`, `opencode.json` or `.vscode/settings.json` change is listed in
    the block and is a reason to ask. The plugin and MCP steps of a bundle source
-   run when the source is applied and are not a reason to ask.
+   run when the source is applied without a kind restriction and are not a
+   reason to ask. `update` skips both steps for a source under a kind
+   restriction.
 5. **`--yes` applies every source.** With `--yes`, or when stdin is not a
    terminal, every source is applied without a question, also a source whose
-   preview changes nothing, so its plugin and MCP steps run. `--dry-run` prints
-   the same blocks and applies nothing.
+   preview changes nothing. Its plugin and MCP steps run unless the source has a
+   kind restriction, which skips both steps. `--dry-run` prints the same blocks
+   and applies nothing.
 6. **A `schema: 1` lockfile is adopted once per run, without a question**, after
    every source that was not skipped (because it could not be fetched, or
    because it requires an item of a skipped source) passed the checks of the
@@ -137,8 +140,9 @@ failed until `update --force`.
 
 - A terminal run and an `update --yes` run reach the same end state when every
   answer is `y`, with two exceptions, each for a source whose preview changes
-  nothing: its plugin and MCP steps, and a change confined to a `bundles` record
-  of the lockfile (the preview does not compare `bundles` records).
+  nothing: its plugin and MCP steps (both skipped under a kind restriction), and
+  a change confined to a `bundles` record of the lockfile (the preview does not
+  compare `bundles` records).
 - A run without a source change reports an edited file, asks to delete the files
   of a client that the flags no longer select, asks to complete an interrupted
   item, and adopts a `schema: 1` lockfile.

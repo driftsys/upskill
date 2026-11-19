@@ -336,6 +336,7 @@ fn run_add(args: AddArgs) -> i32 {
         overwrite: force,
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
+        bundles: Vec::new(),
         kinds,
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
         keep_unwithheld_edits: false,
@@ -2385,8 +2386,8 @@ fn run_pack(
     if let Err(error) =
         pack::validate_source(source).and_then(|()| pack::validate_bundle_name(bundle))
     {
-        eprintln!("error: {error:#}");
-        return 2;
+        print_error(format!("{error:#}"));
+        return EXIT_USAGE;
     }
     let result = (|| -> anyhow::Result<()> {
         let root = std::env::current_dir()?;
@@ -2397,54 +2398,18 @@ fn run_pack(
         if copilot || !claude {
             directories.push(pack::build(&root, bundle, source, PackClient::Copilot)?);
         }
-        for directory in &directories {
-            let target = out.join(&directory.dir_name);
-            match std::fs::symlink_metadata(&target) {
-                Ok(metadata) => {
-                    anyhow::ensure!(metadata.is_dir(), "{} is not a directory", target.display());
-                    if !force && std::fs::read_dir(&target)?.next().transpose()?.is_some() {
-                        anyhow::bail!(
-                            "{} is not empty; use --force to replace it",
-                            target.display()
-                        );
-                    }
-                }
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-                Err(error) => return Err(error.into()),
-            }
-        }
-        for directory in directories {
-            let target = out.join(&directory.dir_name);
-            if force && std::fs::symlink_metadata(&target).is_ok() {
-                std::fs::remove_dir_all(&target)
-                    .with_context(|| format!("removing {}", target.display()))?;
-            }
-            for file in &directory.files {
-                let path = target.join(&file.rel);
-                std::fs::create_dir_all(path.parent().expect("output file has a parent"))?;
-                std::fs::write(&path, &file.bytes)
-                    .with_context(|| format!("writing {}", path.display()))?;
-                #[cfg(unix)]
-                if let Some(mode) = file.mode {
-                    use std::os::unix::fs::PermissionsExt;
-                    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode))?;
-                }
-            }
+        for (target, count) in pack::write_plugin_dirs(out, &directories, force)? {
             if !style::is_quiet() {
-                println!(
-                    "Wrote {} ({} files)",
-                    target.display(),
-                    directory.files.len()
-                );
+                println!("Wrote {} ({} files)", target.display(), count);
             }
         }
         Ok(())
     })();
     match result {
-        Ok(()) => 0,
+        Ok(()) => EXIT_SUCCESS,
         Err(error) => {
-            eprintln!("error: {error:#}");
-            1
+            print_error(format!("{error:#}"));
+            EXIT_ERROR
         }
     }
 }

@@ -120,6 +120,9 @@ pub struct AddOptions {
     /// Item kinds to install. Empty means every kind. When it is not empty, the
     /// install runs no plugin step and no MCP step.
     pub kinds: Vec<ItemKind>,
+    /// Bundle names that the run resolves as bundles only; set by `update`;
+    /// `add` leaves it empty.
+    pub bundles: Vec<String>,
     /// Consumer-side client selection (ADR-0012). Default targets all
     /// clients, preserving the emit-for-everyone behaviour.
     pub selection: crate::select::ClientSelection,

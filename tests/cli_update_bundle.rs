@@ -355,3 +355,275 @@ fn update_fails_before_any_write_when_a_recorded_bundle_left_the_source() {
         );
     }
 }
+
+fn read_update_lock(consumer: &Path) -> serde_json::Value {
+    serde_json::from_slice(&fs::read(consumer.join(".upskill-lock.json")).unwrap()).unwrap()
+}
+
+fn add_direct(consumer: &Path, registry: &Path, name: &str) {
+    common::upskill_cmd(&fake_home(consumer))
+        .current_dir(consumer)
+        .args([
+            "add",
+            registry.to_str().unwrap(),
+            name,
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+}
+
+fn assert_kept_skill(consumer: &Path, registry: &Path, name: &str, change_skill: bool) {
+    let path = consumer.join(format!(".claude/skills/{name}/SKILL.md"));
+    let body = fs::read(&path).unwrap();
+    let before = read_update_lock(consumer);
+    let entry = before["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == name)
+        .unwrap();
+    if change_skill {
+        write(
+            &registry.join(format!("{name}/SKILL.md")),
+            &format!("---\nname: {name}\ndescription: Changed skill.\n---\nChanged body.\n"),
+        );
+    }
+    write_rule_body(registry, "r", "Changed rule.");
+    let result = common::upskill_cmd(&fake_home(consumer))
+        .current_dir(consumer)
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout);
+    assert!(
+        stdout
+            .lines()
+            .any(|line| line.contains(name) && line.contains("up to date")),
+        "{stdout}"
+    );
+    assert_eq!(fs::read(path).unwrap(), body);
+    let after = read_update_lock(consumer);
+    assert_eq!(
+        after["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap(),
+        entry
+    );
+}
+
+#[test]
+fn update_keeps_an_outside_kind_item_that_is_a_bundle_member() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
+    add_direct(consumer.path(), registry.path(), "a");
+    assert_kept_skill(consumer.path(), registry.path(), "a", true);
+}
+
+#[test]
+fn update_keeps_an_outside_kind_required_skill_and_its_provenance() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    write_skill(registry.path(), "s");
+    write(
+        &registry.path().join("r2/RULE.md"),
+        "---\nname: r2\ndescription: Dependent rule.\nrequires:\n  skills: [s]\n---\nRule body.\n",
+    );
+    add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
+    add_direct(consumer.path(), registry.path(), "r2");
+    assert_eq!(
+        read_update_lock(consumer.path())["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == "s")
+            .unwrap()["required_by"],
+        serde_json::json!(["rule:r2"])
+    );
+    assert_kept_skill(consumer.path(), registry.path(), "s", false);
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["doctor", "--project"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn update_with_an_unrestricted_bundle_does_not_restrict_the_source() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    write(
+        &registry.path().join("other.bundle.yaml"),
+        "schema: 1\nname: other\ndescription: Unrestricted bundle.\nitems:\n  skills: [b]\n",
+    );
+    add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
+    add_direct(consumer.path(), registry.path(), "other");
+    write(
+        &registry.path().join("b/SKILL.md"),
+        "---\nname: b\ndescription: Changed skill.\n---\nChanged body.\n",
+    );
+    update_named_bundle(consumer.path());
+    assert!(
+        fs::read_to_string(consumer.path().join(".claude/skills/b/SKILL.md"))
+            .unwrap()
+            .contains("Changed body.")
+    );
+}
+
+#[test]
+fn update_uses_the_union_of_recorded_bundle_kinds() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    write(
+        &registry.path().join("g/AGENT.md"),
+        "---\nname: g\ndescription: An agent.\n---\nOriginal agent.\n",
+    );
+    write(
+        &registry.path().join("other.bundle.yaml"),
+        "schema: 1\nname: other\ndescription: Agent bundle.\nitems:\n  agents: [g]\n  skills: [b]\n",
+    );
+    add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "other",
+            "--kind",
+            "agent",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    write_rule_body(registry.path(), "r", "Changed rule.");
+    write(
+        &registry.path().join("g/AGENT.md"),
+        "---\nname: g\ndescription: An agent.\n---\nChanged agent.\n",
+    );
+    update_named_bundle(consumer.path());
+    assert!(
+        fs::read_to_string(consumer.path().join(".claude/rules/r.md"))
+            .unwrap()
+            .contains("Changed rule.")
+    );
+    assert!(
+        fs::read_to_string(consumer.path().join(".claude/agents/g.md"))
+            .unwrap()
+            .contains("Changed agent.")
+    );
+    assert!(!consumer.path().join(".claude/skills").exists());
+}
+
+#[test]
+fn update_resolves_cross_source_bundles_beside_direct_items() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let dependency = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    write_skill(dependency.path(), "dep-skill");
+    write(
+        &dependency.path().join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Dependency bundle.\nitems:\n  skills: [dep-skill]\n",
+    );
+    let path = registry.path().join("bun.bundle.yaml");
+    let body = fs::read_to_string(&path).unwrap();
+    write(
+        &path,
+        &format!(
+            "{body}requires: [{{ name: dep, source: '{}' }}]\n",
+            dependency.path().display()
+        ),
+    );
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    add_direct(consumer.path(), registry.path(), "b");
+    write(
+        &dependency.path().join("dep-skill/SKILL.md"),
+        "---\nname: dep-skill\ndescription: Changed dependency.\n---\nChanged dependency body.\n",
+    );
+    update_named_bundle(consumer.path());
+    assert!(
+        fs::read_to_string(consumer.path().join(".claude/skills/dep-skill/SKILL.md"))
+            .unwrap()
+            .contains("Changed dependency body.")
+    );
+    assert!(consumer.path().join(".claude/skills/b/SKILL.md").exists());
+}
+
+#[test]
+fn update_refuses_an_item_in_place_of_a_recorded_bundle_before_any_write() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    let paths = [
+        ".upskill-lock.json",
+        ".claude/skills/a/SKILL.md",
+        ".claude/rules/r.md",
+        "CLAUDE.md",
+    ];
+    let before: Vec<_> = paths
+        .iter()
+        .map(|p| fs::read(consumer.path().join(p)).unwrap())
+        .collect();
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    write_skill(registry.path(), "bun");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(
+            "bundle 'bun' is no longer in source",
+        ));
+    for (path, bytes) in paths.iter().zip(before) {
+        assert_eq!(fs::read(consumer.path().join(path)).unwrap(), bytes);
+    }
+    assert!(!consumer.path().join(".claude/skills/bun").exists());
+}
+
+#[test]
+fn update_merges_direct_item_requires_into_the_bundle_closure() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    write_rule_body(registry.path(), "r2", "Direct rule.");
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    add_direct(consumer.path(), registry.path(), "r2");
+    write(
+        &registry.path().join("r2/RULE.md"),
+        "---\nname: r2\ndescription: Dependent rule.\nrequires:\n  skills: [a, b]\n---\nChanged rule.\n",
+    );
+    update_named_bundle(consumer.path());
+    let lock = read_update_lock(consumer.path());
+    for name in ["a", "b"] {
+        let items: Vec<_> = lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|i| i["name"] == name)
+            .collect();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0]["required_by"], serde_json::json!(["rule:r2"]));
+        assert!(
+            consumer
+                .path()
+                .join(format!(".claude/skills/{name}/SKILL.md"))
+                .is_file()
+        );
+    }
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["doctor", "--project"])
+        .assert()
+        .success();
+}

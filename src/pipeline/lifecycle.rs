@@ -1061,6 +1061,14 @@ pub fn update(
                 aliases,
                 excludes: vec![],
                 kinds,
+                bundles: if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
+                    Vec::new()
+                } else {
+                    recorded_bundles
+                        .iter()
+                        .map(|bundle| bundle.name.clone())
+                        .collect()
+                },
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
                 scope: at.scope,
@@ -1080,21 +1088,16 @@ pub fn update(
                 if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
                     Vec::new()
                 } else if !recorded_bundles.is_empty() {
-                    recorded_bundles
+                    source_entries
                         .iter()
-                        .map(|bundle| bundle.name.clone())
-                        .chain(
-                            source_entries
+                        .filter(|entry| entry.required_by.is_empty())
+                        .map(|entry| entry.source_name.as_ref().unwrap_or(&entry.name))
+                        .filter(|name| {
+                            !recorded_bundles
                                 .iter()
-                                .filter(|entry| entry.required_by.is_empty())
-                                .map(|entry| entry.source_name.as_ref().unwrap_or(&entry.name))
-                                .filter(|name| {
-                                    !recorded_bundles
-                                        .iter()
-                                        .any(|bundle| bundle.items.contains(name))
-                                })
-                                .cloned(),
-                        )
+                                .any(|bundle| bundle.items.contains(name))
+                        })
+                        .cloned()
                         .collect()
                 } else {
                     source_entries
@@ -1132,18 +1135,11 @@ pub fn update(
                 }
                 Err(err) => return Err(err),
             };
-            // A direct item excluded by the recorded kinds is kept unchanged,
-            // not treated as an item that disappeared from the source.
+            // Every entry outside the recorded kinds is kept unchanged.
             let source_entries: Vec<_> = source_entries
                 .into_iter()
                 .filter(|entry| {
-                    let name = entry.source_name.as_ref().unwrap_or(&entry.name);
-                    let keep = !options.kinds.is_empty()
-                        && !options.kinds.contains(&entry.kind)
-                        && entry.required_by.is_empty()
-                        && !recorded_bundles
-                            .iter()
-                            .any(|bundle| bundle.items.contains(name));
+                    let keep = !options.kinds.is_empty() && !options.kinds.contains(&entry.kind);
                     if keep {
                         report.items.push(UpdatedItem {
                             kind: entry.kind,

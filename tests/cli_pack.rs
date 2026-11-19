@@ -149,7 +149,7 @@ fn pack_of_an_unknown_bundle_fails() {
     f.command("nope")
         .assert()
         .code(1)
-        .stderr(predicates::str::contains("nope"));
+        .stderr(predicates::str::contains("no bundle named 'nope'"));
     assert!(!f.out.exists());
 }
 
@@ -357,4 +357,50 @@ fn pack_refuses_an_agent_name_with_a_parent_component() {
         ));
     assert_eq!(tree(f._tmp.path()), before);
     assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_accepts_an_existing_empty_client_directory() {
+    let f = Fixture::new();
+    fs::create_dir_all(f.target()).unwrap();
+    f.command("demo").assert().success();
+    f.assert_golden();
+}
+
+#[cfg(unix)]
+#[test]
+fn pack_refuses_a_symbolic_link_target_with_or_without_force() {
+    use std::os::unix::fs::symlink;
+    let f = Fixture::new();
+    let target = f._tmp.path().join("link-target");
+    fs::create_dir_all(&target).unwrap();
+    fs::write(target.join("keep"), "unchanged").unwrap();
+    fs::create_dir_all(&f.out).unwrap();
+    symlink(&target, f.target()).unwrap();
+    let before = tree(&target);
+    for force in [false, true] {
+        let mut cmd = f.command("demo");
+        if force {
+            cmd.arg("--force");
+        }
+        cmd.assert()
+            .code(1)
+            .stderr(predicates::str::contains("not a directory"));
+        assert_eq!(fs::read_link(f.target()).unwrap(), target);
+        assert_eq!(tree(&target), before);
+    }
+}
+
+#[test]
+fn pack_init_lists_plugins_and_mcps_from_required_bundles_for_both_clients() {
+    let f = Fixture::new();
+    f.command_for_clients("demo").assert().success();
+    for client in ["claude", "copilot"] {
+        let text =
+            fs::read_to_string(f.out.join(format!("demo-{client}/commands/init.md"))).unwrap();
+        assert!(text.contains("- plugin `base-tool`\n"));
+        assert!(text.contains("- MCP server `base-server`\n"));
+        assert!(!text.contains("vscode-only"));
+        assert!(!text.contains("opencode-only"));
+    }
 }

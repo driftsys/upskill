@@ -329,6 +329,50 @@ pub(super) struct DependencyClosure {
 }
 
 impl DependencyClosure {
+    /// Merge an item closure into a bundle closure, retaining fetch guards.
+    pub(super) fn merge(&mut self, other: Self) -> Result<()> {
+        for (item, source) in other.item_source {
+            if let Some(existing) = self.item_source.get(&item) {
+                anyhow::ensure!(
+                    existing == &source,
+                    "{} '{}' resolves from both {} and {}",
+                    item.0,
+                    item.1,
+                    existing,
+                    source
+                );
+            }
+            self.item_source.insert(item, source);
+        }
+        for (label, source) in other.by_source {
+            if let Some(existing) = self.by_source.get_mut(&label) {
+                for (target, incoming) in [
+                    (&mut existing.items.rules, source.items.rules),
+                    (&mut existing.items.skills, source.items.skills),
+                    (&mut existing.items.agents, source.items.agents),
+                ] {
+                    for name in incoming {
+                        if !target.contains(&name) {
+                            target.push(name);
+                        }
+                    }
+                }
+            } else {
+                self.by_source.insert(label, source);
+            }
+        }
+        // Keep the roots of the bundle closure for shared sources. Each source's
+        // planned items then use the same root as its overlap check.
+        for (label, root) in other.source_roots {
+            self.source_roots.entry(label).or_insert(root);
+        }
+        for (item, requirers) in other.required_by {
+            self.required_by.entry(item).or_default().extend(requirers);
+        }
+        self.guards.extend(other.guards);
+        Ok(())
+    }
+
     /// Remove every item whose kind is not in `kinds` from `by_source`,
     /// `item_source` and the keys of `required_by`. No-op for an empty slice.
     pub(super) fn retain_kinds(&mut self, kinds: &[ItemKind]) {
