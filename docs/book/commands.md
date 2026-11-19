@@ -63,11 +63,11 @@ installs no item, still writes the lockfile and `CLAUDE.md`, and exits with code
 0.
 
 A local path whose directory is itself an item directory (it holds `SKILL.md`,
-`RULE.md` or `AGENT.md` at its root) and holds no item below it is refused:
-`add` writes nothing, exits with code 1, and prints an error that names the path
-and the command to use instead, `upskill add <parent> <item-name>`. A source is
-the directory that contains the item directories. `.` alone is a local path, the
-same as `./`.
+`RULE.md` or `AGENT.md` at its root) and has no item in its child or grandchild
+directories is refused: `add` writes nothing, exits with code 1, and prints an
+error that names the path and the command to use instead,
+`upskill add <parent> <item-name>`. A source is the directory that contains the
+item directories. `.` alone is a local path, the same as `./`.
 
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a flag uses the project scope. Outside a
