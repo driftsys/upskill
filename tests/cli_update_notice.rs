@@ -972,6 +972,219 @@ fn notice_with_a_fresh_lock_file_prints_nothing_and_leaves_the_cache_unchanged()
 }
 
 #[test]
+fn notice_with_repeat_prints_the_same_set_at_every_run() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    for _ in 0..2 {
+        let out = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+        assert_eq!(out.status.code(), Some(0));
+        assert_eq!(stdout(&out), PROJECT_LINE);
+        assert_eq!(stderr(&out), "");
+    }
+}
+
+#[test]
+fn notice_with_repeat_records_the_set_as_reported() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let first = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    assert_eq!(stdout(&first), PROJECT_LINE);
+    assert_eq!(stdout(&run(&e, &e.repo, &["update", "--notice"])), "");
+}
+
+#[test]
+fn repeat_without_notice_is_a_usage_error() {
+    let e = env();
+    for args in [
+        &["update", "--repeat"][..],
+        &["update", "--repeat", "--check"],
+        &["update", "--repeat", "--yes"],
+        &["update", "--repeat", "--dry-run"],
+        &["update", "--repeat", "--global"],
+        &["update", "--repeat", "alpha"],
+    ] {
+        let out = run(&e, &e.repo, args);
+        assert_eq!(out.status.code(), Some(2), "{args:?}");
+    }
+}
+
+#[test]
+fn notice_with_repeat_prints_nothing_after_update_applied_the_updates() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice", "--repeat"])),
+        PROJECT_LINE
+    );
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    let out = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+}
+
+#[test]
+fn a_dry_run_update_keeps_the_cached_updates() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    run(&e, &e.repo, &["update", "--dry-run"]);
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice", "--repeat"])),
+        PROJECT_LINE
+    );
+}
+
+#[test]
+fn update_of_one_item_keeps_the_cached_update_of_another_item() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    let applied = run(&e, &e.repo, &["update", "--yes", "alpha"]);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice", "--repeat"])),
+        "upskill: 1 update available (project). Run \"upskill update\".\n"
+    );
+    assert_eq!(
+        cached_updates(&e, "repo"),
+        vec![format!("skill:beta@{}", upstream_head(&e))]
+    );
+}
+
+/// The cached `updates` of the scope root whose directory is named `name`.
+fn cached_updates(e: &Env, name: &str) -> Vec<String> {
+    let cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(e)).unwrap()).unwrap();
+    let (_, state) = cache["scopes"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .find(|(root, _)| is_root_named(root, name))
+        .unwrap_or_else(|| panic!("no root named {name}: {cache}"));
+    state["updates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect()
+}
+
+#[test]
+fn a_global_update_run_outside_its_root_removes_the_current_items_of_the_global_scope() {
+    let e = env();
+    let added = run(&e, &e.outside, &["add", REMOTE, "--claude", "--global"]);
+    assert!(added.status.success(), "{}", stderr(&added));
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    assert_eq!(
+        stdout(&run(&e, &e.outside, &["update", "--notice", "--repeat"])),
+        GLOBAL_LINE
+    );
+    let applied = run(&e, &e.outside, &["update", "--global", "--yes"]);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    assert_eq!(cached_updates(&e, "home"), Vec::<String>::new());
+    assert_eq!(
+        stdout(&run(&e, &e.outside, &["update", "--notice", "--repeat"])),
+        ""
+    );
+}
+
+#[test]
+fn an_update_that_exits_with_code_1_removes_the_up_to_date_item_and_keeps_the_skipped_one() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    let installed = e.repo.join(".claude/skills/alpha/SKILL.md");
+    assert!(installed.is_file());
+    fs::write(&installed, "edited by hand\n").unwrap();
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    assert_eq!(applied.status.code(), Some(1), "{}", stderr(&applied));
+    assert_eq!(
+        cached_updates(&e, "repo"),
+        vec![format!("skill:alpha@{}", upstream_head(&e))]
+    );
+}
+
+#[test]
+fn an_update_that_stops_with_an_error_leaves_the_cache_file_unchanged() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    let before = fs::read(cache_path(&e)).unwrap();
+    // A lockfile that cannot be parsed makes `update` return an error and
+    // no report.
+    // The error comes before any item is applied, so this test does not cover
+    // a failure after a partial apply.
+    fs::write(e.repo.join(".upskill-lock.json"), "not json {").unwrap();
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    assert_eq!(applied.status.code(), Some(1), "{}", stderr(&applied));
+    // The message names the canonical path with the separator of the
+    // platform, so only the file name is matched.
+    let err = stderr(&applied);
+    assert!(err.contains("error: parse "), "{err}");
+    assert!(err.contains(".upskill-lock.json: expected"), "{err}");
+    assert_eq!(fs::read(cache_path(&e)).unwrap(), before);
+}
+
+#[test]
+fn an_update_that_skips_an_unreachable_source_leaves_the_cache_file_unchanged() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    let before = fs::read(cache_path(&e)).unwrap();
+    // The upstream is no longer reachable: `update` skips the source and
+    // returns a report with the status `SourceSkipped` and exit code 1.
+    fs::rename(&e.upstream, e.home.parent().unwrap().join("moved")).unwrap();
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    assert_eq!(applied.status.code(), Some(1), "{}", stderr(&applied));
+    assert_eq!(fs::read(cache_path(&e)).unwrap(), before);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_notice_run_that_overlaps_a_global_update_does_not_restore_the_removed_items() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let added = run(&e, &e.outside, &["add", REMOTE, "--claude", "--global"]);
+    assert!(added.status.success(), "{}", stderr(&added));
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice"]);
+    // Only the project scope is due; the global scope is not.
+    age_scope(&e, "repo", 86_400);
+    let mut blocked = BlockedRun::start(&e, &e.repo);
+    let applied = run(&e, &e.outside, &["update", "--global", "--yes"]);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    assert_eq!(cached_updates(&e, "home"), Vec::<String>::new());
+    blocked.release();
+    assert_eq!(blocked.child.wait().unwrap().code(), Some(0));
+    assert_eq!(cached_updates(&e, "home"), Vec::<String>::new());
+}
+
+#[test]
+fn a_quiet_notice_on_a_root_that_is_not_due_leaves_the_set_unreported() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    // The first quiet run checks the root; the second one finds it not due.
+    for _ in 0..2 {
+        let quiet = run(&e, &e.repo, &["--quiet", "update", "--notice"]);
+        assert_eq!(stdout(&quiet), "");
+    }
+    assert_eq!(
+        stdout(&run(&e, &e.repo, &["update", "--notice"])),
+        PROJECT_LINE
+    );
+}
+
+#[test]
 fn notice_with_a_lock_file_of_60_seconds_prints_the_notice_and_deletes_the_lock() {
     let e = env();
     run(&e, &e.repo, &["add", REMOTE, "--claude"]);
@@ -1031,4 +1244,204 @@ fn notice_prints_when_the_cache_directory_is_a_regular_file() {
     assert_eq!(out.status.code(), Some(0));
     assert_eq!(stdout(&out), PROJECT_LINE);
     assert_eq!(stderr(&out), "");
+}
+
+#[cfg(unix)]
+#[test]
+fn update_succeeds_and_prints_nothing_more_when_the_cache_cannot_be_written() {
+    use std::os::unix::fs::PermissionsExt;
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    run(&e, &e.repo, &["update", "--notice"]);
+    let reference = env();
+    run(&reference, &reference.repo, &["add", REMOTE, "--claude"]);
+    advance(&reference, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let expected = run(&reference, &reference.repo, &["update", "--yes"]);
+    let cache_dir = cache_path(&e).parent().unwrap().to_path_buf();
+    fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o555)).unwrap();
+    if fs::write(cache_dir.join("probe"), "").is_ok() {
+        eprintln!("skipped: the process can write to a read-only directory (running as root)");
+        return;
+    }
+    let applied = run(&e, &e.repo, &["update", "--yes"]);
+    fs::set_permissions(&cache_dir, fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(applied.status.code(), Some(0), "{}", stderr(&applied));
+    let strip = |s: String, r: &Env| s.replace(r.repo.to_str().unwrap(), "<repo>");
+    assert_eq!(
+        strip(stderr(&applied), &e),
+        strip(stderr(&expected), &reference)
+    );
+    assert_eq!(stdout(&applied), stdout(&expected));
+}
+
+#[test]
+fn notice_with_repeat_respects_a_fresh_lock_for_cached_and_uncached_updates() {
+    for cached in [false, true] {
+        let e = env();
+        run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+        advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+        if cached {
+            let first = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+            assert_eq!(stdout(&first), PROJECT_LINE);
+        }
+        let lock = cache_path(&e).with_file_name("notice.lock");
+        fs::create_dir_all(lock.parent().unwrap()).unwrap();
+        fs::write(&lock, "").unwrap();
+        let before = fs::read(cache_path(&e)).ok();
+        let out = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+        assert_eq!(out.status.code(), Some(0));
+        assert_eq!(stdout(&out), "");
+        assert_eq!(stderr(&out), "");
+        assert_eq!(fs::read(cache_path(&e)).ok(), before);
+        assert!(lock.is_file());
+        fs::remove_file(&lock).unwrap();
+        let later = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+        assert_eq!(later.status.code(), Some(0));
+        assert_eq!(stdout(&later), PROJECT_LINE);
+        assert_eq!(stderr(&later), "");
+        assert!(!lock.exists());
+    }
+}
+
+#[test]
+fn notice_with_repeat_releases_the_lock_when_a_due_lockfile_cannot_be_parsed() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    fs::write(e.repo.join(".upskill-lock.json"), "not json {").unwrap();
+    let out = run(&e, &e.repo, &["update", "--notice", "--repeat"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+    assert!(!cache_path(&e).exists());
+    assert!(!cache_path(&e).with_file_name("notice.lock").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn a_busy_overlapping_notice_leaves_the_existing_cache_unchanged_until_a_later_run() {
+    let e = env();
+    let other = e.home.parent().unwrap().join("repo2");
+    fs::create_dir_all(other.join(".git")).unwrap();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let added = run(&e, &other, &["add", REMOTE, "--claude"]);
+    assert!(added.status.success(), "{}", stderr(&added));
+    // The cache file holds an outdated entry of the other project.
+    assert_eq!(stdout(&run(&e, &other, &["update", "--notice"])), "");
+    let mut cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    let outdated =
+        serde_json::json!({"checked_at": 1, "updates": ["skill:outdated@c0"], "reported": []});
+    for (root, state) in cache["scopes"].as_object_mut().unwrap() {
+        assert!(is_root_named(root, "repo2"), "{root}");
+        *state = outdated.clone();
+    }
+    fs::write(cache_path(&e), serde_json::to_vec(&cache).unwrap()).unwrap();
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    let before = fs::read(cache_path(&e)).unwrap();
+    // The first run holds the lock while it waits in its lookup.
+    let blocked = BlockedRun::start(&e, &e.repo);
+    let second = run(&e, &other, &["update", "--notice"]);
+    let during_lookup = fs::read(cache_path(&e)).unwrap();
+    blocked.release();
+    let first = blocked.child.wait_with_output().unwrap();
+    assert_eq!(second.status.code(), Some(0));
+    assert_eq!(stdout(&second), "");
+    assert_eq!(stderr(&second), "");
+    assert_eq!(during_lookup, before);
+    assert_eq!(first.status.code(), Some(0));
+    assert_eq!(stderr(&first), "");
+    assert!(!cache_path(&e).with_file_name("notice.lock").exists());
+    let after_first: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    let (_, other_state) = after_first["scopes"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .find(|(r, _)| is_root_named(r, "repo2"))
+        .unwrap();
+    assert_eq!(*other_state, outdated);
+    let later = run(&e, &other, &["update", "--notice"]);
+    assert_eq!(later.status.code(), Some(0));
+    assert_eq!(stdout(&later), PROJECT_LINE);
+    assert_eq!(stderr(&later), "");
+    let cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    let states = cache["scopes"].as_object().unwrap();
+    assert_eq!(states.len(), 2, "{cache}");
+    let (_, other_state) = states
+        .iter()
+        .find(|(r, _)| is_root_named(r, "repo2"))
+        .unwrap();
+    // The later run refreshes the entry that the Busy run left unchanged.
+    assert!(other_state["checked_at"].as_u64().unwrap() > 1, "{cache}");
+    assert_ne!(other_state["updates"], outdated["updates"], "{cache}");
+}
+
+#[cfg(unix)]
+#[test]
+fn overlapping_notices_keep_each_others_cache_entries_when_the_run_lock_is_unavailable() {
+    let e = env();
+    let other = e.home.parent().unwrap().join("repo2");
+    fs::create_dir_all(other.join(".git")).unwrap();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    let added = run(&e, &other, &["add", REMOTE, "--claude"]);
+    assert!(added.status.success(), "{}", stderr(&added));
+    // The cache file holds an outdated entry of the other project.
+    assert_eq!(stdout(&run(&e, &other, &["update", "--notice"])), "");
+    let mut cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    let outdated =
+        serde_json::json!({"checked_at": 1, "updates": ["skill:outdated@c0"], "reported": []});
+    for (root, state) in cache["scopes"].as_object_mut().unwrap() {
+        assert!(is_root_named(root, "repo2"), "{root}");
+        *state = outdated.clone();
+    }
+    fs::write(cache_path(&e), serde_json::to_vec(&cache).unwrap()).unwrap();
+    advance(&e, "skills/alpha/SKILL.md", CHANGED_ALPHA);
+    // A self-referencing symlink prevents lock creation and metadata reads,
+    // while both runs can still read and write notice.json.
+    let lock = cache_path(&e).with_file_name("notice.lock");
+    std::os::unix::fs::symlink("notice.lock", &lock).unwrap();
+    assert!(matches!(
+        upskill::notice::acquire_run_lock(&lock, SystemTime::now()),
+        upskill::notice::LockAttempt::Unavailable
+    ));
+    // The first run loaded that cache and waits in its lookup.
+    let blocked = BlockedRun::start(&e, &e.repo);
+    let second = run(&e, &other, &["update", "--notice"]);
+    let after_second: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    blocked.release();
+    let first = blocked.child.wait_with_output().unwrap();
+    assert_eq!(second.status.code(), Some(0));
+    assert_eq!(stdout(&second), PROJECT_LINE);
+    assert_eq!(stderr(&second), "");
+    assert_eq!(first.status.code(), Some(0));
+    assert_eq!(stderr(&first), "");
+    assert!(
+        fs::symlink_metadata(&lock)
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
+    let cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    let states = cache["scopes"].as_object().unwrap();
+    assert_eq!(states.len(), 2, "{cache}");
+    let (_, other_state) = states
+        .iter()
+        .find(|(r, _)| is_root_named(r, "repo2"))
+        .unwrap();
+    // The newer entry of the second run stays; the first run did not write
+    // back the outdated one.
+    assert!(other_state["checked_at"].as_u64().unwrap() > 1, "{cache}");
+    assert_ne!(other_state["updates"], outdated["updates"], "{cache}");
+    let (_, second_state) = after_second["scopes"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .find(|(r, _)| is_root_named(r, "repo2"))
+        .unwrap();
+    assert_eq!(other_state, second_state);
 }

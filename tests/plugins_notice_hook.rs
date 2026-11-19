@@ -244,10 +244,25 @@ fn stderr_of_upskill_is_not_forwarded() {
 
 #[test]
 fn upskill_is_called_with_update_notice() {
-    for plugin in PLUGINS {
+    // The Claude Code plugin shows the line to the user, so it prints a set
+    // once. The Copilot plugin gives the line to the model, which can ignore
+    // it, so it asks for the line at every session start.
+    for (plugin, expected) in [
+        (Plugin::Claude, "update --notice"),
+        (Plugin::Copilot, "update --notice --repeat"),
+    ] {
         let (_, args) = run_with_fake(plugin, "echo 'upskill: notice'");
-        assert_eq!(args.trim_end(), "update --notice");
+        assert_eq!(args.trim_end(), expected);
     }
+}
+
+#[test]
+fn copilot_hook_prints_nothing_when_upskill_reports_a_usage_error() {
+    // An older binary that does not know `--repeat` prints a usage error to
+    // stderr and exits with code 2.
+    let script = "case \"$*\" in *--repeat*) echo 'error: unexpected argument' >&2; exit 2;; esac; echo 'upskill: notice'";
+    let (out, _) = run_with_fake(Plugin::Copilot, script);
+    assert_silent_success(&out);
 }
 
 #[test]

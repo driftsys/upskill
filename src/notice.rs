@@ -4,20 +4,37 @@
 //! (a check that reached no source also sets it), the updates that check
 //! found, and the set that the last printed notice reported. Time-dependent
 //! functions take the time as an argument. Cache loading and saving, run lock
-//! acquisition, and run lock cleanup perform file I/O.
+//! acquisition, run lock cleanup, and [`mark_current_in_file`] perform file I/O.
 //!
 //! Runs sharing a cache directory share a run lock. A run that finds a lock
 //! younger than 60 seconds exits without printing a notice or changing the
-//! cache, even when it handles a different repository. That repository can
+//! cache, also with `--repeat` and when it handles a different repository. It can
 //! print its notice at a later session start. Locks at least 60 seconds old
 //! or dated after the current time are replaced. When the lock cannot be
 //! acquired for another reason, a run continues without it. A completed run
 //! drops its lock; an interrupted run leaves the file until it expires.
 //!
-//! Before saving, a run loads the cache again and applies only its own roots
-//! with [`merge_roots`]. This preserves other roots saved before that load,
-//! including when a run continues without a lock. If another run saves between
-//! that second load and the rename of the save, its changes can be lost.
+//! Before it saves, a notice run
+//! loads the file again and applies only its own roots with [`merge_roots`],
+//! which leaves the entries of the other run in place. For a root that the run
+//! did not look up, the saved `reported` is the part of the reloaded `updates`
+//! that either run had reported. An `update` saves
+//! through [`mark_current_in_file`], which loads and saves without a lookup
+//! between them. Applying `update` does not take the notice run lock. These
+//! cases remain with an applying `update`, or between notice runs that continue
+//! without a lock:
+//!
+//! - A run saves between the second load and the rename of another run. Its
+//!   save is lost. A lost check of a notice run is made again at the next
+//!   session start, because the root is still due. A lost removal by `update`
+//!   is not: the root is not due, so the removed entries stay until the next
+//!   check in which every source of the scope answers.
+//! - A notice run looks up a root while an `update` of that root saves. The
+//!   notice run writes its own state of the root, so the removed entries come
+//!   back until the next check in which every source of the scope answers.
+//!
+//! A check that reaches only some sources keeps every stored entry that it did
+//! not find (see [`record_check`]), so it does not remove such an entry.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -26,7 +43,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::pipeline::{ScopedCheck, SourceStatus};
+use crate::pipeline::{ScopedCheck, SourceStatus, UpdateReport, UpdateStatus};
 use crate::scope::Scope;
 
 /// The shortest time in seconds between two checks that contact the sources.
@@ -269,11 +286,41 @@ pub fn forget(cache: &mut NoticeCache, root: &Path) {
 /// result. A root that `mine` does not hold is removed from `fresh`. The states
 /// of all other roots stay as `fresh` holds them, so that a run that overlapped
 /// another run does not drop the entries of the other run.
-pub fn merge_roots(mut fresh: NoticeCache, mine: &NoticeCache, roots: &[PathBuf]) -> NoticeCache {
+///
+/// A root of `roots` that is not in `checked` was not looked up by this run,
+/// so this run changed only its `reported`. When `fresh` holds that root, its
+/// `checked_at` and `updates` stay as `fresh` holds them, and `reported`
+/// becomes the entries of the `updates` of `fresh` that the `reported` of
+/// `fresh` or of `mine` holds (in the order of `updates`, so sorted and
+/// without duplicates). An entry that is no longer in `updates` is dropped:
+/// a removal by [`mark_current_in_file`] stays removed, and an entry of an
+/// older set cannot keep `reported` different from `updates`. When `fresh`
+/// does not hold that root, the state of `mine` is inserted.
+pub fn merge_roots(
+    mut fresh: NoticeCache,
+    mine: &NoticeCache,
+    roots: &[PathBuf],
+    checked: &[PathBuf],
+) -> NoticeCache {
     for root in roots {
         match mine.scopes.get(&key(root)) {
             Some(state) => {
-                fresh.scopes.insert(key(root), state.clone());
+                let only_reported = !checked.contains(root);
+                match fresh.scopes.get_mut(&key(root)) {
+                    Some(current) if only_reported => {
+                        current.reported = current
+                            .updates
+                            .iter()
+                            .filter(|entry| {
+                                current.reported.contains(entry) || state.reported.contains(entry)
+                            })
+                            .cloned()
+                            .collect();
+                    }
+                    _ => {
+                        fresh.scopes.insert(key(root), state.clone());
+                    }
+                }
             }
             None => forget(&mut fresh, root),
         }
@@ -281,22 +328,72 @@ pub fn merge_roots(mut fresh: NoticeCache, mine: &NoticeCache, roots: &[PathBuf]
     fresh
 }
 
+/// The `<kind>:<name>` of each item that an applied `update` left at the
+/// version of its source: the statuses `Updated`, `UpToDate`,
+/// `CompletedInterrupted` and `Removed`. An item that was skipped, not
+/// applied, or whose source was skipped is not current.
+pub fn current_items(report: &UpdateReport) -> Vec<String> {
+    report
+        .items
+        .iter()
+        .filter(|item| {
+            matches!(
+                item.status,
+                UpdateStatus::UpToDate
+                    | UpdateStatus::Updated { .. }
+                    | UpdateStatus::CompletedInterrupted
+                    | UpdateStatus::Removed
+            )
+        })
+        .map(|item| format!("{}:{}", item.kind, item.name))
+        .collect()
+}
+
+/// Load the cache file at `path`, apply [`mark_current`] for `root`, and save
+/// the file at once when it changed. The load and the save follow one another
+/// without a lookup between them. A failed read is an empty cache and a failed
+/// write is ignored: the caller is an `update` whose result does not depend on
+/// the notice.
+pub fn mark_current_in_file(path: &Path, root: &Path, current: &[String]) {
+    if current.is_empty() {
+        return;
+    }
+    let mut cache = NoticeCache::load(path);
+    if mark_current(&mut cache, root, current) {
+        let _ = cache.save(path);
+    }
+}
+
 /// Remove each state whose root path `has_lockfile` rejects.
 pub fn prune(cache: &mut NoticeCache, has_lockfile: impl Fn(&Path) -> bool) {
     cache.scopes.retain(|root, _| has_lockfile(Path::new(root)));
 }
 
+/// Remove from `updates` and `reported` of `root` each entry whose
+/// `<kind>:<name>` part is in `current`, the items that an applied `update`
+/// left at the version of their source. Returns true when the cache changed.
+pub fn mark_current(cache: &mut NoticeCache, root: &Path, current: &[String]) -> bool {
+    let Some(state) = cache.scopes.get_mut(&key(root)) else {
+        return false;
+    };
+    let before = (state.updates.len(), state.reported.len());
+    let keep = |entry: &String| !current.iter().any(|item| item == item_of(entry));
+    state.updates.retain(keep);
+    state.reported.retain(keep);
+    before != (state.updates.len(), state.reported.len())
+}
+
 /// The line to print for `root`, and the cache change that goes with it.
-/// Returns `None` when `updates` is empty (and clears `reported`) or equals
-/// `reported`, and when `root` has no state. Otherwise sets
-/// `reported = updates` and returns the line.
-pub fn decide(cache: &mut NoticeCache, scope: Scope, root: &Path) -> Option<String> {
+/// Returns `None` when `updates` is empty (and clears `reported`), when
+/// `updates` equals `reported` and `repeat` is false, and when `root` has no
+/// state. Otherwise sets `reported = updates` and returns the line.
+pub fn decide(cache: &mut NoticeCache, scope: Scope, root: &Path, repeat: bool) -> Option<String> {
     let state = cache.scopes.get_mut(&key(root))?;
     if state.updates.is_empty() {
         state.reported.clear();
         return None;
     }
-    if state.updates == state.reported {
+    if state.updates == state.reported && !repeat {
         return None;
     }
     state.reported = state.updates.clone();
@@ -456,16 +553,38 @@ mod tests {
     fn a_new_set_prints_once() {
         let mut cache = recorded(&["skill:a@c1", "rule:b@c1", "agent:c@c1"]);
         assert_eq!(
-            decide(&mut cache, Scope::Project, &root()).as_deref(),
+            decide(&mut cache, Scope::Project, &root(), false).as_deref(),
             Some("upskill: 3 updates available (project). Run \"upskill update\".")
         );
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
+    }
+
+    #[test]
+    fn a_reported_set_prints_again_with_repeat() {
+        let mut cache = recorded(&["skill:a@c1"]);
+        assert!(decide(&mut cache, Scope::Project, &root(), true).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), true).is_some());
+        assert_eq!(cache.scopes[&key(&root())].reported, set(&["skill:a@c1"]));
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
+    }
+
+    #[test]
+    fn mark_current_removes_the_named_items_from_both_sets() {
+        let mut cache = recorded(&["agent:local", "skill:a@c1", "skill:b@c1"]);
+        decide(&mut cache, Scope::Project, &root(), false);
+        let current = set(&["skill:a", "agent:local", "rule:a"]);
+        assert!(mark_current(&mut cache, &root(), &current));
+        let state = &cache.scopes[&key(&root())];
+        assert_eq!(state.updates, set(&["skill:b@c1"]));
+        assert_eq!(state.reported, set(&["skill:b@c1"]));
+        assert!(!mark_current(&mut cache, &root(), &current));
+        assert!(!mark_current(&mut cache, &other_root(), &current));
     }
 
     #[test]
     fn a_changed_set_prints_again() {
         let mut cache = recorded(&["skill:a@c1"]);
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
         record_check(
             &mut cache,
             &root(),
@@ -473,16 +592,16 @@ mod tests {
             Reached::Fully,
             2_000,
         );
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
     }
 
     #[test]
     fn an_empty_set_prints_nothing_and_clears_the_reported_set() {
         let mut cache = recorded(&["skill:a@c1"]);
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
         record_check(&mut cache, &root(), vec![], Reached::Fully, 2_000);
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
         assert!(cache.scopes[&key(&root())].reported.is_empty());
         record_check(
             &mut cache,
@@ -491,15 +610,15 @@ mod tests {
             Reached::Fully,
             3_000,
         );
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
     }
 
     #[test]
     fn an_equal_set_leaves_the_cache_unchanged() {
         let mut cache = recorded(&["skill:a@c1"]);
-        decide(&mut cache, Scope::Project, &root());
+        decide(&mut cache, Scope::Project, &root(), false);
         let before = cache.clone();
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
         assert_eq!(cache, before);
     }
 
@@ -591,7 +710,7 @@ mod tests {
     fn a_subset_from_a_partly_reached_check_does_not_print_a_second_line() {
         let full = ["rule:b@c1", "skill:a@c1"];
         let mut cache = recorded(&full);
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
         record_check(
             &mut cache,
             &root(),
@@ -599,9 +718,9 @@ mod tests {
             Reached::Partly,
             2_000,
         );
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
         record_check(&mut cache, &root(), set(&full), Reached::Fully, 3_000);
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
     }
 
     fn other_root() -> PathBuf {
@@ -626,7 +745,7 @@ mod tests {
             (&root(), &["skill:new@c1"]),
             (&other_root(), &["skill:o@c1"]),
         ]);
-        let merged = merge_roots(fresh, &mine, &[root()]);
+        let merged = merge_roots(fresh, &mine, &[root()], &[root()]);
         assert_eq!(merged.scopes[&key(&root())].updates, set(&["skill:new@c1"]));
         assert_eq!(
             merged.scopes[&key(&other_root())].updates,
@@ -637,7 +756,7 @@ mod tests {
     #[test]
     fn merge_roots_removes_a_handled_root_that_is_absent_from_my_cache() {
         let fresh = cache_of(&[(&root(), &["skill:a@c1"]), (&other_root(), &["skill:o@c1"])]);
-        let merged = merge_roots(fresh, &NoticeCache::default(), &[root()]);
+        let merged = merge_roots(fresh, &NoticeCache::default(), &[root()], &[]);
         assert!(!merged.scopes.contains_key(&key(&root())));
         assert!(merged.scopes.contains_key(&key(&other_root())));
     }
@@ -645,8 +764,213 @@ mod tests {
     #[test]
     fn merge_roots_adds_a_handled_root_that_the_fresh_cache_lacks() {
         let mine = cache_of(&[(&root(), &["skill:a@c1"])]);
-        let merged = merge_roots(NoticeCache::default(), &mine, &[root()]);
+        let merged = merge_roots(NoticeCache::default(), &mine, &[root()], &[]);
         assert_eq!(merged, mine);
+    }
+
+    #[test]
+    fn merge_roots_keeps_the_updates_of_fresh_for_a_root_that_was_not_checked() {
+        // `mine` loaded the cache before an `update` removed `skill:a` from
+        // the file, and printed both entries without a lookup.
+        let mut mine = cache_of(&[(&root(), &["skill:a@c1", "skill:b@c1"])]);
+        decide(&mut mine, Scope::Project, &root(), true);
+        let mut fresh = cache_of(&[(&root(), &["skill:a@c1", "skill:b@c1"])]);
+        mark_current(&mut fresh, &root(), &set(&["skill:a"]));
+        let merged = merge_roots(fresh, &mine, &[root()], &[]);
+        let state = &merged.scopes[&key(&root())];
+        assert_eq!(state.updates, set(&["skill:b@c1"]));
+        assert_eq!(state.reported, set(&["skill:b@c1"]));
+    }
+
+    #[test]
+    fn merge_roots_keeps_the_set_that_another_run_printed_after_a_lookup() {
+        // Run A loaded the old set and did not look up the root. Run B looked
+        // it up, found a new set, printed it and saved. A then saves.
+        let mut mine = cache_of(&[(&root(), &["skill:a@c1"])]);
+        decide(&mut mine, Scope::Project, &root(), false);
+        let mut fresh = cache_of(&[(&root(), &["skill:a@c2", "skill:b@c2"])]);
+        decide(&mut fresh, Scope::Project, &root(), false);
+        let mut merged = merge_roots(fresh, &mine, &[root()], &[]);
+        assert_eq!(
+            merged.scopes[&key(&root())].reported,
+            set(&["skill:a@c2", "skill:b@c2"])
+        );
+        assert_eq!(decide(&mut merged, Scope::Project, &root(), false), None);
+    }
+
+    /// `runs` plain notice runs in sequence, each loading the file that the
+    /// previous one saved. No run looks up the root, so `checked` is empty in
+    /// every run.
+    fn plain_runs(mut file: NoticeCache, runs: usize) -> (NoticeCache, usize) {
+        let mut printed = 0;
+        for _ in 0..runs {
+            let mut mine = file.clone();
+            if decide(&mut mine, Scope::Project, &root(), false).is_some() {
+                printed += 1;
+            }
+            file = merge_roots(file, &mine, &[root()], &[]);
+        }
+        (file, printed)
+    }
+
+    #[test]
+    fn a_plain_run_after_a_quiet_check_of_a_changed_set_prints_once() {
+        // A quiet check recorded `skill:a@c2`; `reported` still names `c1`.
+        let mut file = recorded(&["skill:a@c1"]);
+        decide(&mut file, Scope::Project, &root(), false);
+        record_check(
+            &mut file,
+            &root(),
+            set(&["skill:a@c2"]),
+            Reached::Fully,
+            2_000,
+        );
+        let (file, printed) = plain_runs(file, 3);
+        assert_eq!(printed, 1);
+        assert_eq!(file.scopes[&key(&root())].reported, set(&["skill:a@c2"]));
+    }
+
+    #[test]
+    fn a_run_that_overlapped_a_run_that_printed_a_new_set_causes_no_second_print() {
+        let mut mine = recorded(&["skill:a@c1"]);
+        decide(&mut mine, Scope::Project, &root(), false);
+        let mut fresh = recorded(&["skill:a@c2", "skill:b@c2"]);
+        decide(&mut fresh, Scope::Project, &root(), false);
+        let merged = merge_roots(fresh, &mine, &[root()], &[]);
+        let (_, printed) = plain_runs(merged, 2);
+        assert_eq!(printed, 0);
+    }
+
+    #[test]
+    fn a_run_that_overlapped_an_update_does_not_bring_back_the_removed_items() {
+        let mut mine = recorded(&["skill:a@c1", "skill:b@c1"]);
+        decide(&mut mine, Scope::Project, &root(), false);
+        let mut fresh = mine.clone();
+        mark_current(&mut fresh, &root(), &set(&["skill:a"]));
+        let merged = merge_roots(fresh, &mine, &[root()], &[]);
+        let state = &merged.scopes[&key(&root())];
+        assert_eq!(state.updates, set(&["skill:b@c1"]));
+        assert_eq!(state.reported, set(&["skill:b@c1"]));
+    }
+
+    #[test]
+    fn a_quiet_run_on_a_root_that_was_not_checked_leaves_the_set_unreported() {
+        // A plain run printed `skill:a@c1`, then a quiet check stored the new
+        // set `skill:a@c2`, so `reported` holds the stale entry. A quiet run
+        // does not call `decide`, so its `reported` equals the one it loaded.
+        let mut file = recorded(&["skill:a@c1"]);
+        decide(&mut file, Scope::Project, &root(), false);
+        record_check(
+            &mut file,
+            &root(),
+            set(&["skill:a@c2"]),
+            Reached::Fully,
+            2_000,
+        );
+        let mine = file.clone();
+        let merged = merge_roots(file, &mine, &[root()], &[]);
+        assert!(merged.scopes[&key(&root())].reported.is_empty());
+        let (_, printed) = plain_runs(merged, 2);
+        assert_eq!(printed, 1);
+    }
+
+    #[test]
+    fn the_merged_reported_set_follows_the_order_of_the_updates() {
+        let mut fresh = recorded(&["agent:a", "rule:b@c1", "skill:c@c1"]);
+        fresh.scopes.get_mut(&key(&root())).unwrap().reported = set(&["rule:b@c1"]);
+        let mut mine = fresh.clone();
+        mine.scopes.get_mut(&key(&root())).unwrap().reported = set(&["agent:a", "skill:c@c1"]);
+        let merged = merge_roots(fresh, &mine, &[root()], &[]);
+        let state = &merged.scopes[&key(&root())];
+        assert_eq!(state.reported, state.updates);
+    }
+
+    #[test]
+    fn three_plain_sessions_without_overlap_print_a_set_once() {
+        let (file, printed) = plain_runs(recorded(&["skill:b@c1", "rule:a@c1", "agent:z"]), 3);
+        assert_eq!(printed, 1);
+        let state = &file.scopes[&key(&root())];
+        assert_eq!(state.reported, state.updates);
+    }
+
+    #[test]
+    fn mark_current_matches_the_kind_and_the_whole_name() {
+        let mut cache = recorded(&["rule:a@c1", "skill:a@c1", "skill:ab@c1"]);
+        assert!(mark_current(&mut cache, &root(), &set(&["skill:a"])));
+        assert_eq!(
+            cache.scopes[&key(&root())].updates,
+            set(&["rule:a@c1", "skill:ab@c1"])
+        );
+    }
+
+    #[test]
+    fn mark_current_in_file_saves_the_removal_and_ignores_an_absent_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(CACHE_FILE_NAME);
+        recorded(&["skill:a@c1", "skill:b@c1"]).save(&path).unwrap();
+        mark_current_in_file(&path, &root(), &set(&["skill:a"]));
+        assert_eq!(
+            NoticeCache::load(&path).scopes[&key(&root())].updates,
+            set(&["skill:b@c1"])
+        );
+        mark_current_in_file(&path, &other_root(), &set(&["skill:b"]));
+        assert_eq!(
+            NoticeCache::load(&path).scopes[&key(&root())].updates,
+            set(&["skill:b@c1"])
+        );
+    }
+
+    #[test]
+    fn current_items_takes_the_statuses_that_leave_an_item_current() {
+        use crate::pipeline::{PreviewAction, SkipCause, UpdatedItem};
+        let item = |name: &str, status| UpdatedItem {
+            kind: ItemKind::Skill,
+            name: name.into(),
+            source: "owner/repo".into(),
+            status,
+        };
+        let report = UpdateReport {
+            items: vec![
+                item("up-to-date", UpdateStatus::UpToDate),
+                item(
+                    "updated",
+                    UpdateStatus::Updated {
+                        old_hash: None,
+                        new_hash: None,
+                    },
+                ),
+                item("completed", UpdateStatus::CompletedInterrupted),
+                UpdatedItem {
+                    kind: ItemKind::Agent,
+                    name: "removed".into(),
+                    source: "owner/repo".into(),
+                    status: UpdateStatus::Removed,
+                },
+                item("skipped", UpdateStatus::SkippedModified { files: vec![] }),
+                item(
+                    "not-applied",
+                    UpdateStatus::NotApplied {
+                        action: PreviewAction::Skip,
+                    },
+                ),
+                item(
+                    "source-skipped",
+                    UpdateStatus::SourceSkipped {
+                        cause: SkipCause::Unreachable,
+                    },
+                ),
+            ],
+            ..UpdateReport::default()
+        };
+        assert_eq!(
+            current_items(&report),
+            set(&[
+                "skill:up-to-date",
+                "skill:updated",
+                "skill:completed",
+                "agent:removed"
+            ])
+        );
     }
 
     #[test]
@@ -667,7 +991,7 @@ mod tests {
     fn one_update_uses_the_singular_form() {
         let mut cache = recorded(&["skill:a@c1"]);
         assert_eq!(
-            decide(&mut cache, Scope::Project, &root()).as_deref(),
+            decide(&mut cache, Scope::Project, &root(), false).as_deref(),
             Some("upskill: 1 update available (project). Run \"upskill update\".")
         );
     }
@@ -676,7 +1000,7 @@ mod tests {
     fn the_global_line_names_the_global_flag() {
         let mut cache = recorded(&["skill:a@c1"]);
         assert_eq!(
-            decide(&mut cache, Scope::Global, &root()).as_deref(),
+            decide(&mut cache, Scope::Global, &root(), false).as_deref(),
             Some("upskill: 1 update available (global). Run \"upskill update --global\".")
         );
     }
@@ -695,7 +1019,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("nested/cache").join(CACHE_FILE_NAME);
         let mut cache = recorded(&["skill:a@c1", "rule:b"]);
-        decide(&mut cache, Scope::Project, &root());
+        decide(&mut cache, Scope::Project, &root(), false);
         cache.save(&path).unwrap();
         assert_eq!(NoticeCache::load(&path), cache);
         let names: Vec<_> = fs::read_dir(path.parent().unwrap())
@@ -757,7 +1081,7 @@ mod tests {
     #[test]
     fn a_root_without_state_prints_nothing() {
         let mut cache = NoticeCache::default();
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
         assert_eq!(cache, NoticeCache::default());
     }
 
@@ -773,7 +1097,7 @@ mod tests {
     #[test]
     fn two_orders_of_one_set_print_once() {
         let mut cache = recorded(&["skill:b@c1", "rule:a@c1"]);
-        assert!(decide(&mut cache, Scope::Project, &root()).is_some());
+        assert!(decide(&mut cache, Scope::Project, &root(), false).is_some());
         record_check(
             &mut cache,
             &root(),
@@ -781,7 +1105,7 @@ mod tests {
             Reached::Fully,
             2_000,
         );
-        assert_eq!(decide(&mut cache, Scope::Project, &root()), None);
+        assert_eq!(decide(&mut cache, Scope::Project, &root(), false), None);
     }
 
     #[test]

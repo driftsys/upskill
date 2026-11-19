@@ -1,4 +1,4 @@
 {
   "name": "upskill",
-  "description": "upskill integration for Copilot CLI. When a session starts, it asks the agent to tell you about available upskill updates, once for each set of updates."
+  "description": "upskill integration for Copilot CLI. When a session starts, it asks the agent to tell you about available upskill updates, at every session start until upskill update runs."
 }

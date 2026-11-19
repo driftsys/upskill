@@ -257,6 +257,7 @@ upskill update code-review           # update one item
 upskill update --dry-run             # preview changes without applying
 upskill update --check               # report newer versions, without a fetch
 upskill update --notice              # one line per scope for a session start
+upskill update --notice --repeat     # the same, also for a set printed before
 ```
 
 Without a scope flag, `update` uses the project scope inside a git repository
@@ -680,11 +681,13 @@ update. 1 when a lockfile cannot be read or parsed. 2 for a usage error.
 
 ```bash
 upskill update --notice
+upskill update --notice --repeat
 ```
 
 Prints one line for each scope that has available updates, for a session-start
-hook of an AI client. It takes no item name and no other flag (any of them is
-refused with exit code 2). It uses the scopes that `list` uses, in the order
+hook of an AI client. It takes no item name and no other flag except `--repeat`
+(any other is refused with exit code 2). `--repeat` without `--notice` is
+refused with exit code 2. It uses the scopes that `list` uses, in the order
 project, global, and leaves out a scope that has no lockfile. It prints no scope
 line and writes nothing to stderr. A line has one of two forms:
 
@@ -701,6 +704,24 @@ The command is quiet by design:
 - A set of updates is printed once. The command prints the line again only when
   the set of available updates changes. When no update is available, it prints
   nothing.
+- With `--repeat`, the line is printed at every run that passes the run lock
+  while the cache holds available updates for the scope, also when the set was
+  printed before. This is for a client that gives the line to the agent and does
+  not show it to the user: the Copilot CLI plugin uses it. The run still records
+  the set as printed, so a later run without `--repeat` prints it only when it
+  changes. Nothing else changes.
+- An `upskill update` that applies (not `--dry-run`, `--check` or `--notice`)
+  and returns its report, with exit code 0, 1 or 130 (an interrupt), removes
+  from the cached updates of its scope the items that it reports as updated, up
+  to date, completed after an interruption, or removed, so the notice does not
+  report updates that are already installed. An `update` that stops with an
+  error removes nothing: the items that it had updated stay in the notice until
+  the next check in which every source of the scope answers. A failure to read
+  or write the cache file does not change the result of `update` and prints
+  nothing. When a session-start run of `--notice` and an `update` of the same
+  scope save the cache file at the same time, the notice can list installed
+  updates until the next check in which every source of the scope answers. A
+  check that reaches only some sources keeps such an entry.
 - It contacts the sources at most once in 24 hours for each scope, with the same
   lookups as `update --check` and a time limit of 5 seconds for all sources.
   Between two lookups, it uses the result of the last one. A lookup that reaches
@@ -734,21 +755,23 @@ The command is quiet by design:
   root the time of the last lookup, the updates found and the set that was
   printed. The entry of a root that has no lockfile is removed. Before the
   command saves the file, it reads the file again and applies only the entries
-  of its own roots, preserving entries saved before that read. If a run proceeds
-  without a lock, another run that saves between that read and the save can
-  still lose its entries; its roots are then checked again at the next session
-  start. When neither directory is known, the command uses no cache and prints
-  nothing.
+  of its own roots, preserving entries saved before that read. An applying
+  `update`, or another notice run that proceeds without a lock, can still lose
+  its save when it saves between that read and the save of the command. A lost
+  check is made again at the next session start; a lost removal by `update`
+  stays lost until the next check in which every source of the scope answers.
+  When neither directory is known, the command uses no cache and prints nothing.
 - With `--quiet` it prints no line. The lookups and the cache update still run,
   and the set stays unreported, so a later run without `--quiet` prints it.
 
 Before reading `notice.json`, the command creates `notice.lock` in the same
 cache directory with create-only-if-absent semantics. A run that finds a lock
 younger than 60 seconds exits with code 0 without output, network requests or
-cache changes. A lock at least 60 seconds old, or dated in the future, is
-removed and creation is retried once. Other lock errors let the run continue
-without a lock. A completed run removes its lock; an interrupted or killed run
-can leave it until it expires. Install, update and removal have no writer lock.
+cache changes, also with `--repeat`. A lock at least 60 seconds old, or dated in
+the future, is removed and creation is retried once. Other lock errors let the
+run continue without a lock. A completed run removes its lock; an interrupted or
+killed run can leave it until it expires. Install, update and removal have no
+writer lock.
 
 Two limits remain: concurrent runs reclaiming an expired lock can both print;
 sessions in different repositories sharing this cache also share the lock, so

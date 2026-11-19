@@ -97,8 +97,9 @@ src/
 ├── fmt.rs               Author command — canonicalise YAML frontmatter
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
 ├── support.rs           Support level table (client x kind), printed by `doctor`
-├── notice.rs            `update --notice`: when a session notice line prints, the
-│                        cache file that records it, and the run lock
+├── notice.rs            `update --notice`: when a session notice line prints,
+│                        its cache file and run lock; removal of current items
+│                        from the cache after an applying `update`
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
 └── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)
@@ -106,9 +107,11 @@ src/
 
 Outside `src/`, `plugins/` holds the sources of the session-notice hook plugins
 for Claude Code and Copilot CLI. Each plugin calls `upskill update --notice`
-from a session-start hook. These directories are the sources. A copy is
-published in the repository `driftsys/metapowers`, which holds the marketplace
-manifests (`.claude-plugin/marketplace.json` for Claude Code,
+from a session-start hook; the Copilot plugin adds `--repeat`, because Copilot
+CLI gives the line to the model and does not show it to the user. These
+directories are the sources. A copy is published in the repository
+`driftsys/metapowers`, which holds the marketplace manifests
+(`.claude-plugin/marketplace.json` for Claude Code,
 `.github/plugin/marketplace.json` for Copilot CLI). A change to `plugins/` must
 be copied there. The Claude Code hook uses the matcher `startup` because the
 notice is meant for a new session: a resumed, cleared, compacted or forked
@@ -172,7 +175,12 @@ the updates found and the printed set in `<cache>/upskill/notice.json`
 creates `notice.lock` in the same directory. A lock younger than 60 seconds
 makes another run exit silently; expired or future-dated locks are replaced. A
 completed run removes its lock; an interrupted run can leave it to expire. Other
-lock errors allow the run to continue without a lock.
+lock errors allow the run to continue without a lock. It prints a set once; with
+`--repeat` (valid only with `--notice`) it prints at every run that can proceed
+past the run lock while cached updates remain. An applied `update` removes from
+the cached updates of its scope root the items that it reports as updated, up to
+date, completed after an interruption, or removed; a cache failure there prints
+nothing.
 
 ### Source format
 
