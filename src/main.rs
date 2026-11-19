@@ -2381,7 +2381,9 @@ fn run_pack(
 ) -> i32 {
     use upskill::pack::{self, PackClient};
 
-    if let Err(error) = pack::validate_source(source) {
+    if let Err(error) =
+        pack::validate_source(source).and_then(|()| pack::validate_bundle_name(bundle))
+    {
         eprintln!("error: {error:#}");
         return 2;
     }
@@ -2412,7 +2414,7 @@ fn run_pack(
         }
         for directory in directories {
             let target = out.join(&directory.dir_name);
-            if force && target.exists() {
+            if force && std::fs::symlink_metadata(&target).is_ok() {
                 std::fs::remove_dir_all(&target)
                     .with_context(|| format!("removing {}", target.display()))?;
             }

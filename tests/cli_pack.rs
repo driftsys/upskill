@@ -151,10 +151,19 @@ fn pack_of_an_unknown_bundle_fails() {
 #[test]
 fn pack_refuses_a_source_with_whitespace_or_a_shell_metacharacter() {
     let f = Fixture::new();
-    for source in ["a/b; rm -rf x", "a/b c", "$(x)", "a/b`x`"] {
+    for source in [
+        "a/b; rm -rf x",
+        "a/b c",
+        "$(x)",
+        "a/b`x`",
+        "-g/x",
+        "--global/x",
+    ] {
         common::upskill_cmd(&f.home)
             .current_dir(&f.registry)
-            .args(["pack", "demo", "--source", source, "--out"])
+            .args(["pack", "demo"])
+            .arg(format!("--source={source}"))
+            .arg("--out")
             .arg(&f.out)
             .assert()
             .code(2);
@@ -252,4 +261,39 @@ fn pack_preserves_resource_permissions() {
             & 0o777,
         0o755
     );
+}
+
+#[test]
+fn pack_refuses_a_bundle_name_with_a_shell_metacharacter_or_a_leading_hyphen() {
+    for bundle in ["a;b", "-x", "a b", "$(x)", ""] {
+        let f = Fixture::new();
+        common::upskill_cmd(&f.home)
+            .current_dir(&f.registry)
+            .args(["pack", "--source", "driftsys/demo@v1", "--out"])
+            .arg(&f.out)
+            .args(["--", bundle])
+            .assert()
+            .code(2);
+        assert!(!f.out.exists());
+    }
+}
+
+#[test]
+fn pack_refuses_an_agent_name_with_a_parent_component() {
+    let f = Fixture::new();
+    let agent = f.registry.join("items/helper/AGENT.md");
+    let text = fs::read_to_string(&agent).unwrap();
+    fs::write(&agent, text.replace("name: helper", "name: ../x")).unwrap();
+    let bundle = f.registry.join("demo.bundle.yaml");
+    let text = fs::read_to_string(&bundle).unwrap();
+    fs::write(&bundle, text.replace("agents: [helper]", "agents: [../x]")).unwrap();
+    let before = tree(f._tmp.path());
+    f.command("demo")
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(
+            "an installed name must not contain a path separator",
+        ));
+    assert_eq!(tree(f._tmp.path()), before);
+    assert!(!f.out.exists());
 }

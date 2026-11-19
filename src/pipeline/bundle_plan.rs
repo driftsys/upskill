@@ -1,7 +1,7 @@
 //! Bundle output planning without consumer state or filesystem writes.
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use anyhow::{Result, bail};
 
@@ -54,6 +54,7 @@ pub fn plan_bundle_output(
     let selection = ClientSelection::restrict(&[selected]);
     let mut files = Vec::new();
     let mut rules = BTreeSet::new();
+    let mut planned = Vec::new();
     for si in closure.by_source.values() {
         let report = install_from_local_path_selective(
             &si.root,
@@ -62,22 +63,31 @@ pub fn plan_bundle_output(
             &PlanNames::default(),
             Scope::Project,
         )?;
-        for item in report.planned {
-            for file in item.files {
-                if file.client != client {
-                    continue;
+        planned.extend(report.planned);
+    }
+    super::apply::check_installed_names(&planned)?;
+    for item in planned {
+        for file in item.files {
+            if file.client != client {
+                continue;
+            }
+            if item.kind == ItemKind::Rule {
+                rules.insert(item.name.clone());
+            } else {
+                let rel: PathBuf = file.rel.components().skip(1).collect();
+                if rel
+                    .components()
+                    .any(|part| !matches!(part, Component::Normal(_)))
+                {
+                    bail!("invalid plugin relative path: {}", rel.display());
                 }
-                if item.kind == ItemKind::Rule {
-                    rules.insert(item.name.clone());
-                } else {
-                    files.push(BundleFile {
-                        kind: item.kind,
-                        name: item.name.clone(),
-                        rel: file.rel.components().skip(1).collect(),
-                        bytes: file.bytes,
-                        mode: file.mode,
-                    });
-                }
+                files.push(BundleFile {
+                    kind: item.kind,
+                    name: item.name.clone(),
+                    rel,
+                    bytes: file.bytes,
+                    mode: file.mode,
+                });
             }
         }
     }

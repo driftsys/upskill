@@ -11,30 +11,52 @@ use crate::model::Bundle;
 use crate::model::bundle::ClaudePluginDescriptor;
 use crate::pipeline::plan_bundle_output;
 
+/// A client whose plugin directory can be built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PackClient {
     Claude,
     Copilot,
 }
 
+/// One file relative to the plugin directory.
 pub struct PackFile {
     pub rel: PathBuf,
     pub bytes: Vec<u8>,
     pub mode: Option<u32>,
 }
 
+/// A plugin directory and its planned files.
 pub struct PluginDir {
     pub dir_name: String,
     pub files: Vec<PackFile>,
 }
 
+/// Validate a source for use as an argument in the init command.
 pub fn validate_source(source: &str) -> Result<()> {
+    if source.starts_with('-') {
+        bail!("source must not start with a hyphen");
+    }
     crate::source::parse_install_source(source)?;
     if !source
         .bytes()
         .all(|b| b.is_ascii_alphanumeric() || b"/@:._-~+".contains(&b))
     {
         bail!("source must contain only ASCII letters, digits and / @ : . _ - ~ +");
+    }
+    Ok(())
+}
+
+/// Validate a bundle name for use in the init command and directory name.
+pub fn validate_bundle_name(name: &str) -> Result<()> {
+    if name.is_empty()
+        || name.starts_with('-')
+        || !name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"-_.".contains(&b))
+    {
+        bail!(
+            "bundle name must be nonempty, must not start with a hyphen, and must contain only ASCII letters, digits and - _ ."
+        );
     }
     Ok(())
 }
@@ -94,13 +116,13 @@ fn init_text(bundle: &str, source: &str, bundles: &[Bundle]) -> String {
     text
 }
 
+/// Build a plugin directory; the caller validates the source and bundle name first.
 pub fn build(
     registry_root: &Path,
     bundle: &str,
     source: &str,
     client: PackClient,
 ) -> Result<PluginDir> {
-    validate_source(source)?;
     if client == PackClient::Copilot {
         bail!("pack for Copilot CLI is not implemented");
     }
