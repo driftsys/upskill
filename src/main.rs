@@ -1584,28 +1584,18 @@ fn render_result(result: &SourceResult) -> String {
 }
 
 /// The closing summary of a terminal run: the items updated, completed or
-/// removed out of the items considered, and the sources applied out of the
+/// removed ([`UpdateReport::changed_items`]) out of the items that the run
+/// covers ([`UpdateReport::items_in_run`]), and the sources applied out of the
 /// sources considered, then ` <k> source(s) not applied.` when a source with
 /// changes was not applied, then ` <u> source(s) skipped.` when a source
 /// was skipped (for either [`upskill::pipeline::SkipCause`]), then
 /// ` Stopped; <r> source(s) not examined.` (or ` Stopped.` when no source
 /// remained) after `q` or end of input.
 fn closing_summary(report: &UpdateReport) -> String {
-    let changed = report
-        .items
-        .iter()
-        .filter(|i| {
-            matches!(
-                i.status,
-                UpdateStatus::Updated { .. }
-                    | UpdateStatus::CompletedInterrupted
-                    | UpdateStatus::Removed
-            )
-        })
-        .count();
     let mut line = format!(
-        "Updated {changed} of {} item(s) from {} of {} source(s).",
-        report.items.len(),
+        "Updated {} of {} item(s) from {} of {} source(s).",
+        report.changed_items(),
+        report.items_in_run,
         report.sources_applied,
         report.sources_considered
     );
@@ -1670,15 +1660,7 @@ fn finish_terminal_update(report: &UpdateReport) -> i32 {
     } else {
         println!();
         println!("{}", closing_summary(report));
-        let changed_items = report.items.iter().any(|i| {
-            matches!(
-                i.status,
-                UpdateStatus::Updated { .. }
-                    | UpdateStatus::CompletedInterrupted
-                    | UpdateStatus::Removed
-            )
-        });
-        if !changed_items && !report.changed.is_empty() {
+        if report.changed_items() == 0 && !report.changed.is_empty() {
             print_changed_files(report.changed.len());
         }
     }
@@ -1713,25 +1695,13 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             "{} {} of {} item(s)",
             style::warn("Dry-run: would update"),
             changes,
-            report.items.len()
+            report.items_in_run
         );
         println!("{DRY_RUN_LAST_LINE}");
         return;
     }
     // An applied run counts the items it changed.
-    let changes = report
-        .items
-        .iter()
-        .filter(|i| {
-            !matches!(
-                i.status,
-                UpdateStatus::UpToDate
-                    | UpdateStatus::SkippedModified { .. }
-                    | UpdateStatus::NotApplied { .. }
-                    | UpdateStatus::SourceSkipped { .. }
-            )
-        })
-        .count();
+    let changes = report.changed_items();
     let skipped = report
         .items
         .iter()
@@ -1754,7 +1724,7 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         "{} {} of {} item(s)",
         style::success("Updated"),
         changes,
-        report.items.len()
+        report.items_in_run
     );
     for item in &report.items {
         let kind_label = match item.kind {
@@ -2990,6 +2960,10 @@ mod tests {
         let mut report = UpdateReport {
             sources_considered: 2,
             sources_applied: 1,
+            // The two entries below are of one item; 3 is the number of
+            // items that the run covers, for example with planned
+            // dependencies that have no status line.
+            items_in_run: 3,
             ..UpdateReport::default()
         };
         for status in [
@@ -3010,12 +2984,12 @@ mod tests {
         }
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s)."
+            "Updated 1 of 3 item(s) from 1 of 2 source(s)."
         );
         report.sources_not_applied = 1;
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied."
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied."
         );
         report
             .skipped_sources
@@ -3026,19 +3000,19 @@ mod tests {
             });
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
              1 source(s) skipped."
         );
         report.skipped_sources.clear();
         report.stopped = true;
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. Stopped."
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied. Stopped."
         );
         report.sources_remaining = 3;
         assert_eq!(
             closing_summary(&report),
-            "Updated 1 of 2 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
+            "Updated 1 of 3 item(s) from 1 of 2 source(s). 1 source(s) not applied. \
              Stopped; 3 source(s) not examined."
         );
     }

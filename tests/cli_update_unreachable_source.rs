@@ -1020,3 +1020,49 @@ fn a_cascade_skip_is_reported_when_a_later_step_fails() {
     assert!(err.contains(&cascade), "{err}");
     assert_eq!(files_under(&e.proj), before, "update changed a file");
 }
+
+/// A source skipped because it requires an item of a skipped source adds no
+/// planned item to `<m>`: the new skill `echo` that its plan would install
+/// is not counted (issue #506).
+#[test]
+fn a_source_skipped_for_a_skipped_requirement_adds_no_planned_item() {
+    let e = env();
+    let requires_beta =
+        format!("requires:\n  skills: [{{ name: beta, source: {OTHER_REMOTE} }}]\n");
+    write_skill(&e.upstream, "alpha", "Alpha one.", &requires_beta);
+    write_skill(&e.upstream, "delta", "Delta one.", "");
+    commit_all(&e, &e.upstream);
+    run_ok(&e, &["add", REMOTE, "--claude", "--project"]);
+    let local = e.tmp.path().join("local-reg");
+    write_skill(
+        &local,
+        "charlie",
+        "Charlie one.",
+        &format!("requires:\n  skills: [{{ name: delta, source: {REMOTE} }}]\n"),
+    );
+    run_ok(
+        &e,
+        &["add", local.to_str().unwrap(), "--claude", "--project"],
+    );
+    let entries = lock(&e)["items"].as_array().unwrap().len();
+    // `charlie` now also requires the new skill `echo` of its own source.
+    write_skill(&local, "echo", "Echo one.", "");
+    write_skill(
+        &local,
+        "charlie",
+        "Charlie two.",
+        &format!("requires:\n  skills: [echo, {{ name: delta, source: {REMOTE} }}]\n"),
+    );
+    write_skill(&e.upstream, "delta", "Delta two.", "");
+    commit_all(&e, &e.upstream);
+    fs::rename(&e.other, e.tmp.path().join("other-moved")).unwrap();
+
+    let out = run(&e, &["update", "--project", "--yes"]);
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    assert!(
+        stdout.contains(&format!("Updated 0 of {entries} item(s)")),
+        "{entries}: {stdout} {}",
+        stderr(&out)
+    );
+}

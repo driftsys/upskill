@@ -444,11 +444,19 @@ The apply checks the files on disk again; it does not rely on the preview. After
 an applied source, `update` prints one result line with the non-zero counts of
 `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
 `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied` when every
-count is 0. After the last source, it prints one closing summary:
-`Updated <n> of <m> item(s) from <a> of <s> source(s).`, followed by
-`<k> source(s) not applied.` when a source with changes was not applied, by
-`<u> source(s) skipped.` when sources were skipped, for either cause (the item
-count `<m>` includes the items of these sources), and by
+count is 0; a dependency from another source that the apply writes is counted in
+that line. After the last source, it prints one closing summary:
+`Updated <n> of <m> item(s) from <a> of <s> source(s).` `<n>` counts the items
+that the run updated, completed or removed, also a dependency from another
+source that the apply of a source updated. `<m>` counts the items that the run
+covers: the lockfile entries that the run selects (all entries, or with names
+only the named entries), also of the sources that were skipped or not examined
+after `q`, and the items that the plans of the sources that were fetched and not
+skipped install. An item (by kind and installed name) is counted once in each
+number, and `<m>` is the same whether or not the run stops. The summary is
+followed by `<k> source(s) not applied.` when a source with changes was not
+applied, by `<u> source(s) skipped.` when sources were skipped, for either cause
+(the item count `<m>` includes the items of these sources), and by
 `Stopped; <r> source(s) not examined.` (or `Stopped.` when no source remained)
 after `q` or end of input. When no item was updated, completed or removed but
 files were written or deleted (for example the files of a client that the flags
@@ -478,8 +486,11 @@ A run with `--yes`, or without a terminal, prints `Updated <n> of <m> item(s)`
 and one status line per item when an item changed or was skipped, files were
 written or deleted, or a lockfile was adopted. A run whose only output is
 `kept modified file` notes prints nothing on stdout. It reports a completed
-interrupted item as `completed — interrupted before` and counts it. When no item
-was updated, completed or removed, but files were written or deleted, it prints
+interrupted item as `completed — interrupted before` and counts it. `<n>` and
+`<m>` have the meaning of the terminal closing summary; `<m>` can be larger than
+the number of status lines, because a dependency that the plan of a source
+installs unchanged has no status line. When no item was updated, completed or
+removed, but files were written or deleted, it prints
 `Changed <n> file(s) written or deleted`. It prints
 `everything is up to date — nothing to do` when nothing changed, no item was
 skipped, no source was skipped, no file was kept with a note and no lockfile was
@@ -502,7 +513,11 @@ does not count in the output above, and `update --dry-run` and a declined source
 record no commit.
 
 `update --dry-run` prints the blocks, then
-`Dry-run: would update <n> of <m> item(s)` and the line
+`Dry-run: would update <n> of <m> item(s)`. `<n>` is the number of selected
+lockfile entries that the block of their own source lists with an action other
+than `skip` (a dependency from another source and an item that is not in the
+lockfile are not counted), and `<m>` has the meaning of the terminal closing
+summary. Then it prints the line
 `Each block is computed for the current state; a later block does not include the effect of an earlier one.`
 Each block is exact for the files on disk, but because nothing is applied, a
 later block does not include the effect of applying an earlier source. With a
