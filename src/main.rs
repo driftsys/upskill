@@ -1723,8 +1723,8 @@ fn closing_summary(report: &UpdateReport) -> String {
 /// otherwise the closing summary ([`closing_summary`]), followed by `Changed <n> file(s) written or
 /// deleted` when files changed but no item was updated, completed or
 /// removed. Without `--quiet` the blocks named the kept and the skipped
-/// files; with `--quiet` it prints the `skipped` lines of
-/// [`print_skipped`] to stderr. With a skipped item it then prints
+/// files; with `--quiet` it prints each `kept modified file` note and the
+/// `skipped` lines of [`print_skipped`] to stderr. With a skipped item it then prints
 /// `Use --force to replace.` to stderr.
 fn finish_terminal_update(report: &UpdateReport) -> i32 {
     let skipped = report

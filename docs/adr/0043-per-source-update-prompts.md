@@ -176,8 +176,9 @@ failed until `update --force`.
   - When a new version of upskill renders an unchanged source to different bytes
     in an edited file only, the new rendering is not written and only the note
     is printed, until `update --force`. `doctor` lists the modified files.
-  - With `--quiet`, a terminal run does not print the blocks, the notes, the
-    result lines or the closing summary. The question names the source.
+  - With `--quiet`, a terminal run does not print the blocks, the result lines
+    or the closing summary; it prints each `kept modified file` note on stderr,
+    as `update --yes --quiet` does (#508). The question names the source.
 - A run can still stop after earlier sources were applied (#471): after a `q`
   answer, end of input or a read error at the question, an interrupt, or an
   error in the apply phase of a later source. An error in the prepare phase,

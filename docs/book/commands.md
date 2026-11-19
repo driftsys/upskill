@@ -492,10 +492,10 @@ the closing summary; it prints each `kept modified file` note on stderr, as
 items that cause exit code 1, `Use --force to replace.` and the adoption notice
 of a `schema: 1` lockfile are printed on stderr; without `--quiet`, a terminal
 run prints no `skipped` line, because the blocks name these files.
-`update --dry-run --quiet` prints nothing on stdout; to see in CI what an update
-would change, run `update --dry-run` without `--quiet`, or `update --check`. A
-terminal run prints the adoption notice before the block of the source that
-adopted the lockfile.
+`update --dry-run --quiet` prints nothing on stdout, also no
+`kept modified file` note; to see in CI what an update would change, run
+`update --dry-run` without `--quiet`, or `update --check`. A terminal run prints
+the adoption notice before the block of the source that adopted the lockfile.
 
 A run with `--yes`, or without a terminal, prints `Updated <n> of <m> item(s)`
 and one status line per item when an item changed or was skipped, files were
