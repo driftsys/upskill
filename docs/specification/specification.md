@@ -45,7 +45,7 @@ of the `HOME` environment variable, or of `USERPROFILE` when `HOME` is not set.
 
 - **Source registry** — repository where SSOT items are authored. Holds the
   canonical `RULE.md` / `SKILL.md` / `AGENT.md` files and `*.bundle.yaml`
-  manifests. Author commands (`new`, `lint`, `fmt`) operate here.
+  manifests. Author commands (`new`, `lint`, `fmt`, `pack`) operate here.
 - **Consumer project** — repository where generated outputs are installed for
   use by AI clients. Holds only generated per-client files. Consumer commands
   (`add`, `remove`, `update`, `list`, `doctor`, `search`) operate here.
@@ -78,11 +78,12 @@ upskill add <source> [items...] [--global|--project]
 ```
 
 `add --kind <kind>` (short `-k`, repeatable) restricts items to `rule`, `skill`
-or `agent`, including dependencies. It also applies without item names. An
-unknown kind is a usage error (exit 2); filtering out every named item is an
-error (exit 1). With any kind restriction, the plugin and MCP steps are skipped:
-no plugin or MCP registration or lockfile record is created by those steps. For
-example: `upskill add owner/repo my-bundle --kind rule --project --claude`.
+or `agent`. A required item of another kind is not installed. It also applies
+without item names. An unknown kind is a usage error (exit 2); filtering out
+every named item is an error (exit 1). With any kind restriction, the plugin and
+MCP steps are skipped: no plugin or MCP registration or lockfile record is
+created by those steps. For example:
+`upskill add owner/repo my-bundle --kind rule --project --claude`.
 
 `<source>` accepts (parity with `npx skills add`):
 

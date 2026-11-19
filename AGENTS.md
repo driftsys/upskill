@@ -97,8 +97,8 @@ src/
 ├── fmt.rs               Author command — canonicalise YAML frontmatter
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
 ├── support.rs           Support level table (client x kind), printed by `doctor`
-├── notice.rs            `update --notice`: when a session notice line prints, and
-│                        the cache file that records it
+├── notice.rs            `update --notice`: when a session notice line prints, the
+│                        cache file that records it, and the run lock
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
 └── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)

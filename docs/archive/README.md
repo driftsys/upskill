@@ -1078,3 +1078,29 @@ in the current tree. The
 [re-steer entry](#customization-re-steer-withdrawn-lifecycle-working-documents)
 and [AD-0042](../adr/0042-resteer-customization-delivery.md) record that
 removal. The plan has no durable successor: it is kept for provenance only.
+
+## Bundle plugin output (`upskill pack`)
+
+Source paths: `docs/wip/specs/2026-11-18-bundle-plugin-output-design.md` and
+`docs/wip/plans/2026-11-19-upskill-pack.md`. The raw
+[spec](specs/2026-11-18-bundle-plugin-output-design.md) and
+[plan](plans/2026-11-19-upskill-pack.md) are retained unchanged, except that two
+relative links were changed to follow the moved files: the plan's link to the
+hook item kind design now points into `docs/wip/specs/`.
+
+Delivered on the branch `feat/upskill-pack` for story
+[#563](https://github.com/driftsys/upskill/issues/563); the pull request is not
+merged at the time of this entry. Completion evidence: `just verify` and
+`just sanity` passed at commit `e60ff40`. The delivered scope is `upskill pack`,
+`add --kind`, the run lock of `update --notice`, and the `kinds` record that
+`update` keeps for a bundle. The spec's open item "whether `pack` accepts a
+bundle from a remote source" was settled as no: `pack` reads the current
+directory only.
+
+Durable successors: [AD-0044](../adr/0044-plugin-output-of-a-bundle.md), the
+[command guide](../book/commands.md#upskill-pack-bundle---source-source---out-dir),
+the [recipe](../book/recipes.md#publish-a-bundle-as-client-plugins),
+[support levels](../book/support-levels.md#bundle-plugin-output) and
+[specification](../specification/specification.md) §2. The
+[hook item kind design](../wip/specs/2026-11-18-hook-item-kind-design.md) is a
+later slice and remains in WIP.

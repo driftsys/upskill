@@ -43,6 +43,17 @@ bundle; it does not replace the bundle or change its schema.
    unrestricted, and empty is omitted on write. `update` restricts a source only
    when every recorded bundle of that source has recorded kinds, using their
    union. One unrestricted bundle makes the source unrestricted.
+7. For a directory source with recorded bundles, `update` passes the recorded
+   bundle names and the directly installed item names of that source, and
+   installs no other item of the source. Before this decision, `update` after
+   `add <dir> <bundle>` installed every item of the source. A directly installed
+   item of a kind outside the recorded restriction is kept unchanged and is not
+   updated; `add <source> <item>` updates it. A recorded bundle that is no
+   longer in its source makes `update` fail before any write.
+8. `pack` resolves the bundle in the current directory only. `--source` must
+   parse as an install source and, like the bundle name, is limited to a safe
+   character set, because both are written into a command line that a model
+   runs. A plugin URL in the init text is written in angle brackets.
 
 ## Consequences
 
@@ -79,5 +90,7 @@ session. An unlocked run can still race with another cache save.
   differ.
 - Deduplicate by session ID: not every client supplies one.
 - Deliver rules through a session hook: deferred with general hook authoring.
+- Update a directly installed item of another kind together with a restricted
+  bundle: rejected because it needs two plans for one source.
 - Introduce a separate plugin source schema: the bundle already supplies the
   metadata, content and dependencies.

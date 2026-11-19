@@ -5,7 +5,7 @@ discussion; not approved for implementation**. This document records the source
 convention for a later slice. It does not describe released behaviour.
 
 Related records:
-[bundle plugin output design](2026-11-18-bundle-plugin-output-design.md),
+[bundle plugin output design](../../archive/specs/2026-11-18-bundle-plugin-output-design.md),
 [format specification](../../topics/0001-content-format.md),
 [AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md),
 [AD-0041](../../adr/0041-separate-client-representations-as-design-baseline.md),

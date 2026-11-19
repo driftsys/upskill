@@ -82,11 +82,12 @@ hides it. `update --check` and `update --notice` print no such line: the block
 of each scope in `update --check` names the scope and its root.
 
 `add --kind <kind>` (short `-k`, repeatable) restricts items to `rule`, `skill`
-or `agent`, including dependencies. It also applies without item names. An
-unknown kind is a usage error (exit 2); filtering out every named item is an
-error (exit 1). With any kind restriction, the plugin and MCP steps are skipped:
-no plugin or MCP registration or lockfile record is created by those steps. For
-example: `upskill add owner/repo my-bundle --kind rule --project --claude`.
+or `agent`. A required item of another kind is not installed. It also applies
+without item names. An unknown kind is a usage error (exit 2); filtering out
+every named item is an error (exit 1). With any kind restriction, the plugin and
+MCP steps are skipped: no plugin or MCP registration or lockfile record is
+created by those steps. For example:
+`upskill add owner/repo my-bundle --kind rule --project --claude`.
 
 **Client selection.** By default `add` emits output for **every** client.
 Restrict it to the clients you actually use with one or more of `--claude`,
