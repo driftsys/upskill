@@ -1,0 +1,6 @@
+schema: 1
+name: base
+description: Base bundle
+items:
+  skills: [beta]
+  rules: [naming]

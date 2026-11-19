@@ -38,6 +38,23 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    /// Build a bundle as a client plugin directory.
+    ///
+    /// Author command: reads the source registry in the current directory.
+    #[command(display_order = 13)]
+    Pack {
+        bundle: String,
+        #[arg(long)]
+        source: String,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        force: bool,
+        #[arg(long)]
+        claude: bool,
+        #[arg(long)]
+        copilot: bool,
+    },
     /// Install rules, skills, or agents from a git repo or local path.
     ///
     /// Parses each item from the source, renders per-client output, and

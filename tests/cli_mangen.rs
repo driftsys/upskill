@@ -38,8 +38,8 @@ fn every_subcommand_renders_a_man_page() {
     // update the assert and the docs.
     assert_eq!(
         names.len(),
-        11,
-        "expected 11 subcommands, got {}: {names:?}",
+        12,
+        "expected 12 subcommands, got {}: {names:?}",
         names.len()
     );
 

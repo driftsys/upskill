@@ -32,6 +32,7 @@ use crate::generate::Client;
 use crate::source::InstallSource;
 
 mod apply;
+mod bundle_plan;
 mod check;
 mod discovery;
 mod git;
@@ -46,6 +47,7 @@ mod prepared;
 mod report;
 
 pub use apply::{ConflictState, FileConflict};
+pub use bundle_plan::{BundleFile, BundleOutput, plan_bundle_output};
 pub use check::{
     CheckedSource, GitRemote, LookupError, RemoteLookup, ScopedCheck, SourceStatus, check_scopes,
 };

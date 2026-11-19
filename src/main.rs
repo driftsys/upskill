@@ -130,6 +130,14 @@ fn main() {
             registry,
             kind,
         } => run_search(&query, limit, registry.as_deref(), kind.as_deref()),
+        Commands::Pack {
+            bundle,
+            source,
+            out,
+            force,
+            claude,
+            copilot,
+        } => run_pack(&bundle, &source, &out, force, claude, copilot),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
         Commands::New { kind, name } => run_new(&kind, &name),
@@ -2360,6 +2368,81 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
             style::name(&bundle.name),
             style::dim(&format!("{}{pinned}", bundle.source))
         );
+    }
+}
+
+fn run_pack(
+    bundle: &str,
+    source: &str,
+    out: &std::path::Path,
+    force: bool,
+    claude: bool,
+    copilot: bool,
+) -> i32 {
+    use upskill::pack::{self, PackClient};
+
+    if let Err(error) = pack::validate_source(source) {
+        eprintln!("error: {error:#}");
+        return 2;
+    }
+    let result = (|| -> anyhow::Result<()> {
+        let root = std::env::current_dir()?;
+        let mut directories = Vec::new();
+        if claude || !copilot {
+            directories.push(pack::build(&root, bundle, source, PackClient::Claude)?);
+        }
+        if copilot {
+            directories.push(pack::build(&root, bundle, source, PackClient::Copilot)?);
+        }
+        for directory in &directories {
+            let target = out.join(&directory.dir_name);
+            match std::fs::symlink_metadata(&target) {
+                Ok(metadata) => {
+                    anyhow::ensure!(metadata.is_dir(), "{} is not a directory", target.display());
+                    if !force && std::fs::read_dir(&target)?.next().transpose()?.is_some() {
+                        anyhow::bail!(
+                            "{} is not empty; use --force to replace it",
+                            target.display()
+                        );
+                    }
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.into()),
+            }
+        }
+        for directory in directories {
+            let target = out.join(&directory.dir_name);
+            if force && target.exists() {
+                std::fs::remove_dir_all(&target)
+                    .with_context(|| format!("removing {}", target.display()))?;
+            }
+            for file in &directory.files {
+                let path = target.join(&file.rel);
+                std::fs::create_dir_all(path.parent().expect("output file has a parent"))?;
+                std::fs::write(&path, &file.bytes)
+                    .with_context(|| format!("writing {}", path.display()))?;
+                #[cfg(unix)]
+                if let Some(mode) = file.mode {
+                    use std::os::unix::fs::PermissionsExt;
+                    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode))?;
+                }
+            }
+            if !style::is_quiet() {
+                println!(
+                    "Wrote {} ({} files)",
+                    target.display(),
+                    directory.files.len()
+                );
+            }
+        }
+        Ok(())
+    })();
+    match result {
+        Ok(()) => 0,
+        Err(error) => {
+            eprintln!("error: {error:#}");
+            1
+        }
     }
 }
 
