@@ -1198,8 +1198,9 @@ and `pack` then tries to remove the `.upskill-old` directories; one that cannot
 be removed is left in place. A failure while writing or renaming tries to undo
 the renames already made, so every client directory keeps its earlier content,
 and tries to remove the staging directories. If an undo rename also fails, the
-earlier content is at the `.upskill-old` path. A file, directory or link left at
-a staging or `.upskill-old` path by an earlier run is removed. An existing empty
+earlier content is at the `.upskill-old` path; the next `pack` run of that
+bundle deletes it, so copy it away first. A file, directory or link left at a
+staging or `.upskill-old` path by an earlier run is removed. An existing empty
 client directory is replaced by a new one, also without `--force`.
 
 `--source` must parse as an install source, must not start with a hyphen and

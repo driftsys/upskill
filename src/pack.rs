@@ -369,7 +369,11 @@ mod tests {
         FAIL_SWAP_AT.with(|f| f.set(Some(1)));
         let result = write_plugin_dirs(out, &dirs, true);
         FAIL_SWAP_AT.with(|f| f.set(None));
-        assert!(result.is_err());
+        let message = format!("{:#}", result.unwrap_err());
+        assert!(
+            message.contains("injected rename failure at 1"),
+            "{message}"
+        );
         assert_eq!(state(out), before);
     }
 
@@ -465,6 +469,7 @@ mod tests {
         std::fs::write(out.join(".b-claude.upskill-stage").join("stale.txt"), "x").unwrap();
         std::fs::write(out.join(".b-claude.upskill-old"), "x").unwrap();
         std::fs::write(out.join(".b-copilot.upskill-stage"), "x").unwrap();
+        std::fs::create_dir_all(out.join(".b-copilot.upskill-old").join("d")).unwrap();
         let dirs = [
             plugin_dir("b-claude", &[("a/new.txt", "new")]),
             plugin_dir("b-copilot", &[("new.txt", "new"), ("two.txt", "2")]),
@@ -488,6 +493,18 @@ mod tests {
             std::fs::read_to_string(out.join("b-copilot").join("new.txt")).unwrap(),
             "new"
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_link_at_the_staging_path_is_removed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let out = tmp.path();
+        std::os::unix::fs::symlink(out.join("missing"), out.join(".b-claude.upskill-stage"))
+            .unwrap();
+        let dirs = [plugin_dir("b-claude", &[("new.txt", "new")])];
+        write_plugin_dirs(out, &dirs, false).unwrap();
+        assert_eq!(state(out).0, vec!["b-claude".to_string()]);
     }
 
     #[cfg(unix)]
