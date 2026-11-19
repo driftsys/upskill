@@ -160,7 +160,8 @@ failed until `update --force`.
 - Known limits:
   - A terminal run does not apply a source whose preview changes nothing, so it
     does not repair a missing plugin or MCP registration of that source.
-    `doctor` reports it and `update --yes` repairs it.
+    `doctor` reports it and `update --yes` repairs it for a source without a
+    kind restriction.
   - A `--dry-run` block is exact for the current disk, but does not include the
     effect of applying an earlier source.
   - A change of only `required_by` in an item record is not shown and does not

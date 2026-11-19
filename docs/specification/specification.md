@@ -437,14 +437,19 @@ not with `--dry-run` or for a declined source. `required_by` is refreshed when
 not apply a source whose preview changes nothing; a dry run, a declined source
 and a source at which the run stops refresh nothing. A refresh computes
 `required_by` of every lockfile entry again, and rewrites an entry only where
-the new value differs. A requirer is evaluated by the run when the run resolved
-its `requires`: every item of an install by item names, or of a whole directory
-source, and every item that such an item requires. A bundle install, and a
-request that also names a bundle (resolved by name), evaluate no requirer. An
-evaluated requirer is removed from every entry and added back where it still
-requires the item (also an item that `--exclude` leaves out). Every other
-requirer is kept, also when it is not installed. The result does not depend on
-the order of the sources or of two `add` commands.
+the new value differs. An install by item names, or of a whole directory source,
+evaluates every item in its item closure as a requirer, including required
+items. A bundle install, and a request that also names a bundle (resolved by
+name), evaluate no requirer. An update of a directory source with recorded
+bundles evaluates every item in the merged bundle and direct-item closure,
+including bundle members even when there are no direct items. The bundle closure
+itself contributes no item-level `requires` edges. A kind restriction retains
+only items of the selected kinds in the closure; a restricted update leaves
+`required_by` unchanged on entries it does not plan, also in other sources.
+Within the entries being refreshed, an evaluated requirer is removed and added
+back where it still requires the item (also an item that `--exclude` leaves
+out). Every other requirer is kept, also when it is not installed. The result
+does not depend on the order of the sources or of two `add` commands.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
@@ -660,27 +665,28 @@ the check above refuses it.
   §2.1), recorded files that could not be inspected (`doctor` continues with the
   others), SSOT hash drift on `local:` sources (`update` fixes), lockfile
   entries with no recoverable source (`remove` fixes), installed plugins missing
-  from the client (`update --yes` reinstalls: a run in a terminal applies a
-  source only when its preview changes something, and the plugin and MCP steps
-  are not part of the preview; a source under a kind restriction skips both
-  steps), skipped plugins (informational — CLI was absent at install time),
-  orphaned dependencies (informational), MCP server reconciliation, and
-  interrupted items (an item with a non-empty `pending` record: run the same
-  command again to complete it), and, for the global scope only, files at the
-  earlier global Copilot paths (`earlier_layout`; `upskill update --global`
-  moves them). `doctor` also prints a note for each item that the lockfiles of
-  both scopes record; the note does not change the exit code. After the scope
-  reports, `doctor` prints the support level of each client and kind
-  (`Support levels:`; the compiled table in `src/support.rs`, stated in the user
-  guide page "Support levels"); the section does not change the exit code and
-  `doctor` does not detect client versions. Exit 0 when clean, 1 when any drift
-  bucket is non-empty, including `earlier_layout`. Skipped plugins are warnings
-  and do not affect the exit code. Missing, modified and unreadable files are
-  checked against the `files` record; a recorded path that `remove` would never
-  delete (outside the client roots, fewer than three components, or with a `..`
-  component) is skipped without a report. For an item with an empty or missing
-  `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
-  list), `doctor` checks each per-client entry file instead.
+  from the client (`update --yes` reinstalls for a source without a kind
+  restriction: a run in a terminal applies a source only when its preview
+  changes something, and the plugin and MCP steps are not part of the preview; a
+  source under a kind restriction skips both steps), skipped plugins
+  (informational — CLI was absent at install time), orphaned dependencies
+  (informational), MCP server reconciliation, and interrupted items (an item
+  with a non-empty `pending` record: run the same command again to complete it),
+  and, for the global scope only, files at the earlier global Copilot paths
+  (`earlier_layout`; `upskill update --global` moves them). `doctor` also prints
+  a note for each item that the lockfiles of both scopes record; the note does
+  not change the exit code. After the scope reports, `doctor` prints the support
+  level of each client and kind (`Support levels:`; the compiled table in
+  `src/support.rs`, stated in the user guide page "Support levels"); the section
+  does not change the exit code and `doctor` does not detect client versions.
+  Exit 0 when clean, 1 when any drift bucket is non-empty, including
+  `earlier_layout`. Skipped plugins are warnings and do not affect the exit
+  code. Missing, modified and unreadable files are checked against the `files`
+  record; a recorded path that `remove` would never delete (outside the client
+  roots, fewer than three components, or with a `..` component) is skipped
+  without a report. For an item with an empty or missing `files` record (a
+  `schema: 1` lockfile, or a `schema: 2` item with an empty list), `doctor`
+  checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 

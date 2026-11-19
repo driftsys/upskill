@@ -1561,6 +1561,64 @@ mod tests {
     use super::*;
 
     #[test]
+    fn merge_rejects_the_same_item_from_different_sources() {
+        let first = tempfile::tempdir().unwrap();
+        let second = tempfile::tempdir().unwrap();
+        for root in [first.path(), second.path()] {
+            write_item(root, ItemKind::Skill, "s", "");
+        }
+        let items = [(ItemKind::Skill, "s".to_string())];
+        let mut closure =
+            resolve_requires_closure("local:first", first.path(), None, None, &items).unwrap();
+        let other =
+            resolve_requires_closure("local:second", second.path(), None, None, &items).unwrap();
+        assert_eq!(
+            closure.merge(other).unwrap_err().to_string(),
+            "skill 's' resolves from both local:first and local:second"
+        );
+    }
+
+    #[test]
+    fn merge_keeps_one_copy_of_each_shared_item_in_by_source() {
+        let root = tempfile::tempdir().unwrap();
+        let items = [
+            (ItemKind::Rule, "r".to_string()),
+            (ItemKind::Skill, "s".to_string()),
+            (ItemKind::Agent, "a".to_string()),
+        ];
+        for (kind, name) in &items {
+            write_item(root.path(), *kind, name, "");
+        }
+        let mut closure =
+            resolve_requires_closure("local:shared", root.path(), None, None, &items).unwrap();
+        let other =
+            resolve_requires_closure("local:shared", root.path(), None, None, &items).unwrap();
+        closure.merge(other).unwrap();
+        let source = &closure.by_source["local:shared"];
+        assert_eq!(source.items.rules, ["r"]);
+        assert_eq!(source.items.skills, ["s"]);
+        assert_eq!(source.items.agents, ["a"]);
+    }
+
+    #[test]
+    fn merge_keeps_the_fetch_guards_of_both_closures() {
+        let first = tempfile::tempdir().unwrap();
+        let second = tempfile::tempdir().unwrap();
+        let paths = [first.path().to_path_buf(), second.path().to_path_buf()];
+        let mut closure = DependencyClosure {
+            guards: vec![first],
+            ..DependencyClosure::default()
+        };
+        let other = DependencyClosure {
+            guards: vec![second],
+            ..DependencyClosure::default()
+        };
+        closure.merge(other).unwrap();
+        assert_eq!(closure.guards.len(), 2);
+        assert!(paths.iter().all(|path| path.exists()));
+    }
+
+    #[test]
     fn audience_none_targets_all_clients() {
         for c in ALL_CLIENTS {
             assert!(targets(c, None));

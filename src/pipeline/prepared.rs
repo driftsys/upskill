@@ -57,8 +57,8 @@ pub(super) struct PreparedInstall {
 struct RequiresProvenance {
     evaluated: BTreeSet<String>,
     required_by: BTreeMap<(ItemKind, String), Vec<String>>,
-    /// A restricted update leaves entries of other kinds in this source untouched.
-    restriction: Option<(String, Vec<ItemKind>)>,
+    /// A restricted update refreshes only entries that it plans.
+    restriction: Option<BTreeSet<(ItemKind, String)>>,
 }
 
 /// What [`PreparedInstall::commit`] would do now. Computed without any
@@ -119,7 +119,7 @@ pub(super) fn prepare_install(
             .iter()
             .filter(|(_, n)| !options.excludes.contains(n))
             .filter(|(kind, _)| options.kinds.is_empty() || options.kinds.contains(kind))
-            .filter(|(_, n)| (items.is_empty() && options.bundles.is_empty()) || items.contains(n))
+            .filter(|(_, n)| items.is_empty() || items.contains(n))
             .filter(|(kind, name)| seen.insert((*kind, name.clone())))
             .map(|(kind, name)| (*kind, name.clone()))
             .collect()
@@ -486,13 +486,15 @@ impl PreparedInstall {
     /// The `requires` provenance of this run, with installed (post-alias)
     /// names.
     ///
-    /// `evaluated` holds the label `"kind:name"` of each item whose
-    /// `requires` this run resolved: every item of the item closure. A
-    /// bundle install and a name-resolution install resolve no item
-    /// `requires`, so their `evaluated` set is empty, except when update merges
-    /// a direct item closure with its recorded bundle closure. `required_by` maps each
-    /// dependency that the closure reached, also an excluded one, to its
-    /// requirers.
+    /// `evaluated` holds the label `"kind:name"` of every item in the
+    /// retained closure. An item install evaluates its item closure. A bundle
+    /// or name-resolution install evaluates no requirer. An update of a
+    /// directory source with recorded bundles evaluates the merged bundle and
+    /// direct-item closure, including bundle members even without direct items.
+    /// The bundle closure contributes no item-level `required_by` edges.
+    /// `required_by` maps each dependency reached by the item closure, also an
+    /// excluded one, to its requirers. A restricted update refreshes only
+    /// planned entries, including entries from other sources.
     fn requires_provenance(&self) -> RequiresProvenance {
         // Translate `requires` provenance through any applied `--as` aliases so
         // the recorded `required_by` is consistent with the post-alias names that
@@ -520,10 +522,16 @@ impl PreparedInstall {
         };
         let mut provenance = RequiresProvenance {
             restriction: (self.options.keep_unwithheld_edits && !self.options.kinds.is_empty())
-                .then(|| (self.label.clone(), self.options.kinds.clone())),
+                .then(|| {
+                    self.report
+                        .planned
+                        .iter()
+                        .map(|item| (item.kind, item.name.clone()))
+                        .collect()
+                }),
             ..RequiresProvenance::default()
         };
-        // Update can merge an item closure into its recorded bundle closure.
+        // Update evaluates its recorded bundle closure even without direct items.
         let Some(closure) = self
             .closure
             .as_ref()
@@ -857,15 +865,16 @@ impl PreparedInstall {
 ///
 /// A requirer label (`"kind:name"`) in `provenance.evaluated` is removed
 /// from every entry and added back where `provenance.required_by` records
-/// it. Every other requirer is kept, whether or not it is installed. The
-/// result is sorted and has no duplicates.
+/// it. A restricted update leaves entries it does not plan untouched, also
+/// in other sources. Every other requirer is kept, whether or not it is
+/// installed. The result is sorted and has no duplicates.
 fn refresh_required_by(lock: &mut Lockfile, provenance: &RequiresProvenance) -> bool {
     let mut changed = false;
     for entry in &mut lock.items {
         if provenance
             .restriction
             .as_ref()
-            .is_some_and(|(source, kinds)| entry.source == *source && !kinds.contains(&entry.kind))
+            .is_some_and(|planned| !planned.contains(&(entry.kind, entry.name.clone())))
         {
             continue;
         }

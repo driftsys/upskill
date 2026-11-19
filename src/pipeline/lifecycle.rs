@@ -915,9 +915,9 @@ fn reselect_from_entries(
 /// directly installed items of that source, and no other source items. It
 /// applies a kind restriction only when every recorded bundle of the source
 /// has recorded kinds, using their union. With one unrestricted bundle of the
-/// source, no restriction applies. A direct item outside that
-/// restriction is kept unchanged and is not updated. To update it, run
-/// `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled
+/// source, no restriction applies. Every entry of that source whose kind is
+/// outside the restriction is kept unchanged and is not updated. To update it,
+/// run `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled
 /// as a whole. Each reinstalled entry gets the commit of its own source,
 /// unless its update is skipped; any other entry keeps its recorded commit.
 /// Every source without changes that is not applied, in a run that is not

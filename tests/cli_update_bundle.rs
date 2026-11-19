@@ -194,17 +194,45 @@ fn update_does_not_install_an_item_of_the_source_that_the_bundle_does_not_list()
 }
 
 #[test]
+#[cfg(unix)]
 fn update_keeps_the_kind_restriction_of_add() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
+    use std::os::unix::fs::PermissionsExt;
+
     setup_kind_registry(registry.path());
+    let bundle_path = registry.path().join("bun.bundle.yaml");
+    let mut bundle = fs::read_to_string(&bundle_path).unwrap();
+    bundle.push_str("plugins:\n  tool:\n    claude:\n      source: example/tools\n      marketplace: tools\n      plugin: tool\nmcps:\n  server:\n    local:\n      command: example-server\n");
+    write(&bundle_path, &bundle);
+    let bin = consumer.path().join("bin");
+    let marker = consumer.path().join("claude-called");
+    let claude = bin.join("claude");
+    write(
+        &claude,
+        "#!/bin/sh\nprintf 'called\\n' >> \"$CLAUDE_MARKER\"\n",
+    );
+    fs::set_permissions(&claude, fs::Permissions::from_mode(0o755)).unwrap();
+    let mut paths = vec![bin];
+    paths.extend(std::env::split_paths(
+        &std::env::var_os("PATH").unwrap_or_default(),
+    ));
+    let path = std::env::join_paths(paths).unwrap();
     add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
     write_rule_body(registry.path(), "r", "Changed rule body.");
     write(
         &registry.path().join("a/SKILL.md"),
         "---\nname: a\ndescription: A changed skill.\n---\nChanged skill body.\n",
     );
-    update_named_bundle(consumer.path());
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .env("PATH", path)
+        .env("CLAUDE_MARKER", &marker)
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(!marker.exists());
+    assert!(!consumer.path().join(".mcp.json").exists());
     assert!(
         fs::read_to_string(consumer.path().join(".claude/rules/r.md"))
             .unwrap()
@@ -626,4 +654,84 @@ fn update_merges_direct_item_requires_into_the_bundle_closure() {
         .args(["doctor", "--project"])
         .assert()
         .success();
+}
+
+#[test]
+fn update_under_a_kind_restriction_keeps_the_provenance_of_a_required_item_of_another_source() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let dependency = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    write_skill(dependency.path(), "s");
+    write(
+        &registry.path().join("r2/RULE.md"),
+        &format!(
+            "---\nname: r2\ndescription: Dependent rule.\nrequires:\n  skills: [{{name: s, source: {}}}]\n---\nRule body.\n",
+            dependency.path().display()
+        ),
+    );
+    add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
+    add_direct(consumer.path(), registry.path(), "r2");
+    let before = read_update_lock(consumer.path());
+    let required_by = &before["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["name"] == "s" && item["kind"] == "skill")
+        .unwrap()["required_by"];
+    assert_eq!(*required_by, serde_json::json!(["rule:r2"]));
+    update_named_bundle(consumer.path());
+    let after = read_update_lock(consumer.path());
+    assert_eq!(
+        after["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["name"] == "s" && item["kind"] == "skill")
+            .unwrap()["required_by"],
+        *required_by
+    );
+}
+
+#[test]
+fn add_under_a_kind_restriction_refreshes_the_provenance_of_an_unplanned_item() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "s");
+    write(
+        &registry.path().join("r2/RULE.md"),
+        "---\nname: r2\ndescription: Dependent rule.\nrequires:\n  skills: [s]\n---\nRule body.\n",
+    );
+    add_direct(consumer.path(), registry.path(), "r2");
+    assert_eq!(
+        read_update_lock(consumer.path())["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["name"] == "s")
+            .unwrap()["required_by"],
+        serde_json::json!(["rule:r2"])
+    );
+    write_rule_body(registry.path(), "r2", "No dependency remains.");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "r2",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let after = read_update_lock(consumer.path());
+    let item = after["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["name"] == "s")
+        .unwrap();
+    assert!(item.get("required_by").is_none());
 }

@@ -221,9 +221,10 @@ findings:
 - Orphan per-client files not recorded in the lockfile (a previous install or
   hand-creation that needs reconciling)
 - Plugin recorded as installed but missing from the client (uninstalled
-  out-of-band → `update --yes` reinstalls; a run in a terminal applies a source
-  only when its preview changes something, and the plugin and MCP steps are not
-  part of the preview)
+  out-of-band → `update --yes` reinstalls for a source without a kind
+  restriction; a run in a terminal applies a source only when its preview
+  changes something, and the plugin and MCP steps are not part of the preview; a
+  source under a kind restriction skips both steps)
 - Plugin skipped at install time because the client CLI was not on PATH
   (informational warning — install the CLI then run `update --yes`)
 
@@ -396,8 +397,9 @@ client, runs `add --kind rule --project` for that client. `add --kind` is
 repeatable for `rule`, `skill` and `agent`; it skips plugin and MCP steps.
 Bundle lockfile entries record the selected `kinds`. `update` uses their union
 only when every recorded bundle of the source has recorded kinds; one
-unrestricted bundle leaves that source unrestricted. A directly installed item
-outside the restriction stays unchanged; reinstall it explicitly to update it.
+unrestricted bundle leaves that source unrestricted. Every entry of that source
+whose kind is outside the restriction stays unchanged; reinstall it explicitly
+to update it.
 
 The embedded notice hook calls `update --notice`. Runs sharing a cache use
 `notice.lock`: a lock younger than 60 seconds makes another run exit silently. A

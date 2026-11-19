@@ -42,6 +42,7 @@ pub enum Commands {
     ///
     /// Author command: reads the source registry in the current directory.
     /// Without a client flag, writes both directories.
+    /// A `requires` entry with a `source` is fetched from that source.
     #[command(display_order = 13)]
     Pack {
         bundle: String,
