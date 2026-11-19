@@ -2393,7 +2393,7 @@ fn run_pack(
         if claude || !copilot {
             directories.push(pack::build(&root, bundle, source, PackClient::Claude)?);
         }
-        if copilot {
+        if copilot || !claude {
             directories.push(pack::build(&root, bundle, source, PackClient::Copilot)?);
         }
         for directory in &directories {

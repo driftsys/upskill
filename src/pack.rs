@@ -82,20 +82,35 @@ fn manifest(bundle: &Bundle) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
-fn init_text(bundle: &str, source: &str, bundles: &[Bundle]) -> String {
+fn init_text(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient) -> String {
+    let flag = match client {
+        PackClient::Claude => "--claude",
+        PackClient::Copilot => "--copilot",
+    };
     let mut text = format!(
-        "---\ndescription: Install the rules of the {bundle} bundle into this repository\n---\n\nRun this command in the root directory of the repository. Then report its\noutput to the user.\n\n```text\nupskill add {source} {bundle} --kind rule --project --claude\n```\n\nIf the command fails, report the error text. Do not run another command in its\nplace.\n"
+        "---\ndescription: Install the rules of the {bundle} bundle into this repository\n---\n\nRun this command in the root directory of the repository. Then report its\noutput to the user.\n\n```text\nupskill add {source} {bundle} --kind rule --project {flag}\n```\n\nIf the command fails, report the error text. Do not run another command in its\nplace.\n"
     );
     let mut plugins = BTreeMap::new();
     let mut mcps = BTreeSet::new();
     for bundle in bundles {
         for (name, entry) in &bundle.plugins {
-            if let Some(descriptor) = &entry.claude {
-                let url = match descriptor {
-                    ClaudePluginDescriptor::Install { install_url, .. } => install_url.as_deref(),
-                    ClaudePluginDescriptor::Instructions { .. } => None,
-                };
-                plugins.insert(name, url);
+            match client {
+                PackClient::Claude => {
+                    if let Some(descriptor) = &entry.claude {
+                        let url = match descriptor {
+                            ClaudePluginDescriptor::Install { install_url, .. } => {
+                                install_url.as_deref()
+                            }
+                            ClaudePluginDescriptor::Instructions { .. } => None,
+                        };
+                        plugins.insert(name, url);
+                    }
+                }
+                PackClient::Copilot => {
+                    if entry.copilot.is_some() {
+                        plugins.insert(name, None);
+                    }
+                }
             }
         }
         mcps.extend(bundle.mcps.keys());
@@ -123,10 +138,23 @@ pub fn build(
     source: &str,
     client: PackClient,
 ) -> Result<PluginDir> {
-    if client == PackClient::Copilot {
-        bail!("pack for Copilot CLI is not implemented");
-    }
-    let output = plan_bundle_output(registry_root, bundle, Client::Claude)?;
+    let (generator, suffix, manifest_path, hook_path, hook) = match client {
+        PackClient::Claude => (
+            Client::Claude,
+            "claude",
+            ".claude-plugin/plugin.json",
+            "hooks/hooks.json",
+            include_str!("../plugins/upskill-claude/hooks/hooks.json"),
+        ),
+        PackClient::Copilot => (
+            Client::Copilot,
+            "copilot",
+            "plugin.json",
+            "hooks.json",
+            include_str!("../plugins/upskill-copilot/hooks.json"),
+        ),
+    };
+    let output = plan_bundle_output(registry_root, bundle, generator)?;
     let entry = output
         .bundles
         .last()
@@ -141,26 +169,24 @@ pub fn build(
         })
         .collect();
     files.push(PackFile {
-        rel: ".claude-plugin/plugin.json".into(),
+        rel: manifest_path.into(),
         bytes: manifest(entry)?,
         mode: None,
     });
     if !output.rules.is_empty() {
         files.push(PackFile {
             rel: "commands/init.md".into(),
-            bytes: init_text(bundle, source, &output.bundles).into_bytes(),
+            bytes: init_text(bundle, source, &output.bundles, client).into_bytes(),
             mode: None,
         });
         files.push(PackFile {
-            rel: "hooks/hooks.json".into(),
-            bytes: include_str!("../plugins/upskill-claude/hooks/hooks.json")
-                .as_bytes()
-                .to_vec(),
+            rel: hook_path.into(),
+            bytes: hook.as_bytes().to_vec(),
             mode: None,
         });
     }
     Ok(PluginDir {
-        dir_name: format!("{bundle}-claude"),
+        dir_name: format!("{bundle}-{suffix}"),
         files,
     })
 }
@@ -178,7 +204,7 @@ mod tests {
 
     #[test]
     fn init_with_list_matches_golden() {
-        let text = init_text("demo", "driftsys/demo@v1", &[demo()]);
+        let text = init_text("demo", "driftsys/demo@v1", &[demo()], PackClient::Claude);
         assert!(text.contains("- plugin `tool`: <https://example.com/tool>\n"));
         assert_eq!(
             text,
@@ -192,7 +218,10 @@ mod tests {
             .split("\nThe command does not install")
             .next()
             .unwrap();
-        assert_eq!(init_text("demo", "driftsys/demo@v1", &[]), expected);
+        assert_eq!(
+            init_text("demo", "driftsys/demo@v1", &[], PackClient::Claude),
+            expected
+        );
     }
 
     #[test]

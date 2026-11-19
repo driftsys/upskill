@@ -51,11 +51,16 @@ impl Fixture {
     }
 
     fn command(&self, bundle: &str) -> assert_cmd::Command {
+        let mut cmd = self.command_for_clients(bundle);
+        cmd.arg("--claude");
+        cmd
+    }
+
+    fn command_for_clients(&self, bundle: &str) -> assert_cmd::Command {
         let mut cmd = common::upskill_cmd(&self.home);
         cmd.current_dir(&self.registry)
             .args(["pack", bundle, "--source", "driftsys/demo@v1", "--out"])
-            .arg(&self.out)
-            .arg("--claude");
+            .arg(&self.out);
         cmd
     }
 
@@ -212,34 +217,90 @@ fn pack_refuses_a_file_target_even_with_force() {
 }
 
 #[test]
-fn pack_builds_all_selected_clients_before_writing() {
+fn pack_writes_the_copilot_plugin_directory() {
     let f = Fixture::new();
-    f.command("demo")
+    f.command_for_clients("demo")
         .arg("--copilot")
         .assert()
-        .code(1)
-        .stderr(predicates::str::contains(
-            "pack for Copilot CLI is not implemented",
-        ));
-    assert!(!f.out.exists());
+        .success();
+    assert_eq!(
+        tree(&f.out.join("demo-copilot")),
+        tree(Path::new("tests/fixtures/pack/expected/demo-copilot"))
+    );
+    assert!(!f.target().exists());
 }
 
 #[test]
-fn pack_defaults_to_claude_and_honors_quiet() {
+fn pack_without_a_client_flag_writes_both_directories() {
     let f = Fixture::new();
-    common::upskill_cmd(&f.home)
-        .current_dir(&f.registry)
-        .args(["pack", "demo", "--source", "driftsys/demo@v1", "--out"])
-        .arg(&f.out)
+    f.command_for_clients("demo")
         .assert()
         .success()
-        .stdout(format!("Wrote {} (7 files)\n", f.target().display()));
-    f.command("demo")
+        .stdout(format!(
+            "Wrote {} (7 files)\nWrote {} (7 files)\n",
+            f.target().display(),
+            f.out.join("demo-copilot").display()
+        ));
+    f.assert_golden();
+    assert_eq!(
+        tree(&f.out.join("demo-copilot")),
+        tree(Path::new("tests/fixtures/pack/expected/demo-copilot"))
+    );
+    f.command_for_clients("demo")
         .args(["--force", "--quiet"])
         .assert()
         .success()
         .stdout("");
-    f.assert_golden();
+}
+
+#[test]
+fn pack_copilot_hook_file_equals_the_notice_plugin() {
+    let f = Fixture::new();
+    f.command_for_clients("demo")
+        .arg("--copilot")
+        .assert()
+        .success();
+    assert_eq!(
+        fs::read(f.out.join("demo-copilot/hooks.json")).unwrap(),
+        fs::read("plugins/upskill-copilot/hooks.json").unwrap()
+    );
+}
+
+#[test]
+fn pack_checks_both_directories_before_it_writes_one() {
+    let f = Fixture::new();
+    let target = f.out.join("demo-copilot");
+    fs::create_dir_all(&target).unwrap();
+    fs::write(target.join("keep"), "unchanged").unwrap();
+    let before = tree(&f.out);
+    f.command_for_clients("demo")
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(target.to_str().unwrap()))
+        .stderr(predicates::str::contains("--force"));
+    assert!(!f.target().exists());
+    assert_eq!(tree(&f.out), before);
+}
+
+#[test]
+fn pack_gives_no_init_command_to_a_client_that_no_rule_targets() {
+    let f = Fixture::new();
+    fs::write(f.registry.join("claudeonly.bundle.yaml"), "schema: 1\nname: claudeonly\ndescription: Claude rules bundle\nitems:\n  skills: [alpha]\n  rules: [style]\n").unwrap();
+    let rule = f.registry.join("items/style/RULE.md");
+    let text = fs::read_to_string(&rule).unwrap();
+    fs::write(
+        rule,
+        text.replace("name: style", "name: style\naudience: [claude]"),
+    )
+    .unwrap();
+    f.command_for_clients("claudeonly").assert().success();
+    let copilot = f.out.join("claudeonly-copilot");
+    assert!(copilot.join("skills/alpha/SKILL.md").is_file());
+    assert!(!copilot.join("commands").exists());
+    assert!(!copilot.join("hooks.json").exists());
+    let claude = f.out.join("claudeonly-claude");
+    assert!(claude.join("commands/init.md").is_file());
+    assert!(claude.join("hooks/hooks.json").is_file());
 }
 
 #[cfg(unix)]
