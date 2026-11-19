@@ -1192,9 +1192,14 @@ and rebuilds that directory, including removal of files from an earlier run. A
 file or symbolic link at the client directory path is refused even with
 `--force`. An unknown bundle fails with exit code 1. Each client directory is
 first written in full to a staging directory next to it,
-`.<bundle>-<client>.upskill-stage`. A failed write removes the staging
-directories and leaves every client directory unchanged. When all are written,
-each staging directory replaces its client directory.
+`.<bundle>-<client>.upskill-stage`. When all are written, each existing client
+directory is renamed to `.<bundle>-<client>.upskill-old`, its staging directory
+is renamed into place, and the `.upskill-old` directories are then removed. A
+failure while writing or renaming undoes the renames already made, so every
+client directory keeps its earlier content, and `pack` tries to remove the
+staging directories. A file, directory or link left at a staging or
+`.upskill-old` path by an earlier run is removed. An existing empty client
+directory is replaced by a new one, also without `--force`.
 
 `--source` must parse as an install source, must not start with a hyphen and
 must contain only ASCII letters, digits and `/ @ : . _ - ~ +`. Whitespace and

@@ -23,9 +23,10 @@ bundle; it does not replace the bundle or change its schema.
    manifests, agent filenames, init client flags and hook paths differ. No
    client flag selects both; either flag selects its client, and both flags
    select both clients. `--force` replaces each selected output directory: every
-   directory is first written in full to a staging directory, and only then does
-   each one replace its target, so a failed write changes no output directory.
-   No README or LICENSE file is generated.
+   directory is first written in full to a staging directory, and only then is
+   each target renamed aside and replaced by a rename. A failure while writing
+   or renaming undoes the renames already made, so every output directory keeps
+   its earlier content. No README or LICENSE file is generated.
 3. upskill does not install, register or own the generated plugin, following
    [AD-0042, Decision 8](0042-resteer-customization-delivery.md). The author
    publishes it through a marketplace, and the user installs it with the client.
