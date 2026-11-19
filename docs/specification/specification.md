@@ -829,8 +829,9 @@ digits and `- _ .`.
 `pack` reads no lockfile and writes only below `--out`. It does not install or
 register the plugin, write a marketplace manifest, or publish it. The bundle
 schema is unchanged. Copy the outputs into a marketplace repository and install
-through the client. Plugin output is experimental pending marketplace smoke
-tests in both clients; `doctor` gains no row.
+through the client. Plugin output is experimental until a smoke test with a
+hosted git marketplace passes in both clients (the local-marketplace smoke test
+of 2026-11-19 passed); `doctor` gains no row.
 
 No rule file is included. Init instructs the model to run
 `upskill add <source> <bundle> --kind rule --project --claude`, or the same

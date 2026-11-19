@@ -2,13 +2,15 @@
 
 Date: 2026-11-19. Binary: `upskill` built from `main` at `553590a`. Clients:
 Claude Code 2.1.308 and GitHub Copilot CLI 1.0.112, on macOS. Each result is
-from one run; model answers can vary between runs.
+from one run, except where a second prompt is named; model answers can vary
+between runs.
 
 ## Setup
 
 - Source: a copy of the test registry `tests/fixtures/pack/registry`, as a git
-  repository. Bundle `demo` holds skill `alpha`, skill `beta` (through
-  `requires: base`), agent `helper`, and rules `style` and `naming`.
+  repository. Bundle `demo` holds skill `alpha`, agent `helper` and rule
+  `style`; through `requires: base` it also brings skill `beta` and rule
+  `naming`.
 - `upskill pack demo --source <registry> --out <market>/plugins` wrote
   `demo-claude/` and `demo-copilot/`, 7 files each.
 - A local marketplace repository held both directories and both manifests:
@@ -36,6 +38,11 @@ Copilot CLI read only `.github/plugin/marketplace.json` and installed
 repository. The reverse check on Claude Code was not run.
 
 ## Observations
+
+- The Copilot CLI notice result is from prompt mode (`copilot -p`), where the
+  hook line was printed before the reply. It does not change the interactive
+  result of [T2](t2-session-notice-display.md), where Copilot CLI 1.0.112 did
+  not show the notice in 0 of 3 interactive sessions.
 
 - In a non-interactive Copilot CLI run, the init command needed
   `--allow-tool='shell(upskill:*)'` and also `--allow-all-paths`, because the

@@ -66,9 +66,10 @@ bundle; it does not replace the bundle or change its schema.
 
 ## Consequences
 
-Plugin output is experimental until a maintainer completes a marketplace-install
-smoke test in both clients. `doctor` gains no row. Plugin updates belong to the
-client marketplace; project rules remain managed by upskill.
+Plugin output is experimental until a smoke test with a hosted git marketplace
+passes in both clients (the local-marketplace smoke test of 2026-11-19 passed).
+`doctor` gains no row. Plugin updates belong to the client marketplace; project
+rules remain managed by upskill.
 
 The init command and hook require the upskill binary. Installing the same skills
 through a plugin and `add` exposes duplicates. References by short skill name
