@@ -29,7 +29,9 @@ pub struct Cli {
     pub no_color: bool,
     /// Suppress informational stdout. Errors on stderr and exit codes
     /// are unaffected. Useful for CI use of `lint`, `update`, etc.
-    /// `update --dry-run --quiet` prints nothing.
+    /// `update --dry-run --quiet` prints nothing on stdout; to see in CI what an update
+    /// would change, run `update --dry-run` without `--quiet`, or
+    /// `update --check`.
     #[arg(short = 'q', long = "quiet", global = true)]
     pub quiet: bool,
     #[command(subcommand)]

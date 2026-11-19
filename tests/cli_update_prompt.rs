@@ -481,6 +481,71 @@ fn quiet_prints_only_the_question() {
     );
 }
 
+/// A terminal run with `--quiet` prints the kept note on stderr, as
+/// `update --yes --quiet` does (issue #508).
+#[test]
+fn quiet_prints_a_kept_note_on_stderr_in_a_terminal_and_with_yes() {
+    let (tmp, home) = two_sources(&["--claude"]);
+    fs::write(claude_skill(tmp.path(), "one"), "my edit\n").unwrap();
+    fs::write(claude_skill(tmp.path(), "two"), "my edit\n").unwrap();
+    let note = "kept modified file: .claude/skills/one/SKILL.md";
+    let note_two = "kept modified file: .claude/skills/two/SKILL.md";
+
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project", "--quiet"], "");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(stdout(&result), "", "{result}");
+    assert_eq!(stderr(&result).matches(note).count(), 1, "{result}");
+    assert_eq!(stderr(&result).matches(note_two).count(), 1, "{result}");
+
+    // Without `--quiet` the blocks on stdout name the notes, and stderr
+    // carries no note.
+    let result = common::update_in_terminal(tmp.path(), &home, &["--project"], "");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(stdout(&result).matches(note).count(), 1, "{result}");
+    assert!(!stderr(&result).contains("kept modified file"), "{result}");
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["update", "--project", "--quiet", "--yes"])
+        .assert()
+        .success();
+    let err = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert_eq!(err.matches(note).count(), 1, "{err}");
+    assert_eq!(err.matches(note_two).count(), 1, "{err}");
+    assert!(out.get_output().stdout.is_empty(), "{:?}", out.get_output());
+}
+
+/// `update --dry-run --quiet` prints nothing on stdout, also with an edited
+/// file and a changed source; the same dry run without `--quiet` prints the
+/// note (issue #508).
+#[test]
+fn dry_run_quiet_prints_nothing_on_stdout() {
+    let (tmp, home) = two_sources(&["--claude"]);
+    change_source(tmp.path(), "b", "two");
+    fs::write(claude_skill(tmp.path(), "one"), "my edit\n").unwrap();
+    let run = |quiet: bool| {
+        let mut args = vec!["update", "--project", "--dry-run"];
+        if quiet {
+            args.push("--quiet");
+        }
+        let out = common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(&args)
+            .assert()
+            .success();
+        let output = out.get_output();
+        (
+            String::from_utf8_lossy(&output.stdout).into_owned(),
+            String::from_utf8_lossy(&output.stderr).into_owned(),
+        )
+    };
+    let (out, err) = run(true);
+    assert_eq!(out, "");
+    assert!(!err.contains("kept modified file"), "{err}");
+    let (loud, _) = run(false);
+    assert!(loud.contains("kept modified file"), "{loud}");
+}
+
 #[test]
 fn quiet_names_a_skipped_file_on_stderr_and_exits_1() {
     let (tmp, home) = two_sources(&["--claude"]);

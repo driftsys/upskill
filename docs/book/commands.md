@@ -507,15 +507,17 @@ applied or in a source whose preview changes nothing, when a source could not be
 fetched, or when a step fails. Answers `n` and `q` do not change the exit code,
 and a `skip` line in a source that was not applied does not cause exit code 1.
 Sources applied before a failure in the apply of a later source stay applied.
-With `--quiet`, a terminal run does not print the blocks, the
-`kept modified file` notes, the result lines or the closing summary. The
-question names the source (`Apply changes from <source>? [y/N/q]`). The
-`skipped` lines of the skipped items that cause exit code 1,
-`Use --force to replace.` and the adoption notice of a `schema: 1` lockfile are
-printed on stderr; without `--quiet`, a terminal run prints no `skipped` line,
-because the blocks name these files. `update --dry-run --quiet` prints nothing
-on stdout. A terminal run prints the adoption notice before the block of the
-source that adopted the lockfile.
+With `--quiet`, a terminal run does not print the blocks, the result lines or
+the closing summary; it prints each `kept modified file` note on stderr, as
+`update --yes --quiet` does. The question names the source
+(`Apply changes from <source>? [y/N/q]`). The `skipped` lines of the skipped
+items that cause exit code 1, `Use --force to replace.` and the adoption notice
+of a `schema: 1` lockfile are printed on stderr; without `--quiet`, a terminal
+run prints no `skipped` line, because the blocks name these files.
+`update --dry-run --quiet` prints nothing on stdout, also no
+`kept modified file` note; to see in CI what an update would change, run
+`update --dry-run` without `--quiet`, or `update --check`. A terminal run prints
+the adoption notice before the block of the source that adopted the lockfile.
 
 A run with `--yes`, or without a terminal, prints `Updated <n> of <m> item(s)`
 and one status line per item when an item changed or was skipped, files were

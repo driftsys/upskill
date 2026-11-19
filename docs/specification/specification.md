@@ -381,9 +381,10 @@ item and a `kept modified file` note are not changes.
   whose preview changes nothing, when a source was skipped, or when a step
   fails; answers `n` and `q` do not change it, and a `skip` line of a source
   that was not applied does not cause exit code 1. With `--quiet`, the blocks,
-  the notes, the result lines and the closing summary are not printed; the
-  question is `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of
-  the skipped items that cause exit code 1, `Use --force to replace.` and the
+  the result lines and the closing summary are not printed, and each
+  `kept modified file` note is printed on stderr, as with `--yes`; the question
+  is `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of the
+  skipped items that cause exit code 1, `Use --force to replace.` and the
   adoption notice are printed on stderr. Without `--quiet`, a terminal run
   prints no `skipped` line.
 - **`--yes`, or stdin is not a terminal.** Every source is applied without a
@@ -439,9 +440,11 @@ item and a `kept modified file` note are not changes.
   the terminal summary) and
   `Each block is computed for the current state; a later block does not include the effect of an earlier one.`,
   and exits with code 0 when no step fails and no source was skipped, for either
-  cause (code 1 otherwise). `update --dry-run --quiet` prints nothing on stdout.
-  Because nothing is applied, a later block does not include the effect of
-  applying an earlier source.
+  cause (code 1 otherwise). `update --dry-run --quiet` prints nothing on stdout,
+  also no `kept modified file` note; to see in CI what an update would change,
+  run `update --dry-run` without `--quiet`, or `update --check`. Because nothing
+  is applied, a later block does not include the effect of applying an earlier
+  source.
 
 A `schema: 1` lockfile is adopted once per run, without a question, after every
 source that was not skipped (because it could not be fetched, or because it
