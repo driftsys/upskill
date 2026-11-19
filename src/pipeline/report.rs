@@ -208,6 +208,9 @@ pub struct PluginResult {
     pub instructions_url: Option<String>,
     /// Human-readable summary for manual instructions.
     pub summary: Option<String>,
+    /// True for an opencode `plugin_uri` install: a write to the `plugin`
+    /// array of `opencode.json`, recorded as `config_write` in the lockfile.
+    pub config_write: bool,
 }
 
 /// Result of a single MCP server configuration attempt, for reporting.
@@ -340,16 +343,27 @@ pub struct MissingPlugin {
     pub client: String,
     pub identifier: String,
     pub bundle: String,
+    /// The command that installs the plugin when `update` cannot: the
+    /// lockfile records no item from the source of the plugin's bundle, so
+    /// that source is not part of an `update` run. `None` otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repair_command: Option<String>,
 }
 
 /// Plugin in lockfile (status: skipped) because the client CLI was not on
-/// PATH at install time.  The plugin has never been installed.
+/// PATH, or opencode was below version 2 or gave no version, at install
+/// time.  The plugin has never been installed.
 #[derive(Debug, Clone, Serialize)]
 pub struct SkippedPlugin {
     pub name: String,
     pub client: String,
     pub identifier: String,
     pub bundle: String,
+    /// The command that installs the plugin when `update` cannot: the
+    /// lockfile records no item from the source of the plugin's bundle, so
+    /// that source is not part of an `update` run. `None` otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repair_command: Option<String>,
 }
 
 /// Reconciliation outcome for a single MCP server during `doctor`.
@@ -583,9 +597,11 @@ pub struct UpdateReport {
     pub sources_not_applied: usize,
     /// True when the observer returned [`SourceDecision::Stop`].
     pub stopped: bool,
-    /// Plugins that the run installed again because they were recorded as
-    /// installed and the client reported them missing (issue #229). The
-    /// plugin install that is part of the apply of a source is not listed.
+    /// The results of the plugin repair of the run (issue #229): every
+    /// plugin recorded as skipped, or recorded as installed and reported
+    /// missing, that was tried again, with any outcome (installed, client
+    /// CLI absent, unsupported version, failed). The plugin install that is
+    /// part of the apply of a source is not listed.
     pub plugin_results: Vec<PluginResult>,
     /// Sources of the run that were not previewed because the observer
     /// returned [`SourceDecision::Stop`] for an earlier source; 0 when the

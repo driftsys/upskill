@@ -427,7 +427,8 @@ fn remove_selected(
 /// - **missing plugins** — plugins recorded as installed that the client
 ///   no longer has.
 /// - **skipped plugins** (advisory) — plugins that were never installed
-///   because the client CLI was missing.
+///   because the client CLI was missing, or opencode was below version 2 or
+///   gave no version.
 /// - **MCP entries** — MCP server reconciliation against each client.
 /// - **interrupted** — items with a non-empty `pending` record: an `add` or
 ///   `update` failed or was stopped between its first and its last write.
@@ -442,6 +443,33 @@ fn remove_selected(
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by `update --check`, which
 /// does not fetch, and by `update --dry-run`, which does fetch.
+/// The `upskill add` command that installs again the plugins of `bundle`,
+/// when `update` cannot: the lockfile records the bundle's source, but no
+/// item from it, and `update` runs over the sources of the recorded items.
+/// `None` when an item comes from that source, or the bundle is not
+/// recorded.
+fn add_command_for_bundle(
+    at: &ScopeRoot,
+    lock: &crate::lockfile::Lockfile,
+    bundle: &str,
+) -> Option<String> {
+    let recorded = lock.bundles.iter().find(|b| b.name == bundle)?;
+    if lock.items.iter().any(|i| i.source == recorded.source) {
+        return None;
+    }
+    let label = recorded.source.as_str();
+    let source = label
+        .strip_prefix("local:")
+        .or_else(|| label.strip_prefix("github:"))
+        .unwrap_or(label);
+    let name = if label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
+        String::new()
+    } else {
+        format!(" {bundle}")
+    };
+    Some(format!("upskill add {source}{name} --{}", at.scope))
+}
+
 pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     let target = at.root.as_path();
     let lock = crate::lockfile::Lockfile::load(target)?;
@@ -624,7 +652,8 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     // installed plugin list.
     //
     // Two buckets:
-    // - skipped_plugins: status == Skipped (CLI was absent at install time).
+    // - skipped_plugins: status == Skipped (CLI was absent, or opencode was
+    //   below version 2, at install time).
     //   Always surface; does not affect is_clean().
     // - missing_plugins: status == Installed but the client no longer has the
     //   plugin.  This is drift → is_clean() returns false → exit 1.
@@ -641,6 +670,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     client: plugin.client.clone(),
                     identifier: plugin.identifier.clone(),
                     bundle: plugin.bundle.clone(),
+                    repair_command: add_command_for_bundle(at, &lock, &plugin.bundle),
                 });
             }
             PluginInstallStatus::Installed => {
@@ -650,6 +680,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                         client: plugin.client.clone(),
                         identifier: plugin.identifier.clone(),
                         bundle: plugin.bundle.clone(),
+                        repair_command: add_command_for_bundle(at, &lock, &plugin.bundle),
                     });
                 }
             }
@@ -793,7 +824,9 @@ fn reselect_from_entries(
 ///
 /// An opencode plugin whose identifier is in the `plugin` array of
 /// `<target>/opencode.json` is installed, and no opencode command is run
-/// for it. Otherwise the client CLI is queried. A client CLI that is absent,
+/// for it. An opencode plugin recorded with `config_write` and absent from
+/// that array is missing, also without any opencode command. Otherwise the
+/// client CLI is queried. A client CLI that is absent,
 /// that has an unsupported version, or whose query fails gives `false`: the
 /// state cannot be checked, and a false report of a missing plugin is
 /// avoided. An unknown client gives `false`.
@@ -813,8 +846,11 @@ pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedP
         }
         "vscode" => check_vscode_extension_installed(&plugin.identifier),
         "opencode" => {
-            if crate::ancillary::opencode_plugin_listed(target, &plugin.identifier) {
-                return false;
+            let listed = crate::ancillary::opencode_plugin_listed(target, &plugin.identifier);
+            // A plugin installed by a write to `opencode.json` is checked in
+            // that file only, with any opencode version or none.
+            if listed || plugin.config_write {
+                return !listed;
             }
             check_opencode_plugin_installed(&plugin.identifier)
         }
@@ -1448,11 +1484,11 @@ pub fn update(
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
             let install_report = prepared.commit(target, plugin_scope)?;
-            // A plugin that the commit installed again is not repaired again.
+            // A plugin that the commit attempted, whatever the outcome, is not
+            // tried again by the repair of the same run.
             let reinstalled: std::collections::BTreeSet<(String, String)> = install_report
                 .plugin_results
                 .iter()
-                .filter(|r| r.outcome.is_success())
                 .map(|r| (r.name.clone(), r.client.clone()))
                 .collect();
             report

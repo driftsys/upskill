@@ -1,8 +1,8 @@
 //! The support level of each client and kind.
 //!
 //! The table is compiled into the binary. A maintainer updates it after a
-//! smoke run against the real client. `doctor` prints it and does not detect
-//! client versions.
+//! smoke run against the real client. `doctor` prints it; the table does not
+//! depend on detected client versions.
 
 use crate::pipeline::ItemKind;
 

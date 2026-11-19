@@ -26,7 +26,7 @@ Each of the four target clients exposes a CLI for plugin/extension management:
 - `copilot plugin marketplace add <source>` +
   `copilot plugin install <plugin>@<marketplace>`
 - `code --install-extension <ext-id>`
-- `opencode plugin add <package>` (opencode 2.x)
+- `opencode plugin add <package>` (opencode 2 or later)
 
 These CLIs already implement the lifecycle work (marketplace registration,
 version pinning, scope semantics, idempotent updates) that upskill would
@@ -114,25 +114,31 @@ mixed-client teams, the bundle's primary value (SSOT-derived content) is
 independent of whether every plugin lands. Failing the whole install for a
 missing tertiary tool is hostile.
 
-### opencode: version 2.x only
+### opencode: version 2 or later only
 
-upskill uses the plugin commands of opencode 2.x only:
-`opencode plugin add <package>` to install, `opencode plugin list` to check and
-`opencode plugin remove <package>` to uninstall. Before it runs any
-`opencode plugin` command, upskill runs `opencode --version`. When the major
-version is below 2, or no version can be read, upskill runs no `opencode plugin`
-command: opencode 1.x reads `opencode plugin <word>` as an install of the module
-`<word>`, so `opencode plugin list` would install a module named `list`. An
-install then records the plugin as `skipped`, and `add` prints a warning that
-names `opencode 2.x` and the version found. `doctor` treats the plugin as a
-plugin whose state cannot be checked: it is not reported as missing.
+upskill uses the plugin commands of opencode 2 or later only:
+`opencode plugin add <package>` to install and `opencode plugin list` to check.
+upskill runs no `opencode plugin remove`: `remove` deletes the plugin's entry
+from the `plugin` array of `opencode.json` and runs no opencode command. Before
+it runs any `opencode plugin` command, upskill runs `opencode --version`. When
+the major version is below 2, or no version can be read, upskill runs no
+`opencode plugin` command: opencode 1.x reads `opencode plugin <word>` as an
+install of the module `<word>`, so `opencode plugin list` would install a module
+named `list`. An install then records the plugin as `skipped`, and `add` prints
+a warning that names `opencode 2` and the version found. `doctor` treats the
+plugin as a plugin whose state cannot be checked: it is not reported as missing.
 
 A plugin declared with `plugin_uri` is installed by a write to the `plugin`
-array of `opencode.json`, not by a command. For every opencode plugin that the
-lockfile records as installed, `doctor` first reads the `opencode.json` that
-upskill writes for that scope. When the `plugin` array holds the recorded
-identifier, the plugin is installed and `doctor` runs no opencode command for
-it. Otherwise `doctor` checks it with `opencode plugin list`.
+array of `opencode.json`, not by a command. Its lockfile record carries
+`"config_write": true` (omitted for every other install form; a record without
+it reads as `false`). For a record with `config_write`, `doctor` and the repair
+of `update` check the `opencode.json` that upskill writes for that scope only:
+the identifier in the `plugin` array means installed, its absence means missing,
+and no opencode command runs, with any opencode version or none. The repair
+writes the entry again. For an opencode record without the field (written before
+the field existed), `doctor` reads the file first and, when the identifier is
+absent, checks with `opencode plugin list` under the version check. When
+`update` applies or repairs such a plugin, it sets the field.
 
 ### Repair by `update`
 
@@ -145,9 +151,17 @@ still absent or opencode is still below 2, it stays skipped and the warning of
 `add` is printed again. A plugin that the apply of the source installed in the
 same run is not installed again. This runs when the source is applied, and when
 its preview changes nothing; it does not run for a source that the answer did
-not apply, with `--dry-run`, or with `--check`. So the hint
-`upskill update --yes` to fix that `doctor` prints for a missing plugin, and the
-advice to run `upskill update --yes` for a skipped plugin, are true.
+not apply, with `--dry-run`, `--check` or `--notice`. A plugin that the apply of
+the source attempted in the same run, whatever the outcome, is not tried again.
+A repair install that fails prints a warning and does not change the exit code
+of `update`, as for `add`.
+
+`update` runs over the sources of the items that the lockfile records. A bundle
+without items (`items: {}`) has no such source, so its plugins are not repaired
+by `update`; for such a plugin `doctor` names the `upskill add` command of the
+bundle instead. Otherwise the hint `upskill update --yes` to fix that `doctor`
+prints for a missing plugin, and the advice to run `upskill update --yes` for a
+skipped plugin, are true.
 
 ### Lockfile records the resolved triple
 

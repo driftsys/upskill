@@ -1207,6 +1207,8 @@ mod tests {
         assert!(!opencode_plugin_listed(tmp.path(), "s"));
         std::fs::write(tmp.path().join("opencode.json"), "not json").unwrap();
         assert!(!opencode_plugin_listed(tmp.path(), "sp"));
+        std::fs::write(tmp.path().join("opencode.json"), r#"{"mcp": {}}"#).unwrap();
+        assert!(!opencode_plugin_listed(tmp.path(), "sp"));
     }
 
     #[test]

@@ -633,6 +633,7 @@ fn doctor_reports_skipped_plugin_from_lockfile() {
     let tmp = tempfile::tempdir().unwrap();
     let mut lock = Lockfile::new();
     lock.upsert_plugin(LockedPlugin {
+        config_write: false,
         name: "superpowers".into(),
         client: "claude".into(),
         identifier: "superpowers@anthropics/claude-plugins".into(),
@@ -661,6 +662,7 @@ fn doctor_skipped_plugins_do_not_cause_is_clean_false() {
     let tmp = tempfile::tempdir().unwrap();
     let mut lock = Lockfile::new();
     lock.upsert_plugin(LockedPlugin {
+        config_write: false,
         name: "superpowers".into(),
         client: "vscode".into(),
         identifier: "anthropic.superpowers".into(),
@@ -691,6 +693,7 @@ fn doctor_installed_plugin_cli_not_found_is_not_reported_as_missing() {
     let mut lock = Lockfile::new();
     // The child PATH excludes the VS Code CLI.
     lock.upsert_plugin(LockedPlugin {
+        config_write: false,
         name: "some-plugin".into(),
         client: "vscode".into(),
         identifier: "vendor.some-plugin".into(),
@@ -709,6 +712,7 @@ fn doctor_reports_multiple_skipped_plugins() {
     let tmp = tempfile::tempdir().unwrap();
     let mut lock = Lockfile::new();
     lock.upsert_plugin(LockedPlugin {
+        config_write: false,
         name: "plugin-a".into(),
         client: "claude".into(),
         identifier: "plugin-a@source".into(),
@@ -717,6 +721,7 @@ fn doctor_reports_multiple_skipped_plugins() {
         status: PluginInstallStatus::Skipped,
     });
     lock.upsert_plugin(LockedPlugin {
+        config_write: false,
         name: "plugin-b".into(),
         client: "vscode".into(),
         identifier: "vendor.plugin-b".into(),

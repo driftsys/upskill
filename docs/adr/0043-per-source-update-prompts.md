@@ -137,8 +137,11 @@ failed until `update --force`.
 
 - A terminal run and an `update --yes` run reach the same end state when every
   answer is `y`, with two exceptions, each for a source whose preview changes
-  nothing: its plugin and MCP steps, and a change confined to a `bundles` record
-  of the lockfile (the preview does not compare `bundles` records).
+  nothing: its MCP step and the install of a plugin that is neither missing nor
+  skipped (a terminal run still installs again a recorded plugin that `doctor`
+  reports missing or that is recorded as skipped, ADR-0008), and a change
+  confined to a `bundles` record of the lockfile (the preview does not compare
+  `bundles` records).
 - A run without a source change reports an edited file, asks to delete the files
   of a client that the flags no longer select, asks to complete an interrupted
   item, and adopts a `schema: 1` lockfile.

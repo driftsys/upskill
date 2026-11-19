@@ -631,12 +631,15 @@ the check above refuses it.
   others), SSOT hash drift on `local:` sources (`update` fixes), lockfile
   entries with no recoverable source (`remove` fixes), installed plugins missing
   from the client (`update --yes` reinstalls them, also when no item changed; an
-  opencode plugin whose identifier is in the `plugin` array of the scope's
-  `opencode.json` is installed and no opencode command is run for it; with an
-  opencode version below 2, no `opencode plugin` command is run and the plugin
-  is not reported missing), skipped plugins (informational — CLI was absent, or
-  opencode was below version 2, at install time; `update --yes` tries them again
-  and records `installed` when the install succeeds), orphaned dependencies
+  opencode plugin recorded with `config_write` is checked in the scope's
+  `opencode.json` only, and no opencode command is run for it; for another
+  opencode plugin, an identifier in that file's `plugin` array means installed,
+  and otherwise, with an opencode version below 2, no `opencode plugin` command
+  is run and the plugin is not reported missing; for the plugin of a bundle
+  without items, which `update` does not reach, `doctor` names the `upskill add`
+  command instead), skipped plugins (informational — CLI was absent, or opencode
+  was below version 2, at install time; `update --yes` tries them again and
+  records `installed` when the install succeeds), orphaned dependencies
   (informational), MCP server reconciliation, and interrupted items (an item
   with a non-empty `pending` record: run the same command again to complete it),
   and, for the global scope only, files at the earlier global Copilot paths
@@ -645,15 +648,16 @@ the check above refuses it.
   not change the exit code. After the scope reports, `doctor` prints the support
   level of each client and kind (`Support levels:`; the compiled table in
   `src/support.rs`, stated in the user guide page "Support levels"); the section
-  does not change the exit code and `doctor` does not detect client versions.
-  Exit 0 when clean, 1 when any drift bucket is non-empty, including
-  `earlier_layout`. Skipped plugins are warnings and do not affect the exit
-  code. Missing, modified and unreadable files are checked against the `files`
-  record; a recorded path that `remove` would never delete (outside the client
-  roots, fewer than three components, or with a `..` component) is skipped
-  without a report. For an item with an empty or missing `files` record (a
-  `schema: 1` lockfile, or a `schema: 2` item with an empty list), `doctor`
-  checks each per-client entry file instead.
+  does not change the exit code and is not based on a detection of client
+  versions (the plugin check runs `opencode --version` before any
+  `opencode plugin list`, ADR-0008). Exit 0 when clean, 1 when any drift bucket
+  is non-empty, including `earlier_layout`. Skipped plugins are warnings and do
+  not affect the exit code. Missing, modified and unreadable files are checked
+  against the `files` record; a recorded path that `remove` would never delete
+  (outside the client roots, fewer than three components, or with a `..`
+  component) is skipped without a report. For an item with an empty or missing
+  `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
+  list), `doctor` checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -883,6 +887,16 @@ across-repo continuity for global scope.
   "plugins": []
 }
 ```
+
+Each entry of `plugins` records one plugin for one client: `name`, `client`,
+`identifier`, `scope`, `bundle` and `status` (`installed`, `skipped` or
+`instructions`), and the optional `config_write`. `config_write` is `true` for
+an opencode plugin installed by a write of `identifier` to the `plugin` array of
+the scope's `opencode.json` (a `plugin_uri` descriptor); it is omitted for every
+other install form, and a record without it reads as `false`. For a record with
+`config_write`, `doctor` and the repair of `update` check that file only and run
+no opencode command (ADR-0008). `update` sets the field when it applies or
+repairs a `plugin_uri` plugin whose record lacks it.
 
 ### 4.1 Pure legacy-state projection
 

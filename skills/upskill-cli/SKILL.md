@@ -221,11 +221,12 @@ findings:
 - Orphan per-client files not recorded in the lockfile (a previous install or
   hand-creation that needs reconciling)
 - Plugin recorded as installed but missing from the client (uninstalled
-  out-of-band → `update --yes` reinstalls; a run in a terminal applies a source
-  only when its preview changes something, and the plugin and MCP steps are not
-  part of the preview)
-- Plugin skipped at install time because the client CLI was not on PATH
-  (informational warning — install the CLI then run `update --yes`)
+  out-of-band → `update` reinstalls it, also in a terminal run for a source
+  whose preview changes nothing; for a bundle without items, `doctor` names the
+  `upskill add` command to run instead)
+- Plugin skipped at install time because the client CLI was not on PATH, or
+  opencode was below version 2 or gave no version (informational warning —
+  install the CLI, or opencode 2 or later, then run `update --yes`)
 
 Exits 0 when clean. Exits 1 when drift is found in either scope (missing
 outputs, modified files, unreadable files, stale hashes, orphan entries, missing

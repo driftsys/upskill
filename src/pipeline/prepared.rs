@@ -93,6 +93,7 @@ pub(super) fn record_plugin_results(
             PluginOutcome::Failed { .. } => continue,
         };
         lock.upsert_plugin(crate::lockfile::LockedPlugin {
+            config_write: pr.config_write,
             name: pr.name.clone(),
             client: pr.client.clone(),
             identifier: pr.identifier.clone(),
@@ -401,8 +402,8 @@ pub(super) fn prepare_install(
 
 impl PreparedInstall {
     /// The bundle `name` as the fetched entry source declares it now: a
-    /// bundle that this install resolved, else the bundle file of that name
-    /// in the source. `None` when the source has no such bundle or its
+    /// bundle that this install resolved (always the case for a bundle-file
+    /// source), else the bundle file of that name in a directory source. `None` when the source has no such bundle or its
     /// manifest cannot be read.
     pub fn source_bundle(&self, name: &str) -> Option<crate::model::Bundle> {
         if let Some(rb) = self
@@ -412,14 +413,9 @@ impl PreparedInstall {
         {
             return Some(rb.bundle.clone());
         }
-        if let Some(bundle) = self.report.bundles.iter().find(|b| b.name == name) {
-            return Some(bundle.clone());
-        }
-        let path = if discovery::is_bundle_file(&self.local_source) {
-            self.local_source.clone()
-        } else {
-            discovery::find_bundle_by_name(&self.local_source, name)?
-        };
+        // A bundle-file source always resolves its bundles above, so only a
+        // directory source is searched here.
+        let path = discovery::find_bundle_by_name(&self.local_source, name)?;
         crate::parse::bundle::load(&path)
             .ok()
             .filter(|bundle| bundle.name == name)

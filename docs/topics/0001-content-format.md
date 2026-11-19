@@ -684,7 +684,7 @@ plugins:
 | `copilot`  | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
 | `vscode`   | `extension`   | string | YES      | Extension ID (passed to `code --install-extension`).                                                   |
 | `vscode`   | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
-| `opencode` | `module`      | string | YES      | Module name (passed to `opencode plugin add`; opencode 2.x).                                           |
+| `opencode` | `module`      | string | YES      | Module name (passed to `opencode plugin add`; opencode 2 or later).                                    |
 | `opencode` | `install_url` | string | no       | URL shown in warn-skip message when CLI not found.                                                     |
 
 `source` and `marketplace` are **distinct** and both required for the
@@ -780,7 +780,7 @@ distinguishes outcomes:
 | `status`         | Meaning                                                                      |
 | ---------------- | ---------------------------------------------------------------------------- |
 | `"installed"`    | Plugin successfully installed via the client CLI or config-write.            |
-| `"skipped"`      | Client CLI was not on PATH at install time (warn-skip).                      |
+| `"skipped"`      | Client CLI was not on PATH, or opencode was below 2, at install (warn-skip). |
 | `"instructions"` | Instructions-only — no automated install; consumer must follow manual steps. |
 
 Plugins that fail for other reasons (non-zero exit from a present CLI) MUST NOT
@@ -800,7 +800,10 @@ Lockfile plugin entry shape:
 ```
 
 The `status` field defaults to `"installed"` when absent (backward-compatible
-with pre-v0.6.x lockfiles that lacked this field).
+with pre-v0.6.x lockfiles that lacked this field). An opencode plugin installed
+by a write to `opencode.json` (`plugin_uri`) also has `"config_write": true`;
+the field is omitted for every other install form and reads as `false` when
+absent.
 
 Implementations:
 

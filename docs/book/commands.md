@@ -223,12 +223,12 @@ and add them from there.
 client-native plugins by shelling out to each client's own CLI
 (`claude plugin install`, `copilot plugin install`, `code
 --install-extension`,
-`opencode plugin add`, which needs opencode 2.x) — they are **not** rendered
-through the generation pipeline. A `plugin_uri` opencode plugin is written into
-the `plugin` array of `opencode.json` instead. If a client's CLI is not on
-`PATH`, or `opencode --version` reports a major version below 2, the plugin is
-skipped (not an error, with a warning) and recorded as `skipped` in the
-lockfile; `upskill doctor` reports skipped and missing plugins. Removing the
+`opencode plugin add`, which needs opencode 2 or later) — they are **not**
+rendered through the generation pipeline. A `plugin_uri` opencode plugin is
+written into the `plugin` array of `opencode.json` instead. If a client's CLI is
+not on `PATH`, or `opencode --version` reports a major version below 2, the
+plugin is skipped (not an error, with a warning) and recorded as `skipped` in
+the lockfile; `upskill doctor` reports skipped and missing plugins. Removing the
 bundle cleans up its plugins.
 
 **Bundle MCP servers.** When a bundle declares an `mcps:` map
@@ -486,10 +486,14 @@ was updated, completed or removed, but files were written or deleted, it prints
 `Changed <n> file(s) written or deleted`. It prints
 `everything is up to date — nothing to do` when nothing changed, no item was
 skipped, no source was skipped, no file was kept with a note and no lockfile was
-adopted. An item of a skipped source has the status line
-`skipped — source not reachable` when its source could not be fetched, and
-`skipped — requires a source that was skipped` when its source requires an item
-of a skipped source.
+adopted. A plugin installed again by the repair (a recorded plugin that `doctor`
+reports missing, or one recorded as skipped) is not an item change: the run
+prints `Plugins: <n> plugin(s) installed` with one line per plugin, and then
+`everything is up to date — nothing to do`. A repair install that fails prints a
+warning on stderr and does not change the exit code, as for `add`. An item of a
+skipped source has the status line `skipped — source not reachable` when its
+source could not be fetched, and `skipped — requires a source that was skipped`
+when its source requires an item of a skipped source.
 
 For a git source, `update` records the commit that it fetched in the lockfile
 entries of the source that the run selected, also when the source has no changes
@@ -884,18 +888,22 @@ scope. For each scope it reports eleven independent buckets:
   dependency of items that are no longer installed. Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
   found in the client. Likely uninstalled out-of-band; `upskill update --yes`
-  reinstalls them, also when no item changed. An opencode plugin whose
-  identifier is in the `plugin` array of the scope's `opencode.json` is
-  installed, and `doctor` runs no opencode command for it; otherwise `doctor`
-  runs `opencode plugin list`. With opencode below version 2, `doctor` runs no
-  `opencode plugin` command and does not report the plugin missing. Causes exit
-  1.
+  reinstalls them, also when no item changed. An opencode plugin installed by a
+  write to `opencode.json` (`plugin_uri`, recorded with `config_write`) is
+  checked in the scope's `opencode.json` only, and `doctor` runs no opencode
+  command for it, with any opencode version or none. For another opencode
+  plugin, an identifier in that `plugin` array means installed; otherwise
+  `doctor` runs `opencode plugin list`. With opencode below version 2, `doctor`
+  runs no `opencode plugin` command and does not report that plugin missing.
+  `update` runs over the sources of the recorded items, so it does not reach the
+  plugin of a bundle without items (`items: {}`); for such a plugin `doctor`
+  names the `upskill add` command that installs it again. Causes exit 1.
 - **Skipped plugins** (informational) — recorded as `skipped` because the client
   CLI was not on PATH at install time, or `opencode --version` reported a major
-  version below 2 (or no version). Install the CLI, or opencode 2.x, then run
-  `upskill update --yes`: it tries again every skipped plugin of a bundle that
-  the lockfile records for a source of the run, also when no item changed, and
-  records it as `installed` when the install succeeds. When the CLI is still
+  version below 2 (or no version). Install the CLI, or opencode 2 or later, then
+  run `upskill update --yes`: it tries again every skipped plugin of a bundle
+  that the lockfile records for a source of the run, also when no item changed,
+  and records it as `installed` when the install succeeds. When the CLI is still
   absent or opencode is still below 2, the plugin stays `skipped` and the
   warning of `add` is printed again. `update <name>` covers only the sources of
   the named items. Does **not** cause exit 1.

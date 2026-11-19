@@ -4,7 +4,7 @@
 //! - Claude Code: `claude plugin marketplace add` + `claude plugin install`
 //! - Copilot CLI: `copilot plugin marketplace add` + `copilot plugin install`
 //! - VS Code: `code --install-extension`
-//! - opencode: `opencode plugin add` (opencode 2.x or later; the major
+//! - opencode: `opencode plugin add` (opencode 2 or later; the major
 //!   version is read with `opencode --version` before any `opencode plugin`
 //!   command)
 //!
@@ -53,7 +53,7 @@ pub enum PluginOutcome {
     /// needs, or `--version` did not print a version. No plugin command was
     /// run — plugin skipped.
     UnsupportedVersion {
-        /// The version that upskill needs, for example `opencode 2.x`.
+        /// The version that upskill needs, for example `opencode 2`.
         required: &'static str,
         /// The first line that `--version` printed; `None` when it printed
         /// nothing or failed.
@@ -149,10 +149,11 @@ pub fn install_opencode_plugin(module: &str) -> PluginOutcome {
 
 /// The opencode version that upskill needs for its `opencode plugin`
 /// commands, as shown to the user.
-pub const OPENCODE_REQUIRED: &str = "opencode 2.x";
+pub const OPENCODE_REQUIRED: &str = "opencode 2";
 
 /// The lowest opencode major version whose plugin commands upskill uses
-/// (`opencode plugin add`, `opencode plugin list`, `opencode plugin remove`).
+/// (`opencode plugin add`, `opencode plugin list`). upskill runs no
+/// `opencode plugin remove`: `remove` only edits `opencode.json`.
 const OPENCODE_MIN_MAJOR: u64 = 2;
 
 /// Result of `opencode --version`, read before any `opencode plugin` command.
@@ -249,20 +250,6 @@ pub fn uninstall_claude_plugin(
 /// Uninstall a VS Code extension.
 pub fn uninstall_vscode_extension(extension: &str) -> PluginOutcome {
     run_command("code", &["--uninstall-extension", extension])
-}
-
-/// Uninstall an opencode package via `opencode plugin remove <package>`.
-/// Runs no `opencode plugin` command when the version check of
-/// [`install_opencode_plugin`] fails.
-pub fn uninstall_opencode_plugin(module: &str) -> PluginOutcome {
-    match opencode_version() {
-        OpencodeVersion::NotFound => PluginOutcome::CliNotFound,
-        OpencodeVersion::Unsupported { found } => PluginOutcome::UnsupportedVersion {
-            required: OPENCODE_REQUIRED,
-            found,
-        },
-        OpencodeVersion::Supported => run_command("opencode", &["plugin", "remove", module]),
-    }
 }
 
 /// Uninstall a GitHub Copilot CLI plugin. `marketplace` is the marketplace

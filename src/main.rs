@@ -2036,10 +2036,11 @@ fn print_doctor_report(report: &DoctorReport) {
         );
         for p in &report.missing_plugins {
             println!(
-                "  {} {} ({})",
+                "  {} {} ({}){}",
                 style::dim("plugin"),
                 style::name(&p.name),
                 p.client,
+                repair_hint(p.repair_command.as_deref()),
             );
         }
     }
@@ -2095,22 +2096,34 @@ fn print_doctor_skipped_plugins(report: &DoctorReport) {
         return;
     }
     println!(
-        "{} {} plugin(s) never installed — client CLI was missing at install time",
+        "{} {} plugin(s) never installed — client CLI was missing, or opencode was below version 2, at install time",
         style::warn("doctor:"),
         report.skipped_plugins.len()
     );
     for p in &report.skipped_plugins {
         println!(
-            "  {} {} ({})",
+            "  {} {} ({}){}",
             style::dim("plugin"),
             style::name(&p.name),
             p.client,
+            repair_hint(p.repair_command.as_deref()),
         );
     }
     println!(
         "  {}",
-        style::dim("install the missing CLI then run `upskill update --yes` to install them")
+        style::dim(
+            "install the missing CLI (or opencode 2 or later) then run `upskill update --yes` to install them"
+        )
     );
+}
+
+/// The text after a doctor plugin line: for a plugin that `update` cannot
+/// reach (no recorded item comes from its bundle's source), the command
+/// that installs it instead of `upskill update --yes`.
+fn repair_hint(command: Option<&str>) -> String {
+    command
+        .map(|c| format!(" — `update` does not reach it; run `{c}`"))
+        .unwrap_or_default()
 }
 
 fn print_doctor_mcps(report: &DoctorReport) {

@@ -69,15 +69,15 @@ and installed through a command.
    A stage file that a killed process left is not deleted.
 3. **Support levels in place of activation gates.** Each client and kind has one
    published level: supported, experimental or unsupported. The levels are a
-   table compiled into the binary (`src/support.rs`); `doctor` prints it and
-   does not detect client versions. A maintainer runs the smoke test
-   (`scripts/qualify-native-instructions.py`, listed by `just smoke`) against
-   the real client, which needs authentication and makes paid model calls, and
-   then updates the table. A failed or outdated cell changes only its own level.
-   It does not block a release or another cell. As built on 2026-11-15, the
-   Claude Code and Copilot CLI cells for rules, skills and agents are
-   `supported`, with the client version and the date of the smoke run recorded
-   in the table.
+   table compiled into the binary (`src/support.rs`); `doctor` prints it, and
+   the table does not depend on detected client versions. A maintainer runs the
+   smoke test (`scripts/qualify-native-instructions.py`, listed by `just smoke`)
+   against the real client, which needs authentication and makes paid model
+   calls, and then updates the table. A failed or outdated cell changes only its
+   own level. It does not block a release or another cell. As built on
+   2026-11-15, the Claude Code and Copilot CLI cells for rules, skills and
+   agents are `supported`, with the client version and the date of the smoke run
+   recorded in the table.
 4. **Claude Code and Copilot first.** Codex and OpenCode follow, each with its
    own short design. OpenCode keeps its current generation, receives the shared
    ownership behaviour and is published as experimental. Codex stays unsupported

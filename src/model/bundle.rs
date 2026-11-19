@@ -198,7 +198,7 @@ pub enum VscodePluginDescriptor {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum OpencodePluginDescriptor {
-    /// Install via `opencode plugin add` (opencode 2.x).
+    /// Install via `opencode plugin add` (opencode 2 or later).
     Install {
         /// Module name (passed to `opencode plugin add`).
         module: String,
