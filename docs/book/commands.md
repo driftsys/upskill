@@ -1187,11 +1187,21 @@ and optional `metadata.version` (as `version`) from the bundle. No README and no
 LICENSE file is written, so `claude plugin validate` reports both as missing.
 
 All selected output directories are checked before writing. A non-empty client
-directory is refused with exit code 1 unless `--force` is set. `--force` deletes
-and rebuilds that directory, including removal of files from an earlier run. A
-file or symbolic link at the client directory path is refused even with
-`--force`. An unknown bundle fails with exit code 1. A failed write after
-`--force` can leave the directory incomplete; run `pack` again.
+directory is refused with exit code 1 unless `--force` is set. `--force`
+replaces that directory, including removal of files from an earlier run. A file
+or symbolic link at the client directory path is refused even with `--force`. An
+unknown bundle fails with exit code 1. Each client directory is first written in
+full to a staging directory next to it, `.<bundle>-<client>.upskill-stage`. When
+all are written, each existing client directory is renamed to
+`.<bundle>-<client>.upskill-old`, its staging directory is renamed into place,
+and `pack` then tries to remove the `.upskill-old` directories; one that cannot
+be removed is left in place. A failure while writing or renaming tries to undo
+the renames already made, so every client directory keeps its earlier content,
+and tries to remove the staging directories. If an undo rename also fails, the
+earlier content is at the `.upskill-old` path; the next `pack` run of that
+bundle deletes it, so copy it away first. A file, directory or link left at a
+staging or `.upskill-old` path by an earlier run is removed. An existing empty
+client directory is replaced by a new one, also without `--force`.
 
 `--source` must parse as an install source, must not start with a hyphen and
 must contain only ASCII letters, digits and `/ @ : . _ - ~ +`. Whitespace and

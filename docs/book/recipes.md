@@ -251,7 +251,8 @@ upskill pack my-bundle --source owner/repo@v1 --out dist
 Copy `dist/my-bundle-claude` and `dist/my-bundle-copilot` into your marketplace
 repository and configure publication there. upskill does not install, register
 or publish these plugins. Add README and LICENSE files yourself if needed;
-`pack --force` deletes and rebuilds the selected output directories.
+`pack --force` replaces the selected output directories, so files that you add
+there are deleted.
 
 Install with the client's marketplace command. When the output includes rules,
 invoke its init command in each project to install only rules through
