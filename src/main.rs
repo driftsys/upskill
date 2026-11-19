@@ -1732,6 +1732,9 @@ fn finish_terminal_update(report: &UpdateReport) -> i32 {
         .iter()
         .any(|i| matches!(i.status, UpdateStatus::SkippedModified { .. }));
     if style::is_quiet() {
+        // The blocks are not printed, so the kept notes go to stderr, as in
+        // `update --yes --quiet` (issue #508).
+        print_kept_modified(&report.kept_modified);
         print_skipped(report);
     } else if report.items.is_empty() {
         println!("nothing to update — lockfile is empty");

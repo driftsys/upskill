@@ -366,9 +366,10 @@ item and a `kept modified file` note are not changes.
   whose preview changes nothing, when a source was skipped, or when a step
   fails; answers `n` and `q` do not change it, and a `skip` line of a source
   that was not applied does not cause exit code 1. With `--quiet`, the blocks,
-  the notes, the result lines and the closing summary are not printed; the
-  question is `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of
-  the skipped items that cause exit code 1, `Use --force to replace.` and the
+  the result lines and the closing summary are not printed, and each
+  `kept modified file` note is printed on stderr, as with `--yes`; the question
+  is `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of the
+  skipped items that cause exit code 1, `Use --force to replace.` and the
   adoption notice are printed on stderr. Without `--quiet`, a terminal run
   prints no `skipped` line.
 - **`--yes`, or stdin is not a terminal.** Every source is applied without a
