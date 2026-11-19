@@ -2149,6 +2149,20 @@ fn dry_run_counts_only_the_selected_entries_with_a_change() {
     assert!(stdout.contains("would update 1 of 3 item(s)"), "{stdout}");
 }
 
+/// The canonical form of `path`. On Windows, `canonicalize` returns a
+/// verbatim path (`\\?\C:\...`), which a `requires` source does not
+/// accept as a local path; the prefix is removed there.
+fn canonical(path: &std::path::Path) -> std::path::PathBuf {
+    let path = path.canonicalize().unwrap();
+    if cfg!(windows) {
+        let text = path.display().to_string();
+        if let Some(rest) = text.strip_prefix(r"\\?\") {
+            return std::path::PathBuf::from(rest);
+        }
+    }
+    path
+}
+
 #[test]
 fn update_lists_a_dependency_planned_from_two_sources_once() {
     // `first` and `second` require `sarif` from `reg-e`; `add` refuses a
@@ -2159,7 +2173,7 @@ fn update_lists_a_dependency_planned_from_two_sources_once() {
     // The canonical path: a relative source is recorded from the canonical
     // working directory, so every label has one form and the sources come
     // in the order of their names: `reg-c`, `reg-d`, then the owner `reg-e`.
-    let root = tmp.path().canonicalize().unwrap();
+    let root = canonical(tmp.path());
     let home = root.join("home");
     fs::create_dir_all(&home).unwrap();
     fs::create_dir_all(root.join(".git")).unwrap();
