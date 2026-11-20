@@ -190,6 +190,12 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// `pending`) for an item from another source. A refused install changes no
 /// file.
 ///
+/// A source directory that is itself one item directory, with no item in
+/// its child or grandchild directories, no `*.bundle.yaml` file and no item
+/// name that matches a bundle in it, is refused before any write (see
+/// `discovery::refuse_item_dir_source`): a local path before the fetch, a
+/// git subfolder or repository root after it.
+///
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Git `git_ref`); local-path sources record `None`.
 /// `source` label is the [`InstallSource`] `Display` form.
@@ -216,14 +222,14 @@ pub fn install_with_lockfile(
         )?;
     }
     let prepared = prepared::prepare_install(source, target, items, options)?;
-    // A git subfolder that is one item directory installs nothing (#577).
-    // `prepare_install` writes nothing, so the refusal still comes before
-    // any write. `update` does not run this check.
-    if !matches!(source, InstallSource::LocalPath(_)) {
+    // A git subfolder or repository root that is one item directory
+    // installs nothing (#577). `prepare_install` writes nothing, so the
+    // refusal still comes before any write. `update` does not run this check.
+    if let Some(git) = discovery::GitSourceForm::of(source) {
         discovery::refuse_item_dir_source(
             prepared.entry_root(),
             items,
-            discovery::ItemDirSource::Git(source),
+            discovery::ItemDirSource::Git(git),
         )?;
     }
     // A source item directory must not contain a file that the lockfile
