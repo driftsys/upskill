@@ -42,7 +42,7 @@ reference rather than this compatibility page.
 
 <a id="23-per-client-override-files"></a>
 
-- [2.3 Per-client override files](../topics/0001-content-format.md#23-per-client-override-files)
+- [2.3 Client-specific bodies](../topics/0001-content-format.md#23-client-specific-bodies)
 
 <a id="24-supporting-resources"></a>
 
@@ -142,7 +142,7 @@ reference rather than this compatibility page.
 
 <a id="64-interaction-with-override-files"></a>
 
-- [6.4 Interaction with override files](../topics/0001-content-format.md#64-interaction-with-override-files)
+- [6.4 Only per-client body mechanism](../topics/0001-content-format.md#64-only-per-client-body-mechanism)
 
 <a id="7-generation-client-specific-output"></a>
 
@@ -214,7 +214,7 @@ reference rather than this compatibility page.
 
 <a id="a6-agent--with-per-client-override-file"></a>
 
-- [A.6 Agent — with per-client override file](../topics/0001-content-format.md#a6-agent--with-per-client-override-file)
+- [A.6 Agent — with per-client directive blocks](../topics/0001-content-format.md#a6-agent--with-per-client-directive-blocks)
 
 <a id="appendix-b-client-frontmatter-mapping-reference"></a>
 

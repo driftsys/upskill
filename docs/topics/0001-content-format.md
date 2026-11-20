@@ -16,7 +16,7 @@ standard does not address.
 The specification intentionally leaves implementation details (installation
 mechanics, caching, registry protocols, CLI surface) to the implementing tool.
 The scope is the on-disk content contract: file layout, frontmatter schemas,
-body conventions, conditional directives, and per-client override mechanics.
+body conventions, and conditional directives.
 
 ## Audience
 
@@ -185,56 +185,23 @@ Bundles are flat YAML manifest files, not directories:
   browsing the registry. See
   [ADR-0007](https://github.com/driftsys/upskill/blob/main/docs/adr/0007-bundle-yaml-format.md).
 
-### 2.3 Per-client override files
+<a id="23-per-client-override-files"></a>
 
-For the three historical generation clients (`claude`, `copilot`, `opencode`),
-any entrypoint MAY have optional per-client body overrides alongside it in the
-same item directory:
+### 2.3 Client-specific bodies
 
-```text
-<name>/
-├── RULE.md                    # canonical, always required
-├── RULE.claude.md             # optional — Claude Code body override
-├── RULE.copilot.md            # optional — GitHub Copilot body override
-└── RULE.opencode.md           # optional — opencode body override
-```
+There are no per-client body files. Each item has one body: the body of its
+canonical entrypoint (`SKILL.md`, `RULE.md` or `AGENT.md`). A file such as
+`SKILL.claude.md` or `RULE.copilot.md` has no special meaning; it is an ordinary
+supporting resource (§2.4) and is copied next to the generated entrypoint for
+every client.
 
-The same pattern applies to skills (`SKILL.claude.md`, etc.) and agents
-(`AGENT.claude.md`, etc.). When an item directory holds multiple kinds (§2.1),
-each kind has its own set of override files keyed by entrypoint name
-(`RULE.claude.md`, `SKILL.claude.md`, `AGENT.claude.md`); they coexist in the
-same directory without ambiguity.
+Authors express client differences in one of two ways:
 
-Override file rules:
-
-- Override files contain body content only; they MUST NOT include YAML
-  frontmatter.
-- Frontmatter is always taken from the canonical entrypoint.
-- The `<client>` suffix MUST be one of `claude`, `copilot` or `opencode`. The
-  four audience/directive family identifiers in §3.1 and §6.1 do not extend this
-  override vocabulary. `codex` is not a supported override suffix.
-
-**Current implementation status.** The resolution order below is the specified
-format contract, not current installer behavior. The historical installer
-renders the canonical body and does not apply override bodies. A captured
-compiler that rejected active matching overrides was removed with the code that
-no command could reach; see
-[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md)
-and [debt #324](https://github.com/driftsys/upskill/issues/324). Override
-execution requires a separate implementation and compatibility tests.
-
-**Specified body-resolution order for a given client.** For historical
-generation client `C` (`claude`, `copilot` or `opencode`), a conforming override
-implementation would resolve the body as follows:
-
-1. If `<KIND>.<C>.md` exists, use its body verbatim. Directives in the canonical
-   body are NOT processed for client `C`.
-2. Otherwise, use the canonical body with `<!-- @client: -->` directives (§6)
-   processed for client `C`.
-
-An override replaces the whole canonical body; it does not append to or compose
-with it. §6.4 cross-references this specified rule and its implementation
-status; this section is the authoritative statement.
+- **Small differences:** surround the client-specific text with
+  `<!-- @client:X -->` directive blocks (§6) in the canonical body.
+- **Large differences:** use the shared-procedure pattern below, or write two
+  separate items, each limited to its client with `audience` (§3.1), and select
+  them with a bundle.
 
 #### Sharing a procedure across client-specific orchestration
 
@@ -243,32 +210,29 @@ the client-specific orchestration instructions with inline client directives
 (§6). These directives are processed during upskill generation; a native client
 reading the source directory directly does not perform that preprocessing.
 
-For large differences, a candidate authoring pattern puts the common procedure
-in a supporting resource and gives each client wrapper an explicit instruction
-to read it before using that client's agent mechanism:
+For large differences, put the common procedure in a supporting resource and
+keep the entrypoint short, with one `@client` block per client that tells that
+client to read the procedure before it uses its own agent mechanism:
 
 ```text
 review/
 ├── SKILL.md
-├── SKILL.claude.md
-├── SKILL.copilot.md
 └── references/
     ├── review-procedure.md
     ├── code-reviewer.md
     └── test-reviewer.md
 ```
 
-For example, each wrapper can say: “Read `references/review-procedure.md` and
-follow its review criteria. Launch two reviewers using this client's agent
-mechanism.” The example illustrates the specified override format; the current
-installer boundary above still applies. The canonical body must also be complete
-for clients without an override. There is no `SKILL.codex.md` override suffix.
+For example, the Claude Code block in `SKILL.md` can say: “Read
+`references/review-procedure.md` and follow its review criteria. Launch two
+reviewers using this client's agent mechanism.” Text outside the `@client`
+blocks reaches every client, including clients that have no block.
 
 This shares the procedure through runtime file loading. Supporting resources are
 copied alongside each generated entrypoint (§2.4); their contents are not
 embedded into the body or processed for client directives. Embedding a common
-core would require a separately specified composition/include feature. Neither
-an override nor a resource reference supplies that feature.
+core would require a separately specified composition/include feature. A
+resource reference does not supply that feature.
 
 Shared authoring is distinct from shared native discovery. Keep this variant
 family outside scanned shared catalogs; expose each logical skill once per
@@ -1164,12 +1128,6 @@ They are explicitly **permitted** inside:
   matches the construct's client. The directive processor strips the entire
   block from outputs targeting any other client, so the construct never reaches
   a client that would not understand it.
-- Per-client override files (§2.3) — `RULE.claude.md`, `SKILL.copilot.md`,
-  `AGENT.opencode.md`, etc. — when the filename suffix matches the construct's
-  historical generation client (`claude`, `copilot` or `opencode`). This is a
-  format permission for the specified matching-client override selection, not
-  implemented loading: the historical installer ignores override bodies, as
-  recorded in §2.3. `codex` has no override-file form.
 
 | Construct                       | Why prohibited (in always-rendered content) | Client         |
 | ------------------------------- | ------------------------------------------- | -------------- |
@@ -1182,8 +1140,7 @@ They are explicitly **permitted** inside:
 | `ultrathink`                    | Extended thinking trigger                   | Claude Code    |
 
 If an item needs one of these constructs in content that would otherwise reach
-every client, wrap it in a matching-client directive block (§6) or move it to a
-matching override file for a historical generation client (§2.3). Items that
+every client, wrap it in a matching-client directive block (§6). Items that
 target only one client end-to-end MAY instead be marked single-client via
 `audience` (§3.1).
 
@@ -1192,8 +1149,8 @@ target only one client end-to-end MAY instead be marked single-client via
 ## 6. Conditional content directives
 
 Canonical bodies MAY include client-conditional content via HTML comment
-directives. These allow minor per-client variations without requiring separate
-override files.
+directives. Directives are the only mechanism for per-client body content
+(§2.3).
 
 ### 6.1 Syntax
 
@@ -1211,8 +1168,7 @@ Content rendered only for Claude Code output.
   prefixed with `!` for negation.
 
 Known audience/directive family identifiers: `claude`, `copilot`, `codex`,
-`opencode`. Override suffixes remain limited to the three historical generation
-clients in §2.3; `codex` does not add an override suffix.
+`opencode`.
 
 These identifiers describe source families. They do not add selectable surfaces
 or change historical default clients. A library-only Codex instruction producer
@@ -1256,15 +1212,12 @@ Implementations:
 - SHOULD process directives before any other body transformation (formatting,
   rendering).
 
-### 6.4 Interaction with override files
+<a id="64-interaction-with-override-files"></a>
 
-Override-file precedence over directives is defined by §2.3 (per-client override
-file rules); this subsection exists only as a cross-reference. When generating
-output for a historical generation client (`claude`, `copilot` or `opencode`),
-the specified resolution order applies only once override execution is
-implemented. The current historical installer ignores override bodies. The
-captured compiler and the Codex instruction producer were removed; see
-[AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md).
+### 6.4 Only per-client body mechanism
+
+Directives are the only per-client body mechanism. There are no per-client body
+files (§2.3).
 
 ---
 
@@ -1438,13 +1391,10 @@ specification work:
 4. **Bundle constraints**: whether `requires` should support semver ranges,
    platform predicates (`requires-client: [claude >= 2.1]`), or conditional
    items.
-5. **Per-client partial overrides**: whether override files should support
-   section-level overrides (replacing only a specific heading's content) rather
-   than full-body replacement.
-6. **Skill activation control**: whether `disable-model-invocation` and
+5. **Skill activation control**: whether `disable-model-invocation` and
    `user-invocable` from the Agent Skills standard should be surfaced as neutral
    fields or remain client passthroughs.
-7. **Multi-repo item sources** (RESOLVED): the item `requires` field with a
+6. **Multi-repo item sources** (RESOLVED): the item `requires` field with a
    `{ name, source }` locator (§3.7) defines the cross-source resolution
    contract — `source` reuses the `upskill
    add` source DSL, conflicts reuse
@@ -1452,7 +1402,7 @@ specification work:
    `(canonical-source-label, kind, name)`. Both same-source and cross-source
    resolution are implemented. See
    [ADR-0009](https://github.com/driftsys/upskill/blob/main/docs/adr/0009-coupling-tiers-and-dependencies.md).
-8. **Content hashing**: whether items should carry a content hash for integrity
+7. **Content hashing**: whether items should carry a content hash for integrity
    verification during distribution, independent of `metadata.version`.
 
 ---
@@ -1609,23 +1559,39 @@ Layered on top of `platform-baseline`. Provides Android-specific development
 conventions, Jetpack Compose patterns, and a specialized code reviewer.
 ```
 
-### A.6 Agent — with per-client override file
+<a id="a6-agent--with-per-client-override-file"></a>
+
+### A.6 Agent — with per-client directive blocks
 
 Directory structure:
 
 ```text
 agents/security-reviewer/
-├── AGENT.md                   # canonical
-├── AGENT.claude.md            # Claude Code body override
-└── AGENT.copilot.md           # GitHub Copilot body override
+└── AGENT.md                   # canonical, the only body
 ```
 
-This is a format illustration, not current installer behavior. Under the
-specified §2.3 resolution order, `AGENT.md` supplies frontmatter for all
-clients; the Claude and Copilot overrides replace the canonical body for their
-respective clients. OpenCode uses the canonical body with directives processed.
-The current historical installer instead renders the canonical body for all
-three clients and does not implement the illustrated override selection.
+`AGENT.md` body:
+
+```markdown
+Review the change for injection, authentication and secret-handling defects.
+Report each finding with its file, line and severity.
+
+<!-- @client:claude -->
+
+Use the Grep tool to search for hard-coded secrets before you read the diff.
+
+<!-- @endclient -->
+
+<!-- @client:copilot -->
+
+Use `#tool:search` to search for hard-coded secrets before you read the diff.
+
+<!-- @endclient -->
+```
+
+`AGENT.md` supplies the frontmatter and the body for all clients. Each client
+receives the shared text plus its own `@client` block (§6). opencode receives
+only the shared text, because no block names it.
 
 ---
 
@@ -1656,7 +1622,8 @@ evolve.
 ```markdown
 <!-- @client:claude -->
 Include only in Claude Code output
-<!-- @client:copilot -->          Include only in Copilot output
+<!-- @client:copilot -->
+Include only in Copilot output
 <!-- @client:opencode -->         Include only in opencode output
 <!-- @client:claude,copilot -->
 Include in Claude Code and GitHub Copilot, not opencode

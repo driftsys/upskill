@@ -77,9 +77,9 @@ fields in those entrypoints MUST match the directory name.
   `<dir>/SKILL.md` with `name` matching the parent — compliant. Any sibling
   RULE.md or AGENT.md is "additional files" under the standard and ignored by
   agentskills.io-compatible tooling.
-- **Per-client override files unchanged in mechanism.** `RULE.claude.md`,
-  `SKILL.claude.md`, `AGENT.claude.md` can coexist in one directory,
-  disambiguated by filename.
+- **No per-client body files.** A file such as `RULE.claude.md` or
+  `SKILL.claude.md` is an ordinary supporting resource of the item directory
+  (removed from the format on 2026-11-20, #539).
 - **Supporting resources can be shared across kinds.** A `templates/` or
   `references/` subdirectory in an item directory is referenced by whichever
   entrypoints need it.

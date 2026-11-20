@@ -148,12 +148,12 @@ per-invocation flag scopes that run only and never rewrites config. An item
 whose author `audience:` excludes every selected client is warn-skipped. See
 [ADR-0012](https://github.com/driftsys/upskill/blob/main/docs/adr/0012-consumer-client-filtering.md).
 
-Supporting files in an item directory — anything besides the entrypoint and
-per-client override files, e.g. `scripts/`, `references/`, `assets/` — are
-copied into each client's output alongside the rendered item. For rules and
-agents that render to a flat file (Claude Code, GitHub Copilot), resources go
-into a sibling `<name>/` directory and the body's relative links are rewritten
-to match. See [format-spec §2.4](format-spec.md).
+Supporting files in an item directory — anything besides the entrypoint, e.g.
+`scripts/`, `references/`, `assets/` — are copied into each client's output
+alongside the rendered item. For rules and agents that render to a flat file
+(Claude Code, GitHub Copilot), resources go into a sibling `<name>/` directory
+and the body's relative links are rewritten to match. See
+[format-spec §2.4](format-spec.md).
 
 `add` refuses an install when a source item directory is the same as, is inside,
 or contains a path that the install deletes or writes for an item that it

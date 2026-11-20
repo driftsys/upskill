@@ -135,14 +135,13 @@ publishing to shared discovery.
 Shared authoring does not require shared native discovery. A common procedure
 can remain in the canonical body with generation-time client directives for
 small orchestration differences, or in copied resources explicitly read by
-client-specific wrappers for larger differences. Whole-body overrides replace
-the canonical body and do not compose with it. Their specified semantics are not
-implemented by the historical installer or captured compiler; see
-[format §2.3](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#23-per-client-override-files)
-and AD-0025. Resource copies do not create additional skill entrypoints. Qualify
-the native read, resource path and permission behavior separately; references do
-not register agents or grant tools/MCP access. An embedded composition/include
-feature and override execution are separate work, outside this Gate 6 change.
+client-specific `@client` blocks for larger differences. There are no per-client
+body files; see
+[format §2.3](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#23-client-specific-bodies).
+Resource copies do not create additional skill entrypoints. Qualify the native
+read, resource path and permission behavior separately; references do not
+register agents or grant tools/MCP access. An embedded composition/include
+feature is separate work, outside this Gate 6 change.
 
 This intent does not adopt existing schema-1 outputs or manual content, add
 owners from compatibility readers, or authorize moving installed files. Select
