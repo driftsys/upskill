@@ -137,11 +137,11 @@ item directory (no subfolder, or a subfolder that normalises to the root, such
 as `:.`), the error says that the repository root is one item directory and that
 upskill installs items from the directory that contains the item directories,
 and names no command. The output-path case does not apply to a git source. With
-item names given, a git source that is one item directory fails before this
-check, with exit code 1, nothing written, and the error that says there are no
-matching items or bundles, not with the command to use instead. This check
-applies to `add` only: `update` and the sources of `requires` entries are not
-checked. `.` alone is a local path, the same as `./`.
+item names given that match nothing in it, a git source that is one item
+directory fails before this check, with exit code 1, nothing written, and the
+error that says there are no matching items or bundles, not with the command to
+use instead. This check applies to `add` only: `update` and the sources of
+`requires` entries are not checked. `.` alone is a local path, the same as `./`.
 
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a scope flag uses the project scope.
