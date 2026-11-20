@@ -1108,3 +1108,30 @@ fn remove_deletes_the_plugin_from_both_keys() {
     assert_eq!(config["plugin"], serde_json::json!(["x"]), "{config}");
     assert_eq!(config["plugins"], serde_json::json!([]), "{config}");
 }
+
+#[test]
+fn project_flag_outside_a_git_repo_writes_the_project_opencode_json() {
+    let env = Env::with_rule_and_mcp();
+    let cwd = env.home.parent().unwrap().join("no-git");
+    fs::create_dir_all(&cwd).unwrap();
+    let registry = env.bundle.parent().unwrap().to_str().unwrap().to_string();
+    let path = format!("{}:/usr/bin:/bin", env.bin.display());
+    common::upskill_cmd(&env.home)
+        .current_dir(&cwd)
+        .env("PATH", path)
+        .args(["add", &registry, "oc", "--opencode", "--project"])
+        .assert()
+        .success();
+
+    let config = read_json(&cwd.join("opencode.json"));
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert_eq!(
+        config["instructions"],
+        serde_json::json!([".agents/rules/**/RULE.md"]),
+        "{config}"
+    );
+    assert!(config["mcp"][MCP_NAME].is_object(), "{config}");
+    assert!(!env.home.join(".config/opencode").exists());
+    let lock = read_json(&cwd.join(".upskill-lock.json"));
+    assert_eq!(lock["plugins"][0]["scope"], "project", "{lock}");
+}

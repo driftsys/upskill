@@ -859,8 +859,8 @@ fn recorded_scope(scope: Option<&str>) -> crate::plugin::PluginScope {
 /// not installed. Used by `doctor` and by the plugin repair of `update`.
 ///
 /// An opencode plugin whose identifier is in the `plugin` or `plugins` array
-/// of the opencode config file of its recorded scope is installed, and no opencode command is run
-/// for it. An opencode plugin recorded with `config_write` and absent from
+/// of the opencode config file of its recorded scope is installed, and no
+/// opencode command is run for it. An opencode plugin recorded with `config_write` and absent from
 /// that array is missing, also without any opencode command. Otherwise the
 /// client CLI is queried. A client CLI that is absent,
 /// that has an unsupported version, or whose query fails gives `false`: the

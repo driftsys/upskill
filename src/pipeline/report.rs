@@ -209,7 +209,8 @@ pub struct PluginResult {
     /// Human-readable summary for manual instructions.
     pub summary: Option<String>,
     /// True for an opencode `plugin_uri` install: a write to the `plugins`
-    /// array of the `opencode.json` of the scope, recorded as `config_write` in the lockfile.
+    /// array of the `opencode.json` of the scope, recorded as `config_write` in
+    /// the lockfile.
     pub config_write: bool,
 }
 
