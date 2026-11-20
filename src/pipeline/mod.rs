@@ -190,6 +190,14 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// `pending`) for an item from another source. A refused install changes no
 /// file.
 ///
+/// A source directory that is itself one item directory, with no item in
+/// its child or grandchild directories, no `*.bundle.yaml` file and no item
+/// name that matches a bundle in it, is refused before any write (see
+/// `discovery::refuse_item_dir_source`): a local path before the fetch, a
+/// git subfolder or repository root after it. The git check runs after
+/// `prepare_install`, so with item names given that match nothing there,
+/// `add` fails first with the "no matching items or bundles" error.
+///
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Git `git_ref`); local-path sources record `None`.
 /// `source` label is the [`InstallSource`] `Display` form.
@@ -205,11 +213,27 @@ pub fn install_with_lockfile(
             scope: options.scope,
             root: target.to_path_buf(),
         };
-        discovery::refuse_item_dir_source(path, items, |kind, name| {
-            output::is_inside_output_path(&at, kind, name, path)
-        })?;
+        let inside_output =
+            |kind: ItemKind, name: &str| output::is_inside_output_path(&at, kind, name, path);
+        discovery::refuse_item_dir_source(
+            path,
+            items,
+            discovery::ItemDirSource::Local {
+                inside_output: &inside_output,
+            },
+        )?;
     }
     let prepared = prepared::prepare_install(source, target, items, options)?;
+    // A git subfolder or repository root that is one item directory
+    // installs nothing (#577). `prepare_install` writes nothing, so the
+    // refusal still comes before any write. `update` does not run this check.
+    if let Some(git) = discovery::GitSourceForm::of(source) {
+        discovery::refuse_item_dir_source(
+            prepared.entry_root(),
+            items,
+            discovery::ItemDirSource::Git(git),
+        )?;
+    }
     // A source item directory must not contain a file that the lockfile
     // records for an item from another source (issue #550). Checked before
     // the adoption and before any write. The records are read after an

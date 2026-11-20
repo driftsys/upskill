@@ -73,9 +73,27 @@ Otherwise the error names the command to use instead,
 `upskill add <parent> <item-name>`, with the parent path and the item name each
 in single quotes when it holds a shell-special character (on Windows, the path
 separator `\` is not one); for the file system root, which has no parent, the
-error says so. A source is the directory that contains the item directories.
-This check applies to `add` only: `update` and the sources of `requires` entries
-are not checked. `.` alone is a local path, the same as `./`.
+error says so. A source is the directory that contains the item directories. A
+git source is checked the same way after the fetch (`owner/repo:path`,
+`owner/repo@ref:path`, a full URL with `:path`, and also a git source without a
+subfolder), on the fetched directory, with the same exemptions; the subfolder is
+first normalised: empty components (from a doubled or trailing `/`) and `.`
+components are removed, and each `..` component removes the component before it.
+When the subfolder is an item directory, the error names the source in the form
+that `add` accepts (a github.com URL is shown as `owner/repo`), and the command
+to use instead keeps the source form and the ref, with the parent subfolder in
+place of the subfolder, for example `upskill add owner/repo@v1:skills foo` for
+`owner/repo@v1:skills/foo`; when the parent is the repository root, the command
+has no subfolder (`upskill add owner/repo foo`). When the repository root is one
+item directory (no subfolder, or a subfolder that normalises to the root, such
+as `:.`), the error says that the repository root is one item directory and that
+upskill installs items from the directory that contains the item directories,
+and names no command. The output-path case does not apply to a git source. With
+item names given that match nothing in it, a git source that is one item
+directory fails before this check, with exit code 1, nothing written, and the
+error that says there are no matching items or bundles, not with the command to
+use instead. This check applies to `add` only: `update` and the sources of
+`requires` entries are not checked. `.` alone is a local path, the same as `./`.
 
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a flag uses the project scope. Outside a
