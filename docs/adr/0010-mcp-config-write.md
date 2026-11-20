@@ -128,7 +128,12 @@ applicable config-write target produces a warn-skip — not an error.
 | Claude Code    | `claude mcp add …` (`--scope`, `-e`, `--transport`, `-H`) | `.mcp.json`                               | `mcpServers` |
 | GitHub Copilot | `copilot mcp add …` (no `--scope`)                        | `~/.copilot/mcp-config.json` (user scope) | `mcpServers` |
 | VS Code        | `code --add-mcp '<json>'`                                 | `.vscode/mcp.json`                        | `servers`    |
-| opencode       | — (no `mcp add` verb)                                     | `opencode.json`                           | `mcp`        |
+| opencode       | — (no `mcp add` verb)                                     | `opencode.json` of the scope (see below)  | `mcp`        |
+
+The opencode file is the `opencode.json` of the scope: the project root in the
+project scope, and `$XDG_CONFIG_HOME/opencode/` (or `~/.config/opencode/`) in
+the global scope, because opencode reads its global configuration only there
+(ADR-0008, issues #565 and #573).
 
 The Claude forms are unchanged:
 

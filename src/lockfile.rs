@@ -180,7 +180,7 @@ pub struct LockedPlugin {
     #[serde(default)]
     pub status: PluginInstallStatus,
     /// True when upskill installed the plugin by a write of `identifier` to
-    /// the `plugin` array of the scope's `opencode.json` (an opencode
+    /// the `plugins` array of the `opencode.json` of the scope (an opencode
     /// `plugin_uri` descriptor). `doctor` and the repair of `update` then
     /// check that file only and run no opencode command. Omitted when false,
     /// for every other install form; a lockfile without it reads as false.

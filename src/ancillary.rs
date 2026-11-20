@@ -32,7 +32,7 @@ use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 
 use crate::model::bundle::{McpLocal, McpRemote};
-use crate::plugin::PluginOutcome;
+use crate::plugin::{PluginOutcome, PluginScope};
 
 /// Filename written at the consumer-project root.
 const CLAUDE_MD: &str = "CLAUDE.md";
@@ -42,8 +42,45 @@ const CLAUDE_MD: &str = "CLAUDE.md";
 /// the project level is then expected to live in `AGENTS.md`.
 const CLAUDE_MD_BRIDGE: &str = "@AGENTS.md\n";
 
-/// opencode config filename at the consumer-project root.
+/// opencode config filename.
 const OPENCODE_JSON: &str = "opencode.json";
+
+/// Keys of `opencode.json` that hold plugin entries. opencode reads both;
+/// upskill writes `PLUGINS_KEY` and accepts either when it looks up or
+/// removes an entry.
+const PLUGIN_KEYS: [&str; 2] = ["plugin", "plugins"];
+const PLUGINS_KEY: &str = "plugins";
+
+/// Directory of the opencode config file for a scope.
+///
+/// - Project scope: `root`, the project root.
+/// - Global scope: `$XDG_CONFIG_HOME/opencode`, or `<root>/.config/opencode`
+///   when `XDG_CONFIG_HOME` is unset, empty or not an absolute path. `root`
+///   is the home directory in the global scope.
+///
+/// opencode reads its global configuration only from that directory.
+pub fn opencode_config_dir(scope: PluginScope, root: &Path) -> PathBuf {
+    opencode_config_dir_with(scope, root, std::env::var_os("XDG_CONFIG_HOME"))
+}
+
+fn opencode_config_dir_with(
+    scope: PluginScope,
+    root: &Path,
+    xdg_config_home: Option<std::ffi::OsString>,
+) -> PathBuf {
+    match scope {
+        PluginScope::Project => root.to_path_buf(),
+        PluginScope::User => xdg_config_home
+            .map(PathBuf::from)
+            .filter(|v| v.is_absolute())
+            .map(|xdg| xdg.join("opencode"))
+            .unwrap_or_else(|| root.join(".config/opencode")),
+    }
+}
+
+fn opencode_json_path(scope: PluginScope, root: &Path) -> PathBuf {
+    opencode_config_dir(scope, root).join(OPENCODE_JSON)
+}
 
 /// Glob entry added to opencode's `instructions[]` so rules under
 /// `.agents/rules/` are discovered (opencode walks the glob, which dot-aware
@@ -128,10 +165,22 @@ fn apply_pending(pending: Option<PendingWrite>) -> Result<AncillaryAction> {
 ///
 /// Returns the same errors as the `ensure_*` functions when an existing file
 /// cannot be read or has an unsupported shape.
-pub fn pending_handshake_changes(target: &Path, has_rules: bool) -> Result<Vec<PathBuf>> {
+///
+/// In the global scope opencode gets no rules entry: its relative
+/// `instructions` path resolves against the project directory, so the glob
+/// cannot reach `~/.agents/rules/`.
+pub fn pending_handshake_changes(
+    target: &Path,
+    scope: PluginScope,
+    has_rules: bool,
+) -> Result<Vec<PathBuf>> {
+    let opencode_rules = match scope {
+        PluginScope::Project => opencode_rules_pending(target, has_rules)?,
+        PluginScope::User => None,
+    };
     let pending = [
         claude_bridge_pending(target),
-        opencode_rules_pending(target, has_rules)?,
+        opencode_rules,
         vscode_instructions_pending(target, has_rules)?,
     ];
     let mut paths: Vec<PathBuf> = pending
@@ -314,16 +363,22 @@ fn vscode_instructions_pending(target: &Path, has_rules: bool) -> Result<Option<
     }
 }
 
-/// Write a plugin URI to the `plugin[]` array in `<target>/opencode.json`.
+/// Write a plugin URI to the `plugins[]` array in the opencode config file
+/// of `scope` (see [`opencode_config_dir`]).
 ///
-/// Idempotent: if the URI is already present, no change is made.
+/// Idempotent: if the URI is already present, no change is made. An entry in
+/// the older `plugin` array is left in place and is not counted as present.
 /// Creates the file if absent. Returns `PluginOutcome::Failed` if the file
-/// exists but is not a JSON object or `plugin` is not an array.
-pub fn write_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> PluginOutcome {
-    let path = target.join(OPENCODE_JSON);
+/// exists but is not a JSON object or `plugins` is not an array.
+pub fn write_opencode_plugin_uri(
+    target: &Path,
+    scope: PluginScope,
+    plugin_uri: &str,
+) -> PluginOutcome {
+    let path = opencode_json_path(scope, target);
     match std::fs::read_to_string(&path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            let new_doc = json!({ "plugin": [plugin_uri] });
+            let new_doc = json!({ PLUGINS_KEY: [plugin_uri] });
             if let Err(e) = write_pretty_json(&path, &new_doc) {
                 return PluginOutcome::Failed {
                     exit_code: None,
@@ -354,15 +409,15 @@ pub fn write_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> PluginOutco
             }
 
             let obj = doc.as_object_mut().expect("checked is_object");
-            match obj.get_mut("plugin") {
+            match obj.get_mut(PLUGINS_KEY) {
                 None => {
-                    obj.insert("plugin".to_string(), json!([plugin_uri]));
+                    obj.insert(PLUGINS_KEY.to_string(), json!([plugin_uri]));
                 }
                 Some(existing) => {
                     let Some(arr) = existing.as_array_mut() else {
                         return PluginOutcome::Failed {
                             exit_code: None,
-                            stderr: format!("{}: `plugin` must be an array", path.display()),
+                            stderr: format!("{}: `plugins` must be an array", path.display()),
                         };
                     };
                     if arr.iter().any(|v| v.as_str() == Some(plugin_uri)) {
@@ -383,26 +438,33 @@ pub fn write_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> PluginOutco
     }
 }
 
-/// True when the `plugin[]` array of `<target>/opencode.json` holds
-/// `identifier`. False when the file is absent, cannot be read or parsed,
-/// or has no such entry.
-pub fn opencode_plugin_listed(target: &Path, identifier: &str) -> bool {
-    let Ok(raw) = std::fs::read_to_string(target.join(OPENCODE_JSON)) else {
+/// True when the `plugin[]` or `plugins[]` array of the opencode config file
+/// of `scope` holds `identifier`. False when the file is absent, cannot be
+/// read or parsed, or has no such entry.
+pub fn opencode_plugin_listed(target: &Path, scope: PluginScope, identifier: &str) -> bool {
+    let Ok(raw) = std::fs::read_to_string(opencode_json_path(scope, target)) else {
         return false;
     };
     let Ok(doc) = serde_json::from_str::<Value>(&raw) else {
         return false;
     };
-    doc.get("plugin")
-        .and_then(Value::as_array)
-        .is_some_and(|a| a.iter().any(|v| v.as_str() == Some(identifier)))
+    PLUGIN_KEYS.iter().any(|key| {
+        doc.get(key)
+            .and_then(Value::as_array)
+            .is_some_and(|a| a.iter().any(|v| v.as_str() == Some(identifier)))
+    })
 }
 
-/// Remove a plugin URI from the `plugin[]` array in `<target>/opencode.json`.
+/// Remove a plugin URI from the `plugin[]` and `plugins[]` arrays of the
+/// opencode config file of `scope`.
 ///
-/// No-op if the file is absent or the URI is not in the array.
-pub fn remove_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> Result<()> {
-    let path = target.join(OPENCODE_JSON);
+/// No-op if the file is absent or the URI is in neither array.
+pub fn remove_opencode_plugin_uri(
+    target: &Path,
+    scope: PluginScope,
+    plugin_uri: &str,
+) -> Result<()> {
+    let path = opencode_json_path(scope, target);
     let raw = match std::fs::read_to_string(&path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
         Err(e) => return Err(e).with_context(|| format!("read {}", path.display())),
@@ -416,15 +478,19 @@ pub fn remove_opencode_plugin_uri(target: &Path, plugin_uri: &str) -> Result<()>
         anyhow::bail!("{}: top-level value must be an object", path.display());
     };
 
-    if let Some(existing) = obj.get_mut("plugin") {
-        let arr = existing
-            .as_array_mut()
-            .with_context(|| format!("{}: `plugin` must be an array", path.display()))?;
-        let before = arr.len();
-        arr.retain(|v| v.as_str() != Some(plugin_uri));
-        if arr.len() < before {
-            write_pretty_json(&path, &doc)?;
+    let mut changed = false;
+    for key in PLUGIN_KEYS {
+        if let Some(existing) = obj.get_mut(key) {
+            let arr = existing
+                .as_array_mut()
+                .with_context(|| format!("{}: `{key}` must be an array", path.display()))?;
+            let before = arr.len();
+            arr.retain(|v| v.as_str() != Some(plugin_uri));
+            changed |= arr.len() < before;
         }
+    }
+    if changed {
+        write_pretty_json(&path, &doc)?;
     }
 
     Ok(())
@@ -612,22 +678,34 @@ fn opencode_remote_value(remote: &McpRemote) -> Value {
     Value::Object(server)
 }
 
-/// Write a local MCP server into `<target>/opencode.json` under `mcp.<name>`.
-/// Merge-preserving (opencode.json also holds `instructions`/`plugin`); this
-/// is opencode's only configuration path — it has no `mcp add` CLI verb.
-pub fn write_opencode_mcp_local(target: &Path, name: &str, local: &McpLocal) -> PluginOutcome {
+/// Write a local MCP server into the opencode config file of `scope` under
+/// `mcp.<name>`. Merge-preserving (opencode.json also holds
+/// `instructions`/`plugins`); this is opencode's only configuration path — it
+/// has no `mcp add` CLI verb.
+pub fn write_opencode_mcp_local(
+    target: &Path,
+    scope: PluginScope,
+    name: &str,
+    local: &McpLocal,
+) -> PluginOutcome {
     upsert_mcp_server(
-        &target.join(OPENCODE_JSON),
+        &opencode_json_path(scope, target),
         "mcp",
         name,
         opencode_local_value(local),
     )
 }
 
-/// Write a remote MCP server into `<target>/opencode.json` under `mcp.<name>`.
-pub fn write_opencode_mcp_remote(target: &Path, name: &str, remote: &McpRemote) -> PluginOutcome {
+/// Write a remote MCP server into the opencode config file of `scope` under
+/// `mcp.<name>`.
+pub fn write_opencode_mcp_remote(
+    target: &Path,
+    scope: PluginScope,
+    name: &str,
+    remote: &McpRemote,
+) -> PluginOutcome {
     upsert_mcp_server(
-        &target.join(OPENCODE_JSON),
+        &opencode_json_path(scope, target),
         "mcp",
         name,
         opencode_remote_value(remote),
@@ -694,10 +772,10 @@ pub fn remove_vscode_mcp(target: &Path, name: &str) -> Result<()> {
     remove_mcp_server(&target.join(VSCODE_MCP_JSON), "servers", name)
 }
 
-/// Remove an MCP server from `<target>/opencode.json` `mcp` map. No-op if
-/// absent.
-pub fn remove_opencode_mcp(target: &Path, name: &str) -> Result<()> {
-    remove_mcp_server(&target.join(OPENCODE_JSON), "mcp", name)
+/// Remove an MCP server from the `mcp` map of the opencode config file of
+/// `scope`. No-op if absent.
+pub fn remove_opencode_mcp(target: &Path, scope: PluginScope, name: &str) -> Result<()> {
+    remove_mcp_server(&opencode_json_path(scope, target), "mcp", name)
 }
 
 /// Remove an MCP server from `~/.copilot/mcp-config.json`. No-op if absent or
@@ -775,9 +853,10 @@ pub fn vscode_mcp_state(target: &Path, name: &str) -> McpConfigState {
     mcp_config_state(&target.join(VSCODE_MCP_JSON), "servers", name)
 }
 
-/// Doctor state for an opencode MCP entry (`opencode.json` `mcp.<name>`).
-pub fn opencode_mcp_state(target: &Path, name: &str) -> McpConfigState {
-    mcp_config_state(&target.join(OPENCODE_JSON), "mcp", name)
+/// Doctor state for an opencode MCP entry (`mcp.<name>` in the opencode
+/// config file of `scope`).
+pub fn opencode_mcp_state(target: &Path, scope: PluginScope, name: &str) -> McpConfigState {
+    mcp_config_state(&opencode_json_path(scope, target), "mcp", name)
 }
 
 /// Doctor state for a Copilot MCP entry (`~/.copilot/mcp-config.json`
@@ -870,14 +949,14 @@ mod tests {
     #[test]
     fn pending_handshake_changes_lists_each_missing_file() {
         let tmp = tempfile::tempdir().unwrap();
-        let got = pending_handshake_changes(tmp.path(), true).unwrap();
+        let got = pending_handshake_changes(tmp.path(), PluginScope::Project, true).unwrap();
         assert_eq!(got, all_three());
     }
 
     #[test]
     fn pending_handshake_changes_without_rules_lists_only_claude_md() {
         let tmp = tempfile::tempdir().unwrap();
-        let got = pending_handshake_changes(tmp.path(), false).unwrap();
+        let got = pending_handshake_changes(tmp.path(), PluginScope::Project, false).unwrap();
         assert_eq!(got, vec![PathBuf::from("CLAUDE.md")]);
     }
 
@@ -888,7 +967,7 @@ mod tests {
         ensure_opencode_rules_registered(tmp.path(), true).unwrap();
         ensure_vscode_instructions_registered(tmp.path(), true).unwrap();
         assert!(
-            pending_handshake_changes(tmp.path(), true)
+            pending_handshake_changes(tmp.path(), PluginScope::Project, true)
                 .unwrap()
                 .is_empty()
         );
@@ -899,7 +978,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join(OPENCODE_JSON), "{\"theme\": \"dark\"}\n").unwrap();
         let before = snapshot(tmp.path());
-        let got = pending_handshake_changes(tmp.path(), true).unwrap();
+        let got = pending_handshake_changes(tmp.path(), PluginScope::Project, true).unwrap();
         assert_eq!(got.len(), 3);
         assert_eq!(snapshot(tmp.path()), before);
         assert!(!tmp.path().join(".vscode").exists());
@@ -913,7 +992,7 @@ mod tests {
             r#"{"theme": "dark", "instructions": ["a.md", ".agents/rules/**/RULE.md"]}"#,
         )
         .unwrap();
-        let got = pending_handshake_changes(tmp.path(), true).unwrap();
+        let got = pending_handshake_changes(tmp.path(), PluginScope::Project, true).unwrap();
         let mut expected = vec![
             PathBuf::from("CLAUDE.md"),
             PathBuf::from(".vscode").join("settings.json"),
@@ -930,7 +1009,7 @@ mod tests {
             r#"{"instructions": ["a.md"]}"#,
         )
         .unwrap();
-        let got = pending_handshake_changes(tmp.path(), true).unwrap();
+        let got = pending_handshake_changes(tmp.path(), PluginScope::Project, true).unwrap();
         assert!(got.contains(&PathBuf::from(OPENCODE_JSON)));
     }
 
@@ -938,7 +1017,7 @@ mod tests {
     fn pending_handshake_changes_errors_like_the_ensure_function() {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join(OPENCODE_JSON), r#"{"instructions": "x"}"#).unwrap();
-        assert!(pending_handshake_changes(tmp.path(), true).is_err());
+        assert!(pending_handshake_changes(tmp.path(), PluginScope::Project, true).is_err());
     }
 
     fn read_opencode(target: &Path) -> Value {
@@ -1162,13 +1241,17 @@ mod tests {
     #[test]
     fn write_opencode_plugin_uri_creates_file_when_absent() {
         let tmp = tempfile::tempdir().unwrap();
-        let outcome = write_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com");
+        let outcome = write_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        );
         assert_eq!(outcome, crate::plugin::PluginOutcome::Success);
         let content: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
         )
         .unwrap();
-        let plugins = content["plugin"].as_array().unwrap();
+        let plugins = content["plugins"].as_array().unwrap();
         assert_eq!(plugins.len(), 1);
         assert_eq!(plugins[0], "sp@git+https://example.com");
     }
@@ -1178,16 +1261,20 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(
             tmp.path().join("opencode.json"),
-            r#"{"instructions": [".agents/rules/**/RULE.md"], "plugin": ["existing@foo"]}"#,
+            r#"{"instructions": [".agents/rules/**/RULE.md"], "plugins": ["existing@foo"]}"#,
         )
         .unwrap();
-        let outcome = write_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com");
+        let outcome = write_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        );
         assert_eq!(outcome, crate::plugin::PluginOutcome::Success);
         let content: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
         )
         .unwrap();
-        let plugins = content["plugin"].as_array().unwrap();
+        let plugins = content["plugins"].as_array().unwrap();
         assert_eq!(plugins.len(), 2);
         assert_eq!(plugins[0], "existing@foo");
         assert_eq!(plugins[1], "sp@git+https://example.com");
@@ -1197,18 +1284,38 @@ mod tests {
     #[test]
     fn opencode_plugin_listed_reads_the_plugin_array() {
         let tmp = tempfile::tempdir().unwrap();
-        assert!(!opencode_plugin_listed(tmp.path(), "sp"));
+        assert!(!opencode_plugin_listed(
+            tmp.path(),
+            PluginScope::Project,
+            "sp"
+        ));
         std::fs::write(
             tmp.path().join("opencode.json"),
             r#"{"plugin": ["other", "sp"]}"#,
         )
         .unwrap();
-        assert!(opencode_plugin_listed(tmp.path(), "sp"));
-        assert!(!opencode_plugin_listed(tmp.path(), "s"));
+        assert!(opencode_plugin_listed(
+            tmp.path(),
+            PluginScope::Project,
+            "sp"
+        ));
+        assert!(!opencode_plugin_listed(
+            tmp.path(),
+            PluginScope::Project,
+            "s"
+        ));
         std::fs::write(tmp.path().join("opencode.json"), "not json").unwrap();
-        assert!(!opencode_plugin_listed(tmp.path(), "sp"));
+        assert!(!opencode_plugin_listed(
+            tmp.path(),
+            PluginScope::Project,
+            "sp"
+        ));
         std::fs::write(tmp.path().join("opencode.json"), r#"{"mcp": {}}"#).unwrap();
-        assert!(!opencode_plugin_listed(tmp.path(), "sp"));
+        assert!(!opencode_plugin_listed(
+            tmp.path(),
+            PluginScope::Project,
+            "sp"
+        ));
     }
 
     #[test]
@@ -1216,28 +1323,36 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(
             tmp.path().join("opencode.json"),
-            r#"{"plugin": ["sp@git+https://example.com"]}"#,
+            r#"{"plugins": ["sp@git+https://example.com"]}"#,
         )
         .unwrap();
-        let outcome = write_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com");
+        let outcome = write_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        );
         assert_eq!(outcome, crate::plugin::PluginOutcome::Success);
         let content: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
         )
         .unwrap();
-        let plugins = content["plugin"].as_array().unwrap();
+        let plugins = content["plugins"].as_array().unwrap();
         assert_eq!(plugins.len(), 1);
     }
 
     #[test]
-    fn write_opencode_plugin_uri_fails_on_non_array_plugin_key() {
+    fn write_opencode_plugin_uri_fails_on_non_array_plugins_key() {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(
             tmp.path().join("opencode.json"),
-            r#"{"plugin": "not-an-array"}"#,
+            r#"{"plugins": "not-an-array"}"#,
         )
         .unwrap();
-        let outcome = write_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com");
+        let outcome = write_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        );
         assert!(matches!(
             outcome,
             crate::plugin::PluginOutcome::Failed { .. }
@@ -1252,7 +1367,12 @@ mod tests {
             r#"{"plugin": ["sp@git+https://example.com", "other@foo"]}"#,
         )
         .unwrap();
-        remove_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com").unwrap();
+        remove_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        )
+        .unwrap();
         let content: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
         )
@@ -1270,7 +1390,12 @@ mod tests {
             r#"{"plugin": ["other@foo"]}"#,
         )
         .unwrap();
-        remove_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com").unwrap();
+        remove_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        )
+        .unwrap();
         let content: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
         )
@@ -1280,9 +1405,96 @@ mod tests {
     }
 
     #[test]
+    fn write_opencode_plugin_uri_leaves_a_legacy_plugin_entry_in_place() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": ["sp@git+https://example.com"]}"#,
+        )
+        .unwrap();
+        let outcome = write_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        );
+        assert_eq!(outcome, crate::plugin::PluginOutcome::Success);
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(content["plugin"].as_array().unwrap().len(), 1);
+        assert_eq!(content["plugins"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn opencode_plugin_listed_accepts_the_plugins_key() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("opencode.json"), r#"{"plugins": ["sp"]}"#).unwrap();
+        assert!(opencode_plugin_listed(
+            tmp.path(),
+            PluginScope::Project,
+            "sp"
+        ));
+    }
+
+    #[test]
+    fn remove_opencode_plugin_uri_removes_from_both_keys() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": ["sp", "a"], "plugins": ["sp", "b"]}"#,
+        )
+        .unwrap();
+        remove_opencode_plugin_uri(tmp.path(), PluginScope::Project, "sp").unwrap();
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(content["plugin"], serde_json::json!(["a"]));
+        assert_eq!(content["plugins"], serde_json::json!(["b"]));
+    }
+
+    #[test]
+    fn opencode_config_dir_is_the_root_in_the_project_scope() {
+        let root = Path::new("/work/proj");
+        let xdg = Some(std::ffi::OsString::from("/xdg"));
+        assert_eq!(
+            opencode_config_dir_with(PluginScope::Project, root, xdg),
+            root
+        );
+    }
+
+    #[test]
+    fn opencode_config_dir_in_the_global_scope_follows_xdg_config_home() {
+        let home = Path::new("/home/u");
+        let dir = |xdg: Option<&str>| {
+            opencode_config_dir_with(PluginScope::User, home, xdg.map(Into::into))
+        };
+        assert_eq!(dir(None), Path::new("/home/u/.config/opencode"));
+        assert_eq!(dir(Some("")), Path::new("/home/u/.config/opencode"));
+        assert_eq!(
+            dir(Some("relative/x")),
+            Path::new("/home/u/.config/opencode")
+        );
+        assert_eq!(dir(Some("/xdg")), Path::new("/xdg/opencode"));
+    }
+
+    #[test]
+    fn pending_handshake_changes_in_the_global_scope_skips_the_opencode_rules_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let got = pending_handshake_changes(tmp.path(), PluginScope::User, true).unwrap();
+        assert!(!got.contains(&PathBuf::from("opencode.json")));
+    }
+
+    #[test]
     fn remove_opencode_plugin_uri_noop_when_no_file() {
         let tmp = tempfile::tempdir().unwrap();
-        remove_opencode_plugin_uri(tmp.path(), "sp@git+https://example.com").unwrap();
+        remove_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        )
+        .unwrap();
         assert!(!tmp.path().join("opencode.json").exists());
     }
 
@@ -1452,7 +1664,10 @@ mod tests {
             env,
         };
 
-        assert!(write_opencode_mcp_local(tmp.path(), "drawio", &local).is_success());
+        assert!(
+            write_opencode_mcp_local(tmp.path(), PluginScope::Project, "drawio", &local)
+                .is_success()
+        );
 
         let raw = std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap();
         let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
@@ -1485,7 +1700,9 @@ mod tests {
             url: "https://example.com/mcp".into(),
             headers: BTreeMap::new(),
         };
-        assert!(write_opencode_mcp_remote(tmp.path(), "ex", &remote).is_success());
+        assert!(
+            write_opencode_mcp_remote(tmp.path(), PluginScope::Project, "ex", &remote).is_success()
+        );
 
         let raw = std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap();
         let doc: serde_json::Value = serde_json::from_str(&raw).unwrap();
@@ -1508,11 +1725,11 @@ mod tests {
         };
         write_vscode_mcp_local(tmp.path(), "a", &local);
         write_vscode_mcp_local(tmp.path(), "b", &local);
-        write_opencode_mcp_local(tmp.path(), "a", &local);
-        write_opencode_mcp_local(tmp.path(), "b", &local);
+        write_opencode_mcp_local(tmp.path(), PluginScope::Project, "a", &local);
+        write_opencode_mcp_local(tmp.path(), PluginScope::Project, "b", &local);
 
         remove_vscode_mcp(tmp.path(), "a").unwrap();
-        remove_opencode_mcp(tmp.path(), "a").unwrap();
+        remove_opencode_mcp(tmp.path(), PluginScope::Project, "a").unwrap();
 
         let vscode: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(tmp.path().join(".vscode/mcp.json")).unwrap(),

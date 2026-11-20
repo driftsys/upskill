@@ -119,26 +119,60 @@ missing tertiary tool is hostile.
 upskill uses the plugin commands of opencode 2 or later only:
 `opencode plugin add <package>` to install and `opencode plugin list` to check.
 upskill runs no `opencode plugin remove`: `remove` deletes the plugin's entry
-from the `plugin` array of `opencode.json` and runs no opencode command. Before
-it runs any `opencode plugin` command, upskill runs `opencode --version`. When
-the major version is below 2, or no version can be read, upskill runs no
-`opencode plugin` command: opencode 1.x reads `opencode plugin <word>` as an
-install of the module `<word>`, so `opencode plugin list` would install a module
-named `list`. An install then records the plugin as `skipped`, and `add` prints
-a warning that names `opencode 2` and the version found. `doctor` treats the
-plugin as a plugin whose state cannot be checked: it is not reported as missing.
+from the `plugin` and `plugins` arrays of `opencode.json` and runs no opencode
+command. Before it runs any `opencode plugin` command, upskill runs
+`opencode --version`. When the major version is below 2, or no version can be
+read, upskill runs no `opencode plugin` command: opencode 1.x reads
+`opencode plugin <word>` as an install of the module `<word>`, so
+`opencode plugin list` would install a module named `list`. An install then
+records the plugin as `skipped`, and `add` prints a warning that names
+`opencode 2` and the version found. `doctor` treats the plugin as a plugin whose
+state cannot be checked: it is not reported as missing.
 
-A plugin declared with `plugin_uri` is installed by a write to the `plugin`
-array of `opencode.json`, not by a command. Its lockfile record carries
-`"config_write": true` (omitted for every other install form; a record without
-it reads as `false`). For a record with `config_write`, `doctor` and the repair
-of `update` check the `opencode.json` that upskill writes for that scope only:
-the identifier in the `plugin` array means installed, its absence means missing,
-and no opencode command runs, with any opencode version or none. The repair
-writes the entry again. For an opencode record without the field (written before
-the field existed), `doctor` reads the file first and, when the identifier is
-absent, checks with `opencode plugin list` under the version check. When
-`update` applies or repairs such a plugin, it sets the field.
+A plugin declared with `plugin_uri` is installed by a write to the `plugins`
+array of the `opencode.json` of the scope, not by a command. Its lockfile record
+carries `"config_write": true` (omitted for every other install form; a record
+without it reads as `false`). For a record with `config_write`, `doctor` and the
+repair of `update` check the `opencode.json` that upskill writes for that scope
+only: the identifier in the `plugin` or `plugins` array means installed, its
+absence means missing, and no opencode command runs, with any opencode version
+or none. The repair writes the entry again. For an opencode record without the
+field (written before the field existed), `doctor` reads the file first and,
+when the identifier is absent, checks with `opencode plugin list` under the
+version check. When `update` applies or repairs such a plugin, it sets the
+field.
+
+### The opencode config file and the `plugins` key
+
+The `opencode.json` of a scope is the file that opencode reads for that scope.
+Trials with opencode 2.1.4 (issues #565 and #573) established three facts:
+
+- opencode reads its global configuration only from
+  `$XDG_CONFIG_HOME/opencode/opencode.json`, or from
+  `~/.config/opencode/opencode.json` when `XDG_CONFIG_HOME` is unset. It ignores
+  `$HOME/opencode.json`, which upskill wrote in the global scope before this
+  decision.
+- In a project `opencode.json`, opencode reads both the `plugin` and the
+  `plugins` key. `plugins` is the key that the opencode 2 documentation names.
+- A relative `instructions` path in the global config resolves against the
+  project directory, not against the config directory. The rules glob
+  `.agents/rules/**/RULE.md` therefore cannot reach `~/.agents/rules/` from the
+  global config. An absolute path was not proven to work.
+
+Decision:
+
+- In the project scope the file is `<project>/opencode.json`. In the global
+  scope it is `$XDG_CONFIG_HOME/opencode/opencode.json` when `XDG_CONFIG_HOME`
+  is set and is an absolute path, and `$HOME/.config/opencode/opencode.json`
+  otherwise. The plugin write, the listed check, the removal, the MCP write and
+  removal, and the MCP check of `doctor` all use that file.
+- upskill writes a `plugin_uri` plugin to the `plugins` array. The listed check
+  and the removal accept an entry under `plugin` or `plugins`; the removal
+  deletes the entry from both. An older entry under `plugin` stays in place:
+  there is no migration before version 1.0.
+- upskill neither reads nor cleans the old `$HOME/opencode.json`.
+- In the global scope upskill writes no rules `instructions` entry for opencode.
+  Global rules do not reach opencode yet.
 
 ### Repair by `update`
 

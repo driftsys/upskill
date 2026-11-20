@@ -66,8 +66,9 @@ use super::{
 /// `.vscode/settings.json`) are user-owned after creation per ADR-0003, so
 /// they are left alone with one exception: for each bundle that lists a
 /// removed item (or has the removed source), the installed opencode plugin
-/// entry of that bundle is deleted from the `plugin` array of
-/// `opencode.json` (`remove_opencode_plugin_uri`; an error is ignored).
+/// entry of that bundle is deleted from the `plugin` and `plugins` arrays of
+/// the opencode config file of its recorded scope
+/// (`remove_opencode_plugin_uri`; an error is ignored).
 pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
     let mut lock = crate::lockfile::Lockfile::load(target)?;
     check_lockfile_records(target, &lock)?;
@@ -389,7 +390,11 @@ fn remove_selected(
         if plugin.client == "opencode"
             && plugin.status == crate::lockfile::PluginInstallStatus::Installed
         {
-            let _ = crate::ancillary::remove_opencode_plugin_uri(target, &plugin.identifier);
+            let _ = crate::ancillary::remove_opencode_plugin_uri(
+                target,
+                recorded_scope(plugin.scope.as_deref()),
+                &plugin.identifier,
+            );
         }
     }
     lock.plugins
@@ -732,7 +737,11 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                 let state = match mcp.client.as_str() {
                     "copilot" => crate::ancillary::copilot_mcp_state(&mcp.name),
                     "vscode" => crate::ancillary::vscode_mcp_state(target, &mcp.name),
-                    _ => crate::ancillary::opencode_mcp_state(target, &mcp.name),
+                    _ => crate::ancillary::opencode_mcp_state(
+                        target,
+                        recorded_scope(mcp.scope.as_deref()),
+                        &mcp.name,
+                    ),
                 };
                 match state {
                     McpConfigState::Present => McpDoctorStatus::Ok,
@@ -837,11 +846,20 @@ fn reselect_from_entries(
     }
 }
 
+/// The install scope that the lockfile records for a plugin or MCP entry.
+/// An entry without a recorded scope is a project entry.
+fn recorded_scope(scope: Option<&str>) -> crate::plugin::PluginScope {
+    match scope {
+        Some("user") => crate::plugin::PluginScope::User,
+        _ => crate::plugin::PluginScope::Project,
+    }
+}
+
 /// True when the client reports that `plugin`, recorded as installed, is
 /// not installed. Used by `doctor` and by the plugin repair of `update`.
 ///
-/// An opencode plugin whose identifier is in the `plugin` array of
-/// `<target>/opencode.json` is installed, and no opencode command is run
+/// An opencode plugin whose identifier is in the `plugin` or `plugins` array
+/// of the opencode config file of its recorded scope is installed, and no opencode command is run
 /// for it. An opencode plugin recorded with `config_write` and absent from
 /// that array is missing, also without any opencode command. Otherwise the
 /// client CLI is queried. A client CLI that is absent,
@@ -864,7 +882,11 @@ pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedP
         }
         "vscode" => check_vscode_extension_installed(&plugin.identifier),
         "opencode" => {
-            let listed = crate::ancillary::opencode_plugin_listed(target, &plugin.identifier);
+            let listed = crate::ancillary::opencode_plugin_listed(
+                target,
+                recorded_scope(plugin.scope.as_deref()),
+                &plugin.identifier,
+            );
             // A plugin installed by a write to `opencode.json` is checked in
             // that file only, with any opencode version or none.
             if listed || plugin.config_write {
@@ -1462,7 +1484,7 @@ pub fn update(
             let is_orphan = |e: &crate::lockfile::LockedItem| {
                 !new_hashes.contains_key(&(e.kind, e.name.clone()))
             };
-            let install_preview = prepared.preview(target, &current)?;
+            let install_preview = prepared.preview(target, plugin_scope, &current)?;
             let mut items = install_preview.items;
             for orphan in source_entries.iter().filter(|e| is_orphan(e)) {
                 if let Some(entry) = current

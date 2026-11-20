@@ -43,14 +43,17 @@ section `Support levels:`, and `upskill doctor --json` holds it in the key
 `support`. The table does not depend on the version of an installed client: the
 recorded version is the one of the smoke run. (The plugin check of `doctor` runs
 `opencode --version` for a recorded opencode plugin whose record has no
-`config_write` and whose identifier is not in `opencode.json`; that does not
-change the table.)
+`config_write` and whose identifier is not in the `opencode.json` of its scope;
+that does not change the table.)
 
 ## Known limits of the experimental OpenCode level
 
 OpenCode at global scope is unchanged. `.agents/skills` is a documented personal
-location of OpenCode. `.agents/rules/<name>/RULE.md` with `$HOME/opencode.json`,
-and `.opencode/agents/`, are not documented personal locations. OpenCode stays
+location of OpenCode. `.agents/rules/<name>/RULE.md` and `.opencode/agents/` are
+not documented personal locations, and the global scope writes no rules entry to
+an opencode config file. opencode reads its global configuration only from
+`$XDG_CONFIG_HOME/opencode/opencode.json` or `~/.config/opencode/opencode.json`,
+where upskill writes the opencode plugin and MCP entries. OpenCode stays
 experimental until its design settles these paths.
 
 ## Run the smoke test
@@ -124,13 +127,10 @@ the run:
 
 - An existing `CLAUDE.md` is not changed. When the file is absent, `add` creates
   it with the content `@AGENTS.md`.
-- `opencode.json`: the glob is `.agents/rules/**/RULE.md`. When the file is
-  absent, `add` creates it with the key `instructions` and an array that holds
-  the glob. When the file exists without the key `instructions`, `add` adds the
-  key with an array that holds the glob. When the key holds an array, `add`
-  appends the glob and keeps the other entries, and it leaves the file unchanged
-  if the glob is already in the array. `add` fails when the key is not an array.
-  `remove` does not revert the change.
+- `$HOME/opencode.json`: a global `add` no longer reads or changes it, and
+  writes no rules glob for opencode. The opencode plugin and MCP entries go to
+  the global opencode config file (`~/.config/opencode/opencode.json`, or under
+  `$XDG_CONFIG_HOME`).
 - `.vscode/settings.json`: `add` creates the file with
   `{"chat.instructionsFilesLocations": {".github/instructions": true}}` when it
   is absent. When the file exists without that key, `add` adds the key with that

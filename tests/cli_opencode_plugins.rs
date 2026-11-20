@@ -204,7 +204,7 @@ fn stderr(assert: &assert_cmd::assert::Assert) -> String {
 }
 
 fn has_uri(value: &serde_json::Value) -> bool {
-    value["plugin"]
+    value["plugins"]
         .as_array()
         .is_some_and(|a| a.iter().any(|v| v == URI))
 }
@@ -230,7 +230,7 @@ fn doctor_reports_a_removed_plugin_uri_and_update_yes_restores_it() {
     let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
     env.add().success();
     let mut json = env.opencode_json();
-    json["plugin"] = serde_json::json!([]);
+    json["plugins"] = serde_json::json!([]);
     env.write_opencode_json(&json);
     env.clear_log();
 
@@ -541,7 +541,7 @@ fn terminal_repair_sets_config_write_on_a_plugin_uri_record_without_it() {
         serde_json::to_string_pretty(&lock).unwrap(),
     )
     .unwrap();
-    env.write_opencode_json(&serde_json::json!({ "plugin": [] }));
+    env.write_opencode_json(&serde_json::json!({ "plugins": [] }));
 
     terminal_update(&env);
     assert_eq!(env.lock()["plugins"][0]["config_write"], true);
@@ -597,7 +597,7 @@ fn removed_plugin_uri_is_missing_and_restored_with_opencode_1x_or_absent() {
         } else {
             env.set_version("opencode v1.15.13\n", 0);
         }
-        env.write_opencode_json(&serde_json::json!({ "plugin": [] }));
+        env.write_opencode_json(&serde_json::json!({ "plugins": [] }));
         env.clear_log();
 
         let out = env.run(&["doctor", "--project"]).code(1);
@@ -626,7 +626,7 @@ fn update_sets_config_write_on_a_plugin_uri_record_without_it() {
         serde_json::to_string_pretty(&lock).unwrap(),
     )
     .unwrap();
-    env.write_opencode_json(&serde_json::json!({ "plugin": [] }));
+    env.write_opencode_json(&serde_json::json!({ "plugins": [] }));
 
     env.run(&["update", "--yes", "--project"]).code(0);
     assert_eq!(env.lock()["plugins"][0]["config_write"], true);
@@ -913,4 +913,198 @@ fn module_plugin_record_has_no_config_write_key() {
     env.add().success();
     let plugin = &env.lock()["plugins"][0];
     assert!(plugin.get("config_write").is_none(), "{plugin}");
+}
+
+// ---------------------------------------------------------------------------
+// opencode config file per scope (issues #565 and #573)
+// ---------------------------------------------------------------------------
+
+const MCP_NAME: &str = "srv";
+
+impl Env {
+    /// A bundle with the plugin URI, one skill, one rule and one local MCP
+    /// server, so that one `add` exercises every writer of `opencode.json`.
+    fn with_rule_and_mcp() -> Self {
+        let env = Env::build(
+            &format!("  superpowers:\n    opencode:\n      plugin_uri: \"{URI}\"\n"),
+            "  skills:\n    - alpha\n  rules:\n    - rule-a\n",
+            "v2.1.4",
+        );
+        let registry = env.bundle.parent().unwrap();
+        let rule = registry.join("rule-a").join("RULE.md");
+        fs::create_dir_all(rule.parent().unwrap()).unwrap();
+        fs::write(
+            &rule,
+            "---\nschema: 1\nname: rule-a\ndescription: rule for the opencode config tests.\n---\n\n## Body\n\nText.\n",
+        )
+        .unwrap();
+        let mut bundle = fs::read_to_string(&env.bundle).unwrap();
+        bundle.push_str(&format!(
+            "mcps:\n  {MCP_NAME}:\n    local:\n      command: npx\n      args:\n        - srv-mcp\n"
+        ));
+        fs::write(&env.bundle, bundle).unwrap();
+        env
+    }
+
+    fn global_config(&self) -> PathBuf {
+        self.home.join(".config/opencode/opencode.json")
+    }
+
+    /// `args` with `--global`, run in a directory that is not a project.
+    fn run_global(
+        &self,
+        args: &[&str],
+        xdg: Option<&std::path::Path>,
+    ) -> assert_cmd::assert::Assert {
+        let path = format!("{}:/usr/bin:/bin", self.bin.display());
+        let mut cmd = common::upskill_cmd(&self.home);
+        cmd.current_dir(self.home.parent().unwrap())
+            .env("PATH", path)
+            .args(args)
+            .arg("--global");
+        if let Some(xdg) = xdg {
+            cmd.env("XDG_CONFIG_HOME", xdg);
+        }
+        cmd.assert()
+    }
+
+    fn add_global(&self, xdg: Option<&std::path::Path>) -> assert_cmd::assert::Assert {
+        let registry = self.bundle.parent().unwrap().to_str().unwrap().to_string();
+        self.run_global(&["add", &registry, "oc"], xdg)
+    }
+}
+
+fn read_json(path: &std::path::Path) -> serde_json::Value {
+    serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+}
+
+#[test]
+fn global_add_writes_plugin_and_mcp_to_the_xdg_default_file_only() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(None).success();
+
+    let config = read_json(&env.global_config());
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert!(config["mcp"][MCP_NAME].is_object(), "{config}");
+    assert!(
+        !env.home.join("opencode.json").exists(),
+        "nothing is written to $HOME/opencode.json"
+    );
+}
+
+#[test]
+fn global_add_writes_no_instructions_entry_for_a_rule() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(None).success();
+
+    let config = read_json(&env.global_config());
+    assert!(config.get("instructions").is_none(), "{config}");
+    assert!(!env.home.join("opencode.json").exists());
+}
+
+#[test]
+fn project_add_writes_the_plugins_key_and_the_rules_entry_at_the_project_root() {
+    let env = Env::with_rule_and_mcp();
+    env.add().success();
+
+    let config = env.opencode_json();
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert!(config.get("plugin").is_none(), "{config}");
+    assert!(config["mcp"][MCP_NAME].is_object(), "{config}");
+    assert_eq!(
+        config["instructions"],
+        serde_json::json!([".agents/rules/**/RULE.md"]),
+        "{config}"
+    );
+    assert!(!env.global_config().exists());
+}
+
+#[test]
+fn global_add_follows_an_absolute_xdg_config_home() {
+    let env = Env::with_rule_and_mcp();
+    let xdg = env.home.parent().unwrap().join("xdg");
+    env.add_global(Some(&xdg)).success();
+
+    let config = read_json(&xdg.join("opencode/opencode.json"));
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert!(config["mcp"][MCP_NAME].is_object(), "{config}");
+    assert!(!env.global_config().exists());
+    assert!(!env.home.join("opencode.json").exists());
+}
+
+#[test]
+fn global_add_ignores_a_relative_xdg_config_home() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(Some(std::path::Path::new("relative-xdg")))
+        .success();
+
+    assert!(env.global_config().exists());
+}
+
+#[test]
+fn global_doctor_reads_the_new_file_and_update_restores_the_plugin_there() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(None).success();
+    env.run_global(&["doctor"], None).code(0);
+
+    // Drop the plugin and the MCP entry from the file that opencode reads.
+    let mut config = read_json(&env.global_config());
+    config["plugins"] = serde_json::json!([]);
+    config["mcp"] = serde_json::json!({});
+    fs::write(env.global_config(), config.to_string()).unwrap();
+
+    let out = env.run_global(&["doctor"], None).code(1);
+    let text = stdout(&out);
+    assert!(text.contains("superpowers"), "{text}");
+    assert!(text.contains(MCP_NAME), "{text}");
+
+    env.run_global(&["update", "--yes"], None).code(0);
+    let config = read_json(&env.global_config());
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert!(!env.home.join("opencode.json").exists());
+    env.run_global(&["doctor"], None).code(0);
+}
+
+#[test]
+fn global_remove_mcp_edits_the_new_file() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(None).success();
+    env.run_global(&["remove-mcp", MCP_NAME], None).success();
+
+    let config = read_json(&env.global_config());
+    assert!(config["mcp"].get(MCP_NAME).is_none(), "{config}");
+    assert!(!env.home.join("opencode.json").exists());
+}
+
+#[test]
+fn global_remove_deletes_the_plugin_from_the_new_file() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(None).success();
+    env.run_global(&["remove", "alpha"], None).success();
+
+    let config = read_json(&env.global_config());
+    assert_eq!(config["plugins"], serde_json::json!([]), "{config}");
+}
+
+#[test]
+fn doctor_accepts_a_legacy_plugin_entry() {
+    let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
+    env.add().success();
+    env.write_opencode_json(&serde_json::json!({ "plugin": [URI] }));
+
+    let out = env.run(&["doctor", "--project"]).code(0);
+    assert!(!stdout(&out).contains("missing"), "{}", stdout(&out));
+}
+
+#[test]
+fn remove_deletes_the_plugin_from_both_keys() {
+    let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
+    env.add().success();
+    env.write_opencode_json(&serde_json::json!({ "plugin": [URI, "x"], "plugins": [URI] }));
+
+    env.run(&["remove", "alpha", "--project"]).success();
+
+    let config = env.opencode_json();
+    assert_eq!(config["plugin"], serde_json::json!(["x"]), "{config}");
+    assert_eq!(config["plugins"], serde_json::json!([]), "{config}");
 }

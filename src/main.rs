@@ -2736,7 +2736,7 @@ fn unconfigure_mcp(
             "claude" => upskill::ancillary::remove_claude_mcp(target, name)?,
             "copilot" => upskill::ancillary::remove_copilot_mcp(name)?,
             "vscode" => upskill::ancillary::remove_vscode_mcp(target, name)?,
-            "opencode" => upskill::ancillary::remove_opencode_mcp(target, name)?,
+            "opencode" => upskill::ancillary::remove_opencode_mcp(target, scope, name)?,
             _ => {}
         },
         Some(PluginOutcome::Failed { stderr, exit_code }) => {

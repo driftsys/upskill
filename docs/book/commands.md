@@ -274,11 +274,15 @@ client-native plugins by shelling out to each client's own CLI
 --install-extension`,
 `opencode plugin add`, which needs opencode 2 or later) — they are **not**
 rendered through the generation pipeline. A `plugin_uri` opencode plugin is
-written into the `plugin` array of `opencode.json` instead. If a client's CLI is
-not on `PATH`, or `opencode --version` reports a major version below 2, the
-plugin is skipped (not an error, with a warning) and recorded as `skipped` in
-the lockfile; `upskill doctor` reports skipped and missing plugins. Removing the
-bundle cleans up its plugins.
+written into the `plugins` array of the `opencode.json` of the scope instead. In
+the project scope that file is at the project root. In the global scope it is
+`$XDG_CONFIG_HOME/opencode/opencode.json`, or `~/.config/opencode/opencode.json`
+when `XDG_CONFIG_HOME` is unset, empty or not an absolute path, because opencode
+reads its global configuration only there. MCP servers for opencode are written
+into the same file. If a client's CLI is not on `PATH`, or `opencode --version`
+reports a major version below 2, the plugin is skipped (not an error, with a
+warning) and recorded as `skipped` in the lockfile; `upskill doctor` reports
+skipped and missing plugins. Removing the bundle cleans up its plugins.
 
 **Bundle MCP servers.** When a bundle declares an `mcps:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` configures those
@@ -856,8 +860,8 @@ upskill remove --force code-review                 # also delete modified files
 Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched, except that removing
 an item of a bundle, or the source of a bundle with `--source`, deletes the
-installed opencode plugin entry of that bundle from the `plugin` array of
-`opencode.json`.
+installed opencode plugin entry of that bundle from the `plugin` and `plugins`
+arrays of the `opencode.json` of the scope.
 
 Without a scope flag, `remove` uses the project scope inside a git repository
 and the global scope outside one. When the current directory is the home
@@ -1022,10 +1026,10 @@ scope. For each scope it reports eleven independent buckets:
   reinstalls them, also when no item changed, for a source without a kind
   restriction (a source under a kind restriction skips the plugin and MCP
   steps). An opencode plugin installed by a write to `opencode.json`
-  (`plugin_uri`, recorded with `config_write`) is checked in the scope's
-  `opencode.json` only, and `doctor` runs no opencode command for it, with any
+  (`plugin_uri`, recorded with `config_write`) is checked in the `opencode.json`
+  of the scope only, and `doctor` runs no opencode command for it, with any
   opencode version or none. For another opencode plugin, an identifier in that
-  `plugin` array means installed; otherwise `doctor` runs
+  `plugin` or `plugins` array means installed; otherwise `doctor` runs
   `opencode plugin list`. With opencode below version 2, `doctor` runs no
   `opencode plugin` command and does not report that plugin missing. `update`
   runs over the sources of the recorded items, so it does not reach a plugin
@@ -1489,10 +1493,12 @@ Limits of the global scope:
 - opencode output in the global scope uses the same paths as in the project
   scope. Of these paths, only `.agents/skills` is a location that opencode
   documents for the whole machine.
-- In the global scope, the first-time files `CLAUDE.md`, `.vscode/settings.json`
-  and `opencode.json` are written under `$HOME` as in a project. The entry in
-  `.vscode/settings.json` points at `.github/instructions`, which a global
-  install no longer writes.
+- In the global scope, the first-time files `CLAUDE.md` and
+  `.vscode/settings.json` are written under `$HOME` as in a project. The entry
+  in `.vscode/settings.json` points at `.github/instructions`, which a global
+  install no longer writes. The global scope writes no rules entry to
+  `opencode.json`, and the opencode plugin and MCP entries go to the global
+  opencode config file, not to `$HOME/opencode.json`.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.
