@@ -88,7 +88,7 @@ fn mode_str(m: Mode) -> &'static str {
 
 /// Map a capability-level tool name to opencode's `permission:` map key.
 ///
-/// Per opencode docs (https://opencode.ai/docs/agents), agents declare
+/// Per opencode docs (<https://opencode.ai/docs/agents>), agents declare
 /// allowed capabilities via a `permission:` map (allow|ask|deny per key)
 /// rather than a `tools:` array. `write` rolls into `edit` since opencode
 /// has no separate write key. Other opencode-only permission keys

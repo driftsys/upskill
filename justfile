@@ -12,7 +12,8 @@ test:
 # Lint and format check
 lint:
     cargo clippy -- -D warnings
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --document-private-items
+    cargo rustdoc --bin upskill -- -D warnings --document-private-items
     cargo fmt -- --check
     prim fmt --check --exclude 'tests/fixtures/**'
     prim lint .

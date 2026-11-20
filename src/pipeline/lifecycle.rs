@@ -814,7 +814,7 @@ pub fn doctor_scopes(roots: &[ScopeRoot]) -> Result<DoctorScopes> {
 /// the union of its entries' recorded generation clients. An entry with an
 /// empty `clients` list was installed for all clients, so it widens the result
 /// back to all — the safe direction (never drops an entry's output trees).
-/// Returns [`ClientSelection::all`] when nothing narrows it (ADR-0012).
+/// Returns [`ClientSelection::all`](crate::select::ClientSelection::all) when nothing narrows it (ADR-0012).
 fn reselect_from_entries(
     entries: &[crate::lockfile::LockedItem],
 ) -> crate::select::ClientSelection {
