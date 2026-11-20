@@ -66,16 +66,24 @@ pub(super) fn is_item_dir(path: &Path) -> bool {
 /// `*.bundle.yaml` file, or when a name in `names` matches a bundle in it:
 /// then the source still has something to install.
 ///
-/// When `inside_output` returns true for the kind and the folder name or
-/// the effective name, the directory is inside an output path of the run: it
-/// is an installed copy, and the error says to add the item from its source
-/// registry. Otherwise the error names the command that adds the item from
-/// the parent directory.
+/// For a local source, when `inside_output` returns true for the kind and
+/// the folder name or the effective name, the directory is inside an output
+/// path of the run: it is an installed copy, and the error says to add the
+/// item from its source registry. Otherwise the error names the command that
+/// adds the item from the parent directory. For a git source with a
+/// subfolder (issue #577), `source` is the fetched subfolder and the command
+/// names the same git source with the parent subfolder.
 pub(super) fn refuse_item_dir_source(
     source: &Path,
     names: &[String],
-    inside_output: impl Fn(ItemKind, &str) -> bool,
+    kind_of_source: ItemDirSource<'_>,
 ) -> Result<()> {
+    // A git source without a subfolder is a repository root: no parent to name.
+    if let ItemDirSource::Git(git) = &kind_of_source {
+        if git_subfolder(git).is_none() {
+            return Ok(());
+        }
+    }
     if !is_item_dir(source)
         || !scan_source_items(source).is_empty()
         || holds_bundle_file(source)
@@ -93,10 +101,13 @@ pub(super) fn refuse_item_dir_source(
     } else {
         ("AGENT.md", ItemKind::Agent)
     };
+    let shown = match &kind_of_source {
+        ItemDirSource::Local { .. } => source.display().to_string(),
+        ItemDirSource::Git(git) => git_source_form(git, git_subfolder(git)),
+    };
     let head = format!(
-        "source {} is an item directory (it holds {entry}); a source must be the directory \
-         that contains the item directories.",
-        source.display()
+        "source {shown} is an item directory (it holds {entry}); a source must be the directory \
+         that contains the item directories."
     );
     let (Some(parent), Some(folder)) =
         (source.parent(), source.file_name().and_then(|n| n.to_str()))
@@ -104,18 +115,73 @@ pub(super) fn refuse_item_dir_source(
         anyhow::bail!("{head} The file system root has no parent directory to add it from");
     };
     let name = probe_effective_name(&source.join(entry), kind, folder);
-    if inside_output(kind, folder) || inside_output(kind, &name) {
-        anyhow::bail!(
-            "{head} {} is an output path that upskill installs, not a source. Add the item \
-             from the source registry that it was installed from",
-            source.display()
-        );
-    }
+    let parent_arg = match kind_of_source {
+        ItemDirSource::Local { inside_output } => {
+            if inside_output(kind, folder) || inside_output(kind, &name) {
+                anyhow::bail!(
+                    "{head} {} is an output path that upskill installs, not a source. Add the \
+                     item from the source registry that it was installed from",
+                    source.display()
+                );
+            }
+            parent.display().to_string()
+        }
+        ItemDirSource::Git(git) => {
+            let parent_sub = git_subfolder(git)
+                .and_then(|s| s.rsplit_once('/'))
+                .map(|(p, _)| p)
+                .filter(|p| !p.is_empty());
+            git_source_form(git, parent_sub)
+        }
+    };
     anyhow::bail!(
         "{head} Use instead: upskill add {} {}",
-        shell_quote(&parent.display().to_string()),
+        shell_quote(&parent_arg),
         shell_quote(&name)
     )
+}
+
+/// The kind of `add` source that [`refuse_item_dir_source`] checks.
+pub(super) enum ItemDirSource<'a> {
+    /// A local directory. `inside_output` tells whether the item with that
+    /// kind and name has its output path at the directory.
+    Local {
+        inside_output: &'a dyn Fn(ItemKind, &str) -> bool,
+    },
+    /// A git source; the checked directory is its fetched subfolder.
+    Git(&'a crate::source::InstallSource),
+}
+
+/// The subfolder of a git source, without a leading or trailing `/`.
+fn git_subfolder(source: &crate::source::InstallSource) -> Option<&str> {
+    use crate::source::InstallSource;
+    let sub = match source {
+        InstallSource::Github(r) => r.subfolder.as_deref(),
+        InstallSource::Git(r) => r.subfolder.as_deref(),
+        InstallSource::LocalPath(_) => None,
+    };
+    sub.map(|s| s.trim_matches('/')).filter(|s| !s.is_empty())
+}
+
+/// A git source in the form that `add` accepts (`owner/repo` for GitHub,
+/// the URL otherwise), with its ref and with `subfolder` in place of its own.
+fn git_source_form(source: &crate::source::InstallSource, subfolder: Option<&str>) -> String {
+    use crate::source::InstallSource;
+    let (base, git_ref) = match source {
+        InstallSource::Github(r) => (format!("{}/{}", r.owner, r.name), r.git_ref.as_deref()),
+        InstallSource::Git(r) => (r.url.clone(), r.git_ref.as_deref()),
+        InstallSource::LocalPath(p) => (p.display().to_string(), None),
+    };
+    let mut out = base;
+    if let Some(g) = git_ref {
+        out.push('@');
+        out.push_str(g);
+    }
+    if let Some(s) = subfolder {
+        out.push(':');
+        out.push_str(s);
+    }
+    out
 }
 
 /// True when `dir` holds a file whose name ends in `.bundle.yaml`.

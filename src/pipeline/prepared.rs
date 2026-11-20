@@ -474,6 +474,11 @@ impl PreparedInstall {
             .filter(|bundle| bundle.name == name)
     }
 
+    /// The fetched root of the entry source: a directory or a bundle file.
+    pub fn entry_root(&self) -> &Path {
+        &self.local_source
+    }
+
     /// Every item directory of every source that this install reads, as given
     /// to the overlap check of [`prepare_install`].
     pub fn source_items(&self) -> &[super::output::SourceItem] {

@@ -205,11 +205,27 @@ pub fn install_with_lockfile(
             scope: options.scope,
             root: target.to_path_buf(),
         };
-        discovery::refuse_item_dir_source(path, items, |kind, name| {
-            output::is_inside_output_path(&at, kind, name, path)
-        })?;
+        let inside_output =
+            |kind: ItemKind, name: &str| output::is_inside_output_path(&at, kind, name, path);
+        discovery::refuse_item_dir_source(
+            path,
+            items,
+            discovery::ItemDirSource::Local {
+                inside_output: &inside_output,
+            },
+        )?;
     }
     let prepared = prepared::prepare_install(source, target, items, options)?;
+    // A git subfolder that is one item directory installs nothing (#577).
+    // `prepare_install` writes nothing, so the refusal still comes before
+    // any write. `update` does not run this check.
+    if !matches!(source, InstallSource::LocalPath(_)) {
+        discovery::refuse_item_dir_source(
+            prepared.entry_root(),
+            items,
+            discovery::ItemDirSource::Git(source),
+        )?;
+    }
     // A source item directory must not contain a file that the lockfile
     // records for an item from another source (issue #550). Checked before
     // the adoption and before any write. The records are read after an
