@@ -3,7 +3,7 @@
 //! Per [ADR-0004](../../docs/adr/0004-cli-surface.md), `fmt` and `lint`
 //! are sibling author commands. `fmt` reorders YAML frontmatter keys and
 //! formats the markdown body through the same dprint pass the generation
-//! pipeline uses (see [`canonical_body`]); `lint` reports a `body-format`
+//! pipeline uses (see `canonical_body`); `lint` reports a `body-format`
 //! finding when a body is not canonical. Like `lint`, this command
 //! refuses to run inside a consumer project (`.upskill-lock.json` at the
 //! path's root).

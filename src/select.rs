@@ -2,7 +2,7 @@
 //!
 //! A consumer restricts which clients an install targets. The selection
 //! surface is the **union** of the generation clients
-//! ([`Client`](crate::generate::Client): claude/copilot/opencode) and the
+//! ([`Client`]: claude/copilot/opencode) and the
 //! MCP-only target VS Code — the four `SelectedClient`s a consumer names with
 //! `--claude` / `--copilot` / `--vscode` / `--opencode`. Each maps onto the
 //! generation space (VS Code shares Copilot's `.github/**` tree) and the MCP

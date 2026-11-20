@@ -159,7 +159,7 @@ fn is_windows_absolute(s: &str) -> bool {
         && (bytes[2] == b'\\' || bytes[2] == b'/')
 }
 
-/// Parse a lockfile source label produced by the [`Display`] impl back
+/// Parse a lockfile source label produced by the [`Display`](std::fmt::Display) impl back
 /// into an [`InstallSource`]. The inverse of `Display::fmt` and the
 /// counterpart to [`parse_install_source`], which accepts user-facing
 /// shorthand instead of the canonical labels.
