@@ -26,7 +26,7 @@ impl McpTarget {
     pub const ALL: [McpTarget; 4] = [Self::Claude, Self::Copilot, Self::VsCode, Self::OpenCode];
 
     /// Stable identifier used in the lockfile `client` field, CLI output, and
-    /// [`McpResult`](crate::pipeline::report::McpResult)/[`LockedMcp`](crate::lockfile::LockedMcp).
+    /// `McpResult`/[`LockedMcp`](crate::lockfile::LockedMcp).
     pub fn name(self) -> &'static str {
         match self {
             Self::Claude => "claude",

@@ -1063,9 +1063,9 @@ fn print_skipped(report: &UpdateReport) -> bool {
 }
 
 /// Print to stderr one line per source that `update` skipped, with its
-/// label and the cause, also with `--quiet`: `source `<label>` could not be
-/// fetched and was skipped: <error>` for a source that could not be
-/// fetched, and `source `<label>` was skipped: <reason>` for a source that
+/// label and the cause, also with `--quiet`: ``source `<label>` could not be
+/// fetched and was skipped: <error>`` for a source that could not be
+/// fetched, and ``source `<label>` was skipped: <reason>`` for a source that
 /// requires an item of a skipped source. Returns true when a source was
 /// skipped; the run then exits with code 1.
 fn print_skipped_sources(report: &UpdateReport) -> bool {

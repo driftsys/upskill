@@ -592,7 +592,7 @@ fn source_git_ref(s: &InstallSource) -> Option<String> {
 /// already-fetched root (seeded into the fetch cache so it is not re-fetched),
 /// `entry_git_ref` its pinned ref and `entry_commit` the commit that its
 /// fetch resolved. Cross-source `{ name, source }` entries
-/// are fetched via [`fetch_ssot`], cached by canonical label. Cycles
+/// are fetched via [`fetch_ssot`](super::git::fetch_ssot), cached by canonical label. Cycles
 /// (keyed `(label, kind, name)`) and same-`(kind,name)`-different-source
 /// clashes are errors; a required item missing from its source is an error.
 pub(super) fn resolve_requires_closure(
