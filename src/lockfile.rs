@@ -380,7 +380,7 @@ pub struct SourceStamp {
 /// records each item once).
 ///
 /// `source_for` is a per-item lookup: it maps each `(kind, name)` to a
-/// [`SourceStamp`], the `Display` form of the [`InstallSource`] it came from,
+/// [`SourceStamp`], the `Display` form of the [`InstallSource`](crate::source::InstallSource) it came from,
 /// that source's pinned ref and the commit that the fetch resolved. This lets
 /// cross-source dependency-pulled items record their own source rather than
 /// the entry source's. `hash` is looked up by the caller (the pipeline) per

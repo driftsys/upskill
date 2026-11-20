@@ -135,7 +135,7 @@ pub fn install_vscode_extension(extension: &str) -> PluginOutcome {
 ///
 /// Runs `opencode --version` first and runs no `opencode plugin` command
 /// when the major version is below 2 or cannot be read (see
-/// [`opencode_version`]).
+/// `opencode_version`).
 pub fn install_opencode_plugin(module: &str) -> PluginOutcome {
     match opencode_version() {
         OpencodeVersion::NotFound => PluginOutcome::CliNotFound,

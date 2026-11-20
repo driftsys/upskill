@@ -12,6 +12,7 @@ test:
 # Lint and format check
 lint:
     cargo clippy -- -D warnings
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
     cargo fmt -- --check
     prim fmt --check --exclude 'tests/fixtures/**'
     prim lint .
