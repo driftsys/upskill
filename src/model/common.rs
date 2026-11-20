@@ -3,8 +3,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
 
-use crate::target::TargetFamily;
-
 /// Highest schema version this implementation supports.
 pub const CURRENT_SCHEMA: u32 = 1;
 
@@ -76,33 +74,6 @@ impl std::str::FromStr for Audience {
     }
 }
 
-impl From<Audience> for TargetFamily {
-    fn from(audience: Audience) -> Self {
-        match audience {
-            Audience::Claude => Self::Claude,
-            Audience::Copilot => Self::Copilot,
-            Audience::Codex => Self::Codex,
-            Audience::OpenCode => Self::OpenCode,
-        }
-    }
-}
-
-impl TryFrom<TargetFamily> for Audience {
-    type Error = anyhow::Error;
-
-    fn try_from(family: TargetFamily) -> anyhow::Result<Self> {
-        match family {
-            TargetFamily::Claude => Ok(Self::Claude),
-            TargetFamily::Copilot => Ok(Self::Copilot),
-            TargetFamily::Codex => Ok(Self::Codex),
-            TargetFamily::OpenCode => Ok(Self::OpenCode),
-            TargetFamily::Cursor | TargetFamily::Gemini => {
-                anyhow::bail!("unsupported audience target family: {family:?}")
-            }
-        }
-    }
-}
-
 /// `license` field — SPDX identifier or custom string (§3.1).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -124,7 +95,6 @@ pub struct Metadata {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::target::TargetFamily;
 
     #[test]
     fn schema_version_default_is_one() {
@@ -140,26 +110,10 @@ mod tests {
     }
 
     #[test]
-    fn audience_converts_supported_families() {
-        for (audience, family) in [
-            (Audience::Claude, TargetFamily::Claude),
-            (Audience::Copilot, TargetFamily::Copilot),
-            (Audience::Codex, TargetFamily::Codex),
-            (Audience::OpenCode, TargetFamily::OpenCode),
-        ] {
-            assert_eq!(TargetFamily::from(audience), family);
-            assert_eq!(Audience::try_from(family).unwrap(), audience);
-        }
-    }
-
-    #[test]
-    fn audience_rejects_unknown_and_unsupported_families() {
+    fn audience_rejects_unknown_names() {
         for name in ["cursor", "gemini", "foo", "Codex", "codex.cli", ""] {
             assert!(serde_yaml_ng::from_str::<Audience>(name).is_err(), "{name}");
             assert!(name.parse::<Audience>().is_err(), "{name}");
-        }
-        for family in [TargetFamily::Cursor, TargetFamily::Gemini] {
-            assert!(Audience::try_from(family).is_err());
         }
     }
 }

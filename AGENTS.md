@@ -136,9 +136,7 @@ Core docs (published at <https://driftsys.github.io/upskill/>):
 ### Key conventions
 
 - **Error handling**: use `anyhow::Result<T>` + `.with_context()` by default.
-  `source.rs` uses `thiserror` for `SourceParseError`; target capability
-  validation uses a typed `CapabilityError` so callers can distinguish
-  unsupported behavior from successful representation.
+  `source.rs` uses `thiserror` for `SourceParseError`.
 - **`main.rs` only does I/O orchestration** — call modules, handle errors, print
   results. Business logic lives in the library modules.
 - **Only `main.rs` writes to stdout/stderr.** Every other module returns data
