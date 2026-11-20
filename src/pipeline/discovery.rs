@@ -719,23 +719,32 @@ mod tests {
     fn iter_item_resources_excludes_only_entrypoints() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path();
-        std::fs::write(dir.join("RULE.md"), "x").unwrap();
-        std::fs::write(dir.join("RULE.claude.md"), "x").unwrap(); // a resource
-        std::fs::write(dir.join("SKILL.md"), "x").unwrap(); // co-located entrypoint
+        let mut expected = Vec::new();
+        for stem in ["SKILL", "RULE", "AGENT"] {
+            // Top-level entrypoints are excluded.
+            std::fs::write(dir.join(format!("{stem}.md")), "x").unwrap();
+            // Every <KIND>.<client>.md name, known or unknown client, is a
+            // resource.
+            for client in ["claude", "copilot", "opencode", "cursor"] {
+                let fname = format!("{stem}.{client}.md");
+                std::fs::write(dir.join(&fname), "x").unwrap();
+                expected.push(std::path::PathBuf::from(fname));
+            }
+        }
         std::fs::write(dir.join("notes.claude.md"), "x").unwrap();
+        expected.push(std::path::PathBuf::from("notes.claude.md"));
+        // A nested file with an entrypoint name is content.
         std::fs::create_dir_all(dir.join("scripts")).unwrap();
         std::fs::write(dir.join("scripts/gate.sh"), "x").unwrap();
+        std::fs::write(dir.join("scripts/SKILL.md"), "x").unwrap();
+        expected.push(std::path::PathBuf::from("scripts/SKILL.md"));
+        expected.push(std::path::PathBuf::from("scripts/gate.sh"));
+        expected.sort();
 
-        let res = iter_item_resources(dir);
         assert_eq!(
-            res,
-            vec![
-                std::path::PathBuf::from("RULE.claude.md"),
-                std::path::PathBuf::from("notes.claude.md"),
-                std::path::PathBuf::from("scripts/gate.sh"),
-            ],
-            "only entrypoints are excluded; <KIND>.<client>.md files \
-             and nested files are resources"
+            iter_item_resources(dir),
+            expected,
+            "only top-level entrypoints are excluded"
         );
     }
 

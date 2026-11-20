@@ -131,6 +131,34 @@ fn client_named_body_file_is_a_resource_for_all_clients() {
     }
 }
 
+/// #539: a rule's `RULE.claude.md` is an ordinary resource. On Claude Code a
+/// rule renders to a flat file, so the resource goes into the sibling
+/// `<name>/` directory, and the body comes from `RULE.md`.
+#[test]
+fn client_named_rule_file_is_copied_to_flat_kind_sibling_dir() {
+    let e = env();
+    write_item(&e.src, "demo-rule", "RULE.md", "Canonical rule body.\n");
+    fs::write(
+        e.src.join("demo-rule/RULE.claude.md"),
+        "Claude-named file.\n",
+    )
+    .unwrap();
+
+    e.cmd()
+        .args(["add", e.src.to_str().unwrap()])
+        .assert()
+        .success();
+
+    let body = read(&e.proj.join(".claude/rules/demo-rule.md"));
+    assert!(body.contains("Canonical rule body."));
+    assert!(!body.contains("Claude-named file."));
+    assert_eq!(
+        read(&e.proj.join(".claude/rules/demo-rule/RULE.claude.md")),
+        "Claude-named file.\n",
+        "RULE.claude.md copied into the sibling namespace dir"
+    );
+}
+
 #[test]
 fn rule_resources_namespaced_and_rewritten_per_client() {
     let e = env();

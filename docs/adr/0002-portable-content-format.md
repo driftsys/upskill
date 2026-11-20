@@ -106,8 +106,8 @@ limited to one client with `audience`.
 
 **Note (2026-11-20, #539):** per-client override files (`<KIND>.<client>.md`)
 were removed from the format. They never worked, because the installer always
-rendered the canonical body, and no content used them. Directives and `audience`
-cover the same cases.
+rendered the canonical body, and no content in this repository or in
+driftsys/metapowers used them. Directives and `audience` cover the same cases.
 
 ### Bundle as pure manifest
 

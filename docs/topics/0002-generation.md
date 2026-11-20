@@ -65,8 +65,9 @@ client fails with an unsupported-override error even if ignored. Overrides for
 other kinds or non-emitted clients remain excluded source inputs. Body override
 precedence is deferred.
 
-Since #539 (2026-11-20), the resource classifier no longer reserves
-`<KIND>.<client>.md` names; such a file is an ordinary resource.
+Since #539 (2026-11-20), the current installer has no override files: a
+`<KIND>.<client>.md` file is an ordinary resource. This record describes the
+removed compiler.
 
 Each included output contains exactly one rendered entrypoint and every retained
 resource, sorted by portable UTF-8 relative path. Compilation reuses existing
@@ -270,9 +271,6 @@ inputs.
 [AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md)
 records the unsupported boundary; body override precedence remains
 unimplemented.
-
-Since #539 (2026-11-20), the resource classifier no longer reserves
-`<KIND>.<client>.md` names; such a file is an ordinary resource.
 
 <a id="architecture-captured-item-compilation-rendering-and-output"></a>
 

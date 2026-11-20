@@ -192,7 +192,7 @@ Bundles are flat YAML manifest files, not directories:
 There are no per-client body files. Each item has one body: the body of its
 canonical entrypoint (`SKILL.md`, `RULE.md` or `AGENT.md`). A file such as
 `SKILL.claude.md` or `RULE.copilot.md` has no special meaning; it is an ordinary
-supporting resource (§2.4) and is copied next to the generated entrypoint for
+supporting resource and is copied with the item's other resources (§2.4) for
 every client.
 
 Authors express client differences in one of two ways:
@@ -1216,8 +1216,7 @@ Implementations:
 
 ### 6.4 Only per-client body mechanism
 
-Directives are the only per-client body mechanism. There are no per-client body
-files (§2.3).
+See §2.3 and §6.
 
 ---
 
