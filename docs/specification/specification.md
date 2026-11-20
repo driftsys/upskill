@@ -980,18 +980,19 @@ as in a project; the `.vscode/settings.json` entry points at
 - **`opencode.json`**: in the project scope only, checked on rule-bearing
   installs. In the global scope upskill writes no rules entry, because opencode
   resolves a relative `instructions` path of its global config against the
-  project directory, so the glob cannot reach `~/.agents/rules/`; global rules
-  do not reach opencode yet. The plugin and MCP writers of both scopes use the
-  opencode config file of the scope: the project root in the project scope, and
-  `$XDG_CONFIG_HOME/opencode/` (when set and absolute) or `~/.config/opencode/`
-  in the global scope. A trial with opencode 2.1.4 confirmed that opencode reads
-  `~/.config/opencode/opencode.json` and ignores `~/opencode.json`; the
-  `XDG_CONFIG_HOME` location follows the opencode documentation. A `plugin_uri`
-  plugin is written to the `plugins` array. upskill neither reads nor changes
-  `$HOME/opencode.json`, which earlier versions wrote. The entry
-  `".agents/rules/**/RULE.md"` is added to `instructions[]` when absent,
-  including when a later install finds that it was removed. An existing entry
-  leaves the file unchanged; unrelated entries and keys are preserved
+  project directory (ADR-0008, issue #581), so the glob cannot reach
+  `~/.agents/rules/`; global rules do not reach opencode yet. The plugin and MCP
+  writers of both scopes use the opencode config file of the scope: the project
+  root in the project scope, and `$XDG_CONFIG_HOME/opencode/` (when set and
+  absolute) or `~/.config/opencode/` in the global scope. A trial with opencode
+  2.1.4 confirmed that opencode reads `~/.config/opencode/opencode.json` and
+  ignores `~/opencode.json`. The `XDG_CONFIG_HOME` location is used when set and
+  absolute, and was not tested. A `plugin_uri` plugin is written to the
+  `plugins` array. upskill neither reads nor changes `$HOME/opencode.json`,
+  which earlier versions wrote. The entry `".agents/rules/**/RULE.md"` is added
+  to `instructions[]` when absent, including when a later install finds that it
+  was removed. An existing entry leaves the file unchanged; unrelated entries
+  and keys are preserved
   ([implementation](https://github.com/driftsys/upskill/blob/main/src/ancillary.rs),
   [call site](https://github.com/driftsys/upskill/blob/main/src/pipeline/mod.rs)).
   The installer relies on client glob expansion; this is a shipped write

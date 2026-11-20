@@ -108,7 +108,7 @@ Three ancillary files are managed idempotently:
 
 The global scope writes no rules entry: opencode resolves a relative
 `instructions` path of its global config against the project directory
-([ADR-0008](0008-plugin-install-shellout.md)).
+([ADR-0008](0008-plugin-install-shellout.md), issue #581).
 
 Skills do not require an `opencode.json` entry — opencode walks
 `.agents/skills/**/SKILL.md` natively (`EXTERNAL_SKILL_PATTERN` in opencode's

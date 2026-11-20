@@ -134,7 +134,7 @@ The opencode file is the `opencode.json` of the scope: the project root in the
 project scope, and `$XDG_CONFIG_HOME/opencode/` (or `~/.config/opencode/`) in
 the global scope. A trial with opencode 2.1.4 showed that opencode reads
 `~/.config/opencode/opencode.json` and ignores `~/opencode.json`; the
-`$XDG_CONFIG_HOME` branch follows the opencode documentation and was not tested
+`$XDG_CONFIG_HOME` location is used when set and absolute, and was not tested
 (ADR-0008, issues #565 and #573).
 
 The Claude forms are unchanged:

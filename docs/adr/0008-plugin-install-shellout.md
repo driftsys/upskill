@@ -151,16 +151,22 @@ Trials with opencode 2.1.4 (issues #565 and #573) tested the following, with
 - In the global scope, opencode read `~/.config/opencode/opencode.json`. It
   ignored `~/opencode.json` and `~/.opencode/opencode.json`. `~/opencode.json`
   is the file that upskill wrote in the global scope before this decision.
-- Both the `plugin` and the `plugins` key appear in the resolved configuration
-  of a project `opencode.json`. Only the listing was checked, not the loading of
-  a plugin. The opencode 2 documentation names `plugins`.
-- In one trial, a relative `instructions` path in the global configuration was
-  resolved against the project directory. The rules glob
-  `.agents/rules/**/RULE.md` therefore does not reach `~/.agents/rules/` from
-  the global configuration. An absolute path was not tested.
+- With a project `opencode.json` that held an entry under the legacy `plugin`
+  key, `opencode debug config` printed only the key `plugins`, with the legacy
+  entry listed under it. Only the listing was checked, not the loading of a
+  plugin.
+- In one trial (2026-11-20, opencode 2.1.4, `XDG_CONFIG_HOME` pointed at a copy
+  of the global configuration, `opencode run` in a project directory; recorded
+  in issue #581), a relative `instructions` path in the global configuration was
+  resolved against the project directory: the marker file in
+  `<project>/.agents/rules/` was loaded and the marker file in the config
+  directory was not. The rules glob `.agents/rules/**/RULE.md` therefore does
+  not reach `~/.agents/rules/` from the global configuration. An absolute path
+  was not tested.
 
-The `$XDG_CONFIG_HOME` branch follows the opencode documentation and was not
-tested.
+upskill uses `$XDG_CONFIG_HOME/opencode/opencode.json` when `XDG_CONFIG_HOME` is
+set and absolute. That location was not tested, except as the way the
+relative-path trial above was run.
 
 Decision:
 

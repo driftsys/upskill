@@ -899,7 +899,7 @@ impl PreparedInstall {
         // keys.
         // Not in the global scope: opencode resolves a relative `instructions`
         // path against the project directory, so the glob cannot reach
-        // `~/.agents/rules/` from the global config.
+        // `~/.agents/rules/` from the global config (ADR-0008, issue #581).
         if plugin_scope == PluginScope::Project {
             crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
         }

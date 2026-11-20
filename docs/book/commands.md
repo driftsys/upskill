@@ -279,9 +279,9 @@ the project scope that file is at the project root. In the global scope it is
 `$XDG_CONFIG_HOME/opencode/opencode.json`, or `~/.config/opencode/opencode.json`
 when `XDG_CONFIG_HOME` is unset, empty or not an absolute path. A trial showed
 that opencode 2.1.4 reads `~/.config/opencode/opencode.json` and ignores
-`~/opencode.json`; the `XDG_CONFIG_HOME` location follows the opencode
-documentation. MCP servers for opencode are written into the same file. If a
-client's CLI is not on `PATH`, or `opencode --version` reports a major version
+`~/opencode.json`. The `XDG_CONFIG_HOME` location is used when set and absolute,
+and was not tested. MCP servers for opencode are written into the same file. If
+a client's CLI is not on `PATH`, or `opencode --version` reports a major version
 below 2, the plugin is skipped (not an error, with a warning) and recorded as
 `skipped` in the lockfile; `upskill doctor` reports skipped and missing plugins.
 Removing the bundle cleans up its plugins.

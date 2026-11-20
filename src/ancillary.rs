@@ -58,7 +58,9 @@ const PLUGINS_KEY: &str = "plugins";
 ///   when `XDG_CONFIG_HOME` is unset, empty or not an absolute path. `root`
 ///   is the home directory in the global scope.
 ///
-/// opencode reads its global configuration only from that directory.
+/// A trial with opencode 2.1.4 confirmed `<root>/.config/opencode` as the global
+/// directory and showed that `<root>/opencode.json` is ignored (ADR-0008). The
+/// `XDG_CONFIG_HOME` location was not tested.
 pub fn opencode_config_dir(scope: PluginScope, root: &Path) -> PathBuf {
     opencode_config_dir_with(scope, root, std::env::var_os("XDG_CONFIG_HOME"))
 }
@@ -168,7 +170,7 @@ fn apply_pending(pending: Option<PendingWrite>) -> Result<AncillaryAction> {
 ///
 /// In the global scope opencode gets no rules entry: its relative
 /// `instructions` path resolves against the project directory, so the glob
-/// cannot reach `~/.agents/rules/`.
+/// cannot reach `~/.agents/rules/` (ADR-0008, issue #581).
 pub fn pending_handshake_changes(
     target: &Path,
     scope: PluginScope,
@@ -409,6 +411,12 @@ pub fn write_opencode_plugin_uri(
             }
 
             let obj = doc.as_object_mut().expect("checked is_object");
+            if obj.get(PLUGINS_KEY).is_some_and(|v| !v.is_array()) {
+                return PluginOutcome::Failed {
+                    exit_code: None,
+                    stderr: format!("{}: `plugins` must be an array", path.display()),
+                };
+            }
             let in_legacy_key = obj
                 .get("plugin")
                 .and_then(Value::as_array)
@@ -1440,6 +1448,50 @@ mod tests {
         .unwrap();
         assert_eq!(content["plugin"].as_array().unwrap().len(), 1);
         assert!(content.get("plugins").is_none(), "{content}");
+    }
+
+    #[test]
+    fn write_opencode_plugin_uri_adds_to_plugins_when_the_legacy_key_holds_other_entries() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": ["other@foo"]}"#,
+        )
+        .unwrap();
+        let outcome = write_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        );
+        assert_eq!(outcome, crate::plugin::PluginOutcome::Success);
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            content["plugins"],
+            serde_json::json!(["sp@git+https://example.com"])
+        );
+        assert_eq!(content["plugin"], serde_json::json!(["other@foo"]));
+    }
+
+    #[test]
+    fn write_opencode_plugin_uri_fails_on_a_non_array_plugins_key_next_to_a_legacy_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": ["sp@git+https://example.com"], "plugins": "x"}"#,
+        )
+        .unwrap();
+        let outcome = write_opencode_plugin_uri(
+            tmp.path(),
+            PluginScope::Project,
+            "sp@git+https://example.com",
+        );
+        assert!(matches!(
+            outcome,
+            crate::plugin::PluginOutcome::Failed { .. }
+        ));
     }
 
     #[test]

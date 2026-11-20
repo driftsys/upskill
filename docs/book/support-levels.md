@@ -53,9 +53,8 @@ that does not change the table.)
 personal locations, and the global scope writes no rules entry to an opencode
 config file. upskill writes the opencode plugin and MCP entries to
 `$XDG_CONFIG_HOME/opencode/opencode.json` or `~/.config/opencode/opencode.json`.
-A trial with opencode 2.1.4 confirmed the second file; the first follows the
-opencode documentation. OpenCode stays experimental until its design settles
-these paths.
+A trial with opencode 2.1.4 confirmed the second file; the first file was not
+tested. OpenCode stays experimental until its design settles these paths.
 
 ## Run the smoke test
 
