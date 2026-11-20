@@ -145,19 +145,22 @@ field.
 ### The opencode config file and the `plugins` key
 
 The `opencode.json` of a scope is the file that opencode reads for that scope.
-Trials with opencode 2.1.4 (issues #565 and #573) established three facts:
+Trials with opencode 2.1.4 (issues #565 and #573) tested the following, with
+`XDG_CONFIG_HOME` unset:
 
-- opencode reads its global configuration only from
-  `$XDG_CONFIG_HOME/opencode/opencode.json`, or from
-  `~/.config/opencode/opencode.json` when `XDG_CONFIG_HOME` is unset. It ignores
-  `$HOME/opencode.json`, which upskill wrote in the global scope before this
-  decision.
-- In a project `opencode.json`, opencode reads both the `plugin` and the
-  `plugins` key. `plugins` is the key that the opencode 2 documentation names.
-- A relative `instructions` path in the global config resolves against the
-  project directory, not against the config directory. The rules glob
-  `.agents/rules/**/RULE.md` therefore cannot reach `~/.agents/rules/` from the
-  global config. An absolute path was not proven to work.
+- In the global scope, opencode read `~/.config/opencode/opencode.json`. It
+  ignored `~/opencode.json` and `~/.opencode/opencode.json`. `~/opencode.json`
+  is the file that upskill wrote in the global scope before this decision.
+- Both the `plugin` and the `plugins` key appear in the resolved configuration
+  of a project `opencode.json`. Only the listing was checked, not the loading of
+  a plugin. The opencode 2 documentation names `plugins`.
+- In one trial, a relative `instructions` path in the global configuration was
+  resolved against the project directory. The rules glob
+  `.agents/rules/**/RULE.md` therefore does not reach `~/.agents/rules/` from
+  the global configuration. An absolute path was not tested.
+
+The `$XDG_CONFIG_HOME` branch follows the opencode documentation and was not
+tested.
 
 Decision:
 
@@ -168,8 +171,9 @@ Decision:
   removal, and the MCP check of `doctor` all use that file.
 - upskill writes a `plugin_uri` plugin to the `plugins` array. The listed check
   and the removal accept an entry under `plugin` or `plugins`; the removal
-  deletes the entry from both. An older entry under `plugin` stays in place:
-  there is no migration before version 1.0.
+  deletes the entry from both. An older entry under `plugin` stays in place and
+  counts as present on write, so the write adds no second entry under `plugins`.
+  There is no migration before version 1.0.
 - upskill neither reads nor cleans the old `$HOME/opencode.json`.
 - In the global scope upskill writes no rules `instructions` entry for opencode.
   Global rules do not reach opencode yet.

@@ -166,7 +166,8 @@ pub struct LockedPlugin {
     /// - vscode: `"<extension-id>"`
     /// - opencode: `"<module>"`
     pub identifier: String,
-    /// Install scope (only meaningful for claude: `"project"` or `"user"`).
+    /// Install scope, `"project"` or `"user"`. It selects the Claude Code install
+    /// scope and the opencode config file.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
     /// Bundle that declared this plugin.
@@ -213,7 +214,8 @@ pub struct LockedMcp {
     pub name: String,
     /// Client identifier: `"claude"`, `"opencode"`, etc.
     pub client: String,
-    /// Install scope (only meaningful for claude: `"project"` or `"user"`).
+    /// Install scope, `"project"` or `"user"`. It selects the Claude Code install
+    /// scope and the opencode config file.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
     /// Bundle that declared this MCP server.

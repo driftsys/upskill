@@ -132,7 +132,9 @@ applicable config-write target produces a warn-skip — not an error.
 
 The opencode file is the `opencode.json` of the scope: the project root in the
 project scope, and `$XDG_CONFIG_HOME/opencode/` (or `~/.config/opencode/`) in
-the global scope, because opencode reads its global configuration only there
+the global scope. A trial with opencode 2.1.4 showed that opencode reads
+`~/.config/opencode/opencode.json` and ignores `~/opencode.json`; the
+`$XDG_CONFIG_HOME` branch follows the opencode documentation and was not tested
 (ADR-0008, issues #565 and #573).
 
 The Claude forms are unchanged:
@@ -283,12 +285,13 @@ silently ignore the unknown array (serde `default`).
   which surfaces every `NotRegistered` server, and by `upskill add` which warns
   at install time for every unset `requires-env` variable.
 - Config-write fallbacks are project-scope files except Copilot, whose only
-  documented config file is the user-scope `~/.copilot/mcp-config.json`. The
-  Claude global-scope config location is client-version-specific and not yet
-  handled by the fallback path. VS Code's `code --add-mcp` writes the user
-  profile MCP store, which differs from the `.vscode/mcp.json` workspace file
-  the fallback writes — so a CLI-installed VS Code server is not removed by the
-  config-file remover.
+  documented config file is the user-scope `~/.copilot/mcp-config.json`, and
+  opencode, whose file is the `opencode.json` of the scope (a global file under
+  `~/.config/opencode/` in the global scope). The Claude global-scope config
+  location is client-version-specific and not yet handled by the fallback path.
+  VS Code's `code --add-mcp` writes the user profile MCP store, which differs
+  from the `.vscode/mcp.json` workspace file the fallback writes — so a
+  CLI-installed VS Code server is not removed by the config-file remover.
 
 ## Alternatives considered
 

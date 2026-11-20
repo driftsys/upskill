@@ -1135,3 +1135,75 @@ fn project_flag_outside_a_git_repo_writes_the_project_opencode_json() {
     let lock = read_json(&cwd.join(".upskill-lock.json"));
     assert_eq!(lock["plugins"][0]["scope"], "project", "{lock}");
 }
+
+impl Env {
+    /// A directory that is not in a git repository.
+    fn no_git_dir(&self) -> PathBuf {
+        let cwd = self.home.parent().unwrap().join("no-git");
+        fs::create_dir_all(&cwd).unwrap();
+        cwd
+    }
+
+    /// Run `args` in `cwd`.
+    fn run_in(&self, cwd: &std::path::Path, args: &[&str]) -> assert_cmd::assert::Assert {
+        let path = format!("{}:/usr/bin:/bin", self.bin.display());
+        common::upskill_cmd(&self.home)
+            .current_dir(cwd)
+            .env("PATH", path)
+            .args(args)
+            .assert()
+    }
+
+    fn add_project_in(&self, cwd: &std::path::Path) {
+        let registry = self.bundle.parent().unwrap().to_str().unwrap().to_string();
+        self.run_in(cwd, &["add", &registry, "oc", "--opencode", "--project"])
+            .success();
+    }
+}
+
+#[test]
+fn global_doctor_reports_a_missing_opencode_mcp_entry_of_the_global_file() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(None).success();
+    // Drop only the opencode MCP entry; the plugin entry stays.
+    let mut config = read_json(&env.global_config());
+    config["mcp"] = serde_json::json!({});
+    fs::write(env.global_config(), config.to_string()).unwrap();
+
+    let out = env.run_global(&["doctor"], None).code(1);
+    let text = stdout(&out);
+    let line = format!(
+        "MCP '{MCP_NAME}' is in the lockfile but not registered in opencode; re-run `upskill update --yes`."
+    );
+    assert!(text.lines().any(|l| l.trim() == line), "{text}");
+}
+
+#[test]
+fn update_project_outside_a_git_repo_restores_the_plugin_in_the_project_file() {
+    let env = Env::with_rule_and_mcp();
+    let cwd = env.no_git_dir();
+    env.add_project_in(&cwd);
+    let mut config = read_json(&cwd.join("opencode.json"));
+    config["plugins"] = serde_json::json!([]);
+    fs::write(cwd.join("opencode.json"), config.to_string()).unwrap();
+
+    env.run_in(&cwd, &["update", "--yes", "--project"]).code(0);
+
+    let config = read_json(&cwd.join("opencode.json"));
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert!(!env.home.join(".config/opencode").exists());
+}
+
+#[test]
+fn remove_mcp_project_outside_a_git_repo_edits_the_project_file() {
+    let env = Env::with_rule_and_mcp();
+    let cwd = env.no_git_dir();
+    env.add_project_in(&cwd);
+
+    env.run_in(&cwd, &["remove-mcp", MCP_NAME, "--project"])
+        .success();
+
+    let config = read_json(&cwd.join("opencode.json"));
+    assert!(config["mcp"].get(MCP_NAME).is_none(), "{config}");
+    assert!(!env.home.join(".config/opencode").exists());
+}

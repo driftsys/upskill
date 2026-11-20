@@ -1284,12 +1284,14 @@ upskill writes these paths in its global scope.
 The opencode config file is `opencode.json`. In the project scope it is at the
 project root. In the global scope it is at `$XDG_CONFIG_HOME/opencode/` when
 `XDG_CONFIG_HOME` is set and absolute, and otherwise at
-`$HOME/.config/opencode/`: opencode reads its global configuration only from
-there, and ignores `$HOME/opencode.json`. An implementation writes the plugin
-URI of a `plugin_uri` descriptor to the `plugins` array of that file. A reader
-accepts an entry under `plugin` or `plugins`. opencode resolves a relative
-`instructions` path of the global file against the project directory, so a
-global install writes no rules entry for opencode.
+`$HOME/.config/opencode/`. A trial with opencode 2.1.4 showed that opencode
+reads `$HOME/.config/opencode/opencode.json` and ignores `$HOME/opencode.json`;
+the `XDG_CONFIG_HOME` location follows the opencode documentation. An
+implementation writes the plugin URI of a `plugin_uri` descriptor to the
+`plugins` array of that file. A reader accepts an entry under `plugin` or
+`plugins`. opencode resolves a relative `instructions` path of the global file
+against the project directory in one trial, so a global install writes no rules
+entry for opencode.
 
 ### 7.4 Formatting guarantee
 

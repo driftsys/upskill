@@ -48,13 +48,14 @@ that does not change the table.)
 
 ## Known limits of the experimental OpenCode level
 
-OpenCode at global scope is unchanged. `.agents/skills` is a documented personal
-location of OpenCode. `.agents/rules/<name>/RULE.md` and `.opencode/agents/` are
-not documented personal locations, and the global scope writes no rules entry to
-an opencode config file. opencode reads its global configuration only from
-`$XDG_CONFIG_HOME/opencode/opencode.json` or `~/.config/opencode/opencode.json`,
-where upskill writes the opencode plugin and MCP entries. OpenCode stays
-experimental until its design settles these paths.
+`.agents/skills` is a documented personal location of OpenCode.
+`.agents/rules/<name>/RULE.md` and `.opencode/agents/` are not documented
+personal locations, and the global scope writes no rules entry to an opencode
+config file. upskill writes the opencode plugin and MCP entries to
+`$XDG_CONFIG_HOME/opencode/opencode.json` or `~/.config/opencode/opencode.json`.
+A trial with opencode 2.1.4 confirmed the second file; the first follows the
+opencode documentation. OpenCode stays experimental until its design settles
+these paths.
 
 ## Run the smoke test
 

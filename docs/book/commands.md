@@ -277,12 +277,14 @@ rendered through the generation pipeline. A `plugin_uri` opencode plugin is
 written into the `plugins` array of the `opencode.json` of the scope instead. In
 the project scope that file is at the project root. In the global scope it is
 `$XDG_CONFIG_HOME/opencode/opencode.json`, or `~/.config/opencode/opencode.json`
-when `XDG_CONFIG_HOME` is unset, empty or not an absolute path, because opencode
-reads its global configuration only there. MCP servers for opencode are written
-into the same file. If a client's CLI is not on `PATH`, or `opencode --version`
-reports a major version below 2, the plugin is skipped (not an error, with a
-warning) and recorded as `skipped` in the lockfile; `upskill doctor` reports
-skipped and missing plugins. Removing the bundle cleans up its plugins.
+when `XDG_CONFIG_HOME` is unset, empty or not an absolute path. A trial showed
+that opencode 2.1.4 reads `~/.config/opencode/opencode.json` and ignores
+`~/opencode.json`; the `XDG_CONFIG_HOME` location follows the opencode
+documentation. MCP servers for opencode are written into the same file. If a
+client's CLI is not on `PATH`, or `opencode --version` reports a major version
+below 2, the plugin is skipped (not an error, with a warning) and recorded as
+`skipped` in the lockfile; `upskill doctor` reports skipped and missing plugins.
+Removing the bundle cleans up its plugins.
 
 **Bundle MCP servers.** When a bundle declares an `mcps:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` configures those

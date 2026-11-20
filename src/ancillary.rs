@@ -366,8 +366,8 @@ fn vscode_instructions_pending(target: &Path, has_rules: bool) -> Result<Option<
 /// Write a plugin URI to the `plugins[]` array in the opencode config file
 /// of `scope` (see [`opencode_config_dir`]).
 ///
-/// Idempotent: if the URI is already present, no change is made. An entry in
-/// the older `plugin` array is left in place and is not counted as present.
+/// Idempotent: if the URI is already present under `plugins` or under the older
+/// `plugin` key, no change is made.
 /// Creates the file if absent. Returns `PluginOutcome::Failed` if the file
 /// exists but is not a JSON object or `plugins` is not an array.
 pub fn write_opencode_plugin_uri(
@@ -409,6 +409,13 @@ pub fn write_opencode_plugin_uri(
             }
 
             let obj = doc.as_object_mut().expect("checked is_object");
+            let in_legacy_key = obj
+                .get("plugin")
+                .and_then(Value::as_array)
+                .is_some_and(|a| a.iter().any(|v| v.as_str() == Some(plugin_uri)));
+            if in_legacy_key {
+                return PluginOutcome::Success;
+            }
             match obj.get_mut(PLUGINS_KEY) {
                 None => {
                     obj.insert(PLUGINS_KEY.to_string(), json!([plugin_uri]));
@@ -478,12 +485,18 @@ pub fn remove_opencode_plugin_uri(
         anyhow::bail!("{}: top-level value must be an object", path.display());
     };
 
+    // Both keys are processed and the file is written before an error for a
+    // non-array key is reported, so a removal in one key is not lost.
     let mut changed = false;
+    let mut first_error = None;
     for key in PLUGIN_KEYS {
         if let Some(existing) = obj.get_mut(key) {
-            let arr = existing
-                .as_array_mut()
-                .with_context(|| format!("{}: `{key}` must be an array", path.display()))?;
+            let Some(arr) = existing.as_array_mut() else {
+                first_error.get_or_insert_with(|| {
+                    anyhow::anyhow!("{}: `{key}` must be an array", path.display())
+                });
+                continue;
+            };
             let before = arr.len();
             arr.retain(|v| v.as_str() != Some(plugin_uri));
             changed |= arr.len() < before;
@@ -491,6 +504,9 @@ pub fn remove_opencode_plugin_uri(
     }
     if changed {
         write_pretty_json(&path, &doc)?;
+    }
+    if let Some(err) = first_error {
+        return Err(err);
     }
 
     Ok(())
@@ -1405,7 +1421,7 @@ mod tests {
     }
 
     #[test]
-    fn write_opencode_plugin_uri_leaves_a_legacy_plugin_entry_in_place() {
+    fn write_opencode_plugin_uri_treats_a_legacy_plugin_entry_as_present() {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(
             tmp.path().join("opencode.json"),
@@ -1423,7 +1439,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(content["plugin"].as_array().unwrap().len(), 1);
-        assert_eq!(content["plugins"].as_array().unwrap().len(), 1);
+        assert!(content.get("plugins").is_none(), "{content}");
     }
 
     #[test]
@@ -1452,6 +1468,45 @@ mod tests {
         .unwrap();
         assert_eq!(content["plugin"], serde_json::json!(["a"]));
         assert_eq!(content["plugins"], serde_json::json!(["b"]));
+    }
+
+    #[test]
+    fn remove_opencode_plugin_uri_writes_the_legacy_removal_next_to_a_plugins_array() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": ["sp"], "plugins": ["b"]}"#,
+        )
+        .unwrap();
+        remove_opencode_plugin_uri(tmp.path(), PluginScope::Project, "sp").unwrap();
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(content["plugin"], serde_json::json!([]));
+        assert_eq!(content["plugins"], serde_json::json!(["b"]));
+    }
+
+    #[test]
+    fn remove_opencode_plugin_uri_removes_from_plugins_then_reports_a_non_array_legacy_key() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("opencode.json"),
+            r#"{"plugin": "x", "plugins": ["sp", "b"]}"#,
+        )
+        .unwrap();
+        let err = remove_opencode_plugin_uri(tmp.path(), PluginScope::Project, "sp")
+            .expect_err("non-array legacy key");
+        assert!(
+            err.to_string().contains("`plugin` must be an array"),
+            "{err}"
+        );
+        let content: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(tmp.path().join("opencode.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(content["plugins"], serde_json::json!(["b"]));
+        assert_eq!(content["plugin"], serde_json::json!("x"));
     }
 
     #[test]
