@@ -76,14 +76,14 @@ separator `\` is not one); for the file system root, which has no parent, the
 error says so. A source is the directory that contains the item directories. The
 same check applies to a git source with a subfolder (`owner/repo:path`,
 `owner/repo@ref:path`, or a full URL with `:path`), on the fetched subfolder.
-There the error names the source as it was typed, and the command to use instead
-keeps the source form and the ref, with the parent subfolder in place of the
-subfolder, for example `upskill add owner/repo@v1:skills foo` for
-`owner/repo@v1:skills/foo`; when the parent is the repository root, the command
-has no subfolder (`upskill add owner/repo foo`). The output-path case does not
-apply to a git source. This check applies to `add` only: `update` and the
-sources of `requires` entries are not checked. `.` alone is a local path, the
-same as `./`.
+There the error names the source in the form that `add` accepts (a github.com
+URL is shown as `owner/repo`), and the command to use instead keeps the source
+form and the ref, with the parent subfolder in place of the subfolder, for
+example `upskill add owner/repo@v1:skills foo` for `owner/repo@v1:skills/foo`;
+when the parent is the repository root, the command has no subfolder
+(`upskill add owner/repo foo`). The output-path case does not apply to a git
+source. This check applies to `add` only: `update` and the sources of `requires`
+entries are not checked. `.` alone is a local path, the same as `./`.
 
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a flag uses the project scope. Outside a
