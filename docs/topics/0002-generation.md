@@ -56,13 +56,17 @@ order. Each requested client omitted by canonical `audience` is explicitly
 excluded; a wholly excluded selection succeeds with empty outputs. This does not
 imply removal of existing files.
 
-Resource selection reuses the existing root-only canonical entrypoint exclusion
-and the requested kind's subtractive `ignore` semantics. Nested equivalents,
-unrelated client-suffixed filenames, unknown-client suffixes, hidden files,
-empty files and binary files remain resources unless ignored. A root override
-for the requested kind and an emitted client fails with an unsupported-override
-error even if ignored. Overrides for other kinds or non-emitted clients remain
-excluded source inputs. Body override precedence is deferred.
+Resource selection reuses the existing root-only canonical entrypoint and known
+`<KIND>.<client>.md` override exclusions and the requested kind's subtractive
+`ignore` semantics. Nested equivalents, unrelated client-suffixed filenames,
+unknown-client suffixes, hidden files, empty files and binary files remain
+resources unless ignored. A root override for the requested kind and an emitted
+client fails with an unsupported-override error even if ignored. Overrides for
+other kinds or non-emitted clients remain excluded source inputs. Body override
+precedence is deferred.
+
+Since #539 (2026-11-20), the resource classifier no longer reserves
+`<KIND>.<client>.md` names; such a file is an ordinary resource.
 
 Each included output contains exactly one rendered entrypoint and every retained
 resource, sorted by portable UTF-8 relative path. Compilation reuses existing
@@ -266,6 +270,9 @@ inputs.
 [AD-0025](https://github.com/driftsys/upskill/blob/main/docs/adr/0025-reject-active-captured-overrides.md)
 records the unsupported boundary; body override precedence remains
 unimplemented.
+
+Since #539 (2026-11-20), the resource classifier no longer reserves
+`<KIND>.<client>.md` names; such a file is an ordinary resource.
 
 <a id="architecture-captured-item-compilation-rendering-and-output"></a>
 

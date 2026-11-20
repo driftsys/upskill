@@ -1624,7 +1624,8 @@ evolve.
 Include only in Claude Code output
 <!-- @client:copilot -->
 Include only in Copilot output
-<!-- @client:opencode -->         Include only in opencode output
+<!-- @client:opencode -->
+Include only in opencode output
 <!-- @client:claude,copilot -->
 Include in Claude Code and GitHub Copilot, not opencode
 <!-- @client:!opencode -->

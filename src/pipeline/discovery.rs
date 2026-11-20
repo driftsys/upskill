@@ -494,8 +494,9 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
 
 /// Relative paths (from `dir`) of every file under an item directory that
 /// is not an entrypoint (`SKILL.md`/`RULE.md`/`AGENT.md`). A file such as
-/// `SKILL.claude.md` is an ordinary resource (format-spec §2.3). Recursive; sub-directory structure is preserved in the returned
-/// relative paths. Sorted for deterministic output.
+/// `SKILL.claude.md` is an ordinary resource (format-spec §2.3). Recursive;
+/// sub-directory structure is preserved in the returned relative paths.
+/// Sorted for deterministic output.
 pub(super) fn iter_item_resources(dir: &Path) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = walk_files(dir)
         .into_iter()
