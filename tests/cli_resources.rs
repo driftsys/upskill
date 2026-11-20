@@ -94,6 +94,43 @@ fn skill_resources_copied_for_all_clients_no_rewrite() {
     }
 }
 
+/// #539: there are no per-client body files. `SKILL.claude.md` is an
+/// ordinary supporting resource: every client gets the body of `SKILL.md`,
+/// and `SKILL.claude.md` is copied beside the generated skill.
+#[test]
+fn client_named_body_file_is_a_resource_for_all_clients() {
+    let e = env();
+    write_item(&e.src, "demo-skill", "SKILL.md", "Canonical body.\n");
+    fs::write(
+        e.src.join("demo-skill/SKILL.claude.md"),
+        "Claude-named file.\n",
+    )
+    .unwrap();
+
+    e.cmd()
+        .args(["add", e.src.to_str().unwrap()])
+        .assert()
+        .success();
+
+    for base in [".claude/skills", ".github/skills", ".agents/skills"] {
+        let dir = e.proj.join(base).join("demo-skill");
+        let body = read(&dir.join("SKILL.md"));
+        assert!(
+            body.contains("Canonical body."),
+            "{base}: body comes from SKILL.md"
+        );
+        assert!(
+            !body.contains("Claude-named file."),
+            "{base}: SKILL.claude.md is not a body"
+        );
+        assert_eq!(
+            read(&dir.join("SKILL.claude.md")),
+            "Claude-named file.\n",
+            "{base}: SKILL.claude.md copied as a resource"
+        );
+    }
+}
+
 #[test]
 fn rule_resources_namespaced_and_rewritten_per_client() {
     let e = env();
