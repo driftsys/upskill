@@ -12,22 +12,15 @@
 
 use crate::generate::Client;
 use crate::model::Audience;
-use crate::target::TargetFamily;
 use anyhow::{Result, bail};
 
 /// Process `@client:` directives in `body` for `target`.
 pub fn process(body: &str, target: Client) -> Result<String> {
-    let family = match target {
-        Client::Claude => TargetFamily::Claude,
-        Client::Copilot => TargetFamily::Copilot,
-        Client::OpenCode => TargetFamily::OpenCode,
+    let target = match target {
+        Client::Claude => Audience::Claude,
+        Client::Copilot => Audience::Copilot,
+        Client::OpenCode => Audience::OpenCode,
     };
-    process_for_family(body, family)
-}
-
-/// Process `@client:` directives for a supported source audience family.
-pub fn process_for_family(body: &str, target: TargetFamily) -> Result<String> {
-    let target = Audience::try_from(target)?;
     let mut out = String::with_capacity(body.len());
     let mut state = State::Outside;
     let mut open_lineno = 0usize;
@@ -154,79 +147,6 @@ fn collapse_blank_runs(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::target::TargetFamily;
-
-    #[test]
-    fn family_directives_filter_positive_negative_and_mixed_lists() {
-        let body = concat!(
-            "before\n",
-            "<!-- @client:codex -->\ncodex only\n<!-- @endclient -->\n",
-            "<!-- @client:!codex -->\nother families\n<!-- @endclient -->\n",
-            "<!-- @client: codex, claude -->\nshared\n<!-- @endclient -->\n",
-            "<!-- @client: !codex, copilot -->\nremaining\n<!-- @endclient -->\n",
-            "after\n",
-        );
-        for (family, expected) in [
-            (TargetFamily::Codex, "before\ncodex only\nshared\nafter\n"),
-            (
-                TargetFamily::Claude,
-                "before\nother families\nshared\nremaining\nafter\n",
-            ),
-            (TargetFamily::Copilot, "before\nother families\nafter\n"),
-            (
-                TargetFamily::OpenCode,
-                "before\nother families\nremaining\nafter\n",
-            ),
-        ] {
-            assert_eq!(
-                process_for_family(body, family).unwrap(),
-                expected,
-                "{family:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn family_directives_reject_unknown_nested_and_unbalanced_input() {
-        for (body, message) in [
-            (
-                "<!-- @client:foo -->\nx\n<!-- @endclient -->\n",
-                "unknown client",
-            ),
-            (
-                "<!-- @client:codex,cursor -->\nx\n<!-- @endclient -->\n",
-                "unknown client",
-            ),
-            (
-                "<!-- @client:gemini -->\nx\n<!-- @endclient -->\n",
-                "unknown client",
-            ),
-            (
-                "<!-- @client:codex, -->\nx\n<!-- @endclient -->\n",
-                "empty client",
-            ),
-            (
-                "<!-- @client:! -->\nx\n<!-- @endclient -->\n",
-                "empty client",
-            ),
-            (
-                "<!-- @client:!codex -->\n<!-- @client:claude -->\nx\n<!-- @endclient -->\n<!-- @endclient -->\n",
-                "nested",
-            ),
-            ("<!-- @client:codex -->\nx\n", "unclosed"),
-            ("<!-- @endclient -->\n", "without matching"),
-        ] {
-            let error = process_for_family(body, TargetFamily::Codex).unwrap_err();
-            assert!(error.to_string().contains(message), "{body:?}: {error}");
-        }
-    }
-
-    #[test]
-    fn unsupported_directive_targets_reject_unconditional_bodies() {
-        for family in [TargetFamily::Cursor, TargetFamily::Gemini] {
-            assert!(process_for_family("unconditional\n", family).is_err());
-        }
-    }
 
     #[test]
     fn historical_clients_keep_exact_directive_bytes() {
@@ -280,6 +200,41 @@ mod tests {
         assert!(claude.contains("inner"), "claude should keep");
         assert!(copilot.contains("inner"), "copilot should keep");
         assert!(!opencode.contains("inner"), "opencode should strip");
+    }
+
+    #[test]
+    fn empty_client_identifier_errors() {
+        for list in ["claude,", "!"] {
+            let body = format!("<!-- @client:{list} -->\nx\n<!-- @endclient -->\n");
+            let err = process(&body, Client::Claude).unwrap_err();
+            let msg = format!("{err:#}");
+            assert!(msg.contains("empty client"), "{list}: {msg}");
+        }
+    }
+
+    #[test]
+    fn unknown_identifier_after_first_position_errors() {
+        let body = "<!-- @client:claude,cursor -->\nx\n<!-- @endclient -->\n";
+        let err = process(body, Client::Claude).unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(msg.contains("unknown client"), "got: {msg}");
+    }
+
+    #[test]
+    fn spaces_around_list_items_are_trimmed() {
+        let body = "<!-- @client: claude , copilot -->\nx\n<!-- @endclient -->\n";
+        for client in [Client::Claude, Client::Copilot] {
+            assert_eq!(process(body, client).unwrap(), "x\n");
+        }
+        assert_eq!(process(body, Client::OpenCode).unwrap(), "");
+    }
+
+    #[test]
+    fn negated_list_with_several_clients() {
+        let body = "<!-- @client: !claude, copilot -->\nx\n<!-- @endclient -->\n";
+        assert_eq!(process(body, Client::Claude).unwrap(), "");
+        assert_eq!(process(body, Client::Copilot).unwrap(), "");
+        assert_eq!(process(body, Client::OpenCode).unwrap(), "x\n");
     }
 
     #[test]
