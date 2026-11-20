@@ -200,6 +200,15 @@ pub fn install_with_lockfile(
     plugin_scope: crate::plugin::PluginScope,
     options: &AddOptions,
 ) -> Result<InstallReport> {
+    if let InstallSource::LocalPath(path) = source {
+        let at = crate::scope::ScopeRoot {
+            scope: options.scope,
+            root: target.to_path_buf(),
+        };
+        discovery::refuse_item_dir_source(path, items, |kind, name| {
+            output::is_inside_output_path(&at, kind, name, path)
+        })?;
+    }
     let prepared = prepared::prepare_install(source, target, items, options)?;
     // A source item directory must not contain a file that the lockfile
     // records for an item from another source (issue #550). Checked before

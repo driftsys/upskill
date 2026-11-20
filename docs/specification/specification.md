@@ -97,7 +97,7 @@ created by those steps. For example:
 - `https://<host>/<path>[...]` — any other https git host: GitLab (including
   self-hosted instances and subgroups at any nesting depth), Bitbucket, Gitea,
   or a plain git server
-- `./path`, `../path`, `/abs/path`, `~/path` — local paths
+- `.`, `./path`, `../path`, `/abs/path`, `~/path` — local paths
 
 `upskill add <source>` installs everything the source contains. Optional
 `items...` after the source filter to a subset. There is no interactive picker;
@@ -105,8 +105,23 @@ install-all-by-default fits bundle curation.
 
 `add` of a local path that does not exist fails with exit code 1 and writes
 nothing. With no item name, `add` of a local path that exists and holds no item
-installs no item, still writes the lockfile and `CLAUDE.md`, and exits with code
-0.
+(other than the refused item directory described below) installs no item, still
+writes the lockfile and `CLAUDE.md`, and exits with code 0.
+
+A local path whose directory is itself an item directory (it holds `SKILL.md`,
+`RULE.md` or `AGENT.md` at its root) is refused when it has no item in its child
+or grandchild directories, holds no `*.bundle.yaml` file, and no item name given
+to `add` matches a bundle in it. `add` then writes nothing, exits with code 1,
+and prints an error that names the path. When the path is inside an output path
+of the install, the error says that the path is an installed output of upskill,
+not a source, and that the item must be added from its source registry.
+Otherwise the error names the command to use instead,
+`upskill add <parent> <item-name>`, with the parent path and the item name each
+in single quotes when it holds a shell-special character (on Windows, the path
+separator `\` is not one); for the file system root, which has no parent, the
+error says so. A source is the directory that contains the item directories.
+This check applies to `add` only: `update` and the sources of `requires` entries
+are not checked. `.` alone is a local path, the same as `./`.
 
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a scope flag uses the project scope.

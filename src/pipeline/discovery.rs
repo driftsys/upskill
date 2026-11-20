@@ -58,6 +58,104 @@ pub(super) fn is_item_dir(path: &Path) -> bool {
         || path.join("AGENT.md").is_file()
 }
 
+/// Refuse an `add` source directory that is itself an item directory (issues
+/// #472 and #488). Discovery reads the items in the child and grandchild
+/// directories of a source, not in the source directory itself, so such a
+/// source installs no item of its own. The directory is not refused when it
+/// has an item in a child or grandchild directory, when it holds a
+/// `*.bundle.yaml` file, or when a name in `names` matches a bundle in it:
+/// then the source still has something to install.
+///
+/// When `inside_output` returns true for the kind and the folder name or
+/// the effective name, the directory is inside an output path of the run: it
+/// is an installed copy, and the error says to add the item from its source
+/// registry. Otherwise the error names the command that adds the item from
+/// the parent directory.
+pub(super) fn refuse_item_dir_source(
+    source: &Path,
+    names: &[String],
+    inside_output: impl Fn(ItemKind, &str) -> bool,
+) -> Result<()> {
+    if !is_item_dir(source)
+        || !scan_source_items(source).is_empty()
+        || holds_bundle_file(source)
+        || names
+            .iter()
+            .any(|n| find_bundle_by_name(source, n).is_some())
+    {
+        return Ok(());
+    }
+    let source = normalize_lexically(source);
+    let (entry, kind) = if source.join("SKILL.md").is_file() {
+        ("SKILL.md", ItemKind::Skill)
+    } else if source.join("RULE.md").is_file() {
+        ("RULE.md", ItemKind::Rule)
+    } else {
+        ("AGENT.md", ItemKind::Agent)
+    };
+    let head = format!(
+        "source {} is an item directory (it holds {entry}); a source must be the directory \
+         that contains the item directories.",
+        source.display()
+    );
+    let (Some(parent), Some(folder)) =
+        (source.parent(), source.file_name().and_then(|n| n.to_str()))
+    else {
+        anyhow::bail!("{head} The file system root has no parent directory to add it from");
+    };
+    let name = probe_effective_name(&source.join(entry), kind, folder);
+    if inside_output(kind, folder) || inside_output(kind, &name) {
+        anyhow::bail!(
+            "{head} {} is an output path that upskill installs, not a source. Add the item \
+             from the source registry that it was installed from",
+            source.display()
+        );
+    }
+    anyhow::bail!(
+        "{head} Use instead: upskill add {} {}",
+        shell_quote(&parent.display().to_string()),
+        shell_quote(&name)
+    )
+}
+
+/// True when `dir` holds a file whose name ends in `.bundle.yaml`.
+fn holds_bundle_file(dir: &Path) -> bool {
+    fs::read_dir(dir).is_ok_and(|entries| entries.flatten().any(|e| is_bundle_file(&e.path())))
+}
+
+/// Remove `.` and `..` components without reading the file system.
+fn normalize_lexically(path: &Path) -> PathBuf {
+    use std::path::Component;
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !out.pop() {
+                    out.push(component);
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    out
+}
+
+/// Quote `word` for a POSIX shell with single quotes when it holds a
+/// character other than a letter, a digit or one of `_-./:@%+=,~` (on
+/// Windows also `\\`, the path separator).
+fn shell_quote(word: &str) -> String {
+    let plain = !word.is_empty()
+        && word.chars().all(|c| {
+            c.is_ascii_alphanumeric() || "_-./:@%+=,~".contains(c) || (cfg!(windows) && c == '\\')
+        });
+    if plain {
+        word.to_string()
+    } else {
+        format!("'{}'", word.replace('\'', r"'\''"))
+    }
+}
+
 pub(super) fn is_bundle_file(path: &Path) -> bool {
     path.is_file()
         && path

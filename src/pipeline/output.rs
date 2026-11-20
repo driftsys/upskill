@@ -143,7 +143,11 @@ pub(super) fn in_item_layout(kind: ItemKind, name: &str, rel: &str) -> bool {
 ///
 /// When `source_dir` is inside an output path that is itself inside
 /// `source_root`, the source root holds upskill's own output (for example a
-/// registry rooted at `~/.claude`), and the error says so.
+/// registry rooted at `~/.claude`), and the error says so. When the client
+/// directory, or a path below it down to that output path, is a symbolic
+/// link, the error asks to remove the link instead. This includes a client
+/// directory that is itself a link to a directory that contains the source
+/// root (a dotfiles layout).
 pub(super) fn check_source_outside_outputs(
     at: &ScopeRoot,
     kind: ItemKind,
@@ -166,8 +170,23 @@ pub(super) fn check_source_outside_outputs(
                     source_dir.display(),
                     out.display()
                 );
-                if let Some((owned, client_dir)) = output_inside_root(&target, &source, &root, rels)
+                if let Some((owned, client_dir, link)) =
+                    output_inside_root(&target, &source, &root, rels)
                 {
+                    // A symbolic link on the output path (the client
+                    // directory or a directory or file below it) points into
+                    // the source root. A client directory that is itself a
+                    // link (a dotfiles layout) also gets this message.
+                    if has_link_between(&client_dir, &link) {
+                        anyhow::bail!(
+                            "{prefix} The output path {} under the client directory {} is or \
+                             passes through a symbolic link into the source root {}. Remove the \
+                             symbolic link, then add the source again",
+                            link.display(),
+                            client_dir.display(),
+                            root.display()
+                        );
+                    }
                     anyhow::bail!(
                         "{prefix} The source root {} contains the output path {} that upskill \
                          writes under the client directory {}. A source must not be rooted in a \
@@ -186,6 +205,25 @@ pub(super) fn check_source_outside_outputs(
         }
     }
     Ok(())
+}
+
+/// True when `dir` is the same as, or is inside, a path that an install in
+/// `at` writes for `(kind, name)` for any client. Paths are compared in
+/// canonical form when they exist.
+pub(super) fn is_inside_output_path(
+    at: &ScopeRoot,
+    kind: ItemKind,
+    name: &str,
+    dir: &Path,
+) -> bool {
+    let canonical = |p: &Path| fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    let dir = canonical(dir);
+    let target = canonical(&at.root);
+    ALL_CLIENTS.into_iter().any(|client| {
+        checked_output_paths(at.scope, kind, client, name)
+            .iter()
+            .any(|rel| dir.starts_with(canonical(&target.join(rel))))
+    })
 }
 
 /// The per-item paths, relative to the scope root, that an install in
@@ -414,21 +452,43 @@ pub(super) fn check_outside_recorded_paths(
     }
 }
 
+/// True when `top`, or a path from `top` down to `path` (included), is a
+/// symbolic link. `path` must be below `top`.
+fn has_link_between(top: &Path, path: &Path) -> bool {
+    let is_link = |p: &Path| fs::symlink_metadata(p).is_ok_and(|m| m.file_type().is_symlink());
+    let Ok(rest) = path.strip_prefix(top) else {
+        return false;
+    };
+    let mut cursor = top.to_path_buf();
+    if is_link(&cursor) {
+        return true;
+    }
+    for component in rest.components() {
+        cursor.push(component);
+        if is_link(&cursor) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Find an output path that contains `source` (or is `source`) and is inside
-/// `root`. Returns that output path and its client directory (the first
-/// component of the output path under `target`).
+/// `root`. Returns that output path in canonical form, its client directory
+/// (the first component of the output path under `target`) and the output
+/// path as given (before symbolic links are resolved).
 fn output_inside_root(
     target: &Path,
     source: &Path,
     root: &Path,
     rels: impl Fn(Client) -> Vec<PathBuf>,
-) -> Option<(PathBuf, PathBuf)> {
+) -> Option<(PathBuf, PathBuf, PathBuf)> {
     for client in ALL_CLIENTS {
         for rel in rels(client) {
-            let out = fs::canonicalize(target.join(&rel)).unwrap_or_else(|_| target.join(&rel));
+            let given = target.join(&rel);
+            let out = fs::canonicalize(&given).unwrap_or_else(|_| given.clone());
             if source.starts_with(&out) && out.starts_with(root) {
                 let first = rel.components().next()?;
-                return Some((out, target.join(first)));
+                return Some((out, target.join(first), given));
             }
         }
     }

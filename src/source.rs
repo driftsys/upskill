@@ -100,7 +100,7 @@ pub fn parse_install_source(source: &str) -> Result<InstallSource, SourceParseEr
     // same directory (`./reg` and `/abs/reg`) collapse to one canonical
     // `local:` label and resolve identically as a dependency source (issue
     // #212).
-    if source.starts_with("./") || source.starts_with("../") {
+    if source == "." || source.starts_with("./") || source.starts_with("../") {
         return Ok(InstallSource::LocalPath(absolutize_local(source)));
     }
     if source.starts_with('/') || is_windows_absolute(source) {
@@ -418,6 +418,13 @@ mod tests {
     fn parse_local_path_dot_slash() {
         let source = parse_install_source("./my-skills").expect("must parse");
         let expected = std::path::absolute("./my-skills").unwrap();
+        assert_eq!(source, InstallSource::LocalPath(expected));
+    }
+
+    #[test]
+    fn parse_local_path_dot_alone() {
+        let source = parse_install_source(".").expect("must parse");
+        let expected = std::path::absolute(".").unwrap();
         assert_eq!(source, InstallSource::LocalPath(expected));
     }
 
