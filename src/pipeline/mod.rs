@@ -194,7 +194,9 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// its child or grandchild directories, no `*.bundle.yaml` file and no item
 /// name that matches a bundle in it, is refused before any write (see
 /// `discovery::refuse_item_dir_source`): a local path before the fetch, a
-/// git subfolder or repository root after it.
+/// git subfolder or repository root after it. The git check runs after
+/// `prepare_install`, so with item names given that match nothing there,
+/// `add` fails first with the "no matching items or bundles" error.
 ///
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Git `git_ref`); local-path sources record `None`.

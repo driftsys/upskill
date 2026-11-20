@@ -188,7 +188,8 @@ nothing.
 
 - `owner/repo` — GitHub shorthand
 - `owner/repo@ref` — pinned ref/tag/branch
-- `owner/repo:path/to/skill` — subfolder
+- `owner/repo:path/to/items` — subfolder that contains the item directories (a
+  subfolder or repository root that is itself one item directory is refused)
 - `owner/repo@ref:path` — combined
 - `https://github.com/owner/repo[...]` — full URL
 - `https://<host>/<path>[...]` — any other https git host (GitLab including

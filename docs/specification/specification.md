@@ -125,10 +125,11 @@ error says so. A source is the directory that contains the item directories. A
 git source is checked the same way after the fetch (`owner/repo:path`,
 `owner/repo@ref:path`, a full URL with `:path`, and also a git source without a
 subfolder), on the fetched directory, with the same exemptions; the subfolder is
-first normalised (a trailing `/` and the `.` components are removed). When the
-subfolder is an item directory, the error names the source in the form that
-`add` accepts (a github.com URL is shown as `owner/repo`), and the command to
-use instead keeps the source form and the ref, with the parent subfolder in
+first normalised: empty components (from a doubled or trailing `/`) and `.`
+components are removed, and each `..` component removes the component before it.
+When the subfolder is an item directory, the error names the source in the form
+that `add` accepts (a github.com URL is shown as `owner/repo`), and the command
+to use instead keeps the source form and the ref, with the parent subfolder in
 place of the subfolder, for example `upskill add owner/repo@v1:skills foo` for
 `owner/repo@v1:skills/foo`; when the parent is the repository root, the command
 has no subfolder (`upskill add owner/repo foo`). When the repository root is one

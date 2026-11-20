@@ -11,6 +11,10 @@ use std::process::Command;
 const REMOTE: &str = "https://example.invalid/team/skills";
 /// A repository whose root is one item directory.
 const ROOT_REMOTE: &str = "https://example.invalid/team/root";
+/// A repository whose root holds `SKILL.md` and the child item `kid`.
+const ROOT_CHILD_REMOTE: &str = "https://example.invalid/team/root-child";
+/// A repository whose root holds `SKILL.md` and `meta.bundle.yaml`.
+const ROOT_BUNDLE_REMOTE: &str = "https://example.invalid/team/root-bundle";
 
 struct Env {
     _tmp: tempfile::TempDir,
@@ -18,6 +22,8 @@ struct Env {
     proj: PathBuf,
     upstream: PathBuf,
     root_repo: PathBuf,
+    root_child: PathBuf,
+    root_bundle: PathBuf,
 }
 
 fn git(home: &Path, dir: &Path, args: &[&str]) {
@@ -73,7 +79,16 @@ fn env() -> Env {
     let proj = base.join("proj");
     let upstream = base.join("upstream");
     let root_repo = base.join("root");
-    for dir in [&home, &upstream, &root_repo, &proj.join(".git")] {
+    let root_child = base.join("root-child");
+    let root_bundle = base.join("root-bundle");
+    for dir in [
+        &home,
+        &upstream,
+        &root_repo,
+        &root_child,
+        &root_bundle,
+        &proj.join(".git"),
+    ] {
         fs::create_dir_all(dir).unwrap();
     }
     fs::write(home.join("empty-gitconfig"), "").unwrap();
@@ -102,12 +117,27 @@ fn env() -> Env {
     write_skill(&root_repo, "root");
     git(&home, &root_repo, &["add", "."]);
     git(&home, &root_repo, &["commit", "-q", "-m", "init"]);
+    write_skill(&root_child, "root-child");
+    write_skill(&root_child.join("kid"), "kid");
+    write_skill(&root_bundle, "root-bundle");
+    fs::write(
+        root_bundle.join("meta.bundle.yaml"),
+        "schema: 1\nname: meta\ndescription: d\nitems: {}\n",
+    )
+    .unwrap();
+    for repo in [&root_child, &root_bundle] {
+        git(&home, repo, &["init", "-q", "--initial-branch=main"]);
+        git(&home, repo, &["add", "."]);
+        git(&home, repo, &["commit", "-q", "-m", "init"]);
+    }
     Env {
         _tmp: tmp,
         home,
         proj,
         upstream,
         root_repo,
+        root_child,
+        root_bundle,
     }
 }
 
@@ -122,9 +152,10 @@ fn run(e: &Env, args: &[&str]) -> std::process::Output {
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_CONFIG_GLOBAL", e.home.join("empty-gitconfig"))
         // Keys 0 and 2 map `REMOTE` and the github.com URL of `team/skills`
-        // to the upstream, key 3 maps `ROOT_REMOTE` to the root repository.
+        // to the upstream, key 3 maps `ROOT_REMOTE` to the root repository, keys 4
+        // and 5 map `ROOT_CHILD_REMOTE` and `ROOT_BUNDLE_REMOTE`.
         // Git rewrites a URL that starts with an `insteadOf` value.
-        .env("GIT_CONFIG_COUNT", "4")
+        .env("GIT_CONFIG_COUNT", "6")
         .env(
             "GIT_CONFIG_KEY_0",
             format!("url.file://{}.insteadOf", e.upstream.display()),
@@ -142,6 +173,16 @@ fn run(e: &Env, args: &[&str]) -> std::process::Output {
             format!("url.file://{}.insteadOf", e.root_repo.display()),
         )
         .env("GIT_CONFIG_VALUE_3", format!("{ROOT_REMOTE}.git"))
+        .env(
+            "GIT_CONFIG_KEY_4",
+            format!("url.file://{}.insteadOf", e.root_child.display()),
+        )
+        .env("GIT_CONFIG_VALUE_4", format!("{ROOT_CHILD_REMOTE}.git"))
+        .env(
+            "GIT_CONFIG_KEY_5",
+            format!("url.file://{}.insteadOf", e.root_bundle.display()),
+        )
+        .env("GIT_CONFIG_VALUE_5", format!("{ROOT_BUNDLE_REMOTE}.git"))
         .env("GIT_ALLOW_PROTOCOL", "file")
         .env("GIT_TERMINAL_PROMPT", "0")
         .args(args);
@@ -386,4 +427,53 @@ fn repository_root_item_is_refused() {
 fn subfolder_that_normalises_to_the_root_is_refused_as_the_root() {
     let e = env();
     assert_root_refused(&e, &format!("{ROOT_REMOTE}:."));
+}
+
+#[test]
+fn dot_dot_component_subfolder_suggests_the_normalised_parent() {
+    let e = env();
+    assert_refused(
+        &e,
+        &format!("{REMOTE}:skills/foo/../foo"),
+        &format!("{REMOTE}:skills/foo/../foo"),
+        &format!("upskill add {REMOTE}:skills foo"),
+    );
+}
+
+#[test]
+fn repository_root_item_with_a_child_item_is_not_refused() {
+    let e = env();
+    let out = run(&e, &["add", ROOT_CHILD_REMOTE, "--project", "--claude"]);
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "stderr: {err}");
+    assert!(
+        e.proj
+            .join(".claude")
+            .join("skills")
+            .join("kid")
+            .join("SKILL.md")
+            .is_file()
+    );
+}
+
+#[test]
+fn repository_root_item_with_a_bundle_file_is_not_refused() {
+    let e = env();
+    let out = run(&e, &["add", ROOT_BUNDLE_REMOTE, "--project", "--claude"]);
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "stderr: {err}");
+    assert!(!err.contains("item directory"), "stderr: {err}");
+}
+
+#[test]
+fn repository_root_item_with_an_item_name_fails_with_no_matching_items() {
+    let e = env();
+    let out = run(&e, &["add", ROOT_REMOTE, "root", "--project", "--claude"]);
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(1), "stderr: {err}");
+    assert!(
+        err.contains("no matching items or bundles"),
+        "stderr: {err}"
+    );
+    assert!(written(&e).is_empty(), "written: {:?}", written(&e));
 }
