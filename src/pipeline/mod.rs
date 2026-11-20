@@ -88,10 +88,6 @@ impl std::str::FromStr for ItemKind {
 }
 
 impl ItemKind {
-    /// Every item kind, in declaration order. Single source of truth for
-    /// code that must enumerate kinds (e.g. override-file detection).
-    pub const ALL: [ItemKind; 3] = [Self::Rule, Self::Skill, Self::Agent];
-
     pub fn entrypoint_filename(self) -> &'static str {
         match self {
             Self::Rule => "RULE.md",

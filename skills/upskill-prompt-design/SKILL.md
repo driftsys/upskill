@@ -54,19 +54,17 @@ no other home.
 ### Cross-client portability
 
 A single canonical body in a source registry's `skills/` directory is emitted to
-per-client files by `upskill add` / `upskill update`. Two divergence mechanisms
-exist: **override files** (`SKILL.claude.md`, `SKILL.copilot.md`,
-`SKILL.opencode.md` — when the procedure itself diverges) and **inline
-directives** (`<!-- @client:claude -->` ... `<!-- @endclient -->` — when 90%+ of
-the body is shared and only a tactical swap is needed).
+per-client files by `upskill add` / `upskill update`. For small differences, use
+**inline directives** (`<!-- @client:claude -->` ... `<!-- @endclient -->`). For
+large differences, put the shared procedure in a supporting resource such as
+`references/procedure.md` with one `@client` block per client in the entrypoint,
+or write separate items limited to one client with `audience`.
 
 **Principle:** write to the most capable client (usually Claude Code), then
 down-shift via inline directives for less capable ones. Writing to the lowest
 common denominator and up-shifting produces blander skills.
 
-Client capability matrix (v0.1.0). `upskill doctor` warns about portability
-misuse (overrides where directives would do, or directives where overrides are
-required):
+Client capability matrix (v0.1.0):
 
 | Capability                         | Claude                      | Copilot        | opencode            |
 | ---------------------------------- | --------------------------- | -------------- | ------------------- |

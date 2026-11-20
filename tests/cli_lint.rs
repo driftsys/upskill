@@ -347,6 +347,32 @@ fn lint_rejects_bundle_without_schema_field() {
         .stdout(predicates::str::contains("missing field `schema`"));
 }
 
+/// #539: a `SKILL.claude.md` file is an ordinary resource; `lint` reports
+/// no finding for it.
+#[test]
+fn lint_accepts_client_named_body_file_without_warning() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let root = tmp.path().join("source");
+    write(
+        &root.join("demo/SKILL.md"),
+        "---\nschema: 1\nname: demo\ndescription: A demo skill.\n---\n\nBody.\n",
+    );
+    write(&root.join("demo/SKILL.claude.md"), "Claude-named file.\n");
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&root)
+        .args(["lint", "--strict"])
+        .assert()
+        .success();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        out.contains("1 file(s) checked, 0 findings"),
+        "expected one clean file: {out}"
+    );
+}
+
 fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
     fs::create_dir_all(to)?;
     for entry in fs::read_dir(from)? {

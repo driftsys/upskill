@@ -257,6 +257,9 @@ active matching overrides under AD-0025. The specified override suffixes remain
 override suffix. See
 [format §2.3](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#23-per-client-override-files).
 
+Since #539 (2026-11-20) per-client override files are removed from the format;
+the §2.3 anchor now leads to "Client-specific bodies".
+
 Keep variant sources outside scanned shared catalogs. Qualify one effective
 entrypoint per client, self-contained package resources, native relative reads
 and permission failures, missing resources and relocation. Copying the same

@@ -12,7 +12,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::ItemKind;
-use crate::generate::Client;
 use crate::parse::frontmatter;
 
 /// Effective identity name for an item (§2.1). Skills always take the
@@ -494,20 +493,19 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
 }
 
 /// Relative paths (from `dir`) of every file under an item directory that
-/// is neither an entrypoint (`SKILL.md`/`RULE.md`/`AGENT.md`) nor a
-/// per-client override file (`<KIND>.<client>.md`, format-spec §2.3).
-/// Recursive; sub-directory structure is preserved in the returned
-/// relative paths. Sorted for deterministic output.
+/// is not an entrypoint (`SKILL.md`/`RULE.md`/`AGENT.md`). A file such as
+/// `SKILL.claude.md` is an ordinary resource (format-spec §2.3). Recursive;
+/// sub-directory structure is preserved in the returned relative paths.
+/// Sorted for deterministic output.
 pub(super) fn iter_item_resources(dir: &Path) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = walk_files(dir)
         .into_iter()
         .filter(|path| {
-            // Entrypoints and override files only ever sit at the top level
-            // of an item directory; a nested file with the same name is
-            // content.
+            // Entrypoints only ever sit at the top level of an item
+            // directory; a nested file with the same name is content.
             let top_level = path.parent() == Some(dir);
             let fname = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
-            !(top_level && is_entrypoint_or_override(fname))
+            !(top_level && is_entrypoint(fname))
         })
         .filter_map(|path| path.strip_prefix(dir).ok().map(Path::to_path_buf))
         .collect();
@@ -548,30 +546,10 @@ fn walk_files_into(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-pub(crate) fn is_entrypoint_or_override(fname: &str) -> bool {
-    matches!(fname, "SKILL.md" | "RULE.md" | "AGENT.md") || is_override_file(fname)
-}
-
-/// `<KIND>.<client>.md` where KIND is an entrypoint stem (`SKILL`, `RULE`,
-/// `AGENT`) and client is a [`Client`] token (`claude`, `copilot`,
-/// `opencode`). Both lists are derived from the [`ItemKind`] and [`Client`]
-/// enums so a new kind or client is recognised without editing this
-/// function. Anchored to entrypoint stems so an unrelated file like
-/// `notes.claude.md` is NOT treated as an override.
-fn is_override_file(fname: &str) -> bool {
-    let Some(stem) = fname.strip_suffix(".md") else {
-        return false;
-    };
-    let mut parts = stem.split('.');
-    match (parts.next(), parts.next(), parts.next()) {
-        (Some(kind), Some(client), None) => {
-            ItemKind::ALL
-                .iter()
-                .any(|k| k.entrypoint_filename().strip_suffix(".md") == Some(kind))
-                && Client::ALL.iter().any(|c| c.name() == client)
-        }
-        _ => false,
-    }
+/// True when `fname` is one of the entrypoint file names
+/// (`SKILL.md`, `RULE.md`, `AGENT.md`).
+fn is_entrypoint(fname: &str) -> bool {
+    matches!(fname, "SKILL.md" | "RULE.md" | "AGENT.md")
 }
 
 #[cfg(test)]
@@ -738,25 +716,35 @@ mod tests {
     }
 
     #[test]
-    fn iter_item_resources_excludes_entrypoint_and_overrides() {
+    fn iter_item_resources_excludes_only_entrypoints() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path();
-        std::fs::write(dir.join("RULE.md"), "x").unwrap();
-        std::fs::write(dir.join("RULE.claude.md"), "x").unwrap(); // override
-        std::fs::write(dir.join("SKILL.md"), "x").unwrap(); // co-located entrypoint
-        std::fs::write(dir.join("notes.claude.md"), "x").unwrap(); // NOT an override
+        let mut expected = Vec::new();
+        for stem in ["SKILL", "RULE", "AGENT"] {
+            // Top-level entrypoints are excluded.
+            std::fs::write(dir.join(format!("{stem}.md")), "x").unwrap();
+            // Every <KIND>.<client>.md name, known or unknown client, is a
+            // resource.
+            for client in ["claude", "copilot", "opencode", "cursor"] {
+                let fname = format!("{stem}.{client}.md");
+                std::fs::write(dir.join(&fname), "x").unwrap();
+                expected.push(std::path::PathBuf::from(fname));
+            }
+        }
+        std::fs::write(dir.join("notes.claude.md"), "x").unwrap();
+        expected.push(std::path::PathBuf::from("notes.claude.md"));
+        // A nested file with an entrypoint name is content.
         std::fs::create_dir_all(dir.join("scripts")).unwrap();
         std::fs::write(dir.join("scripts/gate.sh"), "x").unwrap();
+        std::fs::write(dir.join("scripts/SKILL.md"), "x").unwrap();
+        expected.push(std::path::PathBuf::from("scripts/SKILL.md"));
+        expected.push(std::path::PathBuf::from("scripts/gate.sh"));
+        expected.sort();
 
-        let res = iter_item_resources(dir);
         assert_eq!(
-            res,
-            vec![
-                std::path::PathBuf::from("notes.claude.md"),
-                std::path::PathBuf::from("scripts/gate.sh"),
-            ],
-            "entrypoints and <KIND>.<client>.md overrides are excluded; \
-             nested files and same-suffix non-overrides are kept"
+            iter_item_resources(dir),
+            expected,
+            "only top-level entrypoints are excluded"
         );
     }
 
@@ -786,35 +774,5 @@ mod tests {
             !res.iter().any(|p| p.to_string_lossy().contains("loop")),
             "the symlinked directory must be skipped, not traversed: {res:?}"
         );
-    }
-
-    #[test]
-    fn is_override_file_matches_every_kind_and_client() {
-        // Derived from `ItemKind::ALL` × `Client::ALL`: every combination of
-        // entrypoint stem and client token is an override file.
-        for kind in ItemKind::ALL {
-            let stem = kind.entrypoint_filename().strip_suffix(".md").unwrap();
-            for client in Client::ALL {
-                let fname = format!("{stem}.{}.md", client.name());
-                assert!(is_override_file(&fname), "{fname} should be an override");
-            }
-        }
-    }
-
-    #[test]
-    fn is_override_file_rejects_non_overrides() {
-        for fname in [
-            "notes.claude.md",   // unknown stem
-            "SKILL.cursor.md",   // unknown client
-            "SKILL.md",          // entrypoint, not an override
-            "RULE.claude.txt",   // wrong extension
-            "SKILL.claude",      // missing extension
-            "a.SKILL.claude.md", // too many segments
-        ] {
-            assert!(
-                !is_override_file(fname),
-                "{fname} should not be an override"
-            );
-        }
     }
 }

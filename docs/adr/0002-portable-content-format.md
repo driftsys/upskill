@@ -96,11 +96,18 @@ Negation via `!` (`!opencode`). No nesting. Known source family identifiers:
 does not change historical generation clients or default surfaces; see
 [AD-0039](0039-compile-captured-codex-instructions.md).
 
-### Per-client override files
+### Per-client override files (removed)
 
-When directives become unwieldy, authors provide complete body overrides:
-`RULE.claude.md`, `SKILL.copilot.md`, `AGENT.opencode.md`. Override files
-contain body only; frontmatter always comes from the canonical entrypoint.
+Directives are the only per-client body mechanism. A file such as
+`RULE.claude.md` or `SKILL.copilot.md` is an ordinary supporting resource. For
+large differences, authors put a shared procedure in a supporting resource with
+one `@client` block per client in the entrypoint, or write separate items
+limited to one client with `audience`.
+
+**Note (2026-11-20, #539):** per-client override files (`<KIND>.<client>.md`)
+were removed from the format. They never worked, because the installer always
+rendered the canonical body, and no content in this repository or in
+driftsys/metapowers used them. Directives and `audience` cover the same cases.
 
 ### Bundle as pure manifest
 
