@@ -203,6 +203,41 @@ mod tests {
     }
 
     #[test]
+    fn empty_client_identifier_errors() {
+        for list in ["claude,", "!"] {
+            let body = format!("<!-- @client:{list} -->\nx\n<!-- @endclient -->\n");
+            let err = process(&body, Client::Claude).unwrap_err();
+            let msg = format!("{err:#}");
+            assert!(msg.contains("empty client"), "{list}: {msg}");
+        }
+    }
+
+    #[test]
+    fn unknown_identifier_after_first_position_errors() {
+        let body = "<!-- @client:claude,cursor -->\nx\n<!-- @endclient -->\n";
+        let err = process(body, Client::Claude).unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(msg.contains("unknown client"), "got: {msg}");
+    }
+
+    #[test]
+    fn spaces_around_list_items_are_trimmed() {
+        let body = "<!-- @client: claude , copilot -->\nx\n<!-- @endclient -->\n";
+        for client in [Client::Claude, Client::Copilot] {
+            assert_eq!(process(body, client).unwrap(), "x\n");
+        }
+        assert_eq!(process(body, Client::OpenCode).unwrap(), "");
+    }
+
+    #[test]
+    fn negated_list_with_several_clients() {
+        let body = "<!-- @client: !claude, copilot -->\nx\n<!-- @endclient -->\n";
+        assert_eq!(process(body, Client::Claude).unwrap(), "");
+        assert_eq!(process(body, Client::Copilot).unwrap(), "");
+        assert_eq!(process(body, Client::OpenCode).unwrap(), "x\n");
+    }
+
+    #[test]
     fn unbalanced_unclosed_errors() {
         let body = "<!-- @client:claude -->\nunclosed\n";
         let err = process(body, Client::Claude).unwrap_err();

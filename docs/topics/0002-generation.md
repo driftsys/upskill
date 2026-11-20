@@ -563,10 +563,11 @@ contract and artifact are returned. Errors carry installation context;
 capability rejections retain a downcastable `CapabilityError` in the error
 chain.
 
-The shared `Audience` vocabulary and `process_for_family` support Claude,
-Copilot, Codex and OpenCode families. Cursor, Gemini and unknown directive names
-remain errors. Existing `process(body, Client)` delegates through the family
-processor, preserving the historical three-client selection and rendering.
+The shared `Audience` vocabulary names the Claude, Copilot, Codex and OpenCode
+families, so a directive list accepts those four identifiers. Cursor, Gemini and
+other unknown directive names are errors. `process(body, Client)` maps the
+`Client` (Claude, Copilot or OpenCode) to its `Audience` and filters the
+directive blocks for that audience. It has no separate family processor.
 
 The
 [acceptance target](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/tests/codex_instruction_boundary.rs)
