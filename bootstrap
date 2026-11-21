@@ -58,9 +58,17 @@ version_gte() {
 ensure_tool() (
   local tool="$1" repo="$2"
   local target base download_url version latest_version tmp_dir
-  version="$(curl -sSf "https://api.github.com/repos/$repo/releases/latest" \
-    | grep '"tag_name"' | head -1 | cut -d'"' -f4)"
-  [ -n "$version" ] || die "could not determine latest release"
+  # An authenticated request avoids the shared unauthenticated rate limit
+  # on CI runners. Without GITHUB_TOKEN, the request stays unauthenticated.
+  local -a auth=()
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
+  fi
+  version="$(curl -sSf ${auth[@]+"${auth[@]}"} \
+    "https://api.github.com/repos/$repo/releases/latest" \
+    | grep '"tag_name"' | head -1 | cut -d'"' -f4)" \
+    || die "could not determine latest release of $repo (if GITHUB_TOKEN is set, check that it is valid)"
+  [ -n "$version" ] || die "could not determine latest release of $repo"
   latest_version="${version#v}"
 
   if command -v "$tool" >/dev/null 2>&1; then
