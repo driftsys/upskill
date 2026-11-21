@@ -10,9 +10,11 @@
 //!
 //! A fake `opencode` script, first on `PATH`, records every argument list in
 //! a log file, answers `--version` with a fixed version, and answers
-//! `plugin list` with the content of a list file. Unix only: the fake is a
-//! shell script.
-#![cfg(unix)]
+//! `plugin list` with the content of a list file. The fake is a shell script,
+//! so the tests that depend on it are `cfg(unix)`. The tests after the marker
+//! "opencode config file per scope" use no fake command and run on every
+//! platform.
+#![cfg_attr(not(unix), allow(dead_code, unused_imports))]
 
 mod common;
 
@@ -49,7 +51,7 @@ impl Env {
         let tmp = tempfile::tempdir().unwrap();
         // The canonical path: the recorded local source label must name the
         // same path that `doctor` resolves later (`/var` is a link on macOS).
-        let root = tmp.path().canonicalize().unwrap();
+        let root = plain_path(tmp.path().canonicalize().unwrap());
         let home = root.join("home");
         fs::create_dir_all(&home).unwrap();
         let project = root.join("project");
@@ -108,7 +110,7 @@ impl Env {
     }
 
     fn run(&self, args: &[&str]) -> assert_cmd::assert::Assert {
-        let path = format!("{}:/usr/bin:/bin", self.bin.display());
+        let path = fake_path(&self.bin);
         common::upskill_cmd(&self.home)
             .current_dir(&self.project)
             .env("PATH", path)
@@ -167,8 +169,9 @@ impl Env {
 /// `update --project` in a terminal, with end of input as the answer. No
 /// source has a change in these tests, so the run applies no source and only
 /// the plugin repair can run a plugin command.
+#[cfg(unix)]
 fn terminal_update(env: &Env) -> serde_json::Value {
-    let path = format!("{}:/usr/bin:/bin", env.bin.display());
+    let path = fake_path(&env.bin);
     let result = common::update_in_terminal_with_env(
         &env.project,
         &env.home,
@@ -187,8 +190,37 @@ fn terminal_update(env: &Env) -> serde_json::Value {
 
 fn write_script(path: &std::path::Path, body: &str) {
     fs::write(path, body).unwrap();
-    use std::os::unix::fs::PermissionsExt;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+}
+
+/// `canonicalize` returns a `\\?\` path on Windows, which `add` does not accept
+/// as a local source. Remove that prefix.
+fn plain_path(path: PathBuf) -> PathBuf {
+    match path.to_str().and_then(|p| p.strip_prefix(r"\\?\")) {
+        Some(plain) => PathBuf::from(plain),
+        None => path,
+    }
+}
+
+/// The `PATH` value with the fake commands first. On Unix it holds only the
+/// system directories after them, so that no real `opencode` is found.
+fn fake_path(bin: &std::path::Path) -> String {
+    #[cfg(unix)]
+    {
+        format!("{}:/usr/bin:/bin", bin.display())
+    }
+    #[cfg(not(unix))]
+    {
+        let rest = std::env::var_os("PATH").unwrap_or_default();
+        std::env::join_paths(std::iter::once(bin.to_path_buf()).chain(std::env::split_paths(&rest)))
+            .unwrap()
+            .to_string_lossy()
+            .into_owned()
+    }
 }
 
 fn plugin_lines(log: &str) -> Vec<&str> {
@@ -209,6 +241,7 @@ fn has_uri(value: &serde_json::Value) -> bool {
         .is_some_and(|a| a.iter().any(|v| v == URI))
 }
 
+#[cfg(unix)]
 #[test]
 fn doctor_reads_opencode_json_for_a_plugin_uri_and_runs_no_plugin_command() {
     let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
@@ -225,6 +258,7 @@ fn doctor_reads_opencode_json_for_a_plugin_uri_and_runs_no_plugin_command() {
     assert_eq!(env.log(), "");
 }
 
+#[cfg(unix)]
 #[test]
 fn doctor_reports_a_removed_plugin_uri_and_update_yes_restores_it() {
     let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
@@ -254,6 +288,7 @@ fn doctor_reports_a_removed_plugin_uri_and_update_yes_restores_it() {
     assert_eq!(env.log(), "");
 }
 
+#[cfg(unix)]
 #[test]
 fn module_plugin_installs_with_plugin_add_and_doctor_uses_plugin_list() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -276,6 +311,7 @@ fn module_plugin_installs_with_plugin_add_and_doctor_uses_plugin_list() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn update_yes_installs_a_missing_module_plugin_again_and_dry_run_does_not() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -305,6 +341,7 @@ fn update_yes_installs_a_missing_module_plugin_again_and_dry_run_does_not() {
 
 /// A source under a kind restriction runs no plugin step in `update`, so the
 /// plugin repair does not run for it either.
+#[cfg(unix)]
 #[test]
 fn update_yes_does_not_repair_a_plugin_of_a_source_under_a_kind_restriction() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -347,6 +384,7 @@ fn update_yes_does_not_repair_a_plugin_of_a_source_under_a_kind_restriction() {
 
 /// With one unrestricted bundle of the source, no kind restriction applies,
 /// and the repair runs.
+#[cfg(unix)]
 #[test]
 fn terminal_repair_runs_when_one_bundle_of_the_source_is_unrestricted() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -388,6 +426,7 @@ fn terminal_repair_runs_when_one_bundle_of_the_source_is_unrestricted() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn opencode_1x_runs_no_plugin_command_and_warns() {
     let env = Env::new(&format!("module: {MODULE}"), "v1.15.13");
@@ -408,6 +447,7 @@ fn opencode_1x_runs_no_plugin_command_and_warns() {
     assert!(stdout(&out).contains("never installed"), "{}", stdout(&out));
 }
 
+#[cfg(unix)]
 #[test]
 fn terminal_repair_runs_no_plugin_command_when_opencode_is_1x() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -429,6 +469,7 @@ fn terminal_repair_runs_no_plugin_command_when_opencode_is_1x() {
     assert!(lock.contains("\"installed\""), "{lock}");
 }
 
+#[cfg(unix)]
 #[test]
 fn doctor_does_not_report_a_module_plugin_missing_when_opencode_is_1x() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -453,6 +494,7 @@ fn restore_opencode(env: &Env, version: &str) {
     env.set_version(&format!("opencode {version}\n"), 0);
 }
 
+#[cfg(unix)]
 #[test]
 fn update_yes_installs_a_skipped_plugin_once_opencode_2x_is_on_path() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -477,6 +519,7 @@ fn update_yes_installs_a_skipped_plugin_once_opencode_2x_is_on_path() {
     assert!(!stdout(&out).contains("skipped"), "{}", stdout(&out));
 }
 
+#[cfg(unix)]
 #[test]
 fn update_yes_keeps_a_skipped_plugin_skipped_when_opencode_is_1x() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -493,6 +536,7 @@ fn update_yes_keeps_a_skipped_plugin_skipped_when_opencode_is_1x() {
     assert!(lock.contains("\"skipped\""), "{lock}");
 }
 
+#[cfg(unix)]
 #[test]
 fn terminal_repair_installs_a_skipped_plugin_and_records_it_installed() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -511,6 +555,7 @@ fn terminal_repair_installs_a_skipped_plugin_and_records_it_installed() {
     assert_eq!(env.lock()["plugins"][0]["status"], "installed");
 }
 
+#[cfg(unix)]
 #[test]
 fn terminal_repair_keeps_a_skipped_plugin_skipped_when_opencode_is_1x() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -526,6 +571,7 @@ fn terminal_repair_keeps_a_skipped_plugin_skipped_when_opencode_is_1x() {
     assert_eq!(env.lock()["plugins"][0]["status"], "skipped");
 }
 
+#[cfg(unix)]
 #[test]
 fn terminal_repair_sets_config_write_on_a_plugin_uri_record_without_it() {
     let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
@@ -550,6 +596,7 @@ fn terminal_repair_sets_config_write_on_a_plugin_uri_record_without_it() {
 
 /// The plugin step of an applied source attempts every plugin of the
 /// recorded bundles: every client, and a plugin that needs a manual step.
+#[cfg(unix)]
 #[test]
 fn update_yes_attempts_every_client_and_prints_instructions_again() {
     let env = Env::build(
@@ -587,6 +634,7 @@ fn update_yes_attempts_every_client_and_prints_instructions_again() {
     assert!(stderr(&out).contains("manual step"), "{}", stderr(&out));
 }
 
+#[cfg(unix)]
 #[test]
 fn removed_plugin_uri_is_missing_and_restored_with_opencode_1x_or_absent() {
     for absent in [false, true] {
@@ -609,6 +657,7 @@ fn removed_plugin_uri_is_missing_and_restored_with_opencode_1x_or_absent() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn update_sets_config_write_on_a_plugin_uri_record_without_it() {
     // opencode 2 with an empty `plugin list`: a record without the field
@@ -633,6 +682,7 @@ fn update_sets_config_write_on_a_plugin_uri_record_without_it() {
     assert!(has_uri(&env.opencode_json()));
 }
 
+#[cfg(unix)]
 #[test]
 fn remove_runs_no_opencode_command() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -642,6 +692,7 @@ fn remove_runs_no_opencode_command() {
     assert_eq!(env.log(), "");
 }
 
+#[cfg(unix)]
 #[test]
 fn version_that_fails_or_cannot_be_read_is_not_supported() {
     for (reply, exit) in [("opencode v2.1.4\n", 1), ("opencode dev build\n", 0)] {
@@ -653,6 +704,7 @@ fn version_that_fails_or_cannot_be_read_is_not_supported() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn terminal_update_repairs_a_missing_plugin_of_a_source_without_a_change() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -660,7 +712,7 @@ fn terminal_update_repairs_a_missing_plugin_of_a_source_without_a_change() {
     env.set_list("");
     env.clear_log();
 
-    let path = format!("{}:/usr/bin:/bin", env.bin.display());
+    let path = fake_path(&env.bin);
     let result = common::update_in_terminal_with_env(
         &env.project,
         &env.home,
@@ -676,6 +728,7 @@ fn terminal_update_repairs_a_missing_plugin_of_a_source_without_a_change() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn repair_installs_only_the_missing_client_of_a_plugin() {
     let env = Env::build(
@@ -709,6 +762,7 @@ fn repair_installs_only_the_missing_client_of_a_plugin() {
     assert!(text.contains("nothing to do"), "{text}");
 }
 
+#[cfg(unix)]
 #[test]
 fn bundle_file_source_installs_a_plugin_once_per_update() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -726,6 +780,7 @@ fn bundle_file_source_installs_a_plugin_once_per_update() {
     assert_eq!(adds, 1, "{}", env.log());
 }
 
+#[cfg(unix)]
 #[test]
 fn terminal_update_repairs_a_plugin_of_a_bundle_file_source() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -735,7 +790,7 @@ fn terminal_update_repairs_a_plugin_of_a_bundle_file_source() {
 
     // A terminal run does not apply a source without a change, so only the
     // repair, through the bundle that the source resolved, installs it.
-    let path = format!("{}:/usr/bin:/bin", env.bin.display());
+    let path = fake_path(&env.bin);
     let result = common::update_in_terminal_with_env(
         &env.project,
         &env.home,
@@ -751,6 +806,7 @@ fn terminal_update_repairs_a_plugin_of_a_bundle_file_source() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn instructions_record_is_not_tried_again() {
     let env = Env::new("instructions_url: https://example.com/sp", "v2.1.4");
@@ -761,6 +817,7 @@ fn instructions_record_is_not_tried_again() {
     assert!(!result.to_string().contains("manual step"), "{result}");
 }
 
+#[cfg(unix)]
 #[test]
 fn doctor_names_the_add_command_for_a_bundle_without_items() {
     let env = Env::build(
@@ -787,6 +844,7 @@ fn doctor_names_the_add_command_for_a_bundle_without_items() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn update_reports_a_still_skipped_plugin_of_a_bundle_file_source_once() {
     let env = Env::new(&format!("module: {MODULE}"), "v1.15.13");
@@ -805,6 +863,7 @@ fn update_reports_a_still_skipped_plugin_of_a_bundle_file_source_once() {
     assert!(plugin_lines(&env.log()).is_empty(), "{}", env.log());
 }
 
+#[cfg(unix)]
 #[test]
 fn update_reports_a_plugin_installed_by_the_apply_once() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -815,6 +874,7 @@ fn update_reports_a_plugin_installed_by_the_apply_once() {
     assert_eq!(text.matches("superpowers").count(), 1, "{text}");
 }
 
+#[cfg(unix)]
 #[test]
 fn doctor_gives_no_add_command_when_update_reaches_the_plugin() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -827,6 +887,7 @@ fn doctor_gives_no_add_command_when_update_reaches_the_plugin() {
     assert!(!stdout(&out).contains("repair_command"), "{}", stdout(&out));
 }
 
+#[cfg(unix)]
 #[test]
 fn doctor_header_and_footer_of_plugins_name_the_condition() {
     let env = Env::build(
@@ -855,6 +916,7 @@ fn doctor_header_and_footer_of_plugins_name_the_condition() {
     assert!(!stdout(&out).contains("repair_command"), "{}", stdout(&out));
 }
 
+#[cfg(unix)]
 #[test]
 fn doctor_gives_the_add_command_when_only_another_source_has_items() {
     let env = Env::build(
@@ -882,6 +944,7 @@ fn doctor_gives_the_add_command_when_only_another_source_has_items() {
     assert!(stdout(&out).contains(&command), "{}", stdout(&out));
 }
 
+#[cfg(unix)]
 #[test]
 fn doctor_gives_the_add_command_for_a_skipped_plugin_update_does_not_reach() {
     let env = Env::build(
@@ -907,6 +970,7 @@ fn doctor_gives_the_add_command_for_a_skipped_plugin_update_does_not_reach() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn module_plugin_record_has_no_config_write_key() {
     let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
@@ -956,7 +1020,7 @@ impl Env {
         args: &[&str],
         xdg: Option<&std::path::Path>,
     ) -> assert_cmd::assert::Assert {
-        let path = format!("{}:/usr/bin:/bin", self.bin.display());
+        let path = fake_path(&self.bin);
         let mut cmd = common::upskill_cmd(&self.home);
         cmd.current_dir(self.home.parent().unwrap())
             .env("PATH", path)
@@ -1000,7 +1064,12 @@ fn global_add_writes_the_absolute_path_of_a_rule_to_instructions() {
     let config = read_json(&env.global_config());
     assert_eq!(
         config["instructions"],
-        serde_json::json!([env.home.join(".agents/rules/rule-a/RULE.md")]),
+        serde_json::json!([env
+            .home
+            .join(".agents")
+            .join("rules")
+            .join("rule-a")
+            .join("RULE.md")]),
         "{config}"
     );
     assert!(!env.home.join("opencode.json").exists());
@@ -1065,6 +1134,10 @@ fn global_doctor_reads_the_new_file_and_update_restores_the_plugin_there() {
     env.run_global(&["update", "--yes"], None).code(0);
     let config = read_json(&env.global_config());
     assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert!(
+        config["mcp"][MCP_NAME].is_object(),
+        "the repair writes the MCP entry again: {config}"
+    );
     assert!(!env.home.join("opencode.json").exists());
     env.run_global(&["doctor"], None).code(0);
 }
@@ -1119,7 +1192,7 @@ fn project_flag_outside_a_git_repo_writes_the_project_opencode_json() {
     let cwd = env.home.parent().unwrap().join("no-git");
     fs::create_dir_all(&cwd).unwrap();
     let registry = env.bundle.parent().unwrap().to_str().unwrap().to_string();
-    let path = format!("{}:/usr/bin:/bin", env.bin.display());
+    let path = fake_path(&env.bin);
     common::upskill_cmd(&env.home)
         .current_dir(&cwd)
         .env("PATH", path)
@@ -1150,7 +1223,7 @@ impl Env {
 
     /// Run `args` in `cwd`.
     fn run_in(&self, cwd: &std::path::Path, args: &[&str]) -> assert_cmd::assert::Assert {
-        let path = format!("{}:/usr/bin:/bin", self.bin.display());
+        let path = fake_path(&self.bin);
         common::upskill_cmd(&self.home)
             .current_dir(cwd)
             .env("PATH", path)
@@ -1210,4 +1283,219 @@ fn remove_mcp_project_outside_a_git_repo_edits_the_project_file() {
     let config = read_json(&cwd.join("opencode.json"));
     assert!(config["mcp"].get(MCP_NAME).is_none(), "{config}");
     assert!(!env.home.join(".config/opencode").exists());
+}
+
+// ---------------------------------------------------------------------------
+// The file is chosen from the scope of the lockfile (issue #585)
+// ---------------------------------------------------------------------------
+
+impl Env {
+    fn global_lock_path(&self) -> PathBuf {
+        self.home.join(".upskill-lock.json")
+    }
+
+    /// Set (`Some`) or remove (`None`) the recorded `scope` of every plugin
+    /// and MCP entry of the global lockfile.
+    fn record_scope_in_global_lock(&self, scope: Option<&str>) {
+        let mut lock = read_json(&self.global_lock_path());
+        for key in ["plugins", "mcps"] {
+            for entry in lock[key].as_array_mut().unwrap() {
+                match scope {
+                    Some(scope) => entry["scope"] = serde_json::json!(scope),
+                    None => {
+                        entry.as_object_mut().unwrap().remove("scope");
+                    }
+                }
+            }
+        }
+        fs::write(self.global_lock_path(), lock.to_string()).unwrap();
+    }
+
+    /// The plugin and the MCP entry in the old file `$HOME/opencode.json`.
+    fn write_old_home_file(&self) -> String {
+        let raw = serde_json::json!({
+            "plugins": [URI],
+            "mcp": { MCP_NAME: { "type": "local", "command": ["npx", "srv-mcp"] } }
+        })
+        .to_string();
+        fs::write(self.home.join("opencode.json"), &raw).unwrap();
+        raw
+    }
+
+    fn drop_plugin_and_mcp_from_the_global_file(&self) {
+        let mut config = read_json(&self.global_config());
+        config["plugins"] = serde_json::json!([]);
+        config["mcp"] = serde_json::json!({});
+        fs::write(self.global_config(), config.to_string()).unwrap();
+    }
+}
+
+#[test]
+fn global_doctor_reads_the_global_file_whatever_scope_an_entry_records() {
+    for scope in [None, Some("project")] {
+        let env = Env::with_rule_and_mcp();
+        env.add_global(None).success();
+        env.drop_plugin_and_mcp_from_the_global_file();
+        // The old file holds both entries; the global scope must not read it.
+        let old = env.write_old_home_file();
+        env.record_scope_in_global_lock(scope);
+
+        let out = env.run_global(&["doctor"], None).code(1);
+
+        let text = stdout(&out);
+        assert!(text.contains("superpowers"), "{scope:?}: {text}");
+        assert!(text.contains(MCP_NAME), "{scope:?}: {text}");
+        assert_eq!(
+            fs::read_to_string(env.home.join("opencode.json")).unwrap(),
+            old
+        );
+    }
+}
+
+#[test]
+fn global_remove_edits_the_global_file_whatever_scope_an_entry_records() {
+    for scope in [None, Some("project")] {
+        let env = Env::with_rule_and_mcp();
+        env.add_global(None).success();
+        let old = env.write_old_home_file();
+        env.record_scope_in_global_lock(scope);
+
+        env.run_global(&["remove", "alpha"], None).success();
+
+        let config = read_json(&env.global_config());
+        assert_eq!(
+            config["plugins"],
+            serde_json::json!([]),
+            "{scope:?}: {config}"
+        );
+        assert_eq!(
+            fs::read_to_string(env.home.join("opencode.json")).unwrap(),
+            old,
+            "{scope:?}"
+        );
+    }
+}
+
+#[test]
+fn global_upgrade_from_the_old_home_file_writes_the_global_file_and_keeps_the_old_one() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(None).success();
+    // The state after an upgrade: the lockfile records the plugin with
+    // `config_write`, the old file holds the entries, and the file that
+    // opencode reads has none.
+    let lock = read_json(&env.global_lock_path());
+    assert_eq!(lock["plugins"][0]["config_write"], true, "{lock}");
+    let old = env.write_old_home_file();
+    fs::remove_file(env.global_config()).unwrap();
+
+    let out = env.run_global(&["doctor"], None).code(1);
+    let text = stdout(&out);
+    assert!(text.contains("superpowers"), "{text}");
+    assert!(text.contains(MCP_NAME), "{text}");
+
+    env.run_global(&["update", "--yes"], None).code(0);
+
+    let config = read_json(&env.global_config());
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert!(config["mcp"][MCP_NAME].is_object(), "{config}");
+    assert_eq!(
+        fs::read_to_string(env.home.join("opencode.json")).unwrap(),
+        old
+    );
+    env.run_global(&["doctor"], None).code(0);
+}
+
+#[test]
+fn global_doctor_update_and_remove_use_an_absolute_xdg_config_home() {
+    let env = Env::with_rule_and_mcp();
+    let xdg = env.home.parent().unwrap().join("xdg");
+    env.add_global(Some(&xdg)).success();
+    let file = xdg.join("opencode/opencode.json");
+    env.run_global(&["doctor"], Some(&xdg)).code(0);
+
+    let mut config = read_json(&file);
+    config["plugins"] = serde_json::json!([]);
+    config["mcp"] = serde_json::json!({});
+    fs::write(&file, config.to_string()).unwrap();
+    let out = env.run_global(&["doctor"], Some(&xdg)).code(1);
+    let text = stdout(&out);
+    assert!(text.contains("superpowers"), "{text}");
+    assert!(text.contains(MCP_NAME), "{text}");
+
+    env.run_global(&["update", "--yes"], Some(&xdg)).code(0);
+    let config = read_json(&file);
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert!(config["mcp"][MCP_NAME].is_object(), "{config}");
+    assert!(!env.global_config().exists());
+}
+
+#[test]
+fn global_remove_and_remove_mcp_use_an_absolute_xdg_config_home() {
+    let env = Env::with_rule_and_mcp();
+    let xdg = env.home.parent().unwrap().join("xdg");
+    env.add_global(Some(&xdg)).success();
+    let file = xdg.join("opencode/opencode.json");
+
+    env.run_global(&["remove-mcp", MCP_NAME], Some(&xdg))
+        .success();
+    let config = read_json(&file);
+    assert!(config["mcp"].get(MCP_NAME).is_none(), "{config}");
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+
+    env.run_global(&["remove", "alpha"], Some(&xdg)).success();
+    let config = read_json(&file);
+    assert_eq!(config["plugins"], serde_json::json!([]), "{config}");
+    assert!(!env.global_config().exists());
+}
+
+#[test]
+fn global_remove_by_source_deletes_the_plugin_and_the_rule_entry() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(None).success();
+    let lock = read_json(&env.global_lock_path());
+    let label = lock["items"][0]["source"].as_str().unwrap().to_string();
+
+    env.run_global(&["remove", "--source", &label], None)
+        .success();
+
+    let config = read_json(&env.global_config());
+    assert_eq!(config["plugins"], serde_json::json!([]), "{config}");
+    assert_eq!(config["instructions"], serde_json::json!([]), "{config}");
+}
+
+#[test]
+fn global_add_writes_a_remote_mcp_server_to_the_global_file() {
+    let env = Env::with_rule_and_mcp();
+    let mut bundle = fs::read_to_string(&env.bundle).unwrap();
+    bundle.push_str(
+        "  remote-srv:\n    remote:\n      type: http\n      url: https://example.com/mcp\n",
+    );
+    fs::write(&env.bundle, bundle).unwrap();
+
+    env.add_global(None).success();
+
+    let config = read_json(&env.global_config());
+    assert_eq!(
+        config["mcp"]["remote-srv"],
+        serde_json::json!({ "type": "remote", "url": "https://example.com/mcp" }),
+        "{config}"
+    );
+    assert!(!env.home.join("opencode.json").exists());
+    env.run_global(&["doctor"], None).code(0);
+}
+
+#[test]
+fn global_add_reports_that_plugins_must_be_an_array() {
+    let env = Env::with_rule_and_mcp();
+    fs::create_dir_all(env.global_config().parent().unwrap()).unwrap();
+    fs::write(env.global_config(), r#"{"plugins": "x"}"#).unwrap();
+
+    let out = env.add_global(None);
+
+    let err = stderr(&out);
+    assert!(err.contains("`plugins` must be an array"), "{err}");
+    assert_eq!(
+        read_json(&env.global_config())["plugins"],
+        serde_json::json!("x")
+    );
 }
