@@ -59,7 +59,7 @@ pub(super) struct PreparedInstall {
 struct RequiresProvenance {
     evaluated: BTreeSet<String>,
     required_by: BTreeMap<(ItemKind, String), Vec<String>>,
-    /// A restricted update refreshes only entries that it plans.
+    /// A kind-restricted install refreshes only entries that it plans.
     restriction: Option<BTreeSet<(ItemKind, String)>>,
 }
 
@@ -568,7 +568,7 @@ impl PreparedInstall {
     /// direct-item closure, including bundle members even without direct items.
     /// The bundle closure contributes no item-level `required_by` edges.
     /// `required_by` maps each dependency reached by the item closure, also an
-    /// excluded one, to its requirers. A restricted update refreshes only
+    /// excluded one, to its requirers. A kind-restricted install refreshes only
     /// planned entries, including entries from other sources.
     fn requires_provenance(&self) -> RequiresProvenance {
         // Translate `requires` provenance through any applied `--as` aliases so
@@ -596,14 +596,13 @@ impl PreparedInstall {
             }
         };
         let mut provenance = RequiresProvenance {
-            restriction: (self.options.keep_unwithheld_edits && !self.options.kinds.is_empty())
-                .then(|| {
-                    self.report
-                        .planned
-                        .iter()
-                        .map(|item| (item.kind, item.name.clone()))
-                        .collect()
-                }),
+            restriction: (!self.options.kinds.is_empty()).then(|| {
+                self.report
+                    .planned
+                    .iter()
+                    .map(|item| (item.kind, item.name.clone()))
+                    .collect()
+            }),
             ..RequiresProvenance::default()
         };
         // Update evaluates its recorded bundle closure even without direct items.
@@ -1008,7 +1007,7 @@ fn dropped_opencode_rules(
 ///
 /// A requirer label (`"kind:name"`) in `provenance.evaluated` is removed
 /// from every entry and added back where `provenance.required_by` records
-/// it. A restricted update leaves entries it does not plan untouched, also
+/// it. A kind-restricted install leaves entries it does not plan untouched, also
 /// in other sources. Every other requirer is kept, whether or not it is
 /// installed. The result is sorted and has no duplicates.
 fn refresh_required_by(lock: &mut Lockfile, provenance: &RequiresProvenance) -> bool {

@@ -144,6 +144,30 @@ fn pack_with_force_replaces_the_output_directory() {
 }
 
 #[test]
+fn pack_with_force_replaces_both_client_directories() {
+    let f = Fixture::new();
+    for name in ["demo-claude", "demo-copilot"] {
+        let target = f.out.join(name);
+        fs::create_dir_all(target.join("obsolete/empty")).unwrap();
+        fs::write(target.join("obsolete/keep.bin"), [0, 255, 1]).unwrap();
+    }
+
+    f.command_for_clients("demo")
+        .arg("--force")
+        .assert()
+        .success();
+
+    for name in ["demo-claude", "demo-copilot"] {
+        assert_eq!(
+            tree(&f.out.join(name)),
+            tree(&Path::new("tests/fixtures/pack/expected").join(name))
+        );
+        assert!(!f.out.join(name).join("obsolete").exists());
+    }
+    assert_eq!(fs::read_dir(&f.out).unwrap().count(), 2);
+}
+
+#[test]
 fn pack_of_an_unknown_bundle_fails() {
     let f = Fixture::new();
     f.command("nope")

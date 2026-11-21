@@ -441,16 +441,18 @@ item and a `kept modified file` note are not changes.
   union. With one unrestricted bundle of the source, no kind restriction
   applies. Every lockfile entry of that source whose kind is outside the
   restriction is left untouched and reported as up to date, regardless of bundle
-  membership or `required_by`; to update such an item, run
-  `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled as
-  a whole. Recorded bundle names resolve only as bundles. A missing bundle
-  causes `bundle '<name>' is no longer in source <label>` before any write, even
-  if an item has that name. Each reinstalled entry gets the commit of its own
-  source (an entry from another source gets that source's commit), unless its
-  update is skipped, and any other entry keeps its recorded commit. The lockfile
-  is saved only when a value differs. This write is not a change of the source
-  (see the preview above) and does not count in the output. A dry run, a
-  declined source and a stopped run record no commit.
+  membership or `required_by`, unless its source is skipped. In that case it is
+  reported as skipped with the cause of its source, also when the source is
+  skipped later because it requires an item of a skipped source. To update such
+  an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
+  reinstalled as a whole. Recorded bundle names resolve only as bundles. A
+  missing bundle causes `bundle '<name>' is no longer in source <label>` before
+  any write, even if an item has that name. Each reinstalled entry gets the
+  commit of its own source (an entry from another source gets that source's
+  commit), unless its update is skipped, and any other entry keeps its recorded
+  commit. The lockfile is saved only when a value differs. This write is not a
+  change of the source (see the preview above) and does not count in the output.
+  A dry run, a declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
@@ -502,12 +504,15 @@ name), evaluate no requirer. An update of a directory source with recorded
 bundles evaluates every item in the merged bundle and direct-item closure,
 including bundle members even when there are no direct items. The bundle closure
 itself contributes no item-level `requires` edges. A kind restriction retains
-only items of the selected kinds in the closure; a restricted update leaves
-`required_by` unchanged on entries it does not plan, also in other sources.
-Within the entries being refreshed, an evaluated requirer is removed and added
-back where it still requires the item (also an item that `--exclude` leaves
-out). Every other requirer is kept, also when it is not installed. The result
-does not depend on the order of the sources or of two `add` commands.
+only items of the selected kinds in the closure; a kind-restricted `add` or
+`update` leaves `required_by` unchanged on entries it does not plan, also in
+other sources. Requirers outside the kind restriction keep their edges on
+planned entries as well, because they are not evaluated. Within the entries
+being refreshed, an evaluated requirer is removed and added back where it still
+requires the item (also an item that `--exclude` leaves out). Every other
+requirer is kept, also when it is not installed. The result does not depend on
+the order of the sources or of two `add` commands. The lockfile does not record
+the `--exclude` of an earlier `add`, so `update` does not apply it again.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
@@ -566,17 +571,21 @@ a state has these fields, each defaulting to zero or empty when absent:
 | `reported`   | array of string | The set that the last printed notice reported, sorted.                                                      |
 
 Before reading `notice.json`, the command creates `notice.lock` in the same
-cache directory with create-only-if-absent semantics. A run that finds a lock
-younger than 60 seconds exits with code 0 without output, network requests or
-cache changes, also with `--repeat`. A lock at least 60 seconds old, or dated in
-the future, is removed and creation is retried once. Other lock errors let the
-run continue without a lock. A completed run removes its lock; an interrupted or
-killed run can leave it until it expires. Install, update and removal have no
-writer lock.
+cache directory with create-only-if-absent semantics. Each run writes a unique
+ownership token to its lock. A run that finds a lock younger than 60 seconds
+exits with code 0 without output, network requests or cache changes, also with
+`--repeat`. A lock at least 60 seconds old, or dated in the future, is removed
+only if the token read from it is unchanged, then creation is retried once. If
+the token has changed, the run exits silently as for a busy lock. Other lock
+errors let the run continue without a lock. A completed run removes the lock
+only if the file still holds its own token; an interrupted or killed run can
+leave it until it expires. Install, update and removal have no writer lock.
 
-Two limits remain: concurrent runs reclaiming an expired lock can both print;
-sessions in different repositories sharing this cache also share the lock, so
-one can print no notice until its next session start.
+Three limits remain: the token check and removal are separate operations, so a
+replacement between them can still be deleted and concurrent runs reclaiming an
+expired lock can both print; a run that lasts 60 seconds or more can overlap its
+replacement; sessions in different repositories sharing this cache also share
+the lock, so one can print no notice until its next session start.
 
 A file that is absent, unreadable or not valid JSON is an empty cache. The
 rules, in order:
