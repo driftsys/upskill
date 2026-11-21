@@ -89,7 +89,7 @@ matching client targeted, upskill shells out:
 Claude's `--scope` derives from the resolved install scope of the run. The scope
 comes from `--global` or `--project`, or, without a flag, from git detection and
 the refusal of the project scope in the home directory (see the specification,
-§3.1):
+§1.2 and §2.1 to §2.3):
 
 | install scope | lockfile location           | `claude --scope` |
 | ------------- | --------------------------- | ---------------- |
@@ -132,18 +132,18 @@ records the plugin as `skipped`, and `add` prints a warning that names
 `opencode 2` and the version found. `doctor` treats the plugin as a plugin whose
 state cannot be checked: it is not reported as missing.
 
-A plugin declared with `plugin_uri` is installed by a write to the `plugins`
-array of the `opencode.json` of the scope, not by a command. Its lockfile record
-carries `"config_write": true` (omitted for every other install form; a record
-without it reads as `false`). For a record with `config_write`, `doctor` and the
-repair of `update` check the `opencode.json` that upskill writes for that scope
-only: the identifier in the `plugin` or `plugins` array means installed, its
-absence means missing, and no opencode command runs, with any opencode version
-or none. The repair writes the entry again. For an opencode record without the
-field (written before the field existed), `doctor` reads the file first and,
-when the identifier is absent, checks with `opencode plugin list` under the
-version check. When `update` applies or repairs such a plugin, it sets the
-field.
+A plugin declared with `plugin_uri` is installed by a write to the config file,
+not by a command (the key and the file are in the decision below). Its lockfile
+record carries `"config_write": true` (omitted for every other install form; a
+record without it reads as `false`). For a record with `config_write`, `doctor`
+and the repair of `update` check the `opencode.json` that upskill writes for
+that scope only: the identifier in the `plugin` or `plugins` array means
+installed, its absence means missing, and no opencode command runs, with any
+opencode version or none. The repair writes the entry again. For an opencode
+record without the field (written before the field existed), `doctor` reads the
+file first and, when the identifier is absent, checks with
+`opencode plugin list` under the version check. When `update` applies or repairs
+such a plugin, it sets the field.
 
 ### The opencode config file and the `plugins` key
 
@@ -216,22 +216,23 @@ Decision:
   opencode for it, deletes the entry of that rule; an error there is reported,
   as for a write. A rule whose generated file was modified is still installed
   for opencode, and `update` writes its missing entry. upskill deletes the entry
-  of a rule that it removes in that operation, and the entry of a rule that the
-  lockfile records for other clients than opencode (an earlier run can have
-  saved the lockfile and then failed to edit the file). An entry of the same
-  form for a rule that the lockfile does not record, written by hand, is kept.
-  The rules step reads and parses the file whenever the run installs an opencode
-  rule (to find out whether the entry is present), or deletes an entry. A run
-  that installs no opencode rule and deletes no entry reads the file only to
-  find such a stale entry, when the lockfile records a rule for other clients
-  than opencode; a file that cannot be read as JSON adds no deletion and no
-  error there. The plugin and MCP steps read it when the run writes an entry of
-  theirs. A file that is not strict JSON (for example one with comments)
-  therefore breaks every run that installs an opencode rule, also when all
-  entries are present. `doctor --global` reports a recorded rule whose entry is
-  missing, as drift with exit code 1, and `update --global` writes it again,
-  also when the file has no `instructions` array. It also reports, as drift, the
-  entry of a rule that the lockfile records for other clients than opencode
+  of a rule that it removes in that operation, and `add` and `update` (not
+  `remove`) delete the entry of a rule that the lockfile records for other
+  clients than opencode (an earlier run can have saved the lockfile and then
+  failed to edit the file). An entry of the same form for a rule that the
+  lockfile does not record, written by hand, is kept. The rules step reads and
+  parses the file whenever the run installs an opencode rule (to find out
+  whether the entry is present), or deletes an entry. A run that installs no
+  opencode rule and deletes no entry reads the file only to find such a stale
+  entry, when the lockfile records a rule for other clients than opencode; a
+  file that cannot be read as JSON adds no deletion and no error there. The
+  plugin and MCP steps read it when the run writes an entry of theirs. A file
+  that is not strict JSON (for example one with comments) therefore breaks every
+  run that installs an opencode rule, also when all entries are present.
+  `doctor --global` reports a recorded rule whose entry is missing, as drift
+  with exit code 1, and `update --global` writes it again, also when the file
+  has no `instructions` array. It also reports, as drift, the entry of a rule
+  that the lockfile records for other clients than opencode
   (`stale_rule_entries`), and `update --global` deletes it. The removal of an
   entry that fails during `remove` or the orphan cleanup of `update` leaves an
   entry of a rule that the lockfile no longer records; `doctor` does not report
@@ -301,12 +302,12 @@ directly — no new dependencies, no async, consistent with the project's "shell
 out to git" stance from ADR-0001.
 
 The module exposes typed functions per client operation
-(`claude_marketplace_add`, `claude_plugin_install`, `copilot_marketplace_add`,
-`copilot_plugin_install`, `vscode_extension_install`, `opencode_plugin_install`,
-plus the uninstall functions, which `remove` does not call, and the check
-functions that `doctor` uses). All return `anyhow::Result<T>` and never write to
-stdout/stderr — presentation lives in `main.rs` per existing project
-conventions.
+(`install_claude_plugin`, `install_copilot_plugin`, `install_vscode_extension`,
+`install_opencode_plugin`, the `uninstall_*` functions, which `remove` does not
+call, and the `check_*_installed` functions that `doctor` uses). The install and
+uninstall functions return a `PluginOutcome`, the check functions return a
+`PluginCheckResult`, and none writes to stdout/stderr — presentation lives in
+`main.rs` per existing project conventions.
 
 ### Platform scope
 

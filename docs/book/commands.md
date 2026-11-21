@@ -1014,7 +1014,7 @@ the lockfile label (`local:/path` or `github:owner/repo` etc.).
 Verify on-disk state matches `.upskill-lock.json`. Without a scope flag,
 `doctor` checks both scopes, in the order and with the same rules as
 [`list`](#upskill-list); `--global` or `--project` limits the check to that
-scope. For each scope it reports twelve independent buckets:
+scope. For each scope it reports thirteen independent buckets:
 
 - **Missing per-client output files** — reinstall fixes
   (`upskill add
@@ -1087,9 +1087,9 @@ scope. For each scope it reports twelve independent buckets:
   `$HOME/.agents/rules/<name>/RULE.md` in the `instructions` array of the global
   opencode config, for a rule that the lockfile records for other clients than
   opencode. An earlier removal of the entry can have failed after the lockfile
-  was saved. `upskill update --global` deletes the entry. An entry for a name
-  that the lockfile does not record is not reported and not deleted. Causes exit
-  1.
+  was saved. `upskill update --global` and `upskill add --global` delete the
+  entry. An entry for a name that the lockfile does not record is not reported
+  and not deleted. Causes exit 1.
 - **Earlier layout** (global scope only) — files of a global install at the
   earlier global Copilot paths (`.github/skills`, `.github/instructions` and
   `.github/agents` under `$HOME`). `upskill update --global` moves them. Causes
@@ -1108,11 +1108,12 @@ line for each client and kind with its level, as in
 
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
 modified files, unreadable files, stale hashes, orphan entries, missing plugins,
-unregistered MCP servers, interrupted items, files at earlier global paths, or
-missing rule entries). Skipped plugins and unverifiable MCP entries are
-informational warnings and do not affect the exit code. `doctor` never fetches;
-remote-source drift detection is `update --check` (a lookup of the remote
-commit, without a fetch) and `update --dry-run` (a fetch and a preview).
+unregistered MCP servers, interrupted items, files at earlier global paths,
+missing rule entries, or stale rule entries). Skipped plugins and unverifiable
+MCP entries are informational warnings and do not affect the exit code. `doctor`
+never fetches; remote-source drift detection is `update --check` (a lookup of
+the remote commit, without a fetch) and `update --dry-run` (a fetch and a
+preview).
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 The document has one element in `scopes` for each checked scope (also when
@@ -1542,14 +1543,17 @@ Limits of the global scope:
   global config. `remove` deletes the entry of a removed rule, and `update`
   writes the entries of the rules it installs and deletes those of the rules
   that left the source, and an install that records a rule for fewer clients
-  deletes the entry of that rule. Other entries of the file are kept. The rules
-  step reads and parses the file whenever the run installs an opencode rule or
-  deletes an entry, so a file that is not strict JSON (for example one with
-  comments) fails such an `add` or `update`. `remove` ignores that error and
-  leaves the entry in the file. When the lockfile records a rule for other
-  clients than opencode, `add` and `update` also read the file to find an entry
-  of that rule (see `doctor`, stale rule entries); a file that cannot be read as
-  JSON adds no deletion and no error there.
+  deletes the entry of that rule. An `add` or `update` also deletes a stale
+  entry (`doctor` reports it): an entry for a rule that the lockfile records for
+  other clients than opencode. `remove` keeps such an entry. Other entries of
+  the file are kept. The rules step reads and parses the file whenever the run
+  installs an opencode rule or deletes an entry, so a file that is not strict
+  JSON (for example one with comments) fails such an `add` or `update`. `remove`
+  ignores that error and leaves the entry in the file. When the lockfile records
+  a rule for other clients than opencode, `add` and `update` (not `remove`) also
+  read the file to find an entry of that rule (see `doctor`, stale rule
+  entries); a file that cannot be read as JSON adds no deletion and no error
+  there.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.

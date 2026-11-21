@@ -123,13 +123,13 @@ the flag the cell is `unavailable`. The script removes the three items with
 an error. It runs `remove` after every attempt of `add`, also a failed or
 timed-out one, because `add` is not atomic and a failed `add` can leave files
 and the lockfile entry. When `remove` reports that the name is not in the
-lockfile, nothing was left and the script prints no warning. What a global cell
-leaves in the home directory after that removal, as checked with a temporary
-home that held a `CLAUDE.md`, `opencode.json` and `.vscode/settings.json` before
-the run. The smoke script runs the clients `claude` and `copilot` only, so the
-opencode bullets below come from the integration tests
-`tests/cli_opencode_rules.rs` and `tests/cli_opencode_plugins.rs`, not from the
-smoke cell:
+lockfile, nothing was left and the script prints no warning. After that removal,
+a global cell leaves the files below in the home directory. This was checked
+with a temporary home that held a `CLAUDE.md`, `opencode.json` and
+`.vscode/settings.json` before the run. The smoke script runs the clients
+`claude` and `copilot` only, so the opencode bullets below come from the
+integration tests `tests/cli_opencode_rules.rs` and
+`tests/cli_opencode_plugins.rs`, not from the smoke cell:
 
 - An existing `CLAUDE.md` is not changed. When the file is absent, `add` creates
   it with the content `@AGENTS.md`.

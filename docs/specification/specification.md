@@ -759,7 +759,7 @@ the check above refuses it.
   prints `{"scopes": [{"scope", "root", <the buckets>}]}` and `doctor` prints
   `{"scopes": [...], "in_both_scopes": [...], "support": [...]}`; both also when
   one scope is selected.
-- `doctor` — verify on-disk state matches the lock file. Per scope, twelve
+- `doctor` — verify on-disk state matches the lock file. Per scope, thirteen
   independent buckets: missing per-client outputs (reinstall fixes), modified
   recorded files (content differs from the recorded SHA-256, compared as in
   §2.1), recorded files that could not be inspected (`doctor` continues with the
@@ -791,22 +791,22 @@ the check above refuses it.
   is not strict JSON or whose `instructions` is not an array), and entries of
   the form `<home>/.agents/rules/<name>/RULE.md` in that array for a rule that
   the lockfile records for other clients than opencode (`stale_rule_entries`;
-  `upskill update --global` deletes them; an entry for a name that the lockfile
-  does not record is not reported). `doctor` also prints a note for each item
-  that the lockfiles of both scopes record; the note does not change the exit
-  code. After the scope reports, `doctor` prints the support level of each
-  client and kind (`Support levels:`; the compiled table in `src/support.rs`,
-  stated in the user guide page "Support levels"); the section does not change
-  the exit code and is not based on a detection of client versions (the plugin
-  check runs `opencode --version` before any `opencode plugin list`, ADR-0008).
-  Exit 0 when clean, 1 when any drift bucket is non-empty, including
-  `earlier_layout`. Skipped plugins are warnings and do not affect the exit
-  code. Missing, modified and unreadable files are checked against the `files`
-  record; a recorded path that `remove` would never delete (outside the client
-  roots, fewer than three components, or with a `..` component) is skipped
-  without a report. For an item with an empty or missing `files` record (a
-  `schema: 1` lockfile, or a `schema: 2` item with an empty list), `doctor`
-  checks each per-client entry file instead.
+  `upskill update --global` and `upskill add --global` delete them; an entry for
+  a name that the lockfile does not record is not reported). `doctor` also
+  prints a note for each item that the lockfiles of both scopes record; the note
+  does not change the exit code. After the scope reports, `doctor` prints the
+  support level of each client and kind (`Support levels:`; the compiled table
+  in `src/support.rs`, stated in the user guide page "Support levels"); the
+  section does not change the exit code and is not based on a detection of
+  client versions (the plugin check runs `opencode --version` before any
+  `opencode plugin list`, ADR-0008). Exit 0 when clean, 1 when any drift bucket
+  is non-empty, including `earlier_layout`. Skipped plugins are warnings and do
+  not affect the exit code. Missing, modified and unreadable files are checked
+  against the `files` record; a recorded path that `remove` would never delete
+  (outside the client roots, fewer than three components, or with a `..`
+  component) is skipped without a report. For an item with an empty or missing
+  `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
+  list), `doctor` checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -1004,27 +1004,29 @@ as in a project; the `.vscode/settings.json` entry points at
   (ADR-0008, issue #581). `remove` deletes the entry of a removed rule, `update`
   writes the entries of the rules it installs and deletes those of the rules
   that left the source, an install that records a rule for fewer clients deletes
-  the entry of that rule, and `doctor` reports a missing entry. Other entries,
-  also one of the same form that upskill does not track, are kept. The rules
-  step reads and parses the file whenever the run installs an opencode rule or
-  deletes an entry, so a file that is not strict JSON fails such an `add` or
-  `update` (`remove` ignores that error and leaves the entry), and a run reads
-  it also to find a stale entry when the lockfile records a rule for other
-  clients than opencode (a file that cannot be read as JSON adds no deletion and
-  no error there); the plugin and MCP steps read it when the run writes an entry
-  of theirs. The plugin and MCP writers of both scopes use the opencode config
-  file of the scope: the project root in the project scope, and
-  `$XDG_CONFIG_HOME/opencode/` (when set and absolute) or `~/.config/opencode/`
-  in the global scope. `doctor`, `update` and `remove` use the file of the scope
-  whose lockfile they work on, not the scope that an entry of that lockfile
-  records. A trial with opencode 2.1.4 confirmed that opencode reads
-  `~/.config/opencode/opencode.json` and ignores `~/opencode.json`. The
-  `XDG_CONFIG_HOME` location is used when set and absolute. In the trials of
-  issue #581, opencode loaded the `instructions` of that location; no trial
-  tested the plugin or MCP entries there. A `plugin_uri` plugin is written to
-  the `plugins` array. upskill neither reads nor changes `$HOME/opencode.json`,
-  which earlier versions wrote. In the project scope, the entry
-  `".agents/rules/**/RULE.md"` is added to `instructions[]` when absent,
+  the entry of that rule, an `add` or `update` deletes a stale entry (an entry
+  for a rule that the lockfile records for other clients than opencode, which
+  `remove` keeps), and `doctor` reports a missing entry and a stale entry. Other
+  entries, also one of the same form for a name that the lockfile does not
+  record, are kept. The rules step reads and parses the file whenever the run
+  installs an opencode rule or deletes an entry, so a file that is not strict
+  JSON fails such an `add` or `update` (`remove` ignores that error and leaves
+  the entry), and `add` and `update` (not `remove`) read it also to find a stale
+  entry when the lockfile records a rule for other clients than opencode (a file
+  that cannot be read as JSON adds no deletion and no error there); the plugin
+  and MCP steps read it when the run writes an entry of theirs. The plugin and
+  MCP writers of both scopes use the opencode config file of the scope: the
+  project root in the project scope, and `$XDG_CONFIG_HOME/opencode/` (when set
+  and absolute) or `~/.config/opencode/` in the global scope. `doctor`, `update`
+  and `remove` use the file of the scope whose lockfile they work on, not the
+  scope that an entry of that lockfile records. A trial with opencode 2.1.4
+  confirmed that opencode reads `~/.config/opencode/opencode.json` and ignores
+  `~/opencode.json`. The `XDG_CONFIG_HOME` location is used when set and
+  absolute. In the trials of issue #581, opencode loaded the `instructions` of
+  that location; no trial tested the plugin or MCP entries there. A `plugin_uri`
+  plugin is written to the `plugins` array. upskill neither reads nor changes
+  `$HOME/opencode.json`, which earlier versions wrote. In the project scope, the
+  entry `".agents/rules/**/RULE.md"` is added to `instructions[]` when absent,
   including when a later install finds that it was removed. An existing entry
   leaves the file unchanged; unrelated entries and keys are preserved
   ([implementation](https://github.com/driftsys/upskill/blob/main/src/ancillary.rs),
