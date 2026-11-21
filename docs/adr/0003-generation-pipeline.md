@@ -114,14 +114,15 @@ opencode config ([ADR-0008](0008-plugin-install-shellout.md), issue #581).
 
 Skills do not require an `opencode.json` entry — opencode walks
 `.agents/skills/**/SKILL.md` natively (`EXTERNAL_SKILL_PATTERN` in opencode's
-source). Rules require the glob entry because opencode has no equivalent
-`EXTERNAL_RULE_PATTERN`; rules reach opencode only via `instructions[]`.
+source). In the project scope, rules require the glob entry because opencode has
+no equivalent `EXTERNAL_RULE_PATTERN`; rules reach opencode only via
+`instructions[]`, in the global scope as absolute paths.
 
-> **Note for Phase 3 implementation.** `.agents/` is dot-prefixed; some glob
-> libraries exclude hidden directories by default. opencode's `instructions[]`
-> glob does not pass `dot: true` (verified in opencode source). Phase 3 should
-> include a fixture test that confirms `.agents/rules/**/RULE.md` actually
-> matches files under `.agents/`.
+> **Note for Phase 3 implementation (project scope).** `.agents/` is
+> dot-prefixed; some glob libraries exclude hidden directories by default.
+> opencode's `instructions[]` glob does not pass `dot: true` (verified in
+> opencode source). Phase 3 should include a fixture test that confirms
+> `.agents/rules/**/RULE.md` actually matches files under `.agents/`.
 
 ### Native-first transition planned on 2026-10-24
 

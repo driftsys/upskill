@@ -129,9 +129,10 @@ the run:
 - An existing `CLAUDE.md` is not changed. When the file is absent, `add` creates
   it with the content `@AGENTS.md`.
 - `$HOME/opencode.json`: a global `add` no longer reads or changes it, and
-  writes no rules glob for opencode. The opencode plugin and MCP entries go to
-  the global opencode config file (`~/.config/opencode/opencode.json`, or under
-  `$XDG_CONFIG_HOME`).
+  writes no rules glob for opencode. The global add writes one `instructions`
+  entry per rule to the global opencode config file, and `remove` deletes it.
+  The opencode plugin and MCP entries go to the global opencode config file
+  (`~/.config/opencode/opencode.json`, or under `$XDG_CONFIG_HOME`).
 - `.vscode/settings.json`: `add` creates the file with
   `{"chat.instructionsFilesLocations": {".github/instructions": true}}` when it
   is absent. When the file exists without that key, `add` adds the key with that

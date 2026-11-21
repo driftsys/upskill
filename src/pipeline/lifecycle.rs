@@ -427,7 +427,9 @@ fn remove_selected(
 /// In the global scope, delete from the global opencode config the entries of
 /// the rules in `names`. Nothing happens in the project scope, and the file is
 /// not read when `names` is empty. An error is ignored: the lockfile is
-/// already saved, and the entry of a rule that is not installed does no harm.
+/// already saved, so the removal succeeds. When the file cannot be read as
+/// JSON, or `instructions` is not an array, the entry of the removed rule stays
+/// in the file, and the user deletes it by hand.
 fn drop_global_opencode_rules(
     scope: Scope,
     root: &Path,
@@ -525,6 +527,11 @@ fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> 
 ///   item's record names it, or, for an item without a record, when a file
 ///   exists at it. `upskill update --global` moves them. A path in this
 ///   bucket is not also reported as a missing output.
+/// - **missing rule entries** — for the global scope only: a rule recorded for
+///   opencode whose absolute path is not in the `instructions` array of the
+///   global opencode config. A config that is not strict JSON (for example
+///   with comments) or has no such array reports every such rule, and
+///   `update` cannot repair it.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by `update --check`, which

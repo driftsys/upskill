@@ -863,7 +863,9 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched, except that removing
 an item of a bundle, or the source of a bundle with `--source`, deletes the
 installed opencode plugin entry of that bundle from the `plugin` and `plugins`
-arrays of the `opencode.json` of the scope.
+arrays of the `opencode.json` of the scope. In the global scope, removing a rule
+that is installed for opencode also deletes its `instructions` entry from the
+global opencode config.
 
 Without a scope flag, `remove` uses the project scope inside a git repository
 and the global scope outside one. When the current directory is the home
@@ -1001,7 +1003,7 @@ the lockfile label (`local:/path` or `github:owner/repo` etc.).
 Verify on-disk state matches `.upskill-lock.json`. Without a scope flag,
 `doctor` checks both scopes, in the order and with the same rules as
 [`list`](#upskill-list); `--global` or `--project` limits the check to that
-scope. For each scope it reports eleven independent buckets:
+scope. For each scope it reports twelve independent buckets:
 
 - **Missing per-client output files** — reinstall fixes
   (`upskill add
@@ -1065,7 +1067,10 @@ scope. For each scope it reports eleven independent buckets:
 - **Missing rule entries** (global scope only) — a rule that the lockfile
   records for opencode, and whose absolute path is not in the `instructions`
   array of the global opencode config. opencode does not load such a rule.
-  `upskill update --global` writes the entry again. Causes exit 1.
+  `upskill update --global` writes the entry again. When the file is not strict
+  JSON (for example JSONC with comments), `doctor` reports every such rule as
+  missing and `update` fails with a parse error on the file; the user fixes the
+  file by hand. Causes exit 1.
 - **Earlier layout** (global scope only) — files of a global install at the
   earlier global Copilot paths (`.github/skills`, `.github/instructions` and
   `.github/agents` under `$HOME`). `upskill update --global` moves them. Causes
@@ -1514,8 +1519,9 @@ Limits of the global scope:
   global config. `remove` deletes the entry of a removed rule, and `update`
   writes the entries of the rules it installs and deletes those of the rules
   that left the source, and an install that records a rule for fewer clients
-  deletes the entry of that rule. Other entries of the file are kept, and a run
-  with no opencode rule to add or remove does not read the file.
+  deletes the entry of that rule. Other entries of the file are kept. The rules
+  step reads the file only when the run has an opencode rule entry to add or
+  delete.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.

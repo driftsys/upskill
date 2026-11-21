@@ -693,14 +693,33 @@ impl PreparedInstall {
         )?;
         let (items, kept_notes) =
             preview_items(target, lock, &self.report.planned, decision, &new_items);
-        // The rules that this install writes for opencode, whose entries the
-        // global opencode config would get.
-        let opencode_rules = self.opencode_rule_names();
+        // The rules that this install would write for opencode, whose entries
+        // the global opencode config would get, and the rules that would stop
+        // targeting opencode, whose entries it would lose. A skipped item is
+        // neither written nor recorded.
+        let skipped: BTreeSet<&str> = items
+            .iter()
+            .filter(|i| i.action == PreviewAction::Skip && i.kind == ItemKind::Rule)
+            .map(|i| i.name.as_str())
+            .collect();
+        let opencode_rules: BTreeSet<String> = self
+            .opencode_rule_names()
+            .into_iter()
+            .filter(|name| !skipped.contains(name.as_str()))
+            .collect();
+        let mut after = lock.clone();
+        for item in new_items {
+            if !(item.kind == ItemKind::Rule && skipped.contains(item.name.as_str())) {
+                after.upsert(item);
+            }
+        }
+        let dropped = dropped_opencode_rules(lock, &after, &opencode_rules);
         let handshake = crate::ancillary::pending_handshake_changes(
             target,
             plugin_scope,
             self.has_rules(),
             &opencode_rules,
+            &dropped,
         )?;
         Ok(InstallPreview {
             items,
@@ -743,9 +762,8 @@ impl PreparedInstall {
         let provenance = self.requires_provenance();
         let has_rules = self.has_rules();
         let opencode_rules = self.opencode_rule_names();
-        // The rules recorded for opencode before this install changes the
-        // lockfile.
-        let opencode_rules_before = lock.opencode_rule_names();
+        // The lockfile before this install changes it.
+        let lock_before = lock.clone();
         let PreparedInstall {
             label,
             git_ref,
@@ -927,15 +945,20 @@ impl PreparedInstall {
                 crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
             }
             PluginScope::User => {
-                // A rule that this install records for fewer clients no longer
-                // targets opencode, and its entry is deleted.
-                let after = lock.opencode_rule_names();
-                let dropped: BTreeSet<String> = opencode_rules_before
+                // A rule that a conflict with an unowned file skipped is not
+                // written, so it gets no entry.
+                let written: BTreeSet<String> = opencode_rules
                     .iter()
-                    .filter(|name| !after.contains(*name) && !opencode_rules.contains(*name))
+                    .filter(|name| {
+                        !report
+                            .conflicts
+                            .iter()
+                            .any(|c| c.kind == ItemKind::Rule && &c.name == *name)
+                    })
                     .cloned()
                     .collect();
-                crate::ancillary::sync_opencode_global_rules(target, &opencode_rules, &dropped)?;
+                let dropped = dropped_opencode_rules(&lock_before, &lock, &written);
+                crate::ancillary::sync_opencode_global_rules(target, &written, &dropped)?;
             }
         }
 
@@ -950,6 +973,23 @@ impl PreparedInstall {
 
         Ok(report)
     }
+}
+
+/// The rules that `before` records for opencode and `after` does not, and
+/// that `added` does not write again: a rule that an install records for
+/// fewer clients no longer targets opencode, and its entry in the global
+/// opencode config is deleted.
+fn dropped_opencode_rules(
+    before: &Lockfile,
+    after: &Lockfile,
+    added: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    let remaining = after.opencode_rule_names();
+    before
+        .opencode_rule_names()
+        .into_iter()
+        .filter(|name| !remaining.contains(name) && !added.contains(name))
+        .collect()
 }
 
 /// Refreshes `required_by` of every entry of `lock` with the provenance of

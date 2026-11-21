@@ -441,3 +441,133 @@ fn update_restores_the_entry_of_a_rule_whose_generated_file_was_modified() {
     );
     assert!(fs::read_to_string(&file).unwrap().contains("my edit"));
 }
+
+fn set_instructions(env: &Env, value: serde_json::Value) {
+    fs::create_dir_all(env.config().parent().unwrap()).unwrap();
+    fs::write(
+        env.config(),
+        serde_json::json!({ "instructions": value }).to_string(),
+    )
+    .unwrap();
+}
+
+fn instructions_of(env: &Env) -> serde_json::Value {
+    read_json(&env.config())["instructions"].clone()
+}
+
+#[test]
+fn global_add_of_a_rule_skipped_for_an_unowned_file_writes_no_entry() {
+    let env = Env::new();
+    let file = env.home.join(".agents/rules/rule-a/RULE.md");
+    fs::create_dir_all(file.parent().unwrap()).unwrap();
+    fs::write(&file, "mine\n").unwrap();
+
+    let source = env.source.to_str().unwrap();
+    // A skipped item makes `add` exit with 1.
+    env.run(&["add", source, "--opencode", "--global"], None)
+        .code(1);
+
+    assert_eq!(fs::read_to_string(&file).unwrap(), "mine\n");
+    let config = read_json(&env.config());
+    assert_eq!(
+        config["instructions"],
+        serde_json::json!([env.entry("rule-b")]),
+        "{config}"
+    );
+}
+
+#[test]
+fn remove_keeps_a_hand_written_entry_for_a_rule_that_never_targeted_opencode() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    set_instructions(&env, serde_json::json!([env.entry("rule-a")]));
+
+    env.run(&["remove", "rule-a", "--global"], None).success();
+
+    assert_eq!(
+        instructions_of(&env),
+        serde_json::json!([env.entry("rule-a")])
+    );
+}
+
+#[test]
+fn update_orphan_removal_keeps_a_hand_written_entry_for_a_rule_that_never_targeted_opencode() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    set_instructions(&env, serde_json::json!([env.entry("rule-b")]));
+    fs::remove_dir_all(env.source.join("rule-b")).unwrap();
+
+    env.run(&["update", "--yes", "--global"], None).code(0);
+
+    assert_eq!(
+        instructions_of(&env),
+        serde_json::json!([env.entry("rule-b")])
+    );
+}
+
+#[test]
+fn remove_succeeds_when_the_global_config_cannot_be_edited() {
+    let env = Env::new();
+    env.add_global(None);
+    fs::write(env.config(), r#"{"instructions": "x"}"#).unwrap();
+
+    env.run(&["remove", "rule-a", "--global"], None).success();
+
+    let lock = read_json(&env.home.join(".upskill-lock.json"));
+    let names: Vec<_> = lock["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["name"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(names, vec!["rule-b"], "{lock}");
+    assert_eq!(
+        fs::read_to_string(env.config()).unwrap(),
+        r#"{"instructions": "x"}"#
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn update_preview_lists_the_config_for_a_deletion_only_change() {
+    let env = Env::new();
+    env.add_global(None);
+    // `--claude` narrows rule-b to claude: the entries of both rules go.
+    let result = common::update_in_terminal(
+        env.home.parent().unwrap(),
+        &env.home,
+        &["--claude", "--global"],
+        "n\n",
+    );
+    let out = result["stdout"].as_str().unwrap();
+    assert!(
+        out.lines()
+            .any(|line| line.trim_start().starts_with("write") && line.contains("opencode.json")),
+        "{result}"
+    );
+    assert_eq!(instructions_of(&env).as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn update_validates_the_global_config_before_it_writes_any_file() {
+    let env = Env::new();
+    env.add_global(None);
+    fs::write(env.config(), r#"{"instructions": "x"}"#).unwrap();
+    let lock_before = fs::read_to_string(env.home.join(".upskill-lock.json")).unwrap();
+
+    env.run(&["update", "--yes", "--claude", "--global"], None)
+        .failure();
+
+    assert!(
+        env.home.join(".agents/rules/rule-a/RULE.md").exists(),
+        "no output was deleted"
+    );
+    assert_eq!(
+        fs::read_to_string(env.home.join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}

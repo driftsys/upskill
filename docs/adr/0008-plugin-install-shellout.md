@@ -173,8 +173,9 @@ Trials with opencode 2.1.4 (issues #565 and #573) tested the following, with
   loaded: a single absolute file path, a single `~/` file path, an absolute path
   with a wildcard in the file name only, and a `{file:...}` value whose content
   is an absolute file path. A file `$XDG_CONFIG_HOME/opencode/AGENTS.md` was
-  also loaded; that file belongs to the user, so upskill does not write it. In
-  the project configuration, the relative glob worked in the first trial.
+  also loaded; that file belongs to the user, so upskill does not write it. All
+  the paths of this trial were absolute or `~/` paths on macOS; other platforms
+  were not tested.
 
 upskill uses `$XDG_CONFIG_HOME/opencode/opencode.json` when `XDG_CONFIG_HOME` is
 set and absolute. That location was not tested, except as the way the
@@ -196,7 +197,7 @@ Decision:
 - In the global scope upskill writes one `instructions` entry per rule that is
   installed for opencode, to the global configuration file: the absolute path of
   the generated file, `<home>/.agents/rules/<name>/RULE.md`. An absolute path
-  works on every platform and does not depend on the home directory notation.
+  does not depend on the home directory notation. It was tested on macOS only.
   upskill writes no glob there, because the global configuration does not expand
   `**`. The project scope keeps the single relative glob in
   `<project>/opencode.json`.
@@ -209,11 +210,16 @@ Decision:
   as for a write. A rule whose generated file was modified is still installed
   for opencode, and `update` writes its missing entry. upskill deletes only the
   entry of a rule that it removes in that operation. An entry of the same form
-  for a rule that upskill does not track, written by hand, is kept. A run that
-  adds or removes no opencode rule does not read the file, so a file that is not
-  strict JSON (for example one with comments) breaks only a run that has an
-  entry to write. `doctor --global` reports a recorded rule whose entry is
-  missing, as drift with exit code 1, and `update --global` writes it again.
+  for a rule that upskill does not track, written by hand, is kept. The rules
+  step reads the file only when the run has an opencode rule entry to add or
+  delete; the plugin and MCP steps read it when the run writes an entry of
+  theirs. A file that is not strict JSON (for example one with comments)
+  therefore breaks only a run that has such an entry to write.
+  `doctor
+  --global` reports a recorded rule whose entry is missing, as drift
+  with exit code 1, and `update --global` writes it again. When the file is not
+  strict JSON, `doctor` reports every recorded rule as missing, and `update`
+  cannot repair it: it fails with a parse error until the user fixes the file.
   Other entries and other keys of the file are kept. An `instructions` value
   that is not an array is an error.
 - upskill does not read or write `$XDG_CONFIG_HOME/opencode/AGENTS.md`.

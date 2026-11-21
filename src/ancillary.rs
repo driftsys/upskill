@@ -173,16 +173,18 @@ fn apply_pending(pending: Option<PendingWrite>) -> Result<AncillaryAction> {
 ///
 /// In the global scope opencode gets one absolute path per rule in
 /// `opencode_rules`, the names of the rules that this install writes for
-/// opencode (see `sync_opencode_global_rules`), instead of the glob. The
-/// global opencode config file is listed when an entry would be added, and is
-/// not read when `opencode_rules` is empty; the path is relative to `target`
-/// when the file is inside it. `opencode_rules` is not used in the project
-/// scope.
+/// opencode, and loses the path of each rule in `dropped`, the rules that stop
+/// targeting opencode (see `sync_opencode_global_rules`), instead of the
+/// glob. The global opencode config file is listed when an entry would be
+/// added or deleted, and is not read when both sets are empty; the path is
+/// relative to `target` when the file is inside it. Neither set is used in
+/// the project scope.
 pub fn pending_handshake_changes(
     target: &Path,
     scope: PluginScope,
     has_rules: bool,
     opencode_rules: &BTreeSet<String>,
+    dropped: &BTreeSet<String>,
 ) -> Result<Vec<PathBuf>> {
     let opencode_rules = match scope {
         PluginScope::Project => opencode_rules_pending(target, has_rules)?,
@@ -190,7 +192,7 @@ pub fn pending_handshake_changes(
             &opencode_json_path(scope, target),
             target,
             opencode_rules,
-            &BTreeSet::new(),
+            dropped,
         )?,
     };
     let pending = [
@@ -302,9 +304,9 @@ fn opencode_rules_pending(target: &Path, has_rules: bool) -> Result<Option<Pendi
 /// root. The path is built from separate components, so that one separator
 /// style results on every platform.
 ///
-/// A trial with opencode 2.1.4 showed that the global config expands neither
-/// `**` nor a wildcard in a directory segment. It loads a single absolute
-/// path (ADR-0008, issue #581).
+/// A trial with opencode 2.1.4 on macOS showed that the global config expands
+/// neither `**` nor a wildcard in a directory segment. It loads a single
+/// absolute path. Other platforms were not tested (ADR-0008, issue #581).
 fn opencode_global_rule_entry(root: &Path, name: &str) -> String {
     root.join(".agents")
         .join("rules")
@@ -1115,18 +1117,28 @@ mod tests {
     #[test]
     fn pending_handshake_changes_lists_each_missing_file() {
         let tmp = tempfile::tempdir().unwrap();
-        let got =
-            pending_handshake_changes(tmp.path(), PluginScope::Project, true, &BTreeSet::new())
-                .unwrap();
+        let got = pending_handshake_changes(
+            tmp.path(),
+            PluginScope::Project,
+            true,
+            &BTreeSet::new(),
+            &BTreeSet::new(),
+        )
+        .unwrap();
         assert_eq!(got, all_three());
     }
 
     #[test]
     fn pending_handshake_changes_without_rules_lists_only_claude_md() {
         let tmp = tempfile::tempdir().unwrap();
-        let got =
-            pending_handshake_changes(tmp.path(), PluginScope::Project, false, &BTreeSet::new())
-                .unwrap();
+        let got = pending_handshake_changes(
+            tmp.path(),
+            PluginScope::Project,
+            false,
+            &BTreeSet::new(),
+            &BTreeSet::new(),
+        )
+        .unwrap();
         assert_eq!(got, vec![PathBuf::from("CLAUDE.md")]);
     }
 
@@ -1137,9 +1149,15 @@ mod tests {
         ensure_opencode_rules_registered(tmp.path(), true).unwrap();
         ensure_vscode_instructions_registered(tmp.path(), true).unwrap();
         assert!(
-            pending_handshake_changes(tmp.path(), PluginScope::Project, true, &BTreeSet::new())
-                .unwrap()
-                .is_empty()
+            pending_handshake_changes(
+                tmp.path(),
+                PluginScope::Project,
+                true,
+                &BTreeSet::new(),
+                &BTreeSet::new()
+            )
+            .unwrap()
+            .is_empty()
         );
     }
 
@@ -1148,9 +1166,14 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join(OPENCODE_JSON), "{\"theme\": \"dark\"}\n").unwrap();
         let before = snapshot(tmp.path());
-        let got =
-            pending_handshake_changes(tmp.path(), PluginScope::Project, true, &BTreeSet::new())
-                .unwrap();
+        let got = pending_handshake_changes(
+            tmp.path(),
+            PluginScope::Project,
+            true,
+            &BTreeSet::new(),
+            &BTreeSet::new(),
+        )
+        .unwrap();
         assert_eq!(got.len(), 3);
         assert_eq!(snapshot(tmp.path()), before);
         assert!(!tmp.path().join(".vscode").exists());
@@ -1164,9 +1187,14 @@ mod tests {
             r#"{"theme": "dark", "instructions": ["a.md", ".agents/rules/**/RULE.md"]}"#,
         )
         .unwrap();
-        let got =
-            pending_handshake_changes(tmp.path(), PluginScope::Project, true, &BTreeSet::new())
-                .unwrap();
+        let got = pending_handshake_changes(
+            tmp.path(),
+            PluginScope::Project,
+            true,
+            &BTreeSet::new(),
+            &BTreeSet::new(),
+        )
+        .unwrap();
         let mut expected = vec![
             PathBuf::from("CLAUDE.md"),
             PathBuf::from(".vscode").join("settings.json"),
@@ -1183,9 +1211,14 @@ mod tests {
             r#"{"instructions": ["a.md"]}"#,
         )
         .unwrap();
-        let got =
-            pending_handshake_changes(tmp.path(), PluginScope::Project, true, &BTreeSet::new())
-                .unwrap();
+        let got = pending_handshake_changes(
+            tmp.path(),
+            PluginScope::Project,
+            true,
+            &BTreeSet::new(),
+            &BTreeSet::new(),
+        )
+        .unwrap();
         assert!(got.contains(&PathBuf::from(OPENCODE_JSON)));
     }
 
@@ -1194,8 +1227,14 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join(OPENCODE_JSON), r#"{"instructions": "x"}"#).unwrap();
         assert!(
-            pending_handshake_changes(tmp.path(), PluginScope::Project, true, &BTreeSet::new())
-                .is_err()
+            pending_handshake_changes(
+                tmp.path(),
+                PluginScope::Project,
+                true,
+                &BTreeSet::new(),
+                &BTreeSet::new()
+            )
+            .is_err()
         );
     }
 
@@ -1887,16 +1926,28 @@ mod tests {
     #[test]
     fn pending_handshake_changes_in_the_global_scope_lists_the_config_for_new_entries() {
         let tmp = tempfile::tempdir().unwrap();
-        let got =
-            pending_handshake_changes(tmp.path(), PluginScope::User, true, &names(&["a"])).unwrap();
+        let got = pending_handshake_changes(
+            tmp.path(),
+            PluginScope::User,
+            true,
+            &names(&["a"]),
+            &BTreeSet::new(),
+        )
+        .unwrap();
         assert_eq!(
             got.iter()
                 .filter(|p| p.file_name().is_some_and(|n| n == OPENCODE_JSON))
                 .count(),
             1
         );
-        let none =
-            pending_handshake_changes(tmp.path(), PluginScope::User, true, &names(&[])).unwrap();
+        let none = pending_handshake_changes(
+            tmp.path(),
+            PluginScope::User,
+            true,
+            &names(&[]),
+            &BTreeSet::new(),
+        )
+        .unwrap();
         assert!(
             !none
                 .iter()
