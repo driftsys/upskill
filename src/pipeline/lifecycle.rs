@@ -67,8 +67,9 @@ use super::{
 /// they are left alone with two exceptions. First, for each bundle that lists
 /// a removed item (or has the removed source), the installed opencode plugin
 /// entry of that bundle is deleted from the `plugin` and `plugins` arrays of
-/// the opencode config file of its recorded scope
-/// (`remove_opencode_plugin_uri`; an error is ignored). Second, in the global
+/// the opencode config file of the scope of the lockfile, not of the scope
+/// that the entry records (`remove_opencode_plugin_uri`; an error is
+/// ignored). Second, in the global
 /// scope the `instructions` entry of each removed rule is deleted from the
 /// global opencode config, other entries are kept, and an error is ignored
 /// (`drop_global_opencode_rules`).
@@ -409,7 +410,7 @@ fn remove_selected(
         {
             let _ = crate::ancillary::remove_opencode_plugin_uri(
                 target,
-                scope_plugin_scope(at.scope),
+                crate::plugin::PluginScope::of(at.scope),
                 &plugin.identifier,
             );
         }
@@ -533,6 +534,12 @@ fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> 
 ///   with comments) reports every such rule, and `update` cannot repair it. A
 ///   config without an `instructions` array is repaired by `update`; a value
 ///   that is not an array is not.
+/// - **stale rule entries** — for the global scope only: an entry of the form
+///   `<home>/.agents/rules/<name>/RULE.md` in the `instructions` array of the
+///   global opencode config, for a rule that the lockfile records for other
+///   clients than opencode. `upskill add --global` and `upskill update
+///   --global` delete it. An entry for a name that the lockfile does not
+///   record is not reported.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by `update --check`, which
@@ -781,7 +788,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                 });
             }
             PluginInstallStatus::Installed => {
-                if plugin_is_missing(target, scope_plugin_scope(at.scope), plugin) {
+                if plugin_is_missing(target, crate::plugin::PluginScope::of(at.scope), plugin) {
                     report.missing_plugins.push(MissingPlugin {
                         name: plugin.name.clone(),
                         client: plugin.client.clone(),
@@ -823,7 +830,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     "vscode" => crate::ancillary::vscode_mcp_state(target, &mcp.name),
                     _ => crate::ancillary::opencode_mcp_state(
                         target,
-                        scope_plugin_scope(at.scope),
+                        crate::plugin::PluginScope::of(at.scope),
                         &mcp.name,
                     ),
                 };
@@ -930,24 +937,12 @@ fn reselect_from_entries(
     }
 }
 
-/// The scope of the opencode config file for the lockfile of `scope`. The
-/// file is chosen from the scope root that holds the lockfile, not from the
-/// scope that an entry records, so that no run of the project scope reads or
-/// changes the global opencode config, and no run of the global scope reads or
-/// changes `<home>/opencode.json`.
-fn scope_plugin_scope(scope: Scope) -> crate::plugin::PluginScope {
-    match scope {
-        Scope::Global => crate::plugin::PluginScope::User,
-        Scope::Project => crate::plugin::PluginScope::Project,
-    }
-}
-
 /// True when the client reports that `plugin`, recorded as installed, is
 /// not installed. Used by `doctor` and by the plugin repair of `update`.
 ///
 /// An opencode plugin whose identifier is in the `plugin` or `plugins` array
-/// of the opencode config file of `file_scope`, the scope of the lockfile, is installed, and no
-/// opencode command is run for it. An opencode plugin recorded with
+/// of the opencode config file of `file_scope`, the scope of the lockfile, is
+/// installed, and no opencode command is run for it. An opencode plugin recorded with
 /// `config_write` and absent from that array is missing, also without any
 /// opencode command. Otherwise the client CLI is queried. A client CLI that is
 /// absent, that has an unsupported version, or whose query fails gives `false`: the

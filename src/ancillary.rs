@@ -1979,17 +1979,21 @@ mod tests {
             &BTreeSet::new(),
         )
         .unwrap();
-        // The paths are relative to the target, and sorted.
-        assert_eq!(
-            got,
-            vec![
-                PathBuf::from(".config")
-                    .join("opencode")
-                    .join("opencode.json"),
-                PathBuf::from(".vscode").join("settings.json"),
-                PathBuf::from("CLAUDE.md"),
-            ]
-        );
+        // The paths are relative to the target when they are inside it, and
+        // sorted. `XDG_CONFIG_HOME` of the environment can move the config
+        // file out of the target, so its expected path is computed with the
+        // same inputs as the function.
+        let config = opencode_json_path(PluginScope::User, tmp.path());
+        let mut expected = vec![
+            config
+                .strip_prefix(tmp.path())
+                .map(Path::to_path_buf)
+                .unwrap_or(config),
+            PathBuf::from(".vscode").join("settings.json"),
+            PathBuf::from("CLAUDE.md"),
+        ];
+        expected.sort();
+        assert_eq!(got, expected);
         let none = pending_handshake_changes(
             tmp.path(),
             PluginScope::User,
