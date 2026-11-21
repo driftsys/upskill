@@ -161,8 +161,21 @@ Trials with opencode 2.1.4 (issues #565 and #573) tested the following, with
   resolved against the project directory: the marker file in
   `<project>/.agents/rules/` was loaded and the marker file in the config
   directory was not. The rules glob `.agents/rules/**/RULE.md` therefore does
-  not reach `~/.agents/rules/` from the global configuration. An absolute path
-  was not tested.
+  not reach `~/.agents/rules/` from the global configuration. The first runs
+  with an absolute path stopped responding; the second trial below shows that
+  the cause was the standard input of `opencode run`, not the path.
+- In a second trial (2026-11-21, opencode 2.1.4, same method, recorded in issue
+  #581), `opencode run` was started with standard input redirected from
+  `/dev/null`. Without that redirection `opencode run` stops responding. In the
+  global configuration these `instructions` values were not loaded: an absolute
+  glob with `**`, the same glob under another directory, a `~/` glob with `**`,
+  and an absolute glob with `*` in a directory segment. These values were
+  loaded: a single absolute file path, a single `~/` file path, an absolute path
+  with a wildcard in the file name only, and a `{file:...}` value whose content
+  is an absolute file path. A file `$XDG_CONFIG_HOME/opencode/AGENTS.md` was
+  also loaded; that file belongs to the user, so upskill does not write it. All
+  the paths of this trial were absolute or `~/` paths on macOS; other platforms
+  were not tested.
 
 upskill uses `$XDG_CONFIG_HOME/opencode/opencode.json` when `XDG_CONFIG_HOME` is
 set and absolute. That location was not tested, except as the way the
@@ -181,8 +194,37 @@ Decision:
   counts as present on write, so the write adds no second entry under `plugins`.
   There is no migration before version 1.0.
 - upskill neither reads nor cleans the old `$HOME/opencode.json`.
-- In the global scope upskill writes no rules `instructions` entry for opencode.
-  Global rules do not reach opencode yet.
+- In the global scope upskill writes one `instructions` entry per rule that is
+  installed for opencode, to the global configuration file: the absolute path of
+  the generated file, `<home>/.agents/rules/<name>/RULE.md`. An absolute path
+  does not depend on the home directory notation. It was tested on macOS only.
+  upskill writes no glob there, because the global configuration does not expand
+  `**`. The project scope keeps the single relative glob in
+  `<project>/opencode.json`.
+- `add` and `update` write the entry of each rule that the run installs for
+  opencode. `remove --global` deletes the entry of each rule that it removes,
+  and `update --global` deletes the entry of each rule that left its source; an
+  error of such a deletion is ignored, as for the plugin entry. An install that
+  records a rule for fewer clients, so that the lockfile no longer lists
+  opencode for it, deletes the entry of that rule; an error there is reported,
+  as for a write. A rule whose generated file was modified is still installed
+  for opencode, and `update` writes its missing entry. upskill deletes only the
+  entry of a rule that it removes in that operation. An entry of the same form
+  for a rule that upskill does not track, written by hand, is kept. The rules
+  step reads and parses the file whenever the run installs an opencode rule (to
+  find out whether the entry is present), or deletes an entry; a run that
+  installs no opencode rule and deletes no entry does not read it for rules. The
+  plugin and MCP steps read it when the run writes an entry of theirs. A file
+  that is not strict JSON (for example one with comments) therefore breaks every
+  run that installs an opencode rule, also when all entries are present.
+  `doctor --global` reports a recorded rule whose entry is missing, as drift
+  with exit code 1, and `update --global` writes it again, also when the file
+  has no `instructions` array. When the file is not strict JSON, `doctor`
+  reports every recorded rule as missing, and `update` cannot repair it: it
+  fails with a parse error until the user fixes the file. Other entries and
+  other keys of the file are kept. An `instructions` value that is not an array
+  is an error, and `update` cannot repair it either.
+- upskill does not read or write `$XDG_CONFIG_HOME/opencode/AGENTS.md`.
 
 ### Repair by `update`
 
