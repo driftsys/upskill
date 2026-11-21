@@ -827,49 +827,55 @@ fn update_does_not_keep_removed_bundle_members_as_direct_items() {
 
 #[test]
 fn add_under_a_kind_restriction_keeps_the_provenance_of_an_unplanned_item() {
-    let consumer = tempfile::tempdir().unwrap();
-    let registry = tempfile::tempdir().unwrap();
-    write_skill(registry.path(), "s");
-    write(
-        &registry.path().join("r2/RULE.md"),
-        "---\nname: r2\ndescription: Dependent rule.\nrequires:\n  skills: [s]\n---\nRule body.\n",
-    );
-    add_direct(consumer.path(), registry.path(), "r2");
-    assert_eq!(
-        read_update_lock(consumer.path())["items"]
+    for remove_requirement in [false, true] {
+        let consumer = tempfile::tempdir().unwrap();
+        let registry = tempfile::tempdir().unwrap();
+        write_skill(registry.path(), "s");
+        write(
+            &registry.path().join("r2/RULE.md"),
+            "---\nname: r2\ndescription: Dependent rule.\nrequires:\n  skills: [s]\n---\nRule body.\n",
+        );
+        add_direct(consumer.path(), registry.path(), "r2");
+        assert_eq!(
+            read_update_lock(consumer.path())["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|item| item["name"] == "s")
+                .unwrap()["required_by"],
+            serde_json::json!(["rule:r2"])
+        );
+        let skill_path = consumer.path().join(".claude/skills/s/SKILL.md");
+        let skill_before = fs::read(&skill_path).unwrap();
+        if remove_requirement {
+            write_rule_body(registry.path(), "r2", "No dependency remains.");
+        }
+        common::upskill_cmd(&fake_home(consumer.path()))
+            .current_dir(consumer.path())
+            .args([
+                "add",
+                registry.path().to_str().unwrap(),
+                "r2",
+                "--kind",
+                "rule",
+                "--project",
+                "--claude",
+            ])
+            .assert()
+            .success();
+        let after = read_update_lock(consumer.path());
+        let item = after["items"]
             .as_array()
             .unwrap()
             .iter()
             .find(|item| item["name"] == "s")
-            .unwrap()["required_by"],
-        serde_json::json!(["rule:r2"])
-    );
-    write_rule_body(registry.path(), "r2", "No dependency remains.");
-    common::upskill_cmd(&fake_home(consumer.path()))
-        .current_dir(consumer.path())
-        .args([
-            "add",
-            registry.path().to_str().unwrap(),
-            "r2",
-            "--kind",
-            "rule",
-            "--project",
-            "--claude",
-        ])
-        .assert()
-        .success();
-    let after = read_update_lock(consumer.path());
-    let item = after["items"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|item| item["name"] == "s")
-        .unwrap();
-    assert_eq!(item["required_by"], serde_json::json!(["rule:r2"]));
+            .unwrap();
+        assert_eq!(item["required_by"], serde_json::json!(["rule:r2"]));
+        assert_eq!(fs::read(&skill_path).unwrap(), skill_before);
+    }
 }
 
-#[test]
-fn kind_restricted_update_reports_an_unplanned_item_of_a_later_skipped_source_as_skipped() {
+fn stage_kind_restricted_source_skipped_later() -> (tempfile::TempDir, tempfile::TempDir, PathBuf) {
     let consumer = tempfile::tempdir().unwrap();
     let sources = tempfile::tempdir().unwrap();
     let registry = sources.path().join("a-registry");
@@ -902,6 +908,12 @@ fn kind_restricted_update_reports_an_unplanned_item_of_a_later_skipped_source_as
     add_direct(consumer.path(), &registry, "kept");
     add_direct(consumer.path(), &dependency, "beta");
     fs::remove_dir_all(&missing).unwrap();
+    (consumer, sources, registry)
+}
+
+#[test]
+fn kind_restricted_update_reports_an_unplanned_item_of_a_later_skipped_source_as_skipped() {
+    let (consumer, _sources, registry) = stage_kind_restricted_source_skipped_later();
     let lock_path = consumer.path().join(".upskill-lock.json");
     let before = fs::read(&lock_path).unwrap();
     let kept_path = consumer.path().join(".claude/skills/kept/SKILL.md");
@@ -930,4 +942,116 @@ fn kind_restricted_update_reports_an_unplanned_item_of_a_later_skipped_source_as
     );
     assert_eq!(fs::read(&lock_path).unwrap(), before);
     assert_eq!(fs::read(&kept_path).unwrap(), kept_before);
+}
+
+#[test]
+fn a_later_skipped_source_does_not_mark_an_applied_sources_kept_item_as_skipped() {
+    let (consumer, sources, _registry) = stage_kind_restricted_source_skipped_later();
+    let applied = sources.path().join("z-applied");
+    write_skill(&applied, "untouched");
+    write_rule_body(&applied, "current", "Original applied rule.");
+    write(
+        &applied.join("other.bundle.yaml"),
+        "schema: 1\nname: other\ndescription: Another rule bundle.\nitems:\n  rules: [current]\n",
+    );
+    add_direct(consumer.path(), &applied, "untouched");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            applied.to_str().unwrap(),
+            "other",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let before = read_update_lock(consumer.path());
+    let kept = before["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["name"] == "untouched")
+        .unwrap();
+    let kept_path = consumer.path().join(".claude/skills/untouched/SKILL.md");
+    let bytes_before = fs::read(&kept_path).unwrap();
+    write_rule_body(&applied, "current", "Changed applied rule.");
+    write_skill(&applied, "unlisted");
+
+    let result = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout);
+    for (name, status) in [
+        ("kept", "skipped — requires a source that was skipped"),
+        ("untouched", "up to date"),
+    ] {
+        let lines: Vec<_> = out
+            .lines()
+            .filter(|line| line.split_whitespace().take(2).eq(["skill", name]))
+            .collect();
+        assert_eq!(lines.len(), 1, "{out}");
+        assert!(lines[0].contains(status), "{out}");
+    }
+    let after = read_update_lock(consumer.path());
+    assert_eq!(
+        after["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["name"] == "untouched")
+            .unwrap(),
+        kept
+    );
+    assert_eq!(fs::read(&kept_path).unwrap(), bytes_before);
+    assert!(
+        fs::read_to_string(consumer.path().join(".claude/rules/current.md"))
+            .unwrap()
+            .contains("Changed applied rule.")
+    );
+    assert!(!consumer.path().join(".claude/skills/unlisted").exists());
+}
+
+#[test]
+fn kind_restricted_update_reports_out_of_kind_items_of_an_unreachable_source_with_its_cause() {
+    let consumer = tempfile::tempdir().unwrap();
+    let sources = tempfile::tempdir().unwrap();
+    let registry = sources.path().join("registry");
+    setup_kind_registry(&registry);
+    add_named_bundle(consumer.path(), &registry, &["--kind", "rule"]);
+    add_direct(consumer.path(), &registry, "b");
+    let lock_path = consumer.path().join(".upskill-lock.json");
+    let lock_before = fs::read(&lock_path).unwrap();
+    let skill_path = consumer.path().join(".claude/skills/b/SKILL.md");
+    let skill_before = fs::read(&skill_path).unwrap();
+    fs::remove_dir_all(&registry).unwrap();
+
+    let result = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout);
+    let err = String::from_utf8_lossy(&result.get_output().stderr);
+    assert!(
+        err.contains(&format!(
+            "source `local:{}` could not be fetched and was skipped:",
+            registry.display()
+        )),
+        "{err}"
+    );
+    for (kind, name) in [("rule", "r"), ("skill", "b")] {
+        let lines: Vec<_> = out
+            .lines()
+            .filter(|line| line.split_whitespace().take(2).eq([kind, name]))
+            .collect();
+        assert_eq!(lines.len(), 1, "{out}");
+        assert!(lines[0].contains("skipped — source not reachable"), "{out}");
+    }
+    assert_eq!(fs::read(&lock_path).unwrap(), lock_before);
+    assert_eq!(fs::read(&skill_path).unwrap(), skill_before);
 }

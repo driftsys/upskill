@@ -81,6 +81,8 @@ fn remove_lock_if_matches(path: &Path, token: &[u8]) -> std::io::Result<bool> {
 }
 
 fn create_run_lock(path: &Path) -> std::io::Result<RunLock> {
+    #[cfg(test)]
+    tests::LOCK_CREATION_ATTEMPTS.with(|attempts| attempts.set(attempts.get() + 1));
     static NEXT_TOKEN: AtomicU64 = AtomicU64::new(0);
     let mut file = fs::OpenOptions::new()
         .write(true)
@@ -107,7 +109,8 @@ fn create_run_lock(path: &Path) -> std::io::Result<RunLock> {
 pub enum LockAttempt {
     /// This run created the lock file.
     Held(RunLock),
-    /// Another run holds a lock younger than `LOCK_MAX_AGE_SECS`.
+    /// Another run holds a lock younger than `LOCK_MAX_AGE_SECS`, or the
+    /// observed ownership token changed before removal.
     Busy,
     /// The lock file cannot be created for another reason.
     Unavailable,
@@ -142,6 +145,12 @@ pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt 
     {
         return LockAttempt::Busy;
     }
+    #[cfg(test)]
+    tests::BEFORE_STALE_LOCK_REMOVAL.with(|hook| {
+        if let Some(hook) = hook.borrow_mut().take() {
+            hook(path);
+        }
+    });
     match remove_lock_if_matches(path, &token) {
         Ok(true) => {}
         Ok(false) => return LockAttempt::Busy,
@@ -454,6 +463,46 @@ mod tests {
     use std::path::PathBuf;
 
     use std::time::{Duration, SystemTime};
+
+    type LockRemovalHook = Box<dyn FnOnce(&Path)>;
+
+    thread_local! {
+        pub(super) static BEFORE_STALE_LOCK_REMOVAL: std::cell::RefCell<Option<LockRemovalHook>> =
+            const { std::cell::RefCell::new(None) };
+        pub(super) static LOCK_CREATION_ATTEMPTS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    }
+
+    #[test]
+    fn acquiring_a_stale_lock_stops_when_the_observed_token_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "expired owner").unwrap();
+        let now = SystemTime::now();
+        set_age(&path, now, 60);
+        BEFORE_STALE_LOCK_REMOVAL.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(|path| {
+                fs::remove_file(path).unwrap();
+                fs::write(path, "replacement owner").unwrap();
+            }));
+        });
+        let attempts_before = LOCK_CREATION_ATTEMPTS.with(|attempts| attempts.get());
+
+        let attempt = acquire_run_lock(&path, now);
+
+        assert!(
+            matches!(attempt, LockAttempt::Busy),
+            "a changed token must be busy"
+        );
+        assert_eq!(fs::read(&path).unwrap(), b"replacement owner");
+        LOCK_CREATION_ATTEMPTS.with(|attempts| {
+            assert_eq!(
+                attempts.get() - attempts_before,
+                1,
+                "a changed token must stop before another creation attempt"
+            );
+        });
+    }
 
     fn lock_path(dir: &tempfile::TempDir) -> PathBuf {
         dir.path().join("cache").join(LOCK_FILE_NAME)

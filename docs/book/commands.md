@@ -647,7 +647,7 @@ where it still requires the item (also an item that `--exclude` leaves out).
 Every other requirer is kept, also when it is not installed. The result does not
 depend on the order of the sources or of two `add` commands. The lockfile does
 not record the `--exclude` of an earlier `add`, so `update` does not apply it
-again (open in issue #570).
+again.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.

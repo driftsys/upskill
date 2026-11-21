@@ -42,11 +42,12 @@ bundle; it does not replace the bundle or change its schema.
    Without rules for that client, it has neither init nor the hook.
    `update --notice` creates `notice.lock` before reading the cache. A run
    encountering a lock younger than 60 seconds exits silently. Expired or
-   future-dated locks are replaced after checking the observed ownership token;
-   another lock error permits an unlocked run. Each run writes a unique token
-   and removes its lock on completion only if that token still matches. An
-   interrupted run can leave its lock to expire. This is not a writer lock for
-   install, update or removal.
+   future-dated locks are replaced after checking the observed ownership token.
+   A changed token makes the run exit silently, as for a busy lock. Another lock
+   error permits an unlocked run. Each run writes a unique token and removes its
+   lock on completion only if that token still matches. An interrupted run can
+   leave its lock to expire. This is not a writer lock for install, update or
+   removal.
 6. A lockfile bundle entry records the selected `kinds`; absent or empty means
    unrestricted, and empty is omitted on write. Recorded kinds are sorted
    without duplicates, and bundle entries are sorted by name. `update` restricts
