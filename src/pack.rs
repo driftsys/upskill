@@ -501,9 +501,11 @@ mod tests {
             let message = format!("{:#}", write_plugin_dirs(out, &dirs, true).unwrap_err());
 
             assert_eq!(tree(out), before, "failed client {name}: {message}");
-            let failed_path = out.join(format!(".{name}.upskill-stage/collision"));
+            // Compare the part below the temporary directory: Windows can report
+            // that directory with its short (8.3) name.
+            let failed_path = Path::new(&format!(".{name}.upskill-stage")).join("collision");
             assert!(
-                message.contains(&format!("writing {}", failed_path.display())),
+                message.contains(&format!("{}", failed_path.display())),
                 "{message}"
             );
         }
