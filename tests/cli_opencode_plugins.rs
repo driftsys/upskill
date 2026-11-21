@@ -1038,6 +1038,15 @@ impl Env {
     }
 }
 
+/// True when `text` has the exact `doctor` line for the opencode MCP entry
+/// `MCP_NAME` that is recorded but absent from the config file.
+fn has_mcp_drift_line(text: &str) -> bool {
+    let line = format!(
+        "MCP '{MCP_NAME}' is in the lockfile but not registered in opencode; re-run `upskill update --yes`."
+    );
+    text.lines().any(|l| l.trim() == line)
+}
+
 fn read_json(path: &std::path::Path) -> serde_json::Value {
     serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
 }
@@ -1129,7 +1138,7 @@ fn global_doctor_reads_the_new_file_and_update_restores_the_plugin_there() {
     let out = env.run_global(&["doctor"], None).code(1);
     let text = stdout(&out);
     assert!(text.contains("superpowers"), "{text}");
-    assert!(text.contains(MCP_NAME), "{text}");
+    assert!(has_mcp_drift_line(&text), "{text}");
 
     env.run_global(&["update", "--yes"], None).code(0);
     let config = read_json(&env.global_config());
@@ -1344,7 +1353,7 @@ fn global_doctor_reads_the_global_file_whatever_scope_an_entry_records() {
 
         let text = stdout(&out);
         assert!(text.contains("superpowers"), "{scope:?}: {text}");
-        assert!(text.contains(MCP_NAME), "{scope:?}: {text}");
+        assert!(has_mcp_drift_line(&text), "{scope:?}: {text}");
         assert_eq!(
             fs::read_to_string(env.home.join("opencode.json")).unwrap(),
             old
@@ -1391,7 +1400,12 @@ fn global_upgrade_from_the_old_home_file_writes_the_global_file_and_keeps_the_ol
     let out = env.run_global(&["doctor"], None).code(1);
     let text = stdout(&out);
     assert!(text.contains("superpowers"), "{text}");
-    assert!(text.contains(MCP_NAME), "{text}");
+    // The global file is absent, so the MCP entry cannot be verified there. A
+    // read of the old file would find the entry and print no such line.
+    let line = format!(
+        "MCP '{MCP_NAME}' for opencode: config file not found; cannot verify (it may be configured via the opencode CLI)."
+    );
+    assert!(text.lines().any(|l| l.trim() == line), "{text}");
 
     env.run_global(&["update", "--yes"], None).code(0);
 
@@ -1420,7 +1434,7 @@ fn global_doctor_update_and_remove_use_an_absolute_xdg_config_home() {
     let out = env.run_global(&["doctor"], Some(&xdg)).code(1);
     let text = stdout(&out);
     assert!(text.contains("superpowers"), "{text}");
-    assert!(text.contains(MCP_NAME), "{text}");
+    assert!(has_mcp_drift_line(&text), "{text}");
 
     env.run_global(&["update", "--yes"], Some(&xdg)).code(0);
     let config = read_json(&file);
@@ -1492,10 +1506,90 @@ fn global_add_reports_that_plugins_must_be_an_array() {
 
     let out = env.add_global(None);
 
+    // A failed plugin write is a warning: `add` still exits with 0.
+    assert_eq!(out.get_output().status.code(), Some(0));
     let err = stderr(&out);
     assert!(err.contains("`plugins` must be an array"), "{err}");
     assert_eq!(
         read_json(&env.global_config())["plugins"],
         serde_json::json!("x")
+    );
+}
+
+#[test]
+fn project_doctor_update_and_remove_leave_the_global_file_alone_whatever_scope_an_entry_records() {
+    let env = Env::with_rule_and_mcp();
+    env.add().success();
+    // Record the scope `user` for every plugin and MCP entry of the project
+    // lockfile.
+    let lock_path = env.project.join(".upskill-lock.json");
+    let mut lock = read_json(&lock_path);
+    for key in ["plugins", "mcps"] {
+        for entry in lock[key].as_array_mut().unwrap() {
+            entry["scope"] = serde_json::json!("user");
+        }
+    }
+    fs::write(&lock_path, lock.to_string()).unwrap();
+    // The global file holds both entries. The project file has neither.
+    let global = serde_json::json!({
+        "plugins": [URI],
+        "mcp": { MCP_NAME: { "type": "local", "command": ["npx", "srv-mcp"] } }
+    })
+    .to_string();
+    fs::create_dir_all(env.global_config().parent().unwrap()).unwrap();
+    fs::write(env.global_config(), &global).unwrap();
+    let mut project = env.opencode_json();
+    project["plugins"] = serde_json::json!([]);
+    project["mcp"] = serde_json::json!({});
+    env.write_opencode_json(&project);
+
+    let out = env.run(&["doctor", "--project"]).code(1);
+    let text = stdout(&out);
+    assert!(text.contains("superpowers"), "{text}");
+    assert!(has_mcp_drift_line(&text), "{text}");
+
+    env.run(&["update", "--yes", "--project"]).code(0);
+    let project = env.opencode_json();
+    assert_eq!(project["plugins"], serde_json::json!([URI]), "{project}");
+    assert!(project["mcp"][MCP_NAME].is_object(), "{project}");
+
+    env.run(&["remove", "alpha", "--project"]).success();
+    assert_eq!(env.opencode_json()["plugins"], serde_json::json!([]));
+    assert_eq!(fs::read_to_string(env.global_config()).unwrap(), global);
+}
+
+/// A terminal `update --global` with end of input as the answer. No source
+/// has a change, so only the plugin repair can write the plugin entry.
+#[cfg(unix)]
+#[test]
+fn terminal_global_repair_reads_the_global_file_not_the_old_home_file() {
+    let env = Env::with_rule_and_mcp();
+    env.add_global(None).success();
+    let mut config = read_json(&env.global_config());
+    config["plugins"] = serde_json::json!([]);
+    fs::write(env.global_config(), config.to_string()).unwrap();
+    // The old file lists the plugin; the repair must not take it for the
+    // entry that opencode reads.
+    let old = env.write_old_home_file();
+
+    let path = fake_path(&env.bin);
+    let result = common::update_in_terminal_with_env(
+        env.home.parent().unwrap(),
+        &env.home,
+        &["--global"],
+        "\u{4}",
+        &[("PATH", path)],
+    );
+
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert!(
+        result["stdout"].as_str().unwrap().contains("nothing to do"),
+        "{result}"
+    );
+    let config = read_json(&env.global_config());
+    assert_eq!(config["plugins"], serde_json::json!([URI]), "{config}");
+    assert_eq!(
+        fs::read_to_string(env.home.join("opencode.json")).unwrap(),
+        old
     );
 }

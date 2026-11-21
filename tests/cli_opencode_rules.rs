@@ -530,11 +530,22 @@ fn doctor_reports_and_update_deletes_the_entry_of_a_recorded_rule_not_installed_
         "{text}"
     );
     assert!(!text.contains("rule-x"), "{text}");
+    assert!(
+        text.lines().any(|l| l.contains(
+            "1 rule(s) not installed for opencode are listed in the global opencode config"
+        ) && l.contains("`upskill update --global` deletes the entries")),
+        "{text}"
+    );
     let json = env.run(&["doctor", "--global", "--json"], None).code(1);
     let value: serde_json::Value = serde_json::from_str(&stdout(&json)).unwrap();
     let stale = value["scopes"][0]["stale_rule_entries"].as_array().unwrap();
     assert_eq!(stale.len(), 1, "{value}");
     assert_eq!(stale[0]["name"], "rule-a", "{value}");
+    assert_eq!(
+        stale[0]["config"].as_str().unwrap(),
+        env.config().to_str().unwrap(),
+        "{value}"
+    );
 
     env.run(&["update", "--yes", "--global"], None).code(0);
 
@@ -865,4 +876,56 @@ fn the_entry_of_a_rule_stays_when_a_later_add_skips_the_rule() {
         instructions_of(&env),
         serde_json::json!([env.entry("rule-a"), env.entry("rule-b")])
     );
+}
+
+#[test]
+fn project_doctor_does_not_check_for_stale_global_rule_entries() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--project"], None)
+        .success();
+    // The global form of the entry of a claude-only rule, under the project
+    // root. Only the global scope looks there.
+    let config = env
+        .cwd
+        .join(".config")
+        .join("opencode")
+        .join("opencode.json");
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    let entry = env
+        .cwd
+        .join(".agents")
+        .join("rules")
+        .join("rule-a")
+        .join("RULE.md");
+    fs::write(
+        &config,
+        serde_json::json!({ "instructions": [entry] }).to_string(),
+    )
+    .unwrap();
+
+    env.run(&["doctor", "--project"], None).code(0);
+}
+
+#[cfg(unix)]
+#[test]
+fn update_preview_lists_and_the_update_deletes_a_stale_entry_that_is_the_only_change() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    set_instructions(&env, serde_json::json!([env.entry("rule-a")]));
+
+    let declined = terminal_update(&env, &["--global"]);
+    assert!(lists_the_config(&declined), "{declined}");
+    assert_eq!(
+        instructions_of(&env),
+        serde_json::json!([env.entry("rule-a")]),
+        "a declined update writes nothing"
+    );
+
+    let result =
+        common::update_in_terminal(env.home.parent().unwrap(), &env.home, &["--global"], "y\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(instructions_of(&env), serde_json::json!([]));
 }
