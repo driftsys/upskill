@@ -167,8 +167,8 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// after that. Existing lockfile entries for the same `(kind, name)` are
 /// replaced, except that their `required_by` is refreshed
 /// (`prepared::refresh_required_by`), as is `required_by` of every other
-/// entry; entries installed from a different source are otherwise left in
-/// place.
+/// entry unless a kind restriction limits the refresh to planned entries.
+/// Entries installed from a different source are otherwise left in place.
 ///
 /// Unless `options.overwrite` is true, an item with a modified or unowned
 /// file at one of its destinations is not written, its lockfile entry is

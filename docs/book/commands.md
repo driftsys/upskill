@@ -587,11 +587,13 @@ kind restriction only when every recorded bundle of the source has recorded
 kinds, using their union. With one unrestricted bundle of the source, no kind
 restriction applies. Every lockfile entry of that source whose kind is outside
 the restriction is left untouched and reported as up to date, regardless of
-bundle membership or `required_by`; to update such an item, run
-`upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled as a
-whole. Each reinstalled entry gets the commit of its own source, unless its
-update is skipped, and any other entry keeps its commit. If a recorded bundle is
-missing from the source, update fails before any write with
+bundle membership or `required_by`, unless its source is skipped. Such an item
+is reported as skipped with the cause of its source, also when the source is
+skipped later because it requires an item of a skipped source. To update such an
+item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
+reinstalled as a whole. Each reinstalled entry gets the commit of its own
+source, unless its update is skipped, and any other entry keeps its commit. If a
+recorded bundle is missing from the source, update fails before any write with
 `bundle '<name>' is no longer in source <label>`, even if an item has that name;
 remove the bundle's items with `upskill remove` or restore the bundle. For a
 source that is not applied, only a changed commit value, or a changed
@@ -637,12 +639,13 @@ recorded bundles evaluates every item in the merged bundle and direct-item
 closure, including bundle members even when there are no direct items. The
 bundle closure itself contributes no item-level `requires` edges. A kind
 restriction retains only items of the selected kinds in the closure; a
-restricted update leaves `required_by` unchanged on entries it does not plan,
-also in other sources. Within the entries being refreshed, an evaluated requirer
-is removed and added back where it still requires the item (also an item that
-`--exclude` leaves out). Every other requirer is kept, also when it is not
-installed. The result does not depend on the order of the sources or of two
-`add` commands.
+restricted `add` or `update` leaves `required_by` unchanged on entries it does
+not plan, also in other sources. Requirers outside the kind restriction keep
+their edges on planned entries as well, because they are not evaluated. Within
+the entries being refreshed, an evaluated requirer is removed and added back
+where it still requires the item (also an item that `--exclude` leaves out).
+Every other requirer is kept, also when it is not installed. The result does not
+depend on the order of the sources or of two `add` commands.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.

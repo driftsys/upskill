@@ -60,10 +60,13 @@ bundle; it does not replace the bundle or change its schema.
    merged with the bundle closure. Before this decision, `update` after
    `add <dir> <bundle>` installed every item of the source. Every lockfile entry
    of that source whose kind is outside the restriction is left untouched and
-   reported as up to date, regardless of bundle membership or `required_by`;
-   `add <source> <item>` updates it. A recorded bundle that is no longer in its
-   source causes `bundle '<name>' is no longer in source <label>` before any
-   write, even if an item has the same name.
+   reported as up to date, regardless of bundle membership or `required_by`,
+   unless its source is skipped. It then shares the source's skipped status,
+   also when the source is skipped later because it requires an item of a
+   skipped source. `add <source> <item>` updates it. A recorded bundle that is
+   no longer in its source causes
+   `bundle '<name>' is no longer in source <label>` before any write, even if an
+   item has the same name.
 8. `pack` resolves the entry bundle in the current directory. A `requires` entry
    with a `source` is fetched from that source. The init `--source` must parse
    as an install source and, like the bundle name, is limited to a safe

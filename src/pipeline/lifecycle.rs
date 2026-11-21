@@ -1081,7 +1081,8 @@ fn repair_missing_plugins(
 /// applies a kind restriction only when every recorded bundle of the source
 /// has recorded kinds, using their union. With one unrestricted bundle of the
 /// source, no restriction applies. Every entry of that source whose kind is
-/// outside the restriction is kept unchanged and is not updated. To update it,
+/// outside the restriction is kept unchanged and is not updated. If its source is
+/// skipped, the entry is reported as skipped too. To update it,
 /// run `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled
 /// as a whole. Each reinstalled entry gets the commit of its own source,
 /// unless its update is skipped; any other entry keeps its recorded commit.
@@ -1357,6 +1358,13 @@ pub fn update(
                 break;
             };
             let (source_label, source_entries, _) = prepared_sources.remove(index);
+            // Entries outside the kind restriction were already reported as
+            // up to date. They share the skipped verdict of their source.
+            for item in report.items.iter_mut().filter(|i| i.source == source_label) {
+                item.status = UpdateStatus::SourceSkipped {
+                    cause: SkipCause::RequiresSkipped,
+                };
+            }
             for entry in &source_entries {
                 report.items.push(UpdatedItem {
                     kind: entry.kind,

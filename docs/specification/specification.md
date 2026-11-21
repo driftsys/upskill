@@ -441,16 +441,18 @@ item and a `kept modified file` note are not changes.
   union. With one unrestricted bundle of the source, no kind restriction
   applies. Every lockfile entry of that source whose kind is outside the
   restriction is left untouched and reported as up to date, regardless of bundle
-  membership or `required_by`; to update such an item, run
-  `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled as
-  a whole. Recorded bundle names resolve only as bundles. A missing bundle
-  causes `bundle '<name>' is no longer in source <label>` before any write, even
-  if an item has that name. Each reinstalled entry gets the commit of its own
-  source (an entry from another source gets that source's commit), unless its
-  update is skipped, and any other entry keeps its recorded commit. The lockfile
-  is saved only when a value differs. This write is not a change of the source
-  (see the preview above) and does not count in the output. A dry run, a
-  declined source and a stopped run record no commit.
+  membership or `required_by`, unless its source is skipped. In that case it is
+  reported as skipped with the cause of its source, also when the source is
+  skipped later because it requires an item of a skipped source. To update such
+  an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
+  reinstalled as a whole. Recorded bundle names resolve only as bundles. A
+  missing bundle causes `bundle '<name>' is no longer in source <label>` before
+  any write, even if an item has that name. Each reinstalled entry gets the
+  commit of its own source (an entry from another source gets that source's
+  commit), unless its update is skipped, and any other entry keeps its recorded
+  commit. The lockfile is saved only when a value differs. This write is not a
+  change of the source (see the preview above) and does not count in the output.
+  A dry run, a declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
@@ -502,12 +504,14 @@ name), evaluate no requirer. An update of a directory source with recorded
 bundles evaluates every item in the merged bundle and direct-item closure,
 including bundle members even when there are no direct items. The bundle closure
 itself contributes no item-level `requires` edges. A kind restriction retains
-only items of the selected kinds in the closure; a restricted update leaves
-`required_by` unchanged on entries it does not plan, also in other sources.
-Within the entries being refreshed, an evaluated requirer is removed and added
-back where it still requires the item (also an item that `--exclude` leaves
-out). Every other requirer is kept, also when it is not installed. The result
-does not depend on the order of the sources or of two `add` commands.
+only items of the selected kinds in the closure; a kind-restricted `add` or
+`update` leaves `required_by` unchanged on entries it does not plan, also in
+other sources. Requirers outside the kind restriction keep their edges on
+planned entries as well, because they are not evaluated. Within the entries
+being refreshed, an evaluated requirer is removed and added back where it still
+requires the item (also an item that `--exclude` leaves out). Every other
+requirer is kept, also when it is not installed. The result does not depend on
+the order of the sources or of two `add` commands.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,

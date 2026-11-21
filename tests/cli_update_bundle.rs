@@ -826,7 +826,7 @@ fn update_does_not_keep_removed_bundle_members_as_direct_items() {
 }
 
 #[test]
-fn add_under_a_kind_restriction_refreshes_the_provenance_of_an_unplanned_item() {
+fn add_under_a_kind_restriction_keeps_the_provenance_of_an_unplanned_item() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     write_skill(registry.path(), "s");
@@ -865,5 +865,69 @@ fn add_under_a_kind_restriction_refreshes_the_provenance_of_an_unplanned_item() 
         .iter()
         .find(|item| item["name"] == "s")
         .unwrap();
-    assert!(item.get("required_by").is_none());
+    assert_eq!(item["required_by"], serde_json::json!(["rule:r2"]));
+}
+
+#[test]
+fn kind_restricted_update_reports_an_unplanned_item_of_a_later_skipped_source_as_skipped() {
+    let consumer = tempfile::tempdir().unwrap();
+    let sources = tempfile::tempdir().unwrap();
+    let registry = sources.path().join("a-registry");
+    let dependency = sources.path().join("b-dependency");
+    let missing = sources.path().join("c-missing");
+    write_rule_body(&registry, "base", "Base rule.");
+    write_skill(&registry, "kept");
+    write_rule_body(&dependency, "delta", "Dependency rule.");
+    write_skill(&missing, "gamma");
+    write(
+        &registry.join("r/RULE.md"),
+        &format!(
+            "---\nname: r\ndescription: Dependent rule.\nrequires:\n  rules: [{{name: delta, source: {}}}]\n---\nRule body.\n",
+            dependency.display()
+        ),
+    );
+    write(
+        &dependency.join("beta/SKILL.md"),
+        &format!(
+            "---\nname: beta\ndescription: Dependent skill.\nrequires:\n  skills: [{{name: gamma, source: {}}}]\n---\nSkill body.\n",
+            missing.display()
+        ),
+    );
+    write(
+        &registry.join("bun.bundle.yaml"),
+        "schema: 1\nname: bun\ndescription: Rule bundle.\nitems:\n  rules: [base]\n",
+    );
+    add_named_bundle(consumer.path(), &registry, &["--kind", "rule"]);
+    add_direct(consumer.path(), &registry, "r");
+    add_direct(consumer.path(), &registry, "kept");
+    add_direct(consumer.path(), &dependency, "beta");
+    fs::remove_dir_all(&missing).unwrap();
+    let lock_path = consumer.path().join(".upskill-lock.json");
+    let before = fs::read(&lock_path).unwrap();
+    let kept_path = consumer.path().join(".claude/skills/kept/SKILL.md");
+    let kept_before = fs::read(&kept_path).unwrap();
+    let mut cmd = common::upskill_cmd(&fake_home(consumer.path()));
+    cmd.current_dir(consumer.path())
+        .args(["update", "--project", "--yes"]);
+    let result = cmd.assert().code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout);
+    let err = String::from_utf8_lossy(&result.get_output().stderr);
+    assert!(
+        err.contains(&format!(
+            "source `local:{}` was skipped",
+            registry.display()
+        )),
+        "{err}"
+    );
+    let kept_lines: Vec<_> = out
+        .lines()
+        .filter(|line| line.split_whitespace().take(2).eq(["skill", "kept"]))
+        .collect();
+    assert_eq!(kept_lines.len(), 1, "{out}");
+    assert!(
+        kept_lines[0].contains("skipped — requires a source that was skipped"),
+        "{out}"
+    );
+    assert_eq!(fs::read(&lock_path).unwrap(), before);
+    assert_eq!(fs::read(&kept_path).unwrap(), kept_before);
 }
