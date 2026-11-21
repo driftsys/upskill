@@ -676,11 +676,16 @@ impl PreparedInstall {
     /// lockfile, the caller passes it after `owned::adopt_schema1_in_memory`.
     /// The preview is computed by [`apply::decide_plan`], as `commit` does;
     /// see [`preview_items`] for how each item is reported.
+    ///
+    /// `orphan_rules` holds the names of the rules that an `update` removes
+    /// because their source no longer has them; their entries leave the
+    /// global opencode config.
     pub fn preview(
         &self,
         target: &Path,
         plugin_scope: PluginScope,
         lock: &Lockfile,
+        orphan_rules: &BTreeSet<String>,
     ) -> Result<InstallPreview> {
         let new_items = self.new_items();
         let decision = apply::decide_plan(
@@ -695,8 +700,10 @@ impl PreparedInstall {
             preview_items(target, lock, &self.report.planned, decision, &new_items);
         // The rules that this install would write for opencode, whose entries
         // the global opencode config would get, and the rules that would stop
-        // targeting opencode, whose entries it would lose. A skipped item is
-        // neither written nor recorded.
+        // targeting opencode, whose entries it would lose (also the removed
+        // rules in `orphan_rules`). A skipped item is neither written nor
+        // recorded; a skip is any `Disposition::Skip`, also a conflict with
+        // an unowned file or a modified file of an owned item.
         let skipped: BTreeSet<&str> = items
             .iter()
             .filter(|i| i.action == PreviewAction::Skip && i.kind == ItemKind::Rule)
@@ -708,6 +715,9 @@ impl PreparedInstall {
             .filter(|name| !skipped.contains(name.as_str()))
             .collect();
         let mut after = lock.clone();
+        for name in orphan_rules {
+            after.remove(ItemKind::Rule, name);
+        }
         for item in new_items {
             if !(item.kind == ItemKind::Rule && skipped.contains(item.name.as_str())) {
                 after.upsert(item);
@@ -945,8 +955,9 @@ impl PreparedInstall {
                 crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
             }
             PluginScope::User => {
-                // A rule that a conflict with an unowned file skipped is not
-                // written, so it gets no entry.
+                // A rule that was skipped (any `Disposition::Skip`: a conflict
+                // with an unowned file, or a modified file of an owned item)
+                // is not written, so it gets no entry.
                 let written: BTreeSet<String> = opencode_rules
                     .iter()
                     .filter(|name| {
@@ -1221,6 +1232,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         assert_eq!(preview.items.len(), 1, "only `a` changes");
@@ -1267,6 +1279,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         assert_eq!(preview.items.len(), 1, "{:?}", preview.items);
@@ -1319,6 +1332,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         assert!(
@@ -1372,6 +1386,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         let first = written(&preview);
@@ -1397,6 +1412,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         assert!(written(&preview).is_empty(), "{:?}", preview.items);
@@ -1412,6 +1428,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         drop(prepared);
@@ -1433,7 +1450,12 @@ mod tests {
         )
         .unwrap();
         let preview = prepared
-            .preview(&target, PluginScope::Project, &Lockfile::new())
+            .preview(
+                &target,
+                PluginScope::Project,
+                &Lockfile::new(),
+                &BTreeSet::new(),
+            )
             .unwrap();
         assert!(!preview.handshake.is_empty());
         assert_eq!(fs::read_dir(&target).unwrap().count(), 0);

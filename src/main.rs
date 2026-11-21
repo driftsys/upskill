@@ -2090,7 +2090,7 @@ fn print_doctor_report(report: &DoctorReport) {
 
     if !report.missing_rule_entries.is_empty() {
         println!(
-            "{} {} rule(s) installed for opencode are missing from the global opencode config — `upskill update --global` writes them again",
+            "{} {} rule(s) installed for opencode are missing from the global opencode config — `upskill update --global` writes them again, unless the file is not strict JSON or `instructions` is not an array; fix the file by hand then",
             style::error_label("doctor:"),
             report.missing_rule_entries.len()
         );

@@ -778,21 +778,22 @@ the check above refuses it.
   `upskill update --global` moves them) and rules recorded for opencode whose
   absolute path is missing from the `instructions` array of the global opencode
   config (`missing_rule_entries`; `upskill update --global` writes them again,
-  except when the file is not strict JSON, which `update` cannot repair).
-  `doctor` also prints a note for each item that the lockfiles of both scopes
-  record; the note does not change the exit code. After the scope reports,
-  `doctor` prints the support level of each client and kind (`Support levels:`;
-  the compiled table in `src/support.rs`, stated in the user guide page "Support
-  levels"); the section does not change the exit code and is not based on a
-  detection of client versions (the plugin check runs `opencode --version`
-  before any `opencode plugin list`, ADR-0008). Exit 0 when clean, 1 when any
-  drift bucket is non-empty, including `earlier_layout`. Skipped plugins are
-  warnings and do not affect the exit code. Missing, modified and unreadable
-  files are checked against the `files` record; a recorded path that `remove`
-  would never delete (outside the client roots, fewer than three components, or
-  with a `..` component) is skipped without a report. For an item with an empty
-  or missing `files` record (a `schema: 1` lockfile, or a `schema: 2` item with
-  an empty list), `doctor` checks each per-client entry file instead.
+  also when the file has no `instructions` array; it cannot repair a file that
+  is not strict JSON or whose `instructions` is not an array). `doctor` also
+  prints a note for each item that the lockfiles of both scopes record; the note
+  does not change the exit code. After the scope reports, `doctor` prints the
+  support level of each client and kind (`Support levels:`; the compiled table
+  in `src/support.rs`, stated in the user guide page "Support levels"); the
+  section does not change the exit code and is not based on a detection of
+  client versions (the plugin check runs `opencode --version` before any
+  `opencode plugin list`, ADR-0008). Exit 0 when clean, 1 when any drift bucket
+  is non-empty, including `earlier_layout`. Skipped plugins are warnings and do
+  not affect the exit code. Missing, modified and unreadable files are checked
+  against the `files` record; a recorded path that `remove` would never delete
+  (outside the client roots, fewer than three components, or with a `..`
+  component) is skipped without a report. For an item with an empty or missing
+  `files` record (a `schema: 1` lockfile, or a `schema: 2` item with an empty
+  list), `doctor` checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -992,12 +993,13 @@ as in a project; the `.vscode/settings.json` entry points at
   that left the source, an install that records a rule for fewer clients deletes
   the entry of that rule, and `doctor` reports a missing entry. Other entries,
   also one of the same form that upskill does not track, are kept. The rules
-  step reads the file only when the run has an opencode rule entry to add or
-  delete; the plugin and MCP steps read it when the run writes an entry of
-  theirs. The plugin and MCP writers of both scopes use the opencode config file
-  of the scope: the project root in the project scope, and
-  `$XDG_CONFIG_HOME/opencode/` (when set and absolute) or `~/.config/opencode/`
-  in the global scope. A trial with opencode 2.1.4 confirmed that opencode reads
+  step reads and parses the file whenever the run installs an opencode rule or
+  deletes an entry, so a file that is not strict JSON fails such a run; the
+  plugin and MCP steps read it when the run writes an entry of theirs. The
+  plugin and MCP writers of both scopes use the opencode config file of the
+  scope: the project root in the project scope, and `$XDG_CONFIG_HOME/opencode/`
+  (when set and absolute) or `~/.config/opencode/` in the global scope. A trial
+  with opencode 2.1.4 confirmed that opencode reads
   `~/.config/opencode/opencode.json` and ignores `~/opencode.json`. The
   `XDG_CONFIG_HOME` location is used when set and absolute, and was not tested.
   A `plugin_uri` plugin is written to the `plugins` array. upskill neither reads

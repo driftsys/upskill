@@ -530,8 +530,9 @@ fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> 
 /// - **missing rule entries** — for the global scope only: a rule recorded for
 ///   opencode whose absolute path is not in the `instructions` array of the
 ///   global opencode config. A config that is not strict JSON (for example
-///   with comments) or has no such array reports every such rule, and
-///   `update` cannot repair it.
+///   with comments) reports every such rule, and `update` cannot repair it. A
+///   config without an `instructions` array is repaired by `update`; a value
+///   that is not an array is not.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by `update --check`, which
@@ -1547,7 +1548,13 @@ pub fn update(
             let is_orphan = |e: &crate::lockfile::LockedItem| {
                 !new_hashes.contains_key(&(e.kind, e.name.clone()))
             };
-            let install_preview = prepared.preview(target, plugin_scope, &current)?;
+            let orphan_rules: std::collections::BTreeSet<String> = source_entries
+                .iter()
+                .filter(|e| is_orphan(e) && e.is_opencode_rule())
+                .map(|e| e.name.clone())
+                .collect();
+            let install_preview =
+                prepared.preview(target, plugin_scope, &current, &orphan_rules)?;
             let mut items = install_preview.items;
             for orphan in source_entries.iter().filter(|e| is_orphan(e)) {
                 if let Some(entry) = current

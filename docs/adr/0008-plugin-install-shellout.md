@@ -211,17 +211,19 @@ Decision:
   for opencode, and `update` writes its missing entry. upskill deletes only the
   entry of a rule that it removes in that operation. An entry of the same form
   for a rule that upskill does not track, written by hand, is kept. The rules
-  step reads the file only when the run has an opencode rule entry to add or
-  delete; the plugin and MCP steps read it when the run writes an entry of
-  theirs. A file that is not strict JSON (for example one with comments)
-  therefore breaks only a run that has such an entry to write.
-  `doctor
-  --global` reports a recorded rule whose entry is missing, as drift
-  with exit code 1, and `update --global` writes it again. When the file is not
-  strict JSON, `doctor` reports every recorded rule as missing, and `update`
-  cannot repair it: it fails with a parse error until the user fixes the file.
-  Other entries and other keys of the file are kept. An `instructions` value
-  that is not an array is an error.
+  step reads and parses the file whenever the run installs an opencode rule (to
+  find out whether the entry is present), or deletes an entry; a run that
+  installs no opencode rule and deletes no entry does not read it for rules. The
+  plugin and MCP steps read it when the run writes an entry of theirs. A file
+  that is not strict JSON (for example one with comments) therefore breaks every
+  run that installs an opencode rule, also when all entries are present.
+  `doctor --global` reports a recorded rule whose entry is missing, as drift
+  with exit code 1, and `update --global` writes it again, also when the file
+  has no `instructions` array. When the file is not strict JSON, `doctor`
+  reports every recorded rule as missing, and `update` cannot repair it: it
+  fails with a parse error until the user fixes the file. Other entries and
+  other keys of the file are kept. An `instructions` value that is not an array
+  is an error, and `update` cannot repair it either.
 - upskill does not read or write `$XDG_CONFIG_HOME/opencode/AGENTS.md`.
 
 ### Repair by `update`

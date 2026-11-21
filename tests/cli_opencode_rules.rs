@@ -536,7 +536,8 @@ fn remove_succeeds_when_the_global_config_cannot_be_edited() {
 fn update_preview_lists_the_config_for_a_deletion_only_change() {
     let env = Env::new();
     env.add_global(None);
-    // `--claude` narrows rule-b to claude: the entries of both rules go.
+    // `--claude` narrows both rules to claude, so the preview lists the config
+    // for the deletion of both entries. Declining writes nothing, so both stay.
     let result = common::update_in_terminal(
         env.home.parent().unwrap(),
         &env.home,
@@ -570,4 +571,147 @@ fn update_validates_the_global_config_before_it_writes_any_file() {
         fs::read_to_string(env.home.join(".upskill-lock.json")).unwrap(),
         lock_before
     );
+}
+
+fn write_skill(env: &Env) {
+    let skill = env.source.join("skill-a/SKILL.md");
+    fs::create_dir_all(skill.parent().unwrap()).unwrap();
+    fs::write(
+        &skill,
+        "---\nschema: 1\nname: skill-a\ndescription: skill for the issue 581 tests.\n---\n\n## Body\n\nText.\n",
+    )
+    .unwrap();
+}
+
+/// A source with `rule-a` and a skill, so that the source stays non-empty.
+fn env_with_one_rule_and_a_skill() -> Env {
+    let env = Env::new();
+    fs::remove_dir_all(env.source.join("rule-b")).unwrap();
+    write_skill(&env);
+    env
+}
+
+#[cfg(unix)]
+fn terminal_update(env: &Env, args: &[&str]) -> String {
+    let result = common::update_in_terminal(env.home.parent().unwrap(), &env.home, args, "n\n");
+    format!(
+        "{}{}",
+        result["stdout"].as_str().unwrap(),
+        result["stderr"].as_str().unwrap()
+    )
+}
+
+#[cfg(unix)]
+fn lists_the_config(text: &str) -> bool {
+    text.lines()
+        .any(|line| line.trim_start().starts_with("write") && line.contains("opencode.json"))
+}
+
+#[cfg(unix)]
+#[test]
+fn update_preview_lists_the_config_when_only_an_orphaned_rule_entry_is_deleted() {
+    let env = Env::new();
+    fs::remove_dir_all(env.source.join("rule-a")).unwrap();
+    write_skill(&env);
+    env.add_global(None);
+    fs::remove_dir_all(env.source.join("rule-b")).unwrap();
+
+    let text = terminal_update(&env, &["--global"]);
+
+    assert!(lists_the_config(&text), "{text}");
+}
+
+#[test]
+fn update_validates_the_config_before_it_deletes_an_orphaned_rule() {
+    let env = Env::new();
+    fs::remove_dir_all(env.source.join("rule-a")).unwrap();
+    write_skill(&env);
+    env.add_global(None);
+    fs::remove_dir_all(env.source.join("rule-b")).unwrap();
+    fs::write(env.config(), r#"{"instructions": "x"}"#).unwrap();
+
+    let out = env.run(&["update", "--yes", "--global"], None).failure();
+
+    let err = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(err.contains("`instructions` must be an array"), "{err}");
+    assert!(env.home.join(".agents/rules/rule-b/RULE.md").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn update_preview_of_an_unchanged_install_does_not_list_the_config() {
+    let env = Env::new();
+    let second = env.home.parent().unwrap().join("second");
+    fs::create_dir_all(second.join("rule-c")).unwrap();
+    fs::write(
+        second.join("rule-c/RULE.md"),
+        "---\nschema: 1\nname: rule-c\ndescription: rule for the issue 581 tests.\n---\n\n## Body\n\nText.\n",
+    )
+    .unwrap();
+    env.add_global(None);
+    env.run(
+        &["add", second.to_str().unwrap(), "--opencode", "--global"],
+        None,
+    )
+    .success();
+
+    let text = terminal_update(&env, &["--global"]);
+
+    assert!(!lists_the_config(&text), "{text}");
+}
+
+#[test]
+fn update_preview_ignores_a_skipped_rule_for_the_clients_it_would_drop() {
+    let env = env_with_one_rule_and_a_skill();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--opencode", "--global"], None)
+        .success();
+    // An unowned file at the Claude path makes the rule a skipped item.
+    let claude = env.home.join(".claude/rules/rule-a.md");
+    fs::create_dir_all(claude.parent().unwrap()).unwrap();
+    fs::write(&claude, "mine\n").unwrap();
+    fs::write(env.config(), r#"{"instructions": "x"}"#).unwrap();
+
+    let out = env.run(&["update", "--dry-run", "--claude", "--global"], None);
+
+    let err = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(!err.contains("must be an array"), "{err}");
+}
+
+#[test]
+fn update_preview_does_not_add_the_entry_of_a_skipped_rule() {
+    let env = env_with_one_rule_and_a_skill();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    // An unowned file at the opencode path makes the rule a skipped item.
+    let file = env.home.join(".agents/rules/rule-a/RULE.md");
+    fs::create_dir_all(file.parent().unwrap()).unwrap();
+    fs::write(&file, "mine\n").unwrap();
+    fs::create_dir_all(env.config().parent().unwrap()).unwrap();
+    fs::write(env.config(), r#"{"instructions": "x"}"#).unwrap();
+
+    let out = env.run(&["update", "--dry-run", "--opencode", "--global"], None);
+
+    let err = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(!err.contains("must be an array"), "{err}");
+}
+
+#[test]
+fn a_config_that_is_not_strict_json_fails_add_and_update_with_the_parse_error() {
+    let env = Env::new();
+    write_jsonc_config(&env);
+    let source = env.source.to_str().unwrap();
+    let out = env
+        .run(&["add", source, "--opencode", "--global"], None)
+        .failure();
+    let err = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(err.contains("parse"), "{err}");
+
+    let env = Env::new();
+    env.add_global(None);
+    write_jsonc_config(&env);
+    let out = env.run(&["update", "--yes", "--global"], None).failure();
+    let err = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(err.contains("parse"), "{err}");
 }

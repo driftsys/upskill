@@ -1067,10 +1067,11 @@ scope. For each scope it reports twelve independent buckets:
 - **Missing rule entries** (global scope only) — a rule that the lockfile
   records for opencode, and whose absolute path is not in the `instructions`
   array of the global opencode config. opencode does not load such a rule.
-  `upskill update --global` writes the entry again. When the file is not strict
-  JSON (for example JSONC with comments), `doctor` reports every such rule as
-  missing and `update` fails with a parse error on the file; the user fixes the
-  file by hand. Causes exit 1.
+  `upskill update --global` writes the entry again, also when the file has no
+  `instructions` array. When the file is not strict JSON (for example JSONC with
+  comments), `doctor` reports every such rule as missing and `update` fails with
+  a parse error on the file; when `instructions` is not an array, `update` fails
+  too. The user fixes the file by hand in both cases. Causes exit 1.
 - **Earlier layout** (global scope only) — files of a global install at the
   earlier global Copilot paths (`.github/skills`, `.github/instructions` and
   `.github/agents` under `$HOME`). `upskill update --global` moves them. Causes
@@ -1089,11 +1090,11 @@ line for each client and kind with its level, as in
 
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
 modified files, unreadable files, stale hashes, orphan entries, missing plugins,
-unregistered MCP servers, interrupted items, or files at earlier global paths).
-Skipped plugins and unverifiable MCP entries are informational warnings and do
-not affect the exit code. `doctor` never fetches; remote-source drift detection
-is `update --check` (a lookup of the remote commit, without a fetch) and
-`update --dry-run` (a fetch and a preview).
+unregistered MCP servers, interrupted items, files at earlier global paths, or
+missing rule entries). Skipped plugins and unverifiable MCP entries are
+informational warnings and do not affect the exit code. `doctor` never fetches;
+remote-source drift detection is `update --check` (a lookup of the remote
+commit, without a fetch) and `update --dry-run` (a fetch and a preview).
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 The document has one element in `scopes` for each checked scope (also when
@@ -1520,8 +1521,9 @@ Limits of the global scope:
   writes the entries of the rules it installs and deletes those of the rules
   that left the source, and an install that records a rule for fewer clients
   deletes the entry of that rule. Other entries of the file are kept. The rules
-  step reads the file only when the run has an opencode rule entry to add or
-  delete.
+  step reads and parses the file whenever the run installs an opencode rule or
+  deletes an entry, so a file that is not strict JSON (for example one with
+  comments) fails such a run.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.
