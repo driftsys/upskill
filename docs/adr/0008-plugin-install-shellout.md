@@ -86,12 +86,15 @@ matching client targeted, upskill shells out:
 | vscode   | `code --install-extension <extension>` (naturally idempotent)                                                                                                             |
 | opencode | `opencode plugin add <module>`                                                                                                                                            |
 
-Claude's `--scope` derives from upskill's existing project/global flag:
+Claude's `--scope` derives from the resolved install scope of the run. The scope
+comes from `--global` or `--project`, or, without a flag, from git detection and
+the refusal of the project scope in the home directory (see the specification,
+§3.1):
 
-| upskill flag       | lockfile location          | `claude --scope` |
-| ------------------ | -------------------------- | ---------------- |
-| `--global`         | `$HOME/.upskill-lock.json` | `user`           |
-| (default, project) | `<cwd>/.upskill-lock.json` | `project`        |
+| install scope | lockfile location           | `claude --scope` |
+| ------------- | --------------------------- | ---------------- |
+| global        | `$HOME/.upskill-lock.json`  | `user`           |
+| project       | `<root>/.upskill-lock.json` | `project`        |
 
 Claude's `local` scope (machine-local, not committed) is not exposed via
 upskill; users who want it can call `claude plugin install` directly.
@@ -178,16 +181,20 @@ Trials with opencode 2.1.4 (issues #565 and #573) tested the following, with
   were not tested.
 
 upskill uses `$XDG_CONFIG_HOME/opencode/opencode.json` when `XDG_CONFIG_HOME` is
-set and absolute. That location was not tested, except as the way the
-relative-path trial above was run.
+set and absolute. In the two trials above, which ran with `XDG_CONFIG_HOME`
+pointed at a copy of the global configuration, opencode loaded the
+`instructions` of that file, so the location is read. No trial tested the plugin
+or MCP entries in that location.
 
 Decision:
 
 - In the project scope the file is `<project>/opencode.json`. In the global
   scope it is `$XDG_CONFIG_HOME/opencode/opencode.json` when `XDG_CONFIG_HOME`
   is set and is an absolute path, and `$HOME/.config/opencode/opencode.json`
-  otherwise. The plugin write, the listed check, the removal, the MCP write and
-  removal, and the MCP check of `doctor` all use that file.
+  otherwise. The file is chosen from the scope of the lockfile that the run
+  uses, not from the scope that an entry of that lockfile records. The plugin
+  write, the listed check, the removal, the MCP write and removal, and the MCP
+  check of `doctor` all use that file.
 - upskill writes a `plugin_uri` plugin to the `plugins` array. The listed check
   and the removal accept an entry under `plugin` or `plugins`; the removal
   deletes the entry from both. An older entry under `plugin` stays in place and
@@ -208,22 +215,31 @@ Decision:
   records a rule for fewer clients, so that the lockfile no longer lists
   opencode for it, deletes the entry of that rule; an error there is reported,
   as for a write. A rule whose generated file was modified is still installed
-  for opencode, and `update` writes its missing entry. upskill deletes only the
-  entry of a rule that it removes in that operation. An entry of the same form
-  for a rule that upskill does not track, written by hand, is kept. The rules
-  step reads and parses the file whenever the run installs an opencode rule (to
-  find out whether the entry is present), or deletes an entry; a run that
-  installs no opencode rule and deletes no entry does not read it for rules. The
-  plugin and MCP steps read it when the run writes an entry of theirs. A file
-  that is not strict JSON (for example one with comments) therefore breaks every
-  run that installs an opencode rule, also when all entries are present.
-  `doctor --global` reports a recorded rule whose entry is missing, as drift
-  with exit code 1, and `update --global` writes it again, also when the file
-  has no `instructions` array. When the file is not strict JSON, `doctor`
-  reports every recorded rule as missing, and `update` cannot repair it: it
-  fails with a parse error until the user fixes the file. Other entries and
-  other keys of the file are kept. An `instructions` value that is not an array
-  is an error, and `update` cannot repair it either.
+  for opencode, and `update` writes its missing entry. upskill deletes the entry
+  of a rule that it removes in that operation, and the entry of a rule that the
+  lockfile records for other clients than opencode (an earlier run can have
+  saved the lockfile and then failed to edit the file). An entry of the same
+  form for a rule that the lockfile does not record, written by hand, is kept.
+  The rules step reads and parses the file whenever the run installs an opencode
+  rule (to find out whether the entry is present), or deletes an entry. A run
+  that installs no opencode rule and deletes no entry reads the file only to
+  find such a stale entry, when the lockfile records a rule for other clients
+  than opencode; a file that cannot be read as JSON adds no deletion and no
+  error there. The plugin and MCP steps read it when the run writes an entry of
+  theirs. A file that is not strict JSON (for example one with comments)
+  therefore breaks every run that installs an opencode rule, also when all
+  entries are present. `doctor --global` reports a recorded rule whose entry is
+  missing, as drift with exit code 1, and `update --global` writes it again,
+  also when the file has no `instructions` array. It also reports, as drift, the
+  entry of a rule that the lockfile records for other clients than opencode
+  (`stale_rule_entries`), and `update --global` deletes it. The removal of an
+  entry that fails during `remove` or the orphan cleanup of `update` leaves an
+  entry of a rule that the lockfile no longer records; `doctor` does not report
+  it. When the file is not strict JSON, `doctor` reports every recorded rule as
+  missing, and `update` cannot repair it: it fails with a parse error until the
+  user fixes the file. Other entries and other keys of the file are kept. An
+  `instructions` value that is not an array is an error, and `update` cannot
+  repair it either.
 - upskill does not read or write `$XDG_CONFIG_HOME/opencode/AGENTS.md`.
 
 ### Repair by `update`
@@ -272,21 +288,24 @@ once per source of the run.
 
 Each plugin install records `(client, marketplace, plugin-name,
 scope)` (or the
-client-equivalent identifier) in `.upskill-lock.json` so `remove` / `update` /
-`doctor` can invoke the inverse CLI command. The lockfile schema bump is
+client-equivalent identifier) in `.upskill-lock.json` so that `remove`, `update`
+and `doctor` can find the plugin again. `remove` runs no inverse CLI command: it
+deletes the opencode entry from the config file, and it does not uninstall a
+Claude Code, Copilot CLI or VS Code plugin. The lockfile schema bump is
 documented in the format spec.
 
 ### Implementation shape
 
-New module `src/plugin.rs`, peer to `src/fetch.rs` and `src/auth.rs`. Uses
-`std::process::Command` directly — no new dependencies, no async, consistent
-with the project's "shell out to git" stance from ADR-0001.
+New module `src/plugin.rs`, peer to `src/fetch.rs`. Uses `std::process::Command`
+directly — no new dependencies, no async, consistent with the project's "shell
+out to git" stance from ADR-0001.
 
 The module exposes typed functions per client operation
 (`claude_marketplace_add`, `claude_plugin_install`, `copilot_marketplace_add`,
 `copilot_plugin_install`, `vscode_extension_install`, `opencode_plugin_install`,
-plus the inverse uninstall calls). All return `anyhow::Result<T>` and never
-write to stdout/stderr — presentation lives in `main.rs` per existing project
+plus the uninstall functions, which `remove` does not call, and the check
+functions that `doctor` uses). All return `anyhow::Result<T>` and never write to
+stdout/stderr — presentation lives in `main.rs` per existing project
 conventions.
 
 ### Platform scope

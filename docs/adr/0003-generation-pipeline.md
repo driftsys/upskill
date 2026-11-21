@@ -103,7 +103,7 @@ Three ancillary files are managed idempotently:
   2026-10-25 as-built clarification corrects the earlier first-install-only
   description without changing code or qualifying current OpenCode glob
   expansion ([implementation](../../src/ancillary.rs),
-  [call site](../../src/pipeline/mod.rs),
+  [call site](../../src/pipeline/prepared.rs),
   [current-pin failure](../technotes/gate6-opencode-explicit-paths-retry.md)).
 
 In the global scope the glob does not work: the global opencode config expands
@@ -137,13 +137,13 @@ work; no new lockfile field is specified here
 ([AD-0040](0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24),
 [route and amendment inventory](../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)).
 
-The shipped bridge and OpenCode glob writes remain until the separate step-8
-code PR, gated on Q5 explicit-path PASS. That future PR removes creation without
-a fallback/migration and requires doctor reporting for existing generated
-entries rather than deletion. VS Code's ancillary write remains pending a
-separate profile decision. This record does not claim those future behaviors are
-implemented or that the historical OpenCode glob description establishes current
-2.1.4 conformance
+The shipped bridge and OpenCode glob writes (the glob is a project-scope write)
+remain until the separate step-8 code PR, gated on Q5 explicit-path PASS. That
+future PR removes creation without a fallback/migration and requires doctor
+reporting for existing generated entries rather than deletion. VS Code's
+ancillary write remains pending a separate profile decision. This record does
+not claim those future behaviors are implemented or that the historical OpenCode
+glob description establishes current 2.1.4 conformance
 ([shipped specification](../specification/specification.md#34-ancillary-file-handling),
 [Q5 retry](../technotes/gate6-opencode-explicit-paths-retry.md)).
 

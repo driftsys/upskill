@@ -279,12 +279,14 @@ the project scope that file is at the project root. In the global scope it is
 `$XDG_CONFIG_HOME/opencode/opencode.json`, or `~/.config/opencode/opencode.json`
 when `XDG_CONFIG_HOME` is unset, empty or not an absolute path. A trial showed
 that opencode 2.1.4 reads `~/.config/opencode/opencode.json` and ignores
-`~/opencode.json`. The `XDG_CONFIG_HOME` location is used when set and absolute,
-and was not tested. MCP servers for opencode are written into the same file. If
-a client's CLI is not on `PATH`, or `opencode --version` reports a major version
-below 2, the plugin is skipped (not an error, with a warning) and recorded as
-`skipped` in the lockfile; `upskill doctor` reports skipped and missing plugins.
-Removing the bundle cleans up its plugins.
+`~/opencode.json`. The `XDG_CONFIG_HOME` location is used when set and absolute.
+In the trials of issue #581, opencode loaded the `instructions` of that
+location; no trial tested the plugin or MCP entries there. MCP servers for
+opencode are written into the same file. If a client's CLI is not on `PATH`, or
+`opencode --version` reports a major version below 2, the plugin is skipped (not
+an error, with a warning) and recorded as `skipped` in the lockfile;
+`upskill doctor` reports skipped and missing plugins. Removing the bundle cleans
+up its plugins.
 
 **Bundle MCP servers.** When a bundle declares an `mcps:` map
 ([format-spec §3.7](format-spec.md#37-bundle-schema)), `add` configures those
@@ -1081,6 +1083,13 @@ scope. For each scope it reports twelve independent buckets:
   comments), `doctor` reports every such rule as missing and `update` fails with
   a parse error on the file; when `instructions` is not an array, `update` fails
   too. The user fixes the file by hand in both cases. Causes exit 1.
+- **Stale rule entries** (global scope only) — an entry of the form
+  `$HOME/.agents/rules/<name>/RULE.md` in the `instructions` array of the global
+  opencode config, for a rule that the lockfile records for other clients than
+  opencode. An earlier removal of the entry can have failed after the lockfile
+  was saved. `upskill update --global` deletes the entry. An entry for a name
+  that the lockfile does not record is not reported and not deleted. Causes exit
+  1.
 - **Earlier layout** (global scope only) — files of a global install at the
   earlier global Copilot paths (`.github/skills`, `.github/instructions` and
   `.github/agents` under `$HOME`). `upskill update --global` moves them. Causes
@@ -1175,6 +1184,9 @@ Each element of `scopes` has these keys besides `scope` and `root`:
   "missing_rule_entries": [
     { "name": "...", "client": "opencode",
       "config": "/home/user/.config/opencode/opencode.json" }
+  ],
+  "stale_rule_entries": [
+    { "name": "...", "config": "/home/user/.config/opencode/opencode.json" }
   ]
 }
 ```
@@ -1184,11 +1196,12 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 `"ok"`, `"not-registered"`, `"cli-not-found"`, or
 `{ "query-failed": { "stderr": "..." } }`. The plugin and item arrays are always
 present (possibly empty); `mcp_entries` is omitted when no MCP servers are
-recorded, and `missing_rule_entries` is omitted when no entry is missing. An
-entry of `missing_plugins` or `skipped_plugins` has the key `repair_command`
-only when `update` does not install the plugin (no recorded item comes from the
-recorded source of its bundle, or that source is under a kind restriction); the
-value is the `upskill add` command that installs it again.
+recorded, and `missing_rule_entries` and `stale_rule_entries` are omitted when
+empty. An entry of `missing_plugins` or `skipped_plugins` has the key
+`repair_command` only when `update` does not install the plugin (no recorded
+item comes from the recorded source of its bundle, or that source is under a
+kind restriction); the value is the `upskill add` command that installs it
+again.
 
 ### `upskill search <query>`
 
@@ -1533,7 +1546,10 @@ Limits of the global scope:
   step reads and parses the file whenever the run installs an opencode rule or
   deletes an entry, so a file that is not strict JSON (for example one with
   comments) fails such an `add` or `update`. `remove` ignores that error and
-  leaves the entry in the file.
+  leaves the entry in the file. When the lockfile records a rule for other
+  clients than opencode, `add` and `update` also read the file to find an entry
+  of that rule (see `doctor`, stale rule entries); a file that cannot be read as
+  JSON adds no deletion and no error there.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.

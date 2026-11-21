@@ -54,8 +54,10 @@ personal locations. In the global scope, upskill writes one `instructions` entry
 per rule, the absolute path of its `RULE.md`, to the opencode config file that
 opencode reads. upskill also writes the opencode plugin and MCP entries to
 `$XDG_CONFIG_HOME/opencode/opencode.json` or `~/.config/opencode/opencode.json`.
-A trial with opencode 2.1.4 confirmed the second file; the first file was not
-tested. OpenCode stays experimental until its design settles these paths.
+A trial with opencode 2.1.4 confirmed the second file. In the trials of issue
+#581, opencode loaded the `instructions` of the first file; no trial tested the
+plugin or MCP entries there. OpenCode stays experimental until its design
+settles these paths.
 
 ## Run the smoke test
 
@@ -124,7 +126,10 @@ and the lockfile entry. When `remove` reports that the name is not in the
 lockfile, nothing was left and the script prints no warning. What a global cell
 leaves in the home directory after that removal, as checked with a temporary
 home that held a `CLAUDE.md`, `opencode.json` and `.vscode/settings.json` before
-the run:
+the run. The smoke script runs the clients `claude` and `copilot` only, so the
+opencode bullets below come from the integration tests
+`tests/cli_opencode_rules.rs` and `tests/cli_opencode_plugins.rs`, not from the
+smoke cell:
 
 - An existing `CLAUDE.md` is not changed. When the file is absent, `add` creates
   it with the content `@AGENTS.md`.
