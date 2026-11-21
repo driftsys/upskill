@@ -872,7 +872,9 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched, except that removing
 an item of a bundle, or the source of a bundle with `--source`, deletes the
 installed opencode plugin entry of that bundle from the `plugin` and `plugins`
-arrays of the `opencode.json` of the scope.
+arrays of the `opencode.json` of the scope. In the global scope, removing a rule
+that is installed for opencode also deletes its `instructions` entry from the
+global opencode config.
 
 Without a scope flag, `remove` uses the project scope inside a git repository
 and the global scope outside one. When the current directory is the home
@@ -1010,7 +1012,7 @@ the lockfile label (`local:/path` or `github:owner/repo` etc.).
 Verify on-disk state matches `.upskill-lock.json`. Without a scope flag,
 `doctor` checks both scopes, in the order and with the same rules as
 [`list`](#upskill-list); `--global` or `--project` limits the check to that
-scope. For each scope it reports eleven independent buckets:
+scope. For each scope it reports twelve independent buckets:
 
 - **Missing per-client output files** — reinstall fixes
   (`upskill add
@@ -1071,6 +1073,14 @@ scope. For each scope it reports eleven independent buckets:
 - **Interrupted** — items with a non-empty `pending` record: an `add` or
   `update` failed or was stopped before it completed. Run the same command again
   to complete it. Causes exit 1.
+- **Missing rule entries** (global scope only) — a rule that the lockfile
+  records for opencode, and whose absolute path is not in the `instructions`
+  array of the global opencode config. opencode does not load such a rule.
+  `upskill update --global` writes the entry again, also when the file has no
+  `instructions` array. When the file is not strict JSON (for example JSONC with
+  comments), `doctor` reports every such rule as missing and `update` fails with
+  a parse error on the file; when `instructions` is not an array, `update` fails
+  too. The user fixes the file by hand in both cases. Causes exit 1.
 - **Earlier layout** (global scope only) — files of a global install at the
   earlier global Copilot paths (`.github/skills`, `.github/instructions` and
   `.github/agents` under `$HOME`). `upskill update --global` moves them. Causes
@@ -1089,11 +1099,11 @@ line for each client and kind with its level, as in
 
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
 modified files, unreadable files, stale hashes, orphan entries, missing plugins,
-unregistered MCP servers, interrupted items, or files at earlier global paths).
-Skipped plugins and unverifiable MCP entries are informational warnings and do
-not affect the exit code. `doctor` never fetches; remote-source drift detection
-is `update --check` (a lookup of the remote commit, without a fetch) and
-`update --dry-run` (a fetch and a preview).
+unregistered MCP servers, interrupted items, files at earlier global paths, or
+missing rule entries). Skipped plugins and unverifiable MCP entries are
+informational warnings and do not affect the exit code. `doctor` never fetches;
+remote-source drift detection is `update --check` (a lookup of the remote
+commit, without a fetch) and `update --dry-run` (a fetch and a preview).
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 The document has one element in `scopes` for each checked scope (also when
@@ -1161,6 +1171,10 @@ Each element of `scopes` has these keys besides `scope` and `root`:
   ],
   "earlier_layout": [
     { "kind": "skill", "name": "...", "files": [".github/skills/<name>/SKILL.md"] }
+  ],
+  "missing_rule_entries": [
+    { "name": "...", "client": "opencode",
+      "config": "/home/user/.config/opencode/opencode.json" }
   ]
 }
 ```
@@ -1170,11 +1184,11 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 `"ok"`, `"not-registered"`, `"cli-not-found"`, or
 `{ "query-failed": { "stderr": "..." } }`. The plugin and item arrays are always
 present (possibly empty); `mcp_entries` is omitted when no MCP servers are
-recorded. An entry of `missing_plugins` or `skipped_plugins` has the key
-`repair_command` only when `update` does not install the plugin (no recorded
-item comes from the recorded source of its bundle, or that source is under a
-kind restriction); the value is the `upskill add` command that installs it
-again.
+recorded, and `missing_rule_entries` is omitted when no entry is missing. An
+entry of `missing_plugins` or `skipped_plugins` has the key `repair_command`
+only when `update` does not install the plugin (no recorded item comes from the
+recorded source of its bundle, or that source is under a kind restriction); the
+value is the `upskill add` command that installs it again.
 
 ### `upskill search <query>`
 
@@ -1507,9 +1521,19 @@ Limits of the global scope:
 - In the global scope, the first-time files `CLAUDE.md` and
   `.vscode/settings.json` are written under `$HOME` as in a project. The entry
   in `.vscode/settings.json` points at `.github/instructions`, which a global
-  install no longer writes. The global scope writes no rules entry to
-  `opencode.json`, and the opencode plugin and MCP entries go to the global
-  opencode config file, not to `$HOME/opencode.json`.
+  install no longer writes. The opencode rules entries, plugin entries and MCP
+  entries go to the global opencode config file, not to `$HOME/opencode.json`.
+  For each rule that is installed for opencode, the `instructions` array of that
+  file lists the absolute path of the generated file,
+  `$HOME/.agents/rules/<name>/RULE.md`; opencode expands no `**` glob in the
+  global config. `remove` deletes the entry of a removed rule, and `update`
+  writes the entries of the rules it installs and deletes those of the rules
+  that left the source, and an install that records a rule for fewer clients
+  deletes the entry of that rule. Other entries of the file are kept. The rules
+  step reads and parses the file whenever the run installs an opencode rule or
+  deletes an entry, so a file that is not strict JSON (for example one with
+  comments) fails such an `add` or `update`. `remove` ignores that error and
+  leaves the entry in the file.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.

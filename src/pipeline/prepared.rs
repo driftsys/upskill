@@ -534,6 +534,16 @@ impl PreparedInstall {
         self.report.items.iter().any(|i| i.kind == ItemKind::Rule)
     }
 
+    /// Names of the rules that this install writes for opencode.
+    fn opencode_rule_names(&self) -> BTreeSet<String> {
+        self.report
+            .items
+            .iter()
+            .filter(|i| i.kind == ItemKind::Rule && i.client == crate::generate::Client::OpenCode)
+            .map(|i| i.name.clone())
+            .collect()
+    }
+
     /// `alias -> source name` of every planned item installed under an
     /// `--as` alias.
     fn aliased_names(&self) -> HashMap<String, String> {
@@ -665,11 +675,16 @@ impl PreparedInstall {
     /// lockfile, the caller passes it after `owned::adopt_schema1_in_memory`.
     /// The preview is computed by [`apply::decide_plan`], as `commit` does;
     /// see [`preview_items`] for how each item is reported.
+    ///
+    /// `orphan_rules` holds the names of the rules that an `update` removes
+    /// because their source no longer has them; their entries leave the
+    /// global opencode config.
     pub fn preview(
         &self,
         target: &Path,
         plugin_scope: PluginScope,
         lock: &Lockfile,
+        orphan_rules: &BTreeSet<String>,
     ) -> Result<InstallPreview> {
         let new_items = self.new_items();
         let decision = apply::decide_plan(
@@ -682,8 +697,39 @@ impl PreparedInstall {
         )?;
         let (items, kept_notes) =
             preview_items(target, lock, &self.report.planned, decision, &new_items);
-        let handshake =
-            crate::ancillary::pending_handshake_changes(target, plugin_scope, self.has_rules())?;
+        // The rules that this install would write for opencode, whose entries
+        // the global opencode config would get, and the rules that would stop
+        // targeting opencode, whose entries it would lose (also the removed
+        // rules in `orphan_rules`). A skipped item is neither written nor
+        // recorded; a skip is any `Disposition::Skip`, also a conflict with
+        // an unowned file or a modified file of an owned item.
+        let skipped: BTreeSet<&str> = items
+            .iter()
+            .filter(|i| i.action == PreviewAction::Skip && i.kind == ItemKind::Rule)
+            .map(|i| i.name.as_str())
+            .collect();
+        let opencode_rules: BTreeSet<String> = self
+            .opencode_rule_names()
+            .into_iter()
+            .filter(|name| !skipped.contains(name.as_str()))
+            .collect();
+        let mut after = lock.clone();
+        for name in orphan_rules {
+            after.remove(ItemKind::Rule, name);
+        }
+        for item in new_items {
+            if !(item.kind == ItemKind::Rule && skipped.contains(item.name.as_str())) {
+                after.upsert(item);
+            }
+        }
+        let dropped = dropped_opencode_rules(lock, &after, &opencode_rules);
+        let handshake = crate::ancillary::pending_handshake_changes(
+            target,
+            plugin_scope,
+            self.has_rules(),
+            &opencode_rules,
+            &dropped,
+        )?;
         Ok(InstallPreview {
             items,
             kept_notes,
@@ -724,6 +770,9 @@ impl PreparedInstall {
         let new_items = self.new_items();
         let provenance = self.requires_provenance();
         let has_rules = self.has_rules();
+        let opencode_rules = self.opencode_rule_names();
+        // The lockfile before this install changes it.
+        let lock_before = lock.clone();
         let PreparedInstall {
             label,
             git_ref,
@@ -896,11 +945,31 @@ impl PreparedInstall {
         // register the opencode.json `instructions[]` glob so opencode picks up
         // generated rules under `.agents/rules/`. Idempotent; preserves other
         // keys.
-        // Not in the global scope: opencode resolves a relative `instructions`
-        // path against the project directory, so the glob cannot reach
-        // `~/.agents/rules/` from the global config (ADR-0008, issue #581).
-        if plugin_scope == PluginScope::Project {
-            crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
+        // In the global scope the glob does not work: opencode expands no `**`
+        // there, and resolves a relative path against the project directory.
+        // The global opencode config gets one absolute path per installed rule
+        // instead (ADR-0008, issue #581).
+        match plugin_scope {
+            PluginScope::Project => {
+                crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
+            }
+            PluginScope::User => {
+                // A rule that was skipped (any `Disposition::Skip`: a conflict
+                // with an unowned file, or a modified file of an owned item)
+                // is not written, so it gets no entry.
+                let written: BTreeSet<String> = opencode_rules
+                    .iter()
+                    .filter(|name| {
+                        !report
+                            .conflicts
+                            .iter()
+                            .any(|c| c.kind == ItemKind::Rule && &c.name == *name)
+                    })
+                    .cloned()
+                    .collect();
+                let dropped = dropped_opencode_rules(&lock_before, &lock, &written);
+                crate::ancillary::sync_opencode_global_rules(target, &written, &dropped)?;
+            }
         }
 
         // Per ADR-0003: when the install includes any rule, register
@@ -914,6 +983,23 @@ impl PreparedInstall {
 
         Ok(report)
     }
+}
+
+/// The rules that `before` records for opencode and `after` does not, and
+/// that `added` does not write again: a rule that an install records for
+/// fewer clients no longer targets opencode, and its entry in the global
+/// opencode config is deleted.
+fn dropped_opencode_rules(
+    before: &Lockfile,
+    after: &Lockfile,
+    added: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    let remaining = after.opencode_rule_names();
+    before
+        .opencode_rule_names()
+        .into_iter()
+        .filter(|name| !remaining.contains(name) && !added.contains(name))
+        .collect()
 }
 
 /// Refreshes `required_by` of every entry of `lock` with the provenance of
@@ -1145,6 +1231,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         assert_eq!(preview.items.len(), 1, "only `a` changes");
@@ -1191,6 +1278,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         assert_eq!(preview.items.len(), 1, "{:?}", preview.items);
@@ -1243,6 +1331,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         assert!(
@@ -1296,6 +1385,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         let first = written(&preview);
@@ -1321,6 +1411,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         assert!(written(&preview).is_empty(), "{:?}", preview.items);
@@ -1336,6 +1427,7 @@ mod tests {
                 &target,
                 PluginScope::Project,
                 &Lockfile::load(&target).unwrap(),
+                &BTreeSet::new(),
             )
             .unwrap();
         drop(prepared);
@@ -1357,7 +1449,12 @@ mod tests {
         )
         .unwrap();
         let preview = prepared
-            .preview(&target, PluginScope::Project, &Lockfile::new())
+            .preview(
+                &target,
+                PluginScope::Project,
+                &Lockfile::new(),
+                &BTreeSet::new(),
+            )
             .unwrap();
         assert!(!preview.handshake.is_empty());
         assert_eq!(fs::read_dir(&target).unwrap().count(), 0);
