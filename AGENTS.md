@@ -162,8 +162,12 @@ scope. In the global scope it is `$XDG_CONFIG_HOME/opencode/opencode.json` (when
 absolute) or `~/.config/opencode/opencode.json`. A trial with opencode 2.1.4
 confirmed the second location and not `$HOME/opencode.json`; the first location
 was not tested. upskill writes plugin entries to its `plugins` array and MCP
-servers to its `mcp` map, and writes no rules `instructions` entry in the global
-scope ([ADR-0008](docs/adr/0008-plugin-install-shellout.md)).
+servers to its `mcp` map. In the global scope it also writes, for each rule that
+is installed for opencode, the absolute path of the rule's generated file
+(`<home>/.agents/rules/<name>/RULE.md`) to its `instructions` array, because
+opencode expands no `**` glob there; `remove` deletes the entry, `update` keeps
+the entries equal to the installed rules, and `doctor` reports a missing entry
+([ADR-0008](docs/adr/0008-plugin-install-shellout.md), issue #581).
 
 Without a scope flag, `add` stops outside a git repo (exit 2); `update`,
 `remove` and `remove-mcp` use the global scope there; `list`, `doctor`,

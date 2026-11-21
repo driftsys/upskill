@@ -1062,6 +1062,10 @@ scope. For each scope it reports eleven independent buckets:
 - **Interrupted** — items with a non-empty `pending` record: an `add` or
   `update` failed or was stopped before it completed. Run the same command again
   to complete it. Causes exit 1.
+- **Missing rule entries** (global scope only) — a rule that the lockfile
+  records for opencode, and whose absolute path is not in the `instructions`
+  array of the global opencode config. opencode does not load such a rule.
+  `upskill update --global` writes the entry again. Causes exit 1.
 - **Earlier layout** (global scope only) — files of a global install at the
   earlier global Copilot paths (`.github/skills`, `.github/instructions` and
   `.github/agents` under `$HOME`). `upskill update --global` moves them. Causes
@@ -1152,6 +1156,10 @@ Each element of `scopes` has these keys besides `scope` and `root`:
   ],
   "earlier_layout": [
     { "kind": "skill", "name": "...", "files": [".github/skills/<name>/SKILL.md"] }
+  ],
+  "missing_rule_entries": [
+    { "name": "...", "client": "opencode",
+      "config": "/home/user/.config/opencode/opencode.json" }
   ]
 }
 ```
@@ -1161,11 +1169,11 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 `"ok"`, `"not-registered"`, `"cli-not-found"`, or
 `{ "query-failed": { "stderr": "..." } }`. The plugin and item arrays are always
 present (possibly empty); `mcp_entries` is omitted when no MCP servers are
-recorded. An entry of `missing_plugins` or `skipped_plugins` has the key
-`repair_command` only when `update` does not install the plugin (no recorded
-item comes from the recorded source of its bundle, or that source is under a
-kind restriction); the value is the `upskill add` command that installs it
-again.
+recorded, and `missing_rule_entries` is omitted when no entry is missing. An
+entry of `missing_plugins` or `skipped_plugins` has the key `repair_command`
+only when `update` does not install the plugin (no recorded item comes from the
+recorded source of its bundle, or that source is under a kind restriction); the
+value is the `upskill add` command that installs it again.
 
 ### `upskill search <query>`
 
@@ -1498,9 +1506,14 @@ Limits of the global scope:
 - In the global scope, the first-time files `CLAUDE.md` and
   `.vscode/settings.json` are written under `$HOME` as in a project. The entry
   in `.vscode/settings.json` points at `.github/instructions`, which a global
-  install no longer writes. The global scope writes no rules entry to
-  `opencode.json`, and the opencode plugin and MCP entries go to the global
-  opencode config file, not to `$HOME/opencode.json`.
+  install no longer writes. The opencode rules entries, plugin entries and MCP
+  entries go to the global opencode config file, not to `$HOME/opencode.json`.
+  For each rule that is installed for opencode, the `instructions` array of that
+  file lists the absolute path of the generated file,
+  `$HOME/.agents/rules/<name>/RULE.md`; opencode expands no `**` glob in the
+  global config. `remove` deletes the entry of a removed rule, and `update`
+  keeps the entries equal to the installed rules. Other entries of the file are
+  kept.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.

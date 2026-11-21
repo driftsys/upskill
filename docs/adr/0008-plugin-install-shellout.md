@@ -161,8 +161,20 @@ Trials with opencode 2.1.4 (issues #565 and #573) tested the following, with
   resolved against the project directory: the marker file in
   `<project>/.agents/rules/` was loaded and the marker file in the config
   directory was not. The rules glob `.agents/rules/**/RULE.md` therefore does
-  not reach `~/.agents/rules/` from the global configuration. An absolute path
-  was not tested.
+  not reach `~/.agents/rules/` from the global configuration. The first runs
+  with an absolute path stopped responding; the second trial below shows that
+  the cause was the standard input of `opencode run`, not the path.
+- In a second trial (2026-11-21, opencode 2.1.4, same method, recorded in issue
+  #581), `opencode run` was started with standard input redirected from
+  `/dev/null`. Without that redirection `opencode run` stops responding. In the
+  global configuration these `instructions` values were not loaded: an absolute
+  glob with `**`, the same glob under another directory, a `~/` glob with `**`,
+  and an absolute glob with `*` in a directory segment. These values were
+  loaded: a single absolute file path, a single `~/` file path, an absolute path
+  with a wildcard in the file name only, and a `{file:...}` value whose content
+  is an absolute file path. A file `$XDG_CONFIG_HOME/opencode/AGENTS.md` was
+  also loaded; that file belongs to the user, so upskill does not write it. In
+  the project configuration, the relative glob worked in the first trial.
 
 upskill uses `$XDG_CONFIG_HOME/opencode/opencode.json` when `XDG_CONFIG_HOME` is
 set and absolute. That location was not tested, except as the way the
@@ -181,8 +193,22 @@ Decision:
   counts as present on write, so the write adds no second entry under `plugins`.
   There is no migration before version 1.0.
 - upskill neither reads nor cleans the old `$HOME/opencode.json`.
-- In the global scope upskill writes no rules `instructions` entry for opencode.
-  Global rules do not reach opencode yet.
+- In the global scope upskill writes one `instructions` entry per rule that is
+  installed for opencode, to the global configuration file: the absolute path of
+  the generated file, `<home>/.agents/rules/<name>/RULE.md`. An absolute path
+  works on every platform and does not depend on the home directory notation.
+  upskill writes no glob there, because the global configuration does not expand
+  `**`. The project scope keeps the single relative glob in
+  `<project>/opencode.json`.
+- The entries follow the lockfile. `add` and `update` write the entry of each
+  rule that the lockfile records for opencode and remove an entry of that form
+  whose rule is no longer recorded. `remove --global` deletes the entry of each
+  removed rule; an error of that deletion is ignored, as for the plugin entry.
+  `doctor --global` reports a recorded rule whose entry is missing, as drift
+  with exit code 1, and `update --global` writes it again. Other entries and
+  other keys of the file are kept. An `instructions` value that is not an array
+  is an error.
+- upskill does not read or write `$XDG_CONFIG_HOME/opencode/AGENTS.md`.
 
 ### Repair by `update`
 

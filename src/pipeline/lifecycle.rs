@@ -23,11 +23,11 @@ use super::prepared::prepare_install;
 use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, BothScopesItem, DoctorReport, DoctorScopes,
     EarlierLayoutFile, FetchFailed, InterruptedItem, ItemKind, ListReport, ListedBundle,
-    ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry, OrphanReason,
-    OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport, RemovedItem,
-    ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure, SkippedPlugin, SkippedSource,
-    SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile, UpdateObserver,
-    UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
+    ListedItem, MissingOutput, MissingPlugin, MissingRuleEntry, ModifiedFile, OrphanEntry,
+    OrphanReason, OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport,
+    RemovedItem, ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure, SkippedPlugin,
+    SkippedSource, SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile,
+    UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -64,12 +64,16 @@ use super::{
 ///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
 /// `.vscode/settings.json`) are user-owned after creation per ADR-0003, so
-/// they are left alone with one exception: for each bundle that lists a
-/// removed item (or has the removed source), the installed opencode plugin
+/// they are left alone with two exceptions. First, for each bundle that lists
+/// a removed item (or has the removed source), the installed opencode plugin
 /// entry of that bundle is deleted from the `plugin` and `plugins` arrays of
 /// the opencode config file of its recorded scope
-/// (`remove_opencode_plugin_uri`; an error is ignored).
-pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
+/// (`remove_opencode_plugin_uri`; an error is ignored). Second, in the global
+/// scope the `instructions` entry of each removed rule is deleted from the
+/// global opencode config, other entries are kept, and an error is ignored
+/// (`sync_global_opencode_rules`).
+pub fn remove(at: &ScopeRoot, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
+    let target = at.root.as_path();
     let mut lock = crate::lockfile::Lockfile::load(target)?;
     check_lockfile_records(target, &lock)?;
 
@@ -133,7 +137,7 @@ pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<Remove
     // The adoption is saved before any file is deleted. Every later error
     // carries the adopted paths, so that `main.rs` can still print the adoption notice.
     let adopted = adopt_schema1(target, &mut lock)?;
-    let result = remove_selected(target, &mut lock, &filter, &keys, force);
+    let result = remove_selected(at, &mut lock, &filter, &keys, force);
     match (result, adopted) {
         (Ok(mut report), adopted) => {
             report.adopted = adopted;
@@ -334,12 +338,13 @@ fn execute_removal(
 /// The part of `remove` that runs after adoption: plan every selected
 /// item, then delete, then clean up bundles and plugins and save.
 fn remove_selected(
-    target: &Path,
+    at: &ScopeRoot,
     lock: &mut crate::lockfile::Lockfile,
     filter: &RemoveFilter,
     keys: &[(ItemKind, String)],
     force: bool,
 ) -> Result<RemoveReport> {
+    let target = at.root.as_path();
     let mut plans = Vec::with_capacity(keys.len());
     for (kind, name) in keys {
         let Some(entry) = lock
@@ -403,7 +408,18 @@ fn remove_selected(
         .retain(|b| !bundles_to_remove.contains(&b.name));
 
     lock.save(target)?;
+    sync_global_opencode_rules(at.scope, target, lock);
     Ok(report)
+}
+
+/// In the global scope, make the global opencode config list the rules that
+/// `lock` records for opencode. Nothing happens in the project scope. An
+/// error is ignored: the lockfile is already saved, and `doctor` reports an
+/// entry that is missing.
+fn sync_global_opencode_rules(scope: Scope, root: &Path, lock: &crate::lockfile::Lockfile) {
+    if scope == Scope::Global {
+        let _ = crate::ancillary::sync_opencode_global_rules(root, &lock.opencode_rule_names());
+    }
 }
 
 /// The `upskill add` command that installs again the plugins of `bundle`,
@@ -646,6 +662,26 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
         // Non-local sources: doctor only validates per-client outputs.
         // Hash comparison would require a network fetch — out of scope
         // here, see `update --check` and `update --dry-run`.
+    }
+
+    // -- Global opencode rule entries (ADR-0008, issue #581) --
+    // A rule installed for opencode in the global scope is listed in the
+    // `instructions` array of the global opencode config. An entry that is
+    // missing is drift: opencode does not load the rule.
+    if at.scope == Scope::Global {
+        for name in lock.opencode_rule_names() {
+            if !crate::ancillary::opencode_global_rule_registered(target, &name) {
+                report.missing_rule_entries.push(MissingRuleEntry {
+                    name,
+                    client: "opencode".to_string(),
+                    config: crate::ancillary::opencode_config_dir(
+                        crate::plugin::PluginScope::User,
+                        target,
+                    )
+                    .join("opencode.json"),
+                });
+            }
+        }
     }
 
     // -- Orphaned dependencies (advisory, issue #196) --
@@ -1655,6 +1691,7 @@ pub fn update(
                     });
                 }
                 lock.save(target)?;
+                sync_global_opencode_rules(at.scope, target, &lock);
             }
             for entry in &source_entries {
                 let kind = entry.kind;

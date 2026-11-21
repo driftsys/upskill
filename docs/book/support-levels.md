@@ -50,8 +50,9 @@ that does not change the table.)
 
 `.agents/skills` is a documented personal location of OpenCode.
 `.agents/rules/<name>/RULE.md` and `.opencode/agents/` are not documented
-personal locations, and the global scope writes no rules entry to an opencode
-config file. upskill writes the opencode plugin and MCP entries to
+personal locations. In the global scope, upskill writes one `instructions` entry
+per rule, the absolute path of its `RULE.md`, to the opencode config file that
+opencode reads. upskill also writes the opencode plugin and MCP entries to
 `$XDG_CONFIG_HOME/opencode/opencode.json` or `~/.config/opencode/opencode.json`.
 A trial with opencode 2.1.4 confirmed the second file; the first file was not
 tested. OpenCode stays experimental until its design settles these paths.

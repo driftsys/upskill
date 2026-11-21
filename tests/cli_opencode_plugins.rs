@@ -993,12 +993,16 @@ fn global_add_writes_plugin_and_mcp_to_the_xdg_default_file_only() {
 }
 
 #[test]
-fn global_add_writes_no_instructions_entry_for_a_rule() {
+fn global_add_writes_the_absolute_path_of_a_rule_to_instructions() {
     let env = Env::with_rule_and_mcp();
     env.add_global(None).success();
 
     let config = read_json(&env.global_config());
-    assert!(config.get("instructions").is_none(), "{config}");
+    assert_eq!(
+        config["instructions"],
+        serde_json::json!([env.home.join(".agents/rules/rule-a/RULE.md")]),
+        "{config}"
+    );
     assert!(!env.home.join("opencode.json").exists());
 }
 

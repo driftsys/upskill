@@ -352,6 +352,16 @@ pub struct MissingPlugin {
     pub repair_command: Option<String>,
 }
 
+/// A rule that the lockfile records for opencode in the global scope, whose
+/// `instructions` entry is missing from the global opencode config.
+#[derive(Debug, Clone, Serialize)]
+pub struct MissingRuleEntry {
+    pub name: String,
+    pub client: String,
+    /// The global opencode config file that lacks the entry.
+    pub config: PathBuf,
+}
+
 /// Plugin in lockfile (status: skipped) because the client CLI was not on
 /// PATH, or opencode was below version 2 or gave no version, at install
 /// time.  The plugin has never been installed.
@@ -474,6 +484,11 @@ pub struct DoctorReport {
     /// Files of a global install at the paths of an earlier version. Always
     /// empty for the project scope. Non-empty → `is_clean()` returns false.
     pub earlier_layout: Vec<EarlierLayoutFile>,
+    /// Rules installed for opencode whose entry is missing from the global
+    /// opencode config. Always empty for the project scope. Non-empty →
+    /// `is_clean()` returns false.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub missing_rule_entries: Vec<MissingRuleEntry>,
 }
 
 impl DoctorReport {
@@ -497,6 +512,7 @@ impl DoctorReport {
             && self.missing_plugins.is_empty()
             && self.interrupted.is_empty()
             && self.earlier_layout.is_empty()
+            && self.missing_rule_entries.is_empty()
             && !self
                 .mcp_entries
                 .iter()

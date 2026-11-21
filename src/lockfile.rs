@@ -315,6 +315,19 @@ impl Lockfile {
             .retain(|existing| !(existing.kind == kind && existing.name == name));
     }
 
+    /// Names of the rules whose output was written for opencode: an item of
+    /// kind rule whose `clients` is empty (all clients) or lists `opencode`.
+    pub fn opencode_rule_names(&self) -> std::collections::BTreeSet<String> {
+        self.items
+            .iter()
+            .filter(|i| {
+                i.kind == ItemKind::Rule
+                    && (i.clients.is_empty() || i.clients.iter().any(|c| c == "opencode"))
+            })
+            .map(|i| i.name.clone())
+            .collect()
+    }
+
     /// Add or replace a bundle entry by `name`. Bundles are kept sorted
     /// for deterministic on-disk output.
     pub fn upsert_bundle(&mut self, bundle: LockedBundle) {

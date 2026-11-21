@@ -106,9 +106,11 @@ Three ancillary files are managed idempotently:
   [call site](../../src/pipeline/mod.rs),
   [current-pin failure](../technotes/gate6-opencode-explicit-paths-retry.md)).
 
-The global scope writes no rules entry: opencode resolves a relative
-`instructions` path of its global config against the project directory
-([ADR-0008](0008-plugin-install-shellout.md), issue #581).
+In the global scope the glob does not work: the global opencode config expands
+no `**`, and it resolves a relative path against the project directory. The
+global scope writes one absolute path per installed rule,
+`<home>/.agents/rules/<name>/RULE.md`, to the `instructions` array of the global
+opencode config ([ADR-0008](0008-plugin-install-shellout.md), issue #581).
 
 Skills do not require an `opencode.json` entry — opencode walks
 `.agents/skills/**/SKILL.md` natively (`EXTERNAL_SKILL_PATTERN` in opencode's

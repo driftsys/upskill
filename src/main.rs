@@ -924,7 +924,7 @@ fn run_remove(
     };
 
     print_scope_line(&at);
-    match remove(&at.root, filter, force) {
+    match remove(&at, filter, force) {
         Ok(report) => {
             print_adoption_notice(report.adopted.as_deref());
             print_remove_report(&report);
@@ -2084,6 +2084,22 @@ fn print_doctor_report(report: &DoctorReport) {
                 style::name(&p.name),
                 p.client,
                 repair_hint(p.repair_command.as_deref()),
+            );
+        }
+    }
+
+    if !report.missing_rule_entries.is_empty() {
+        println!(
+            "{} {} rule(s) installed for opencode are missing from the global opencode config — `upskill update --global` writes them again",
+            style::error_label("doctor:"),
+            report.missing_rule_entries.len()
+        );
+        for r in &report.missing_rule_entries {
+            println!(
+                "  {} {} {}",
+                style::dim("rule"),
+                style::name(&r.name),
+                style::dim(&format!("({})", r.config.display())),
             );
         }
     }

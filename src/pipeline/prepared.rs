@@ -683,8 +683,24 @@ impl PreparedInstall {
         )?;
         let (items, kept_notes) =
             preview_items(target, lock, &self.report.planned, decision, &new_items);
-        let handshake =
-            crate::ancillary::pending_handshake_changes(target, plugin_scope, self.has_rules())?;
+        // The rules that the global opencode config would list: the
+        // installed ones and the ones this install plans for opencode.
+        let mut opencode_rules = lock.opencode_rule_names();
+        opencode_rules.extend(
+            self.report
+                .items
+                .iter()
+                .filter(|i| {
+                    i.kind == ItemKind::Rule && i.client == crate::generate::Client::OpenCode
+                })
+                .map(|i| i.name.clone()),
+        );
+        let handshake = crate::ancillary::pending_handshake_changes(
+            target,
+            plugin_scope,
+            self.has_rules(),
+            &opencode_rules,
+        )?;
         Ok(InstallPreview {
             items,
             kept_notes,
@@ -897,11 +913,17 @@ impl PreparedInstall {
         // register the opencode.json `instructions[]` glob so opencode picks up
         // generated rules under `.agents/rules/`. Idempotent; preserves other
         // keys.
-        // Not in the global scope: opencode resolves a relative `instructions`
-        // path against the project directory, so the glob cannot reach
-        // `~/.agents/rules/` from the global config (ADR-0008, issue #581).
-        if plugin_scope == PluginScope::Project {
-            crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
+        // In the global scope the glob does not work: opencode expands no `**`
+        // there, and resolves a relative path against the project directory.
+        // The global opencode config gets one absolute path per installed rule
+        // instead (ADR-0008, issue #581).
+        match plugin_scope {
+            PluginScope::Project => {
+                crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
+            }
+            PluginScope::User => {
+                crate::ancillary::sync_opencode_global_rules(target, &lock.opencode_rule_names())?;
+            }
         }
 
         // Per ADR-0003: when the install includes any rule, register
