@@ -2106,7 +2106,7 @@ fn print_doctor_report(report: &DoctorReport) {
 
     if !report.stale_rule_entries.is_empty() {
         println!(
-            "{} {} rule(s) not installed for opencode are listed in the global opencode config — `upskill update --global` deletes the entries, unless the file is not strict JSON or `instructions` is not an array; fix the file by hand then",
+            "{} {} rule(s) not installed for opencode are listed in the global opencode config — `upskill update --global` deletes the entries",
             style::error_label("doctor:"),
             report.stale_rule_entries.len()
         );
