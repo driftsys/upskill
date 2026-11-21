@@ -243,6 +243,15 @@ impl Default for Lockfile {
     }
 }
 
+impl LockedItem {
+    /// True for a rule whose output was written for opencode: `clients` is
+    /// empty (all clients) or lists `opencode`.
+    pub fn is_opencode_rule(&self) -> bool {
+        self.kind == ItemKind::Rule
+            && (self.clients.is_empty() || self.clients.iter().any(|c| c == "opencode"))
+    }
+}
+
 impl Lockfile {
     /// An empty lockfile with schema [`CURRENT_SCHEMA`] (2).
     pub fn new() -> Self {
@@ -313,6 +322,16 @@ impl Lockfile {
     pub fn remove(&mut self, kind: ItemKind, name: &str) {
         self.items
             .retain(|existing| !(existing.kind == kind && existing.name == name));
+    }
+
+    /// Names of the rules whose output was written for opencode: an item of
+    /// kind rule whose `clients` is empty (all clients) or lists `opencode`.
+    pub fn opencode_rule_names(&self) -> std::collections::BTreeSet<String> {
+        self.items
+            .iter()
+            .filter(|i| i.is_opencode_rule())
+            .map(|i| i.name.clone())
+            .collect()
     }
 
     /// Add or replace a bundle entry by `name`. Bundles are kept sorted

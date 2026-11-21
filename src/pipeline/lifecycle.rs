@@ -23,11 +23,11 @@ use super::prepared::prepare_install;
 use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, BothScopesItem, DoctorReport, DoctorScopes,
     EarlierLayoutFile, FetchFailed, InterruptedItem, ItemKind, ListReport, ListedBundle,
-    ListedItem, MissingOutput, MissingPlugin, ModifiedFile, OrphanEntry, OrphanReason,
-    OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport, RemovedItem,
-    ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure, SkippedPlugin, SkippedSource,
-    SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile, UpdateObserver,
-    UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
+    ListedItem, MissingOutput, MissingPlugin, MissingRuleEntry, ModifiedFile, OrphanEntry,
+    OrphanReason, OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport,
+    RemovedItem, ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure, SkippedPlugin,
+    SkippedSource, SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile,
+    UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -64,12 +64,16 @@ use super::{
 ///
 /// Ancillary files (`CLAUDE.md`, `opencode.json`,
 /// `.vscode/settings.json`) are user-owned after creation per ADR-0003, so
-/// they are left alone with one exception: for each bundle that lists a
-/// removed item (or has the removed source), the installed opencode plugin
+/// they are left alone with two exceptions. First, for each bundle that lists
+/// a removed item (or has the removed source), the installed opencode plugin
 /// entry of that bundle is deleted from the `plugin` and `plugins` arrays of
 /// the opencode config file of its recorded scope
-/// (`remove_opencode_plugin_uri`; an error is ignored).
-pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
+/// (`remove_opencode_plugin_uri`; an error is ignored). Second, in the global
+/// scope the `instructions` entry of each removed rule is deleted from the
+/// global opencode config, other entries are kept, and an error is ignored
+/// (`drop_global_opencode_rules`).
+pub fn remove(at: &ScopeRoot, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
+    let target = at.root.as_path();
     let mut lock = crate::lockfile::Lockfile::load(target)?;
     check_lockfile_records(target, &lock)?;
 
@@ -133,7 +137,7 @@ pub fn remove(target: &Path, filter: RemoveFilter, force: bool) -> Result<Remove
     // The adoption is saved before any file is deleted. Every later error
     // carries the adopted paths, so that `main.rs` can still print the adoption notice.
     let adopted = adopt_schema1(target, &mut lock)?;
-    let result = remove_selected(target, &mut lock, &filter, &keys, force);
+    let result = remove_selected(at, &mut lock, &filter, &keys, force);
     match (result, adopted) {
         (Ok(mut report), adopted) => {
             report.adopted = adopted;
@@ -334,12 +338,13 @@ fn execute_removal(
 /// The part of `remove` that runs after adoption: plan every selected
 /// item, then delete, then clean up bundles and plugins and save.
 fn remove_selected(
-    target: &Path,
+    at: &ScopeRoot,
     lock: &mut crate::lockfile::Lockfile,
     filter: &RemoveFilter,
     keys: &[(ItemKind, String)],
     force: bool,
 ) -> Result<RemoveReport> {
+    let target = at.root.as_path();
     let mut plans = Vec::with_capacity(keys.len());
     for (kind, name) in keys {
         let Some(entry) = lock
@@ -351,6 +356,18 @@ fn remove_selected(
         };
         plans.push(plan_removal(target, entry, force)?);
     }
+
+    // The rules whose opencode entry this removal deletes.
+    let opencode_rules: std::collections::BTreeSet<String> = keys
+        .iter()
+        .filter_map(|(kind, name)| {
+            lock.items
+                .iter()
+                .find(|i| i.kind == *kind && &i.name == name)
+        })
+        .filter(|i| i.is_opencode_rule())
+        .map(|i| i.name.clone())
+        .collect();
 
     let mut report = RemoveReport::default();
     // A path recorded by two removed items is reported once, for the first.
@@ -403,7 +420,28 @@ fn remove_selected(
         .retain(|b| !bundles_to_remove.contains(&b.name));
 
     lock.save(target)?;
+    drop_global_opencode_rules(at.scope, target, &opencode_rules);
     Ok(report)
+}
+
+/// In the global scope, delete from the global opencode config the entries of
+/// the rules in `names`. Nothing happens in the project scope, and the file is
+/// not read when `names` is empty. An error is ignored: the lockfile is
+/// already saved, so the removal succeeds. When the file cannot be read as
+/// JSON, or `instructions` is not an array, the entry of the removed rule stays
+/// in the file, and the user deletes it by hand.
+fn drop_global_opencode_rules(
+    scope: Scope,
+    root: &Path,
+    names: &std::collections::BTreeSet<String>,
+) {
+    if scope == Scope::Global {
+        let _ = crate::ancillary::sync_opencode_global_rules(
+            root,
+            &std::collections::BTreeSet::new(),
+            names,
+        );
+    }
 }
 
 /// The `upskill add` command that installs again the plugins of `bundle`,
@@ -489,6 +527,12 @@ fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> 
 ///   item's record names it, or, for an item without a record, when a file
 ///   exists at it. `upskill update --global` moves them. A path in this
 ///   bucket is not also reported as a missing output.
+/// - **missing rule entries** — for the global scope only: a rule recorded for
+///   opencode whose absolute path is not in the `instructions` array of the
+///   global opencode config. A config that is not strict JSON (for example
+///   with comments) reports every such rule, and `update` cannot repair it. A
+///   config without an `instructions` array is repaired by `update`; a value
+///   that is not an array is not.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by `update --check`, which
@@ -646,6 +690,26 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
         // Non-local sources: doctor only validates per-client outputs.
         // Hash comparison would require a network fetch — out of scope
         // here, see `update --check` and `update --dry-run`.
+    }
+
+    // -- Global opencode rule entries (ADR-0008, issue #581) --
+    // A rule installed for opencode in the global scope is listed in the
+    // `instructions` array of the global opencode config. An entry that is
+    // missing is drift: opencode does not load the rule.
+    if at.scope == Scope::Global {
+        for name in lock.opencode_rule_names() {
+            if !crate::ancillary::opencode_global_rule_registered(target, &name) {
+                report.missing_rule_entries.push(MissingRuleEntry {
+                    name,
+                    client: "opencode".to_string(),
+                    config: crate::ancillary::opencode_config_dir(
+                        crate::plugin::PluginScope::User,
+                        target,
+                    )
+                    .join("opencode.json"),
+                });
+            }
+        }
     }
 
     // -- Orphaned dependencies (advisory, issue #196) --
@@ -1484,7 +1548,13 @@ pub fn update(
             let is_orphan = |e: &crate::lockfile::LockedItem| {
                 !new_hashes.contains_key(&(e.kind, e.name.clone()))
             };
-            let install_preview = prepared.preview(target, plugin_scope, &current)?;
+            let orphan_rules: std::collections::BTreeSet<String> = source_entries
+                .iter()
+                .filter(|e| is_orphan(e) && e.is_opencode_rule())
+                .map(|e| e.name.clone())
+                .collect();
+            let install_preview =
+                prepared.preview(target, plugin_scope, &current, &orphan_rules)?;
             let mut items = install_preview.items;
             for orphan in source_entries.iter().filter(|e| is_orphan(e)) {
                 if let Some(entry) = current
@@ -1640,6 +1710,11 @@ pub fn update(
                     }
                 }
                 let mut reported = std::collections::BTreeSet::new();
+                let dropped: std::collections::BTreeSet<String> = orphans
+                    .iter()
+                    .filter(|o| o.is_opencode_rule())
+                    .map(|o| o.name.clone())
+                    .collect();
                 for plan in plans {
                     report
                         .changed
@@ -1655,6 +1730,7 @@ pub fn update(
                     });
                 }
                 lock.save(target)?;
+                drop_global_opencode_rules(at.scope, target, &dropped);
             }
             for entry in &source_entries {
                 let kind = entry.kind;
