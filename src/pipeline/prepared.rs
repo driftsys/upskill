@@ -743,6 +743,9 @@ impl PreparedInstall {
         let provenance = self.requires_provenance();
         let has_rules = self.has_rules();
         let opencode_rules = self.opencode_rule_names();
+        // The rules recorded for opencode before this install changes the
+        // lockfile.
+        let opencode_rules_before = lock.opencode_rule_names();
         let PreparedInstall {
             label,
             git_ref,
@@ -924,11 +927,15 @@ impl PreparedInstall {
                 crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
             }
             PluginScope::User => {
-                crate::ancillary::sync_opencode_global_rules(
-                    target,
-                    &opencode_rules,
-                    &BTreeSet::new(),
-                )?;
+                // A rule that this install records for fewer clients no longer
+                // targets opencode, and its entry is deleted.
+                let after = lock.opencode_rule_names();
+                let dropped: BTreeSet<String> = opencode_rules_before
+                    .iter()
+                    .filter(|name| !after.contains(*name) && !opencode_rules.contains(*name))
+                    .cloned()
+                    .collect();
+                crate::ancillary::sync_opencode_global_rules(target, &opencode_rules, &dropped)?;
             }
         }
 

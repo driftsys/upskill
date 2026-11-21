@@ -203,13 +203,17 @@ Decision:
 - `add` and `update` write the entry of each rule that the run installs for
   opencode. `remove --global` deletes the entry of each rule that it removes,
   and `update --global` deletes the entry of each rule that left its source; an
-  error of such a deletion is ignored, as for the plugin entry. upskill deletes
-  only the entry of a rule that it removes in that operation. An entry of the
-  same form for a rule that upskill does not track, written by hand, is kept. A
-  run that adds or removes no opencode rule does not read the file, so a file
-  that is not strict JSON (for example one with comments) breaks only a run that
-  has an entry to write. `doctor --global` reports a recorded rule whose entry
-  is missing, as drift with exit code 1, and `update --global` writes it again.
+  error of such a deletion is ignored, as for the plugin entry. An install that
+  records a rule for fewer clients, so that the lockfile no longer lists
+  opencode for it, deletes the entry of that rule; an error there is reported,
+  as for a write. A rule whose generated file was modified is still installed
+  for opencode, and `update` writes its missing entry. upskill deletes only the
+  entry of a rule that it removes in that operation. An entry of the same form
+  for a rule that upskill does not track, written by hand, is kept. A run that
+  adds or removes no opencode rule does not read the file, so a file that is not
+  strict JSON (for example one with comments) breaks only a run that has an
+  entry to write. `doctor --global` reports a recorded rule whose entry is
+  missing, as drift with exit code 1, and `update --global` writes it again.
   Other entries and other keys of the file are kept. An `instructions` value
   that is not an array is an error.
 - upskill does not read or write `$XDG_CONFIG_HOME/opencode/AGENTS.md`.

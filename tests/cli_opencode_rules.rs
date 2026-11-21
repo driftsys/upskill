@@ -389,3 +389,55 @@ fn a_hand_written_entry_of_the_same_form_survives_add_update_and_remove() {
         "{config}"
     );
 }
+
+#[test]
+fn reinstalling_a_rule_for_fewer_clients_deletes_its_opencode_entry() {
+    let env = Env::new();
+    env.add_global(None);
+    let source = env.source.to_str().unwrap();
+    env.run(
+        &["add", source, "rule-a", "--claude", "--global", "--force"],
+        None,
+    )
+    .success();
+
+    let config = read_json(&env.config());
+    assert_eq!(
+        config["instructions"],
+        serde_json::json!([env.entry("rule-b")]),
+        "{config}"
+    );
+}
+
+#[test]
+fn update_with_a_narrower_client_selection_deletes_the_opencode_entries() {
+    let env = Env::new();
+    env.add_global(None);
+    env.run(&["update", "--yes", "--claude", "--global"], None)
+        .code(0);
+
+    let config = read_json(&env.config());
+    assert_eq!(config["instructions"], serde_json::json!([]), "{config}");
+}
+
+#[test]
+fn update_restores_the_entry_of_a_rule_whose_generated_file_was_modified() {
+    let env = Env::new();
+    env.add_global(None);
+    let file = env.home.join(".agents/rules/rule-a/RULE.md");
+    let text = fs::read_to_string(&file).unwrap();
+    fs::write(&file, format!("{text}my edit\n")).unwrap();
+    let mut config = read_json(&env.config());
+    config["instructions"] = serde_json::json!([env.entry("rule-b")]);
+    fs::write(env.config(), config.to_string()).unwrap();
+
+    env.run(&["update", "--yes", "--global"], None).code(0);
+
+    let config = read_json(&env.config());
+    assert_eq!(
+        config["instructions"],
+        serde_json::json!([env.entry("rule-b"), env.entry("rule-a")]),
+        "{config}"
+    );
+    assert!(fs::read_to_string(&file).unwrap().contains("my edit"));
+}

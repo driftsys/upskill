@@ -984,7 +984,8 @@ as in a project; the `.vscode/settings.json` entry points at
   global opencode config, and no glob, because opencode expands no `**` there
   (ADR-0008, issue #581). `remove` deletes the entry of a removed rule, `update`
   writes the entries of the rules it installs and deletes those of the rules
-  that left the source, and `doctor` reports a missing entry. Other entries,
+  that left the source, an install that records a rule for fewer clients deletes
+  the entry of that rule, and `doctor` reports a missing entry. Other entries,
   also one of the same form that upskill does not track, are kept, and a run
   with no opencode rule to add or remove does not read the file. The plugin and
   MCP writers of both scopes use the opencode config file of the scope: the
