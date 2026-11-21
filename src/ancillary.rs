@@ -1583,7 +1583,10 @@ mod tests {
             dir(Some("relative/x")),
             Path::new("/home/u/.config/opencode")
         );
-        assert_eq!(dir(Some("/xdg")), Path::new("/xdg/opencode"));
+        // `/xdg` is not absolute on Windows (no drive), so use a path that
+        // is absolute on every platform.
+        let xdg = std::env::temp_dir().join("xdg");
+        assert_eq!(dir(Some(xdg.to_str().unwrap())), xdg.join("opencode"));
     }
 
     #[test]
