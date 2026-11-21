@@ -12,7 +12,9 @@
 //! print its notice at a later session start. Locks at least 60 seconds old
 //! or dated after the current time are replaced. When the lock cannot be
 //! acquired for another reason, a run continues without it. A completed run
-//! drops its lock; an interrupted run leaves the file until it expires.
+//! removes its lock only when its ownership token still matches; an interrupted
+//! run leaves the file until it expires. Checking the token and removing the
+//! file are separate operations, so simultaneous replacements can still race.
 //!
 //! Before it saves, a notice run
 //! loads the file again and applies only its own roots with [`merge_roots`],
@@ -38,7 +40,9 @@
 
 use std::collections::BTreeMap;
 use std::fs;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -56,15 +60,48 @@ pub const LOCK_FILE_NAME: &str = "notice.lock";
 /// The age in seconds at which a run lock can be replaced.
 pub const LOCK_MAX_AGE_SECS: u64 = 60;
 
-/// Deletes the lock file when dropped.
+/// Removes the lock file on drop if its ownership token still matches.
 pub struct RunLock {
     path: PathBuf,
+    token: Vec<u8>,
 }
 
 impl Drop for RunLock {
     fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
+        let _ = remove_lock_if_matches(&self.path, &self.token);
     }
+}
+
+fn remove_lock_if_matches(path: &Path, token: &[u8]) -> std::io::Result<bool> {
+    if fs::read(path)? != token {
+        return Ok(false);
+    }
+    fs::remove_file(path)?;
+    Ok(true)
+}
+
+fn create_run_lock(path: &Path) -> std::io::Result<RunLock> {
+    static NEXT_TOKEN: AtomicU64 = AtomicU64::new(0);
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let token = format!(
+        "{}:{timestamp}:{}",
+        std::process::id(),
+        NEXT_TOKEN.fetch_add(1, Ordering::Relaxed)
+    )
+    .into_bytes();
+    // A failed write can leave a partial token, which expires like any lock.
+    file.write_all(&token)?;
+    Ok(RunLock {
+        path: path.into(),
+        token,
+    })
 }
 
 pub enum LockAttempt {
@@ -82,17 +119,21 @@ pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt 
     if fs::create_dir_all(dir).is_err() {
         return LockAttempt::Unavailable;
     }
-    match fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(path)
-    {
-        Ok(_) => return LockAttempt::Held(RunLock { path: path.into() }),
+    match create_run_lock(path) {
+        Ok(lock) => return LockAttempt::Held(lock),
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
         Err(_) => return LockAttempt::Unavailable,
     }
-    let modified = match fs::metadata(path).and_then(|metadata| metadata.modified()) {
-        Ok(modified) => modified,
+    // Read the token and timestamp from the same file, even if the path changes.
+    let observed = (|| -> std::io::Result<_> {
+        let mut file = fs::File::open(path)?;
+        let modified = file.metadata()?.modified()?;
+        let mut token = Vec::new();
+        file.read_to_end(&mut token)?;
+        Ok((modified, token))
+    })();
+    let (modified, token) = match observed {
+        Ok(observed) => observed,
         Err(_) => return LockAttempt::Unavailable,
     };
     if now
@@ -101,15 +142,13 @@ pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt 
     {
         return LockAttempt::Busy;
     }
-    if fs::remove_file(path).is_err() {
-        return LockAttempt::Unavailable;
+    match remove_lock_if_matches(path, &token) {
+        Ok(true) => {}
+        Ok(false) => return LockAttempt::Busy,
+        Err(_) => return LockAttempt::Unavailable,
     }
-    match fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(path)
-    {
-        Ok(_) => LockAttempt::Held(RunLock { path: path.into() }),
+    match create_run_lock(path) {
+        Ok(lock) => LockAttempt::Held(lock),
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => LockAttempt::Busy,
         Err(_) => LockAttempt::Unavailable,
     }
@@ -446,6 +485,64 @@ mod tests {
             panic!("expected a held lock");
         };
         drop(lock);
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn dropping_a_replaced_run_lock_preserves_the_new_lock() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        let now = SystemTime::now();
+        let LockAttempt::Held(first) = acquire_run_lock(&path, now) else {
+            panic!("expected the first run to hold the lock");
+        };
+        set_age(&path, now, 60);
+        let LockAttempt::Held(second) = acquire_run_lock(&path, now) else {
+            panic!("expected the second run to replace the expired lock");
+        };
+
+        drop(first);
+        assert!(
+            path.is_file(),
+            "the first run deleted the second run's lock"
+        );
+        assert!(matches!(
+            acquire_run_lock(&path, now + Duration::from_secs(1)),
+            LockAttempt::Busy
+        ));
+
+        set_age(&path, now, 60);
+        let LockAttempt::Held(third) = acquire_run_lock(&path, now) else {
+            panic!("expected the third run to replace the expired lock");
+        };
+        drop(second);
+        assert!(
+            path.is_file(),
+            "the second run deleted the third run's lock"
+        );
+        drop(third);
+        assert!(!path.exists(), "the third run did not remove its own lock");
+    }
+
+    #[test]
+    fn a_stale_lock_snapshot_cannot_remove_a_replacement() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "expired owner").unwrap();
+        let now = SystemTime::now();
+        set_age(&path, now, 60);
+        let observed_token = fs::read(&path).unwrap();
+
+        let LockAttempt::Held(replacement) = acquire_run_lock(&path, now) else {
+            panic!("expected a replacement lock");
+        };
+        assert!(!remove_lock_if_matches(&path, &observed_token).unwrap());
+        assert!(matches!(
+            acquire_run_lock(&path, now + Duration::from_secs(1)),
+            LockAttempt::Busy
+        ));
+        drop(replacement);
         assert!(!path.exists());
     }
 

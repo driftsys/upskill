@@ -42,9 +42,11 @@ bundle; it does not replace the bundle or change its schema.
    Without rules for that client, it has neither init nor the hook.
    `update --notice` creates `notice.lock` before reading the cache. A run
    encountering a lock younger than 60 seconds exits silently. Expired or
-   future-dated locks are replaced; another lock error permits an unlocked run.
-   A completed run removes its lock; an interrupted run can leave it to expire.
-   This is not a writer lock for install, update or removal.
+   future-dated locks are replaced after checking the observed ownership token;
+   another lock error permits an unlocked run. Each run writes a unique token
+   and removes its lock on completion only if that token still matches. An
+   interrupted run can leave its lock to expire. This is not a writer lock for
+   install, update or removal.
 6. A lockfile bundle entry records the selected `kinds`; absent or empty means
    unrestricted, and empty is omitted on write. Recorded kinds are sorted
    without duplicates, and bundle entries are sorted by name. `update` restricts
@@ -80,9 +82,13 @@ through a plugin and `add` exposes duplicates. References by short skill name
 are not verified to resolve to prefixed plugin names. Authors publishing both
 outputs must check that Copilot does not also load the Claude output.
 
-Two runs reclaiming an expired lock can both print. Sessions in different
-repositories share the cache lock, so one can receive no notice until its next
-session. An unlocked run can still race with another cache save.
+Ownership tokens prevent a completed run from removing a lock that has already
+been replaced when it checks the token. The token check and removal are separate
+operations: a replacement between them can still be deleted, so two runs
+reclaiming an expired lock can both print. A run lasting at least 60 seconds can
+also overlap its replacement. Sessions in different repositories share the cache
+lock, so one can receive no notice until its next session. An unlocked run can
+still race with another cache save.
 
 ## Alternatives considered
 
