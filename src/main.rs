@@ -2104,6 +2104,22 @@ fn print_doctor_report(report: &DoctorReport) {
         }
     }
 
+    if !report.stale_rule_entries.is_empty() {
+        println!(
+            "{} {} rule(s) not installed for opencode are listed in the global opencode config — `upskill update --global` deletes the entries, unless the file is not strict JSON or `instructions` is not an array; fix the file by hand then",
+            style::error_label("doctor:"),
+            report.stale_rule_entries.len()
+        );
+        for r in &report.stale_rule_entries {
+            println!(
+                "  {} {} {}",
+                style::dim("rule"),
+                style::name(&r.name),
+                style::dim(&format!("({})", r.config.display())),
+            );
+        }
+    }
+
     if !report.interrupted.is_empty() {
         println!(
             "{} interrupted add or update ({} item(s)) — run the same command again to complete it",

@@ -244,8 +244,8 @@ impl Default for Lockfile {
 }
 
 impl LockedItem {
-    /// True for a rule whose output was written for opencode: `clients` is
-    /// empty (all clients) or lists `opencode`.
+    /// True for a rule whose output was written for opencode. An empty
+    /// `clients` list means all clients (ADR-0012).
     pub fn is_opencode_rule(&self) -> bool {
         self.kind == ItemKind::Rule
             && (self.clients.is_empty() || self.clients.iter().any(|c| c == "opencode"))
@@ -324,12 +324,22 @@ impl Lockfile {
             .retain(|existing| !(existing.kind == kind && existing.name == name));
     }
 
-    /// Names of the rules whose output was written for opencode: an item of
-    /// kind rule whose `clients` is empty (all clients) or lists `opencode`.
+    /// Names of the rules whose output was written for opencode, by
+    /// [`LockedItem::is_opencode_rule`].
     pub fn opencode_rule_names(&self) -> std::collections::BTreeSet<String> {
         self.items
             .iter()
             .filter(|i| i.is_opencode_rule())
+            .map(|i| i.name.clone())
+            .collect()
+    }
+
+    /// Names of the rules that are not written for opencode: an item of kind
+    /// rule whose `clients` is not empty and does not list `opencode`.
+    pub fn other_client_rule_names(&self) -> std::collections::BTreeSet<String> {
+        self.items
+            .iter()
+            .filter(|i| i.kind == ItemKind::Rule && !i.is_opencode_rule())
             .map(|i| i.name.clone())
             .collect()
     }
@@ -498,6 +508,35 @@ mod tests {
             files: Vec::new(),
             pending: Vec::new(),
         }
+    }
+
+    fn with_clients(kind: ItemKind, name: &str, clients: &[&str]) -> LockedItem {
+        LockedItem {
+            clients: clients.iter().map(|c| (*c).to_string()).collect(),
+            ..item(kind, name)
+        }
+    }
+
+    #[test]
+    fn a_rule_with_no_recorded_clients_is_an_opencode_rule() {
+        assert!(item(ItemKind::Rule, "r").is_opencode_rule());
+        assert!(with_clients(ItemKind::Rule, "r", &["claude", "opencode"]).is_opencode_rule());
+        assert!(!with_clients(ItemKind::Rule, "r", &["claude"]).is_opencode_rule());
+        assert!(!item(ItemKind::Skill, "s").is_opencode_rule());
+    }
+
+    #[test]
+    fn opencode_and_other_client_rule_names_split_the_rules() {
+        let mut lock = Lockfile::new();
+        lock.upsert(item(ItemKind::Rule, "all"));
+        lock.upsert(with_clients(ItemKind::Rule, "oc", &["opencode"]));
+        lock.upsert(with_clients(ItemKind::Rule, "cl", &["claude"]));
+        lock.upsert(with_clients(ItemKind::Skill, "sk", &["claude"]));
+        let set = |names: &[&str]| -> std::collections::BTreeSet<String> {
+            names.iter().map(|n| (*n).to_string()).collect()
+        };
+        assert_eq!(lock.opencode_rule_names(), set(&["all", "oc"]));
+        assert_eq!(lock.other_client_rule_names(), set(&["cl"]));
     }
 
     #[test]

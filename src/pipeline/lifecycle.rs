@@ -26,8 +26,8 @@ use super::{
     ListedItem, MissingOutput, MissingPlugin, MissingRuleEntry, ModifiedFile, OrphanEntry,
     OrphanReason, OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport,
     RemovedItem, ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure, SkippedPlugin,
-    SkippedSource, SourceDecision, SourcePreview, SourceResult, StaleHash, UnreadableFile,
-    UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
+    SkippedSource, SourceDecision, SourcePreview, SourceResult, StaleHash, StaleRuleEntry,
+    UnreadableFile, UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -409,7 +409,7 @@ fn remove_selected(
         {
             let _ = crate::ancillary::remove_opencode_plugin_uri(
                 target,
-                recorded_scope(plugin.scope.as_deref()),
+                scope_plugin_scope(at.scope),
                 &plugin.identifier,
             );
         }
@@ -712,6 +712,26 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
         }
     }
 
+    // A rule that the lockfile records for other clients than opencode has no
+    // entry of its own in the global opencode config. An entry of the form
+    // that upskill writes, for such a rule, is left from a removal that
+    // failed after the lockfile was saved. `update --global` deletes it.
+    // An entry for a name that the lockfile does not know is not reported.
+    if at.scope == Scope::Global {
+        for name in lock.other_client_rule_names() {
+            if crate::ancillary::opencode_global_rule_registered(target, &name) {
+                report.stale_rule_entries.push(StaleRuleEntry {
+                    name,
+                    config: crate::ancillary::opencode_config_dir(
+                        crate::plugin::PluginScope::User,
+                        target,
+                    )
+                    .join("opencode.json"),
+                });
+            }
+        }
+    }
+
     // -- Orphaned dependencies (advisory, issue #196) --
     // An item pulled in only as a dependency (`required_by` non-empty) whose
     // every recorded requirer is no longer installed. Surfaced as advisory
@@ -761,7 +781,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                 });
             }
             PluginInstallStatus::Installed => {
-                if plugin_is_missing(target, plugin) {
+                if plugin_is_missing(target, scope_plugin_scope(at.scope), plugin) {
                     report.missing_plugins.push(MissingPlugin {
                         name: plugin.name.clone(),
                         client: plugin.client.clone(),
@@ -803,7 +823,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     "vscode" => crate::ancillary::vscode_mcp_state(target, &mcp.name),
                     _ => crate::ancillary::opencode_mcp_state(
                         target,
-                        recorded_scope(mcp.scope.as_deref()),
+                        scope_plugin_scope(at.scope),
                         &mcp.name,
                     ),
                 };
@@ -910,12 +930,15 @@ fn reselect_from_entries(
     }
 }
 
-/// The install scope that the lockfile records for a plugin or MCP entry.
-/// An entry without a recorded scope is a project entry.
-fn recorded_scope(scope: Option<&str>) -> crate::plugin::PluginScope {
+/// The scope of the opencode config file for the lockfile of `scope`. The
+/// file is chosen from the scope root that holds the lockfile, not from the
+/// scope that an entry records, so that no run of the project scope reads or
+/// changes the global opencode config, and no run of the global scope reads or
+/// changes `<home>/opencode.json`.
+fn scope_plugin_scope(scope: Scope) -> crate::plugin::PluginScope {
     match scope {
-        Some("user") => crate::plugin::PluginScope::User,
-        _ => crate::plugin::PluginScope::Project,
+        Scope::Global => crate::plugin::PluginScope::User,
+        Scope::Project => crate::plugin::PluginScope::Project,
     }
 }
 
@@ -923,14 +946,18 @@ fn recorded_scope(scope: Option<&str>) -> crate::plugin::PluginScope {
 /// not installed. Used by `doctor` and by the plugin repair of `update`.
 ///
 /// An opencode plugin whose identifier is in the `plugin` or `plugins` array
-/// of the opencode config file of its recorded scope is installed, and no
+/// of the opencode config file of `file_scope`, the scope of the lockfile, is installed, and no
 /// opencode command is run for it. An opencode plugin recorded with
 /// `config_write` and absent from that array is missing, also without any
 /// opencode command. Otherwise the client CLI is queried. A client CLI that is
 /// absent, that has an unsupported version, or whose query fails gives `false`: the
 /// state cannot be checked, and a false report of a missing plugin is
 /// avoided. An unknown client gives `false`.
-pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedPlugin) -> bool {
+pub(super) fn plugin_is_missing(
+    target: &Path,
+    file_scope: crate::plugin::PluginScope,
+    plugin: &crate::lockfile::LockedPlugin,
+) -> bool {
     use crate::plugin::{
         PluginScope, check_claude_plugin_installed, check_opencode_plugin_installed,
         check_vscode_extension_installed,
@@ -946,11 +973,8 @@ pub(super) fn plugin_is_missing(target: &Path, plugin: &crate::lockfile::LockedP
         }
         "vscode" => check_vscode_extension_installed(&plugin.identifier),
         "opencode" => {
-            let listed = crate::ancillary::opencode_plugin_listed(
-                target,
-                recorded_scope(plugin.scope.as_deref()),
-                &plugin.identifier,
-            );
+            let listed =
+                crate::ancillary::opencode_plugin_listed(target, file_scope, &plugin.identifier);
             // A plugin installed by a write to `opencode.json` is checked in
             // that file only, with any opencode version or none.
             if listed || plugin.config_write {
@@ -991,7 +1015,7 @@ fn repair_missing_plugins(
                 // A skipped plugin is tried again: its client CLI may be on
                 // PATH now (issue #229).
                 PluginInstallStatus::Skipped => true,
-                PluginInstallStatus::Installed => plugin_is_missing(target, p),
+                PluginInstallStatus::Installed => plugin_is_missing(target, plugin_scope, p),
                 PluginInstallStatus::Instructions => false,
             })
             .map(|p| (p.name.clone(), p.client.clone()))
