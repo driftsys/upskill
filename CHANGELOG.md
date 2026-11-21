@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.9.2] (2026-11-21)
+
+### Refactoring
+
+- remove the unused capability model and family directive processing ([#473])
+  ([#583]) ([9afb4c6]), closes [#473]
+
+### Documentation
+
+- remove per-client override files from the content format ([#539]) ([#580])
+  ([831b8fc]), closes [#539], refs [#539], [#539]
+
+### Bug Fixes
+
+- **opencode:** write the global config to ~/.config/opencode and use the
+  plugins key ([#565], [#573]) ([#584]) ([bd32202])
+- **docs:** fix the rustdoc errors and deny rustdoc warnings in just lint
+  ([#559]) ([#582]) ([72d974d]), closes [#559]
+- **add:** refuse a git subfolder that is one item directory ([#577]) ([#579])
+  ([f9a7eb3]), closes [#577], refs [#577], [#577]
+- **add:** refuse a local source that is itself one item directory ([#472],
+  [#488]) ([#578]) ([d6152f9]), closes [#472], [#488]
+- **update:** print kept notes on stderr in a quiet terminal run ([#508])
+  ([#576]) ([eeb14f4]), closes [#508]
+
+[0.9.2]: https://github.com/driftsys/upskill/compare/v0.9.1...v0.9.2
+[9afb4c6]: https://github.com/driftsys/upskill/commit/9afb4c6
+[#473]: https://github.com/driftsys/upskill/issues/473
+[#583]: https://github.com/driftsys/upskill/issues/583
+[831b8fc]: https://github.com/driftsys/upskill/commit/831b8fc
+[#539]: https://github.com/driftsys/upskill/issues/539
+[#580]: https://github.com/driftsys/upskill/issues/580
+[bd32202]: https://github.com/driftsys/upskill/commit/bd32202
+[#565]: https://github.com/driftsys/upskill/issues/565
+[#573]: https://github.com/driftsys/upskill/issues/573
+[#584]: https://github.com/driftsys/upskill/issues/584
+[72d974d]: https://github.com/driftsys/upskill/commit/72d974d
+[#559]: https://github.com/driftsys/upskill/issues/559
+[#582]: https://github.com/driftsys/upskill/issues/582
+[f9a7eb3]: https://github.com/driftsys/upskill/commit/f9a7eb3
+[#577]: https://github.com/driftsys/upskill/issues/577
+[#579]: https://github.com/driftsys/upskill/issues/579
+[d6152f9]: https://github.com/driftsys/upskill/commit/d6152f9
+[#472]: https://github.com/driftsys/upskill/issues/472
+[#488]: https://github.com/driftsys/upskill/issues/488
+[#578]: https://github.com/driftsys/upskill/issues/578
+[eeb14f4]: https://github.com/driftsys/upskill/commit/eeb14f4
+[#508]: https://github.com/driftsys/upskill/issues/508
+[#576]: https://github.com/driftsys/upskill/issues/576
+
 ## [0.9.1] (2026-11-19)
 
 ### Documentation
