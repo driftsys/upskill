@@ -25,6 +25,29 @@ CANONICAL_PATHS = {
     'opencode': 'AGENTS.md',
 }
 
+GIT_ENVIRONMENT_SENTINELS = {
+    'GIT_DIR': '/unrelated/repository.git',
+    'GIT_WORK_TREE': '/unrelated/worktree',
+    'GIT_INDEX_FILE': '/unrelated/index',
+    'GIT_COMMON_DIR': '/unrelated/common',
+    'GIT_OBJECT_DIRECTORY': '/unrelated/objects',
+    'GIT_ALTERNATE_OBJECT_DIRECTORIES': '/unrelated/alternates',
+    'GIT_CONFIG_COUNT': '1',
+    'GIT_CONFIG_KEY_0': 'core.worktree',
+    'GIT_CONFIG_VALUE_0': '/unrelated/config-worktree',
+    'GIT_UPSKILL_FUTURE_SENTINEL': 'synthetic-git-value',
+}
+PRESERVED_ENVIRONMENT_SENTINELS = {
+    'PATH': '/synthetic/bin',
+    'HOME': '/synthetic/home',
+    'LANG': 'C',
+    'UPSKILL_TEST_ORDINARY': 'synthetic-ordinary-value',
+    'GH_TOKEN': 'synthetic-github-token',
+    'OPENAI_API_KEY': 'synthetic-openai-key',
+    'ANTHROPIC_API_KEY': 'synthetic-anthropic-key',
+    'COPILOT_GITHUB_TOKEN': 'synthetic-copilot-token',
+}
+
 
 def fixture_git(project, *args):
     env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
@@ -32,6 +55,23 @@ def fixture_git(project, *args):
 
 
 class QualificationTests(unittest.TestCase):
+    def test_fixture_git_environments_exclude_git_prefix_and_preserve_other_variables(self):
+        inherited = {**GIT_ENVIRONMENT_SENTINELS, **PRESERVED_ENVIRONMENT_SENTINELS}
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ, inherited, clear=True), mock.patch.object(q.subprocess, 'run') as git:
+                for client in CANONICAL_PATHS:
+                    q.fixtures(Path(tmp) / client, client)
+                    self.assertEqual(dict(os.environ), inherited)
+                q.copilot_claude_rules_fixtures(Path(tmp) / 'reader')
+                self.assertEqual(dict(os.environ), inherited)
+                self.assertEqual(git.call_count, 22)
+                for call in git.call_args_list:
+                    command = call.args[0]
+                    with self.subTest(command=command):
+                        self.assertEqual(command[0], 'git')
+                        self.assertTrue('init' in command or 'commit' in command)
+                        self.assertEqual(call.kwargs['env'], PRESERVED_ENVIRONMENT_SENTINELS)
+
     def test_fixture_markers_are_separated(self):
         with tempfile.TemporaryDirectory() as tmp:
             for client in CANONICAL_PATHS:
@@ -306,16 +346,23 @@ class OrchestrationTests(unittest.TestCase):
                 self.assertEqual(len(calls), 3)
 
     def test_native_and_version_environments_exclude_inherited_git_authority(self):
-        inherited = {'GIT_DIR': '/unrelated/repository.git', 'GIT_WORK_TREE': '/unrelated/worktree', 'GIT_INDEX_FILE': '/unrelated/index', 'GIT_COMMON_DIR': '/unrelated/common', 'GIT_OBJECT_DIRECTORY': '/unrelated/objects', 'GIT_ALTERNATE_OBJECT_DIRECTORIES': '/unrelated/alternates', 'GIT_CONFIG_COUNT': '1', 'GIT_CONFIG_KEY_0': 'core.worktree', 'GIT_CONFIG_VALUE_0': '/unrelated/config-worktree'}
+        inherited = {**GIT_ENVIRONMENT_SENTINELS, **PRESERVED_ENVIRONMENT_SENTINELS}
         # Real fixture Git isolation is covered separately; this boundary test
         # records version and model environments without executing a native CLI.
-        with mock.patch.dict(os.environ, inherited), mock.patch.object(q.subprocess, 'run'):
+        with mock.patch.dict(os.environ, inherited, clear=True), mock.patch.object(q.subprocess, 'run'):
             for client in CANONICAL_PATHS:
                 with self.subTest(client=client):
                     report, calls = self.controlled_run(client)
+                    self.assertEqual(calls[0]['command'], [client, '--version'])
+                    self.assertEqual([call['fixture'] for call in calls[1:]],
+                                     [outcome['fixture'] for probe in report['probes'] for outcome in probe['outcomes']])
+                    self.assertEqual(len(calls), 1 + 2 * len(report['probes']))
                     for call in calls:
-                        self.assertFalse(set(inherited) & call['env'].keys())
-                    self.assertEqual({key: os.environ[key] for key in inherited}, inherited)
+                        with self.subTest(command=call['command'], fixture=call['fixture']):
+                            self.assertFalse(any(key.startswith('GIT_') for key in call['env']))
+                            self.assertEqual({key: call['env'].get(key) for key in PRESERVED_ENVIRONMENT_SENTINELS},
+                                             PRESERVED_ENVIRONMENT_SENTINELS)
+                    self.assertEqual(dict(os.environ), inherited)
                     self.assertTrue(all(probe['result'] == 'qualified' for probe in report['probes']))
 
     def test_opencode_discovery_inventory_and_explicit_selections(self):
