@@ -566,17 +566,21 @@ a state has these fields, each defaulting to zero or empty when absent:
 | `reported`   | array of string | The set that the last printed notice reported, sorted.                                                      |
 
 Before reading `notice.json`, the command creates `notice.lock` in the same
-cache directory with create-only-if-absent semantics. A run that finds a lock
-younger than 60 seconds exits with code 0 without output, network requests or
-cache changes, also with `--repeat`. A lock at least 60 seconds old, or dated in
-the future, is removed and creation is retried once. Other lock errors let the
-run continue without a lock. A completed run removes its lock; an interrupted or
-killed run can leave it until it expires. Install, update and removal have no
-writer lock.
+cache directory with create-only-if-absent semantics. Each run writes a unique
+ownership token to its lock. A run that finds a lock younger than 60 seconds
+exits with code 0 without output, network requests or cache changes, also with
+`--repeat`. A lock at least 60 seconds old, or dated in the future, is removed
+only if the token read from it is unchanged, then creation is retried once. If
+the token has changed, the run exits silently as for a busy lock. Other lock
+errors let the run continue without a lock. A completed run removes the lock
+only if the file still holds its own token; an interrupted or killed run can
+leave it until it expires. Install, update and removal have no writer lock.
 
-Two limits remain: concurrent runs reclaiming an expired lock can both print;
-sessions in different repositories sharing this cache also share the lock, so
-one can print no notice until its next session start.
+Three limits remain: the token check and removal are separate operations, so a
+replacement between them can still be deleted and concurrent runs reclaiming an
+expired lock can both print; a run that lasts 60 seconds or more can overlap its
+replacement; sessions in different repositories sharing this cache also share
+the lock, so one can print no notice until its next session start.
 
 A file that is absent, unreadable or not valid JSON is an empty cache. The
 rules, in order:
