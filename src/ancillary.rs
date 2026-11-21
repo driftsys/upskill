@@ -79,7 +79,7 @@ fn opencode_config_dir_with(
             .map(PathBuf::from)
             .filter(|v| v.is_absolute())
             .map(|xdg| xdg.join("opencode"))
-            .unwrap_or_else(|| root.join(".config/opencode")),
+            .unwrap_or_else(|| root.join(".config").join("opencode")),
     }
 }
 
