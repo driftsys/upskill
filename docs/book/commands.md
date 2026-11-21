@@ -1523,7 +1523,8 @@ Limits of the global scope:
   deletes the entry of that rule. Other entries of the file are kept. The rules
   step reads and parses the file whenever the run installs an opencode rule or
   deletes an entry, so a file that is not strict JSON (for example one with
-  comments) fails such a run.
+  comments) fails such an `add` or `update`. `remove` ignores that error and
+  leaves the entry in the file.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.

@@ -994,20 +994,20 @@ as in a project; the `.vscode/settings.json` entry points at
   the entry of that rule, and `doctor` reports a missing entry. Other entries,
   also one of the same form that upskill does not track, are kept. The rules
   step reads and parses the file whenever the run installs an opencode rule or
-  deletes an entry, so a file that is not strict JSON fails such a run; the
-  plugin and MCP steps read it when the run writes an entry of theirs. The
-  plugin and MCP writers of both scopes use the opencode config file of the
-  scope: the project root in the project scope, and `$XDG_CONFIG_HOME/opencode/`
-  (when set and absolute) or `~/.config/opencode/` in the global scope. A trial
-  with opencode 2.1.4 confirmed that opencode reads
-  `~/.config/opencode/opencode.json` and ignores `~/opencode.json`. The
-  `XDG_CONFIG_HOME` location is used when set and absolute, and was not tested.
-  A `plugin_uri` plugin is written to the `plugins` array. upskill neither reads
-  nor changes `$HOME/opencode.json`, which earlier versions wrote. In the
-  project scope, the entry `".agents/rules/**/RULE.md"` is added to
-  `instructions[]` when absent, including when a later install finds that it was
-  removed. An existing entry leaves the file unchanged; unrelated entries and
-  keys are preserved
+  deletes an entry, so a file that is not strict JSON fails such an `add` or
+  `update` (`remove` ignores that error and leaves the entry); the plugin and
+  MCP steps read it when the run writes an entry of theirs. The plugin and MCP
+  writers of both scopes use the opencode config file of the scope: the project
+  root in the project scope, and `$XDG_CONFIG_HOME/opencode/` (when set and
+  absolute) or `~/.config/opencode/` in the global scope. A trial with opencode
+  2.1.4 confirmed that opencode reads `~/.config/opencode/opencode.json` and
+  ignores `~/opencode.json`. The `XDG_CONFIG_HOME` location is used when set and
+  absolute, and was not tested. A `plugin_uri` plugin is written to the
+  `plugins` array. upskill neither reads nor changes `$HOME/opencode.json`,
+  which earlier versions wrote. In the project scope, the entry
+  `".agents/rules/**/RULE.md"` is added to `instructions[]` when absent,
+  including when a later install finds that it was removed. An existing entry
+  leaves the file unchanged; unrelated entries and keys are preserved
   ([implementation](https://github.com/driftsys/upskill/blob/main/src/ancillary.rs),
   [call site](https://github.com/driftsys/upskill/blob/main/src/pipeline/mod.rs)).
   In the project scope the installer relies on client glob expansion; this is a
