@@ -179,14 +179,18 @@ stderr, never fetches, and keeps for each scope root the time of the last check,
 the updates found and the printed set in `<cache>/upskill/notice.json`
 (`$XDG_CACHE_HOME` when absolute, else `~/.cache`). Before reading the cache, it
 creates `notice.lock` in the same directory. A lock younger than 60 seconds
-makes another run exit silently; expired or future-dated locks are replaced. A
-completed run removes its lock; an interrupted run can leave it to expire. Other
-lock errors allow the run to continue without a lock. It prints a set once; with
-`--repeat` (valid only with `--notice`) it prints at every run that can proceed
-past the run lock while cached updates remain. An applied `update` removes from
-the cached updates of its scope root the items that it reports as updated, up to
-date, completed after an interruption, or removed; a cache failure there prints
-nothing.
+makes another run exit silently; expired or future-dated locks are replaced
+after checking that their ownership token still matches the observed file. A
+changed token makes the run exit silently, as for a busy lock. Each run writes a
+unique token and removes the lock on completion only if that token still
+matches. An interrupted run can leave its lock to expire. The token check and
+removal are separate operations, so simultaneous replacements can still race.
+Other lock errors allow the run to continue without a lock. It prints a set
+once; with `--repeat` (valid only with `--notice`) it prints at every run that
+can proceed past the run lock while cached updates remain. An applied `update`
+removes from the cached updates of its scope root the items that it reports as
+updated, up to date, completed after an interruption, or removed; a cache
+failure there prints nothing.
 
 ### Source format
 

@@ -458,6 +458,60 @@ mod tests {
     }
 
     #[test]
+    fn force_file_write_failure_preserves_both_client_trees() {
+        fn tree(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
+            fn visit(root: &Path, dir: &Path, entries: &mut BTreeMap<PathBuf, Option<Vec<u8>>>) {
+                for entry in std::fs::read_dir(dir).unwrap() {
+                    let path = entry.unwrap().path();
+                    let rel = path.strip_prefix(root).unwrap().to_path_buf();
+                    if path.is_dir() {
+                        entries.insert(rel, None);
+                        visit(root, &path, entries);
+                    } else {
+                        entries.insert(rel, Some(std::fs::read(path).unwrap()));
+                    }
+                }
+            }
+            let mut entries = BTreeMap::new();
+            visit(root, root, &mut entries);
+            entries
+        }
+
+        for failing_client in [0, 1] {
+            let tmp = tempfile::tempdir().unwrap();
+            let out = tmp.path();
+            for name in ["b-claude", "b-copilot"] {
+                let target = out.join(name);
+                std::fs::create_dir_all(target.join("nested/empty")).unwrap();
+                std::fs::write(target.join("old.txt"), name).unwrap();
+                std::fs::write(target.join("nested/old.bin"), [0, 255, 1]).unwrap();
+            }
+            let before = tree(out);
+            let mut dirs = [
+                plugin_dir("b-claude", &[("new.txt", "new")]),
+                plugin_dir("b-copilot", &[("new.txt", "new")]),
+            ];
+            let name = dirs[failing_client].dir_name.clone();
+            // The nested file is written before writing over its parent directory fails.
+            dirs[failing_client] = plugin_dir(
+                &name,
+                &[("collision/partial.txt", "partial"), ("collision", "fails")],
+            );
+
+            let message = format!("{:#}", write_plugin_dirs(out, &dirs, true).unwrap_err());
+
+            assert_eq!(tree(out), before, "failed client {name}: {message}");
+            // Compare the part below the temporary directory: Windows can report
+            // that directory with its short (8.3) name.
+            let failed_path = Path::new(&format!(".{name}.upskill-stage")).join("collision");
+            assert!(
+                message.contains(&format!("{}", failed_path.display())),
+                "{message}"
+            );
+        }
+    }
+
+    #[test]
     fn force_replaces_each_directory_and_leaves_no_staging_directory() {
         let tmp = tempfile::tempdir().unwrap();
         let out = tmp.path();

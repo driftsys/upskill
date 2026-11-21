@@ -53,10 +53,11 @@ Thirteen model turns include these cases and two unsuccessful Codex control
 attempts. Six paired assessments returned `observed` through the existing strict
 classifier; two command-line-override assessments failed. The classifier never
 returns campaign qualification. Team bytes and mode `0640` match before and
-after every turn. Exclusive configuration backups were used for temporary
-fixture changes, and original bytes/modes were restored. Codex native removal
-also removed each selected cache. The evidence does not demonstrate arbitrary
-native/cloud recovery or an interrupted backup-restoration path.
+after every turn. Retained configuration receipts show matching original and
+restored SHA-256 hashes and file modes after temporary fixture changes. Codex
+native removal also removed each selected cache. The evidence does not
+demonstrate arbitrary native/cloud recovery or an interrupted backup-restoration
+path.
 
 Codex `-c plugins.<id>.enabled=false` invocation overrides did not disable
 either hook. These are failed controls, not negative passes or an established

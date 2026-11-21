@@ -42,9 +42,12 @@ bundle; it does not replace the bundle or change its schema.
    Without rules for that client, it has neither init nor the hook.
    `update --notice` creates `notice.lock` before reading the cache. A run
    encountering a lock younger than 60 seconds exits silently. Expired or
-   future-dated locks are replaced; another lock error permits an unlocked run.
-   A completed run removes its lock; an interrupted run can leave it to expire.
-   This is not a writer lock for install, update or removal.
+   future-dated locks are replaced after checking the observed ownership token.
+   A changed token makes the run exit silently, as for a busy lock. Another lock
+   error permits an unlocked run. Each run writes a unique token and removes its
+   lock on completion only if that token still matches. An interrupted run can
+   leave its lock to expire. This is not a writer lock for install, update or
+   removal.
 6. A lockfile bundle entry records the selected `kinds`; absent or empty means
    unrestricted, and empty is omitted on write. Recorded kinds are sorted
    without duplicates, and bundle entries are sorted by name. `update` restricts
@@ -58,10 +61,13 @@ bundle; it does not replace the bundle or change its schema.
    merged with the bundle closure. Before this decision, `update` after
    `add <dir> <bundle>` installed every item of the source. Every lockfile entry
    of that source whose kind is outside the restriction is left untouched and
-   reported as up to date, regardless of bundle membership or `required_by`;
-   `add <source> <item>` updates it. A recorded bundle that is no longer in its
-   source causes `bundle '<name>' is no longer in source <label>` before any
-   write, even if an item has the same name.
+   reported as up to date, regardless of bundle membership or `required_by`,
+   unless its source is skipped. It then shares the source's skipped status,
+   also when the source is skipped later because it requires an item of a
+   skipped source. `add <source> <item>` updates it. A recorded bundle that is
+   no longer in its source causes
+   `bundle '<name>' is no longer in source <label>` before any write, even if an
+   item has the same name.
 8. `pack` resolves the entry bundle in the current directory. A `requires` entry
    with a `source` is fetched from that source. The init `--source` must parse
    as an install source and, like the bundle name, is limited to a safe
@@ -80,9 +86,13 @@ through a plugin and `add` exposes duplicates. References by short skill name
 are not verified to resolve to prefixed plugin names. Authors publishing both
 outputs must check that Copilot does not also load the Claude output.
 
-Two runs reclaiming an expired lock can both print. Sessions in different
-repositories share the cache lock, so one can receive no notice until its next
-session. An unlocked run can still race with another cache save.
+Ownership tokens prevent a completed run from removing a lock that has already
+been replaced when it checks the token. The token check and removal are separate
+operations: a replacement between them can still be deleted, so two runs
+reclaiming an expired lock can both print. A run lasting at least 60 seconds can
+also overlap its replacement. Sessions in different repositories share the cache
+lock, so one can receive no notice until its next session. An unlocked run can
+still race with another cache save.
 
 ## Alternatives considered
 
