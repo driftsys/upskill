@@ -188,10 +188,28 @@ pub fn pending_handshake_changes(
     opencode_rules: &BTreeSet<String>,
     dropped: &BTreeSet<String>,
 ) -> Result<Vec<PathBuf>> {
+    pending_handshake_changes_with(
+        target,
+        scope,
+        has_rules,
+        opencode_rules,
+        dropped,
+        std::env::var_os("XDG_CONFIG_HOME"),
+    )
+}
+
+fn pending_handshake_changes_with(
+    target: &Path,
+    scope: PluginScope,
+    has_rules: bool,
+    opencode_rules: &BTreeSet<String>,
+    dropped: &BTreeSet<String>,
+    xdg_config_home: Option<std::ffi::OsString>,
+) -> Result<Vec<PathBuf>> {
     let opencode_rules = match scope {
         PluginScope::Project => opencode_rules_pending(target, has_rules)?,
         PluginScope::User => opencode_global_rules_pending(
-            &opencode_json_path(scope, target),
+            &opencode_config_dir_with(scope, target, xdg_config_home).join(OPENCODE_JSON),
             target,
             opencode_rules,
             dropped,
@@ -1971,29 +1989,37 @@ mod tests {
     #[test]
     fn pending_handshake_changes_in_the_global_scope_lists_the_config_for_new_entries() {
         let tmp = tempfile::tempdir().unwrap();
-        let got = pending_handshake_changes(
-            tmp.path(),
-            PluginScope::User,
-            true,
-            &names(&["a"]),
-            &BTreeSet::new(),
-        )
-        .unwrap();
-        // The paths are relative to the target when they are inside it, and
-        // sorted. `XDG_CONFIG_HOME` of the environment can move the config
-        // file out of the target, so its expected path is computed with the
-        // same inputs as the function.
-        let config = opencode_json_path(PluginScope::User, tmp.path());
+        let list = |xdg: Option<&Path>| {
+            pending_handshake_changes_with(
+                tmp.path(),
+                PluginScope::User,
+                true,
+                &names(&["a"]),
+                &BTreeSet::new(),
+                xdg.map(|p| p.as_os_str().to_owned()),
+            )
+            .unwrap()
+        };
+        // Without `XDG_CONFIG_HOME` the config file is inside the target, so
+        // the path is relative to it. The list is sorted.
+        assert_eq!(
+            list(None),
+            vec![
+                PathBuf::from(".config/opencode/opencode.json"),
+                PathBuf::from(".vscode/settings.json"),
+                PathBuf::from("CLAUDE.md"),
+            ]
+        );
+        // An absolute `XDG_CONFIG_HOME` outside the target gives an absolute
+        // path.
+        let xdg = std::env::temp_dir().join("upskill-xdg-literal");
         let mut expected = vec![
-            config
-                .strip_prefix(tmp.path())
-                .map(Path::to_path_buf)
-                .unwrap_or(config),
-            PathBuf::from(".vscode").join("settings.json"),
+            PathBuf::from(".vscode/settings.json"),
             PathBuf::from("CLAUDE.md"),
+            xdg.join("opencode").join("opencode.json"),
         ];
         expected.sort();
-        assert_eq!(got, expected);
+        assert_eq!(list(Some(&xdg)), expected);
         let none = pending_handshake_changes(
             tmp.path(),
             PluginScope::User,

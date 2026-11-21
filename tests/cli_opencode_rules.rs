@@ -277,6 +277,11 @@ fn global_doctor_json_lists_the_missing_entry() {
     assert_eq!(missing.as_array().unwrap().len(), 2, "{value}");
     assert_eq!(missing[0]["name"], "rule-a", "{value}");
     assert_eq!(missing[0]["client"], "opencode", "{value}");
+    assert_eq!(
+        missing[0]["config"].as_str().unwrap(),
+        env.config().to_str().unwrap(),
+        "{value}"
+    );
 }
 
 #[cfg(unix)]
@@ -928,4 +933,34 @@ fn update_preview_lists_and_the_update_deletes_a_stale_entry_that_is_the_only_ch
         common::update_in_terminal(env.home.parent().unwrap(), &env.home, &["--global"], "y\n");
     assert_eq!(result["returncode"], 0, "{result}");
     assert_eq!(instructions_of(&env), serde_json::json!([]));
+}
+
+#[test]
+fn global_add_deletes_a_stale_entry() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    set_instructions(&env, serde_json::json!([env.entry("rule-a")]));
+
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+
+    assert_eq!(instructions_of(&env), serde_json::json!([]));
+}
+
+#[test]
+fn remove_keeps_a_stale_entry_of_another_rule() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    set_instructions(&env, serde_json::json!([env.entry("rule-a")]));
+
+    env.run(&["remove", "rule-b", "--global"], None).success();
+
+    assert_eq!(
+        instructions_of(&env),
+        serde_json::json!([env.entry("rule-a")])
+    );
 }

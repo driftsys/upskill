@@ -215,9 +215,9 @@ pub struct LockedMcp {
     pub name: String,
     /// Client identifier: `"claude"`, `"opencode"`, etc.
     pub client: String,
-    /// Install scope, `"project"` or `"user"`. It selects the Claude Code install
-    /// scope only; the opencode config file comes from the scope of the
-    /// lockfile that holds the entry.
+    /// Install scope, `"project"` or `"user"`, as recorded. Nothing reads it:
+    /// the scope of the lockfile that holds the entry selects the Claude Code
+    /// scope and the opencode config file.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
     /// Bundle that declared this MCP server.

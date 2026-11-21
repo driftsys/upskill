@@ -1516,28 +1516,38 @@ fn global_add_reports_that_plugins_must_be_an_array() {
     );
 }
 
+impl Env {
+    /// Record the scope `user` for every plugin and MCP entry of the project
+    /// lockfile, and write the file that a recorded `user` scope would reach
+    /// under the project root, `<project>/.config/opencode/opencode.json`,
+    /// with the plugin and the MCP entry. The project file keeps its own.
+    /// Returns the content of that other file.
+    fn record_user_scope_in_project_lock(&self) -> (PathBuf, String) {
+        let lock_path = self.project.join(".upskill-lock.json");
+        let mut lock = read_json(&lock_path);
+        for key in ["plugins", "mcps"] {
+            for entry in lock[key].as_array_mut().unwrap() {
+                entry["scope"] = serde_json::json!("user");
+            }
+        }
+        fs::write(&lock_path, lock.to_string()).unwrap();
+        let other = self.project.join(".config/opencode/opencode.json");
+        let raw = serde_json::json!({
+            "plugins": [URI],
+            "mcp": { MCP_NAME: { "type": "local", "command": ["npx", "srv-mcp"] } }
+        })
+        .to_string();
+        fs::create_dir_all(other.parent().unwrap()).unwrap();
+        fs::write(&other, &raw).unwrap();
+        (other, raw)
+    }
+}
+
 #[test]
-fn project_doctor_update_and_remove_leave_the_global_file_alone_whatever_scope_an_entry_records() {
+fn project_doctor_and_update_use_the_project_file_whatever_scope_an_entry_records() {
     let env = Env::with_rule_and_mcp();
     env.add().success();
-    // Record the scope `user` for every plugin and MCP entry of the project
-    // lockfile.
-    let lock_path = env.project.join(".upskill-lock.json");
-    let mut lock = read_json(&lock_path);
-    for key in ["plugins", "mcps"] {
-        for entry in lock[key].as_array_mut().unwrap() {
-            entry["scope"] = serde_json::json!("user");
-        }
-    }
-    fs::write(&lock_path, lock.to_string()).unwrap();
-    // The global file holds both entries. The project file has neither.
-    let global = serde_json::json!({
-        "plugins": [URI],
-        "mcp": { MCP_NAME: { "type": "local", "command": ["npx", "srv-mcp"] } }
-    })
-    .to_string();
-    fs::create_dir_all(env.global_config().parent().unwrap()).unwrap();
-    fs::write(env.global_config(), &global).unwrap();
+    let (other, raw) = env.record_user_scope_in_project_lock();
     let mut project = env.opencode_json();
     project["plugins"] = serde_json::json!([]);
     project["mcp"] = serde_json::json!({});
@@ -1552,10 +1562,31 @@ fn project_doctor_update_and_remove_leave_the_global_file_alone_whatever_scope_a
     let project = env.opencode_json();
     assert_eq!(project["plugins"], serde_json::json!([URI]), "{project}");
     assert!(project["mcp"][MCP_NAME].is_object(), "{project}");
+    assert_eq!(fs::read_to_string(other).unwrap(), raw);
+}
+
+#[test]
+fn project_remove_edits_the_project_file_whatever_scope_an_entry_records() {
+    let env = Env::with_rule_and_mcp();
+    env.add().success();
+    let (other, raw) = env.record_user_scope_in_project_lock();
 
     env.run(&["remove", "alpha", "--project"]).success();
+
     assert_eq!(env.opencode_json()["plugins"], serde_json::json!([]));
-    assert_eq!(fs::read_to_string(env.global_config()).unwrap(), global);
+    assert_eq!(fs::read_to_string(other).unwrap(), raw);
+}
+
+#[test]
+fn project_remove_mcp_edits_the_project_file_whatever_scope_an_entry_records() {
+    let env = Env::with_rule_and_mcp();
+    env.add().success();
+    let (other, raw) = env.record_user_scope_in_project_lock();
+
+    env.run(&["remove-mcp", MCP_NAME, "--project"]).success();
+
+    assert!(env.opencode_json()["mcp"].get(MCP_NAME).is_none());
+    assert_eq!(fs::read_to_string(other).unwrap(), raw);
 }
 
 /// A terminal `update --global` with end of input as the answer. No source
@@ -1569,8 +1600,9 @@ fn terminal_global_repair_reads_the_global_file_not_the_old_home_file() {
     config["plugins"] = serde_json::json!([]);
     fs::write(env.global_config(), config.to_string()).unwrap();
     // The old file lists the plugin; the repair must not take it for the
-    // entry that opencode reads.
+    // entry that opencode reads, whatever scope the entry records.
     let old = env.write_old_home_file();
+    env.record_scope_in_global_lock(Some("project"));
 
     let path = fake_path(&env.bin);
     let result = common::update_in_terminal_with_env(
