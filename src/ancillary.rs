@@ -62,8 +62,10 @@ const PLUGINS_KEY: &str = "plugins";
 ///   is the home directory in the global scope.
 ///
 /// A trial with opencode 2.1.4 confirmed `<root>/.config/opencode` as the global
-/// directory and showed that `<root>/opencode.json` is ignored (ADR-0008). The
-/// `XDG_CONFIG_HOME` location was not tested.
+/// directory and showed that `<root>/opencode.json` is ignored (ADR-0008). In
+/// the trials of issue #581, opencode loaded the `instructions` of the
+/// `XDG_CONFIG_HOME` location; no trial tested the plugin or MCP entries
+/// there.
 pub fn opencode_config_dir(scope: PluginScope, root: &Path) -> PathBuf {
     opencode_config_dir_with(scope, root, std::env::var_os("XDG_CONFIG_HOME"))
 }
@@ -186,10 +188,28 @@ pub fn pending_handshake_changes(
     opencode_rules: &BTreeSet<String>,
     dropped: &BTreeSet<String>,
 ) -> Result<Vec<PathBuf>> {
+    pending_handshake_changes_with(
+        target,
+        scope,
+        has_rules,
+        opencode_rules,
+        dropped,
+        std::env::var_os("XDG_CONFIG_HOME"),
+    )
+}
+
+fn pending_handshake_changes_with(
+    target: &Path,
+    scope: PluginScope,
+    has_rules: bool,
+    opencode_rules: &BTreeSet<String>,
+    dropped: &BTreeSet<String>,
+    xdg_config_home: Option<std::ffi::OsString>,
+) -> Result<Vec<PathBuf>> {
     let opencode_rules = match scope {
         PluginScope::Project => opencode_rules_pending(target, has_rules)?,
         PluginScope::User => opencode_global_rules_pending(
-            &opencode_json_path(scope, target),
+            &opencode_config_dir_with(scope, target, xdg_config_home).join(OPENCODE_JSON),
             target,
             opencode_rules,
             dropped,
@@ -1808,6 +1828,55 @@ mod tests {
             .collect()
     }
 
+    /// The entry of the rule `name` under the root `/home/u`, as a literal
+    /// path of the platform: the entry is built from separate components, so
+    /// a Windows path has a backslash after `/home/u`.
+    fn lit(name: &str) -> String {
+        #[cfg(unix)]
+        {
+            format!("/home/u/.agents/rules/{name}/RULE.md")
+        }
+        #[cfg(not(unix))]
+        {
+            format!("/home/u\\.agents\\rules\\{name}\\RULE.md")
+        }
+    }
+
+    #[test]
+    fn global_rule_entry_is_the_literal_absolute_path_of_the_generated_file() {
+        assert_eq!(
+            opencode_global_rule_entry(Path::new("/home/u"), "a"),
+            lit("a")
+        );
+    }
+
+    #[test]
+    fn global_rules_sync_removing_from_a_file_without_instructions_leaves_it_as_it_is() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cfg = tmp.path().join("opencode.json");
+        let raw = r#"{"theme": "dark"}"#;
+        std::fs::write(&cfg, raw).unwrap();
+        assert_eq!(
+            sync_at(&cfg, &[], &["a"]).unwrap(),
+            AncillaryAction::Preserved
+        );
+        assert_eq!(std::fs::read_to_string(&cfg).unwrap(), raw);
+    }
+
+    #[test]
+    fn global_rules_sync_keeps_instructions_entries_that_are_not_strings() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cfg = tmp.path().join("opencode.json");
+        let doc = json!({"instructions": [{"file": "x.md"}, 7, lit("a")]});
+        std::fs::write(&cfg, doc.to_string()).unwrap();
+        assert_eq!(
+            sync_at(&cfg, &[], &["a"]).unwrap(),
+            AncillaryAction::Updated
+        );
+        let after: Value = serde_json::from_str(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
+        assert_eq!(after["instructions"], json!([{"file": "x.md"}, 7]));
+    }
+
     #[test]
     fn global_rules_sync_creates_the_file_with_one_absolute_entry_per_rule() {
         let tmp = tempfile::tempdir().unwrap();
@@ -1816,13 +1885,7 @@ mod tests {
             sync_at(&cfg, &["b", "a"], &[]).unwrap(),
             AncillaryAction::Created
         );
-        assert_eq!(
-            instructions(&cfg),
-            vec![
-                opencode_global_rule_entry(Path::new("/home/u"), "a"),
-                opencode_global_rule_entry(Path::new("/home/u"), "b"),
-            ]
-        );
+        assert_eq!(instructions(&cfg), vec![lit("a"), lit("b"),]);
     }
 
     #[test]
@@ -1869,7 +1932,7 @@ mod tests {
             vec![
                 "/x/foreign.md".to_string(),
                 ".agents/rules/**/RULE.md".to_string(),
-                opencode_global_rule_entry(Path::new("/home/u"), "a"),
+                lit("a"),
             ]
         );
         let doc: Value = serde_json::from_str(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
@@ -1880,7 +1943,7 @@ mod tests {
     fn global_rules_sync_removes_only_the_entries_of_the_named_rules() {
         let tmp = tempfile::tempdir().unwrap();
         let cfg = tmp.path().join("opencode.json");
-        let entry = |n: &str| opencode_global_rule_entry(Path::new("/home/u"), n);
+        let entry = lit;
         let doc = json!({"instructions": [
             "/x/foreign.md", entry("a"), entry("b"), entry("mine"), "/other/.agents/rules/c/RULE.md"
         ]});
@@ -1926,20 +1989,37 @@ mod tests {
     #[test]
     fn pending_handshake_changes_in_the_global_scope_lists_the_config_for_new_entries() {
         let tmp = tempfile::tempdir().unwrap();
-        let got = pending_handshake_changes(
-            tmp.path(),
-            PluginScope::User,
-            true,
-            &names(&["a"]),
-            &BTreeSet::new(),
-        )
-        .unwrap();
+        let list = |xdg: Option<&Path>| {
+            pending_handshake_changes_with(
+                tmp.path(),
+                PluginScope::User,
+                true,
+                &names(&["a"]),
+                &BTreeSet::new(),
+                xdg.map(|p| p.as_os_str().to_owned()),
+            )
+            .unwrap()
+        };
+        // Without `XDG_CONFIG_HOME` the config file is inside the target, so
+        // the path is relative to it. The list is sorted.
         assert_eq!(
-            got.iter()
-                .filter(|p| p.file_name().is_some_and(|n| n == OPENCODE_JSON))
-                .count(),
-            1
+            list(None),
+            vec![
+                PathBuf::from(".config/opencode/opencode.json"),
+                PathBuf::from(".vscode/settings.json"),
+                PathBuf::from("CLAUDE.md"),
+            ]
         );
+        // An absolute `XDG_CONFIG_HOME` outside the target gives an absolute
+        // path.
+        let xdg = std::env::temp_dir().join("upskill-xdg-literal");
+        let mut expected = vec![
+            PathBuf::from(".vscode/settings.json"),
+            PathBuf::from("CLAUDE.md"),
+            xdg.join("opencode").join("opencode.json"),
+        ];
+        expected.sort();
+        assert_eq!(list(Some(&xdg)), expected);
         let none = pending_handshake_changes(
             tmp.path(),
             PluginScope::User,

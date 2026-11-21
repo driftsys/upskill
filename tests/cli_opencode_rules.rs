@@ -277,6 +277,11 @@ fn global_doctor_json_lists_the_missing_entry() {
     assert_eq!(missing.as_array().unwrap().len(), 2, "{value}");
     assert_eq!(missing[0]["name"], "rule-a", "{value}");
     assert_eq!(missing[0]["client"], "opencode", "{value}");
+    assert_eq!(
+        missing[0]["config"].as_str().unwrap(),
+        env.config().to_str().unwrap(),
+        "{value}"
+    );
 }
 
 #[cfg(unix)]
@@ -289,11 +294,7 @@ fn global_update_preview_lists_the_config_when_an_entry_would_be_added() {
     let result =
         common::update_in_terminal(env.home.parent().unwrap(), &env.home, &["--global"], "n\n");
     let out = result["stdout"].as_str().unwrap();
-    assert!(
-        out.lines()
-            .any(|line| line.trim_start().starts_with("write") && line.contains("opencode.json")),
-        "{result}"
-    );
+    assert!(lists_the_config(out), "{result}");
     assert!(!env.config().exists(), "a declined update writes nothing");
 }
 
@@ -508,20 +509,56 @@ fn remove_keeps_a_hand_written_entry_for_a_rule_that_never_targeted_opencode() {
 }
 
 #[test]
-fn update_orphan_removal_keeps_a_hand_written_entry_for_a_rule_that_never_targeted_opencode() {
+fn doctor_reports_and_update_deletes_the_entry_of_a_recorded_rule_not_installed_for_opencode() {
     let env = Env::new();
     let source = env.source.to_str().unwrap();
     env.run(&["add", source, "--claude", "--global"], None)
         .success();
-    set_instructions(&env, serde_json::json!([env.entry("rule-b")]));
-    fs::remove_dir_all(env.source.join("rule-b")).unwrap();
+    // The entry of `rule-a`, which the lockfile records for claude only, is
+    // left in the config (as after a removal that failed). The entry of
+    // `rule-x`, a name that the lockfile does not know, and a foreign entry
+    // are not upskill's.
+    set_instructions(
+        &env,
+        serde_json::json!([
+            env.entry("rule-a"),
+            env.entry("rule-x"),
+            "/elsewhere/own.md"
+        ]),
+    );
+
+    let out = env.run(&["doctor", "--global"], None).code(1);
+    let text = stdout(&out);
+    assert!(
+        text.lines()
+            .any(|l| l.trim_start().starts_with("rule rule-a")),
+        "{text}"
+    );
+    assert!(!text.contains("rule-x"), "{text}");
+    assert!(
+        text.lines().any(|l| l.contains(
+            "1 rule(s) not installed for opencode are listed in the global opencode config"
+        ) && l.contains("`upskill update --global` deletes the entries")),
+        "{text}"
+    );
+    let json = env.run(&["doctor", "--global", "--json"], None).code(1);
+    let value: serde_json::Value = serde_json::from_str(&stdout(&json)).unwrap();
+    let stale = value["scopes"][0]["stale_rule_entries"].as_array().unwrap();
+    assert_eq!(stale.len(), 1, "{value}");
+    assert_eq!(stale[0]["name"], "rule-a", "{value}");
+    assert_eq!(
+        stale[0]["config"].as_str().unwrap(),
+        env.config().to_str().unwrap(),
+        "{value}"
+    );
 
     env.run(&["update", "--yes", "--global"], None).code(0);
 
     assert_eq!(
         instructions_of(&env),
-        serde_json::json!([env.entry("rule-b")])
+        serde_json::json!([env.entry("rule-x"), "/elsewhere/own.md"])
     );
+    env.run(&["doctor", "--global"], None).code(0);
 }
 
 #[test]
@@ -560,11 +597,7 @@ fn update_preview_lists_the_config_for_a_deletion_only_change() {
         "n\n",
     );
     let out = result["stdout"].as_str().unwrap();
-    assert!(
-        out.lines()
-            .any(|line| line.trim_start().starts_with("write") && line.contains("opencode.json")),
-        "{result}"
-    );
+    assert!(lists_the_config(out), "{result}");
     assert_eq!(instructions_of(&env).as_array().unwrap().len(), 2);
 }
 
@@ -575,12 +608,19 @@ fn update_validates_the_global_config_before_it_writes_any_file() {
     fs::write(env.config(), r#"{"instructions": "x"}"#).unwrap();
     let lock_before = fs::read_to_string(env.home.join(".upskill-lock.json")).unwrap();
 
-    env.run(&["update", "--yes", "--claude", "--global"], None)
+    let out = env
+        .run(&["update", "--yes", "--claude", "--global"], None)
         .failure();
 
+    let err = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(err.contains("`instructions` must be an array"), "{err}");
     assert!(
         env.home.join(".agents/rules/rule-a/RULE.md").exists(),
         "no output was deleted"
+    );
+    assert!(
+        !env.home.join(".claude/rules/rule-a.md").exists(),
+        "no rule output was created"
     );
     assert_eq!(
         fs::read_to_string(env.home.join(".upskill-lock.json")).unwrap(),
@@ -616,11 +656,18 @@ fn terminal_update(env: &Env, args: &[&str]) -> String {
     )
 }
 
+/// True when the preview has a `write` line for the global opencode config,
+/// by its path relative to the home directory. The project glob file
+/// `opencode.json` at the root is not that path.
 #[cfg(unix)]
 fn lists_the_config(text: &str) -> bool {
-    text.lines()
-        .any(|line| line.trim_start().starts_with("write") && line.contains("opencode.json"))
+    text.lines().any(|line| {
+        line.trim_start().starts_with("write") && line.trim_end().ends_with(GLOBAL_CONFIG_REL)
+    })
 }
+
+#[cfg(unix)]
+const GLOBAL_CONFIG_REL: &str = ".config/opencode/opencode.json";
 
 #[cfg(unix)]
 #[test]
@@ -729,4 +776,191 @@ fn a_config_that_is_not_strict_json_fails_add_and_update_with_the_parse_error() 
     let out = env.run(&["update", "--yes", "--global"], None).failure();
     let err = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
     assert!(err.contains("parse"), "{err}");
+}
+
+#[test]
+fn a_clean_global_doctor_json_omits_the_rule_entry_lists() {
+    let env = Env::new();
+    env.add_global(None);
+
+    let out = env.run(&["doctor", "--global", "--json"], None).code(0);
+    let value: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    let scope = value["scopes"][0].as_object().unwrap();
+    assert!(!scope.contains_key("missing_rule_entries"), "{value}");
+    assert!(!scope.contains_key("stale_rule_entries"), "{value}");
+}
+
+#[test]
+fn doctor_reports_every_rule_as_missing_when_the_config_is_not_strict_json() {
+    let env = Env::new();
+    env.add_global(None);
+    write_jsonc_config(&env);
+
+    let out = env.run(&["doctor", "--global", "--json"], None).code(1);
+
+    let value: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    let missing = value["scopes"][0]["missing_rule_entries"]
+        .as_array()
+        .unwrap();
+    let names: Vec<&str> = missing
+        .iter()
+        .map(|m| m["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, vec!["rule-a", "rule-b"], "{value}");
+}
+
+#[test]
+fn project_remove_leaves_a_config_entry_under_the_project_root_alone() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--opencode", "--project"], None)
+        .success();
+    // The global form of the entry, under the project root, in the place where
+    // the global scope would keep it. Only the global scope edits that file.
+    let config = env
+        .cwd
+        .join(".config")
+        .join("opencode")
+        .join("opencode.json");
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    let entry = env
+        .cwd
+        .join(".agents")
+        .join("rules")
+        .join("rule-a")
+        .join("RULE.md");
+    let raw = serde_json::json!({ "instructions": [entry] }).to_string();
+    fs::write(&config, &raw).unwrap();
+
+    env.run(&["remove", "rule-a", "--project"], None).success();
+
+    assert_eq!(fs::read_to_string(&config).unwrap(), raw);
+}
+
+#[test]
+fn a_skipped_skill_does_not_stop_the_entry_of_a_rule_with_the_same_name() {
+    let env = Env::new();
+    fs::remove_dir_all(env.source.join("rule-b")).unwrap();
+    // A skill named `rule-a`, in the directory of the rule `rule-a`.
+    let skill = env.source.join("rule-a/SKILL.md");
+    fs::create_dir_all(skill.parent().unwrap()).unwrap();
+    fs::write(
+        &skill,
+        "---\nschema: 1\nname: rule-a\ndescription: skill for the issue 585 tests.\n---\n\n## Body\n\nText.\n",
+    )
+    .unwrap();
+    // An unowned file at the opencode path of the skill makes the skill a skipped item.
+    let file = env.home.join(".agents/skills/rule-a/SKILL.md");
+    fs::create_dir_all(file.parent().unwrap()).unwrap();
+    fs::write(&file, "mine\n").unwrap();
+
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--opencode", "--global"], None)
+        .code(1);
+
+    assert_eq!(fs::read_to_string(&file).unwrap(), "mine\n");
+    assert_eq!(
+        instructions_of(&env),
+        serde_json::json!([env.entry("rule-a")])
+    );
+}
+
+#[test]
+fn the_entry_of_a_rule_stays_when_a_later_add_skips_the_rule() {
+    let env = Env::new();
+    env.add_global(None);
+    let file = env.home.join(".agents/rules/rule-a/RULE.md");
+    let text = fs::read_to_string(&file).unwrap();
+    fs::write(&file, format!("{text}my edit\n")).unwrap();
+
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--opencode", "--global"], None)
+        .code(1);
+
+    assert_eq!(
+        instructions_of(&env),
+        serde_json::json!([env.entry("rule-a"), env.entry("rule-b")])
+    );
+}
+
+#[test]
+fn project_doctor_does_not_check_for_stale_global_rule_entries() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--project"], None)
+        .success();
+    // The global form of the entry of a claude-only rule, under the project
+    // root. Only the global scope looks there.
+    let config = env
+        .cwd
+        .join(".config")
+        .join("opencode")
+        .join("opencode.json");
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    let entry = env
+        .cwd
+        .join(".agents")
+        .join("rules")
+        .join("rule-a")
+        .join("RULE.md");
+    fs::write(
+        &config,
+        serde_json::json!({ "instructions": [entry] }).to_string(),
+    )
+    .unwrap();
+
+    env.run(&["doctor", "--project"], None).code(0);
+}
+
+#[cfg(unix)]
+#[test]
+fn update_preview_lists_and_the_update_deletes_a_stale_entry_that_is_the_only_change() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    set_instructions(&env, serde_json::json!([env.entry("rule-a")]));
+
+    let declined = terminal_update(&env, &["--global"]);
+    assert!(lists_the_config(&declined), "{declined}");
+    assert_eq!(
+        instructions_of(&env),
+        serde_json::json!([env.entry("rule-a")]),
+        "a declined update writes nothing"
+    );
+
+    let result =
+        common::update_in_terminal(env.home.parent().unwrap(), &env.home, &["--global"], "y\n");
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(instructions_of(&env), serde_json::json!([]));
+}
+
+#[test]
+fn global_add_deletes_a_stale_entry() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    set_instructions(&env, serde_json::json!([env.entry("rule-a")]));
+
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+
+    assert_eq!(instructions_of(&env), serde_json::json!([]));
+}
+
+#[test]
+fn remove_keeps_a_stale_entry_of_another_rule() {
+    let env = Env::new();
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    set_instructions(&env, serde_json::json!([env.entry("rule-a")]));
+
+    env.run(&["remove", "rule-b", "--global"], None).success();
+
+    assert_eq!(
+        instructions_of(&env),
+        serde_json::json!([env.entry("rule-a")])
+    );
 }
