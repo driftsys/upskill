@@ -353,7 +353,7 @@ fn run_add(args: AddArgs) -> i32 {
         }
     };
 
-    let plugin_scope = scope_to_plugin_scope(global, project);
+    let plugin_scope = scope_to_plugin_scope(at.scope);
 
     let is_global = at.scope == Scope::Global;
 
@@ -619,17 +619,14 @@ fn is_inside_git_repo() -> bool {
     }
 }
 
-/// Map the `--global` / `--project` CLI flags to a `PluginScope` for
-/// plugin installation (used by clients that support scoped installs,
-/// e.g. Claude Code).
-fn scope_to_plugin_scope(global: bool, _project: bool) -> PluginScope {
-    if global {
-        PluginScope::User
-    } else if is_inside_git_repo() {
-        // `--project` or auto-detected git repo → project scope.
-        PluginScope::Project
-    } else {
-        PluginScope::User
+/// Map the resolved scope to a `PluginScope` for plugin installation (used by
+/// clients that support scoped installs, e.g. Claude Code). The scope is the
+/// one `resolve_scope` returned, so the flags, the git-repo detection and the
+/// home-directory refusal are decided in one place.
+fn scope_to_plugin_scope(scope: Scope) -> PluginScope {
+    match scope {
+        Scope::Project => PluginScope::Project,
+        Scope::Global => PluginScope::User,
     }
 }
 
@@ -1120,7 +1117,7 @@ fn run_update(args: UpdateArgs) -> i32 {
         }
     };
 
-    let plugin_scope = scope_to_plugin_scope(global, project);
+    let plugin_scope = scope_to_plugin_scope(at.scope);
     let is_global = at.scope == Scope::Global;
     let selection = resolve_selection(&flag_clients, project_config_root(is_global));
 
@@ -2736,7 +2733,7 @@ fn unconfigure_mcp(
             "claude" => upskill::ancillary::remove_claude_mcp(target, name)?,
             "copilot" => upskill::ancillary::remove_copilot_mcp(name)?,
             "vscode" => upskill::ancillary::remove_vscode_mcp(target, name)?,
-            "opencode" => upskill::ancillary::remove_opencode_mcp(target, name)?,
+            "opencode" => upskill::ancillary::remove_opencode_mcp(target, scope, name)?,
             _ => {}
         },
         Some(PluginOutcome::Failed { stderr, exit_code }) => {
@@ -2763,9 +2760,8 @@ fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
         }
     };
     print_scope_line(&at);
+    let mcp_scope = scope_to_plugin_scope(at.scope);
     let target = at.root;
-
-    let mcp_scope = scope_to_plugin_scope(global, project);
 
     let mut lock = match upskill::lockfile::Lockfile::load(&target) {
         Ok(l) => l,

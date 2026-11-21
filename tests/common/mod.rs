@@ -18,6 +18,9 @@ pub fn upskill_cmd(fake_home: &Path) -> Command {
     cmd.env("HOME", fake_home);
     // Also override USERPROFILE for Windows-compat code paths.
     cmd.env("USERPROFILE", fake_home);
+    // The opencode global config directory follows `XDG_CONFIG_HOME`; the
+    // developer's own value must not reach a test.
+    cmd.env_remove("XDG_CONFIG_HOME");
     cmd
 }
 

@@ -671,11 +671,11 @@ matching block skip installation silently.
 A client block MAY use one of these alternative forms instead of the standard
 auto-install form. The mode is determined by which required field is present:
 
-| Mode              | Discriminating fields                                    | Available for | Behavior                               |
-| ----------------- | -------------------------------------------------------- | ------------- | -------------------------------------- |
-| Auto-install      | `source`+`marketplace`+`plugin` / `extension` / `module` | all clients   | Shell out to client CLI                |
-| Instructions-only | `instructions_url`                                       | all clients   | Print info notice; no automated action |
-| Config-write      | `plugin_uri`                                             | opencode only | Write URI to project `opencode.json`   |
+| Mode              | Discriminating fields                                    | Available for | Behavior                                  |
+| ----------------- | -------------------------------------------------------- | ------------- | ----------------------------------------- |
+| Auto-install      | `source`+`marketplace`+`plugin` / `extension` / `module` | all clients   | Shell out to client CLI                   |
+| Instructions-only | `instructions_url`                                       | all clients   | Print info notice; no automated action    |
+| Config-write      | `plugin_uri`                                             | opencode only | Write URI to `opencode.json` of the scope |
 
 **Instructions-only form:**
 
@@ -686,7 +686,7 @@ plugins:
       instructions_url: https://example.com/install-docs
       summary: |
         Add "example@git+https://example.com/repo.git" to the
-        plugin[] array in opencode.json, then restart opencode.
+        plugins[] array in opencode.json, then restart opencode.
 ```
 
 | Field              | Type   | Required | Description                                    |
@@ -704,10 +704,10 @@ plugins:
       install_url: https://example.com/install-docs
 ```
 
-| Field         | Type   | Required | Description                                              |
-| ------------- | ------ | -------- | -------------------------------------------------------- |
-| `plugin_uri`  | string | YES      | Plugin URI appended to `opencode.json` `plugin[]` array. |
-| `install_url` | string | no       | URL shown in output for reference.                       |
+| Field         | Type   | Required | Description                                                      |
+| ------------- | ------ | -------- | ---------------------------------------------------------------- |
+| `plugin_uri`  | string | YES      | Plugin URI appended to the `plugins[]` array of `opencode.json`. |
+| `install_url` | string | no       | URL shown in output for reference.                               |
 
 Disambiguation: serde attempts variants in declaration order (Install first). If
 both an auto-install field and an instructions-only field are present, the
@@ -773,8 +773,8 @@ Implementations:
 
 - MUST shell out to the native client CLI for auto-install plugin descriptors —
   MUST NOT manipulate client config files directly, except for the opencode
-  config-write mode which writes to project-scope `opencode.json` per the
-  documented plugin registration path.
+  config-write mode which writes the `plugins` array of the `opencode.json` of
+  the scope (§7.3).
 - MUST treat plugin install as idempotent (re-running on an already-installed
   plugin is a no-op).
 - MUST use warn-skip when the target client CLI is not found
@@ -853,7 +853,7 @@ CLI-first with a config-write fallback per target. VS Code is an MCP target but
 | Claude Code    | `claude mcp add <name> --scope <scope> [-e K=${V}] -- <cmd> [args]` (local) / `claude mcp add --transport <http\|sse> <name> <url> --scope <scope> [-H …]` (remote) | `.mcp.json`                               | `mcpServers` |
 | GitHub Copilot | `copilot mcp add …` (no `--scope`)                                                                                                                                  | `~/.copilot/mcp-config.json` (user scope) | `mcpServers` |
 | VS Code        | `code --add-mcp '<json>'`                                                                                                                                           | `.vscode/mcp.json`                        | `servers`    |
-| opencode       | — (no `mcp add` verb; config-only)                                                                                                                                  | `opencode.json`                           | `mcp`        |
+| opencode       | — (no `mcp add` verb; config-only)                                                                                                                                  | `opencode.json` of the scope (§7.3)       | `mcp`        |
 
 Per-target config shapes differ:
 
@@ -1280,6 +1280,18 @@ upskill writes these paths in its global scope.
 | Rule      | `.agents/rules/<name>/RULE.md`   | `name:`, `description:`. opencode-specific fields from passthrough block. `scope.paths` dropped (no per-rule scoping per §3.2).                               |
 | Skill     | `.agents/skills/<name>/SKILL.md` | `name:`, `description:`. Agent Skills extended fields and opencode-specific fields from passthrough block. opencode walks this directory.                     |
 | Agent     | `.opencode/agents/<name>.md`     | `name:`, `description:`, `mode:`, `model:`, `permission:` map (allow per capability; write rolls into edit). opencode-specific fields from passthrough block. |
+
+The opencode config file is `opencode.json`. In the project scope it is at the
+project root. In the global scope it is at `$XDG_CONFIG_HOME/opencode/` when
+`XDG_CONFIG_HOME` is set and absolute, and otherwise at
+`$HOME/.config/opencode/`. A trial with opencode 2.1.4 showed that opencode
+reads `$HOME/.config/opencode/opencode.json` and ignores `$HOME/opencode.json`;
+the `XDG_CONFIG_HOME` location is used when set and absolute, and was not
+tested. An implementation writes the plugin URI of a `plugin_uri` descriptor to
+the `plugins` array of that file. A reader accepts an entry under `plugin` or
+`plugins`. opencode resolves a relative `instructions` path of the global file
+against the project directory in one trial (issue #581), so a global install
+writes no rules entry for opencode.
 
 ### 7.4 Formatting guarantee
 

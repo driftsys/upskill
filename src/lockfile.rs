@@ -166,7 +166,8 @@ pub struct LockedPlugin {
     /// - vscode: `"<extension-id>"`
     /// - opencode: `"<module>"`
     pub identifier: String,
-    /// Install scope (only meaningful for claude: `"project"` or `"user"`).
+    /// Install scope, `"project"` or `"user"`. It selects the Claude Code install
+    /// scope and the opencode config file.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
     /// Bundle that declared this plugin.
@@ -180,7 +181,7 @@ pub struct LockedPlugin {
     #[serde(default)]
     pub status: PluginInstallStatus,
     /// True when upskill installed the plugin by a write of `identifier` to
-    /// the `plugin` array of the scope's `opencode.json` (an opencode
+    /// the `plugins` array of the `opencode.json` of the scope (an opencode
     /// `plugin_uri` descriptor). `doctor` and the repair of `update` then
     /// check that file only and run no opencode command. Omitted when false,
     /// for every other install form; a lockfile without it reads as false.
@@ -213,7 +214,8 @@ pub struct LockedMcp {
     pub name: String,
     /// Client identifier: `"claude"`, `"opencode"`, etc.
     pub client: String,
-    /// Install scope (only meaningful for claude: `"project"` or `"user"`).
+    /// Install scope, `"project"` or `"user"`. It selects the Claude Code install
+    /// scope and the opencode config file.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
     /// Bundle that declared this MCP server.

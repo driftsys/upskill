@@ -1147,7 +1147,7 @@ pub(super) fn install_plugins_from_bundles(
                         install_url,
                     } => {
                         let outcome =
-                            crate::ancillary::write_opencode_plugin_uri(target, plugin_uri);
+                            crate::ancillary::write_opencode_plugin_uri(target, scope, plugin_uri);
                         results.push(PluginResult {
                             config_write: true,
                             name: plugin_name.clone(),
@@ -1294,7 +1294,9 @@ fn configure_mcp_for_target(
     };
 
     match cli_outcome {
-        PluginOutcome::CliNotFound => config_write_mcp_for_target(mcp_target, name, entry, target),
+        PluginOutcome::CliNotFound => {
+            config_write_mcp_for_target(mcp_target, name, entry, scope, target)
+        }
         other => other,
     }
 }
@@ -1305,6 +1307,7 @@ fn config_write_mcp_for_target(
     mcp_target: crate::mcp::McpTarget,
     name: &str,
     entry: &crate::model::bundle::McpEntry,
+    scope: crate::plugin::PluginScope,
     target: &Path,
 ) -> crate::plugin::PluginOutcome {
     use crate::ancillary;
@@ -1329,10 +1332,10 @@ fn config_write_mcp_for_target(
             ancillary::write_vscode_mcp_remote(target, name, r)
         }
         (McpTarget::OpenCode, McpTransport::Local(l)) => {
-            ancillary::write_opencode_mcp_local(target, name, l)
+            ancillary::write_opencode_mcp_local(target, scope, name, l)
         }
         (McpTarget::OpenCode, McpTransport::Remote(r)) => {
-            ancillary::write_opencode_mcp_remote(target, name, r)
+            ancillary::write_opencode_mcp_remote(target, scope, name, r)
         }
     }
 }

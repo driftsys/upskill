@@ -157,6 +157,14 @@ scope, not committed). Per-client output paths and ancillary files (`CLAUDE.md`,
 [format-spec §7](docs/specification/format-spec.md); the global Copilot paths
 are in [specification §3.1](docs/specification/specification.md).
 
+The opencode config file (`opencode.json`) is at the project root in the project
+scope. In the global scope it is `$XDG_CONFIG_HOME/opencode/opencode.json` (when
+absolute) or `~/.config/opencode/opencode.json`. A trial with opencode 2.1.4
+confirmed the second location and not `$HOME/opencode.json`; the first location
+was not tested. upskill writes plugin entries to its `plugins` array and MCP
+servers to its `mcp` map, and writes no rules `instructions` entry in the global
+scope ([ADR-0008](docs/adr/0008-plugin-install-shellout.md)).
+
 Without a scope flag, `add` stops outside a git repo (exit 2); `update`,
 `remove` and `remove-mcp` use the global scope there; `list`, `doctor`,
 `update --check` and `update --notice` report both scopes. The project scope is

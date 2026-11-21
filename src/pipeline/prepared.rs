@@ -666,7 +666,12 @@ impl PreparedInstall {
     /// lockfile, the caller passes it after `owned::adopt_schema1_in_memory`.
     /// The preview is computed by [`apply::decide_plan`], as `commit` does;
     /// see [`preview_items`] for how each item is reported.
-    pub fn preview(&self, target: &Path, lock: &Lockfile) -> Result<InstallPreview> {
+    pub fn preview(
+        &self,
+        target: &Path,
+        plugin_scope: PluginScope,
+        lock: &Lockfile,
+    ) -> Result<InstallPreview> {
         let new_items = self.new_items();
         let decision = apply::decide_plan(
             target,
@@ -678,7 +683,8 @@ impl PreparedInstall {
         )?;
         let (items, kept_notes) =
             preview_items(target, lock, &self.report.planned, decision, &new_items);
-        let handshake = crate::ancillary::pending_handshake_changes(target, self.has_rules())?;
+        let handshake =
+            crate::ancillary::pending_handshake_changes(target, plugin_scope, self.has_rules())?;
         Ok(InstallPreview {
             items,
             kept_notes,
@@ -891,7 +897,12 @@ impl PreparedInstall {
         // register the opencode.json `instructions[]` glob so opencode picks up
         // generated rules under `.agents/rules/`. Idempotent; preserves other
         // keys.
-        crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
+        // Not in the global scope: opencode resolves a relative `instructions`
+        // path against the project directory, so the glob cannot reach
+        // `~/.agents/rules/` from the global config (ADR-0008, issue #581).
+        if plugin_scope == PluginScope::Project {
+            crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
+        }
 
         // Per ADR-0003: when the install includes any rule, register
         // `.github/instructions` in `.vscode/settings.json`'s
@@ -1131,7 +1142,11 @@ mod tests {
         let (_tmp, target, source) = installed_then_changed();
         let prepared = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
         let preview = prepared
-            .preview(&target, &Lockfile::load(&target).unwrap())
+            .preview(
+                &target,
+                PluginScope::Project,
+                &Lockfile::load(&target).unwrap(),
+            )
             .unwrap();
         assert_eq!(preview.items.len(), 1, "only `a` changes");
         assert_eq!(preview.items[0].name, "a");
@@ -1173,7 +1188,11 @@ mod tests {
 
         let prepared = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
         let preview = prepared
-            .preview(&target, &Lockfile::load(&target).unwrap())
+            .preview(
+                &target,
+                PluginScope::Project,
+                &Lockfile::load(&target).unwrap(),
+            )
             .unwrap();
         assert_eq!(preview.items.len(), 1, "{:?}", preview.items);
         let previewed: BTreeSet<PathBuf> = preview
@@ -1221,7 +1240,11 @@ mod tests {
 
         let prepared = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
         let preview = prepared
-            .preview(&target, &Lockfile::load(&target).unwrap())
+            .preview(
+                &target,
+                PluginScope::Project,
+                &Lockfile::load(&target).unwrap(),
+            )
             .unwrap();
         assert!(
             preview
@@ -1270,7 +1293,11 @@ mod tests {
 
         let prepared = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
         let preview = prepared
-            .preview(&target, &Lockfile::load(&target).unwrap())
+            .preview(
+                &target,
+                PluginScope::Project,
+                &Lockfile::load(&target).unwrap(),
+            )
             .unwrap();
         let first = written(&preview);
         // Each client copy of the resource is listed once. The `.claude` copy
@@ -1291,7 +1318,11 @@ mod tests {
 
         let again = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
         let preview = again
-            .preview(&target, &Lockfile::load(&target).unwrap())
+            .preview(
+                &target,
+                PluginScope::Project,
+                &Lockfile::load(&target).unwrap(),
+            )
             .unwrap();
         assert!(written(&preview).is_empty(), "{:?}", preview.items);
     }
@@ -1302,7 +1333,11 @@ mod tests {
         let before = snapshot(tmp.path());
         let prepared = prepare_install(&source, &target, &[], &AddOptions::default()).unwrap();
         prepared
-            .preview(&target, &Lockfile::load(&target).unwrap())
+            .preview(
+                &target,
+                PluginScope::Project,
+                &Lockfile::load(&target).unwrap(),
+            )
             .unwrap();
         drop(prepared);
         assert_eq!(snapshot(tmp.path()), before);
@@ -1322,7 +1357,9 @@ mod tests {
             &AddOptions::default(),
         )
         .unwrap();
-        let preview = prepared.preview(&target, &Lockfile::new()).unwrap();
+        let preview = prepared
+            .preview(&target, PluginScope::Project, &Lockfile::new())
+            .unwrap();
         assert!(!preview.handshake.is_empty());
         assert_eq!(fs::read_dir(&target).unwrap().count(), 0);
     }
