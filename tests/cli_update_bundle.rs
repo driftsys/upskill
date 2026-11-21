@@ -694,6 +694,138 @@ fn update_under_a_kind_restriction_keeps_the_provenance_of_a_required_item_of_an
 }
 
 #[test]
+fn kind_restricted_update_refreshes_provenance_by_kind_and_name() {
+    for change_rule in [false, true] {
+        let consumer = tempfile::tempdir().unwrap();
+        let registry = tempfile::tempdir().unwrap();
+        write_rule_body(registry.path(), "shared", "Shared rule.");
+        write_rule_body(registry.path(), "base", "Base rule.");
+        write(
+            &registry.path().join("shared/SKILL.md"),
+            "---\nname: shared\ndescription: Dependent skill.\nrequires:\n  rules: [base]\n---\nSkill body.\n",
+        );
+        write(
+            &registry.path().join("r2/RULE.md"),
+            "---\nname: r2\ndescription: Dependent rule.\nrequires:\n  rules: [shared]\n  skills: [shared]\n---\nRule body.\n",
+        );
+        write(
+            &registry.path().join("bun.bundle.yaml"),
+            "schema: 1\nname: bun\ndescription: Mixed bundle.\nitems:\n  rules: [base, r2, shared]\n  skills: [shared]\n",
+        );
+        add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
+        add_direct(consumer.path(), registry.path(), "r2");
+        let before = read_update_lock(consumer.path());
+        for kind in ["rule", "skill"] {
+            let item = before["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|item| item["kind"] == kind && item["name"] == "shared")
+                .unwrap();
+            assert_eq!(item["required_by"], serde_json::json!(["rule:r2"]));
+        }
+        if change_rule {
+            write_rule_body(registry.path(), "shared", "Changed shared rule.");
+        }
+        update_named_bundle(consumer.path());
+        let after = read_update_lock(consumer.path());
+        let item = |kind: &str| {
+            after["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|item| item["kind"] == kind && item["name"] == "shared")
+                .unwrap()
+        };
+        // The bundle closure evaluates r2 but contributes no item-level edges.
+        assert!(item("rule").get("required_by").is_none(), "{after}");
+        assert_eq!(
+            item("skill")["required_by"],
+            serde_json::json!(["rule:r2"]),
+            "an unplanned skill must keep its provenance even when a rule has the same name"
+        );
+        let base = after["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["kind"] == "rule" && item["name"] == "base")
+            .unwrap();
+        assert_eq!(base["required_by"], serde_json::json!(["skill:shared"]));
+    }
+}
+
+#[test]
+fn update_evaluates_bundle_members_even_without_direct_items() {
+    for change_rule in [false, true] {
+        let consumer = tempfile::tempdir().unwrap();
+        let registry = tempfile::tempdir().unwrap();
+        setup_kind_registry(registry.path());
+        write(
+            &registry.path().join("r/RULE.md"),
+            "---\nname: r\ndescription: Dependent rule.\nrequires:\n  skills: [a]\n---\nRule body.\n",
+        );
+        add_direct(consumer.path(), registry.path(), "r");
+        add_named_bundle(consumer.path(), registry.path(), &[]);
+        let before = read_update_lock(consumer.path());
+        let dependency = before["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["name"] == "a")
+            .unwrap();
+        assert_eq!(dependency["required_by"], serde_json::json!(["rule:r"]));
+        if change_rule {
+            write_rule_body(registry.path(), "r", "Changed bundle rule.");
+        }
+        update_named_bundle(consumer.path());
+        let after = read_update_lock(consumer.path());
+        let dependency = after["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["name"] == "a")
+            .unwrap();
+        assert!(dependency.get("required_by").is_none(), "{after}");
+        assert_eq!(after["items"].as_array().unwrap().len(), 2);
+    }
+}
+
+#[test]
+fn update_does_not_keep_removed_bundle_members_as_direct_items() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    write_skill(registry.path(), "direct");
+    write_skill(registry.path(), "stray");
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    add_direct(consumer.path(), registry.path(), "direct");
+    // a remains in the registry, but b replaces it in the bundle.
+    write(
+        &registry.path().join("bun.bundle.yaml"),
+        "schema: 1\nname: bun\ndescription: Changed bundle.\nitems:\n  rules: [r]\n  skills: [b]\n",
+    );
+    update_named_bundle(consumer.path());
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(consumer.path().join(".claude/skills/b/SKILL.md").is_file());
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/direct/SKILL.md")
+            .is_file()
+    );
+    assert!(!consumer.path().join(".claude/skills/stray").exists());
+    let lock = read_update_lock(consumer.path());
+    let mut names: Vec<_> = lock["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["name"].as_str().unwrap())
+        .collect();
+    names.sort();
+    assert_eq!(names, ["b", "direct", "r"]);
+}
+
+#[test]
 fn add_under_a_kind_restriction_refreshes_the_provenance_of_an_unplanned_item() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();

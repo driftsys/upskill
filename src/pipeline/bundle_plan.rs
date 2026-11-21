@@ -74,13 +74,7 @@ pub fn plan_bundle_output(
             if item.kind == ItemKind::Rule {
                 rules.insert(item.name.clone());
             } else {
-                let rel: PathBuf = file.rel.components().skip(1).collect();
-                if rel
-                    .components()
-                    .any(|part| !matches!(part, Component::Normal(_)))
-                {
-                    bail!("invalid plugin relative path: {}", rel.display());
-                }
+                let rel = plugin_relative_path(&file.rel)?;
                 files.push(BundleFile {
                     kind: item.kind,
                     name: item.name.clone(),
@@ -99,4 +93,48 @@ pub fn plan_bundle_output(
         files,
         rules: rules.into_iter().collect(),
     })
+}
+
+fn plugin_relative_path(path: &Path) -> Result<PathBuf> {
+    let rel: PathBuf = path.components().skip(1).collect();
+    if rel
+        .components()
+        .any(|part| !matches!(part, Component::Normal(_)))
+    {
+        bail!("invalid plugin relative path: {}", rel.display());
+    }
+    Ok(rel)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plugin_relative_path_refuses_parent_components_after_the_client_root() {
+        for path in [
+            ".claude/../outside.md",
+            ".claude/skills/a/../../outside.md",
+            ".github/agents/../outside.md",
+        ] {
+            let error = plugin_relative_path(Path::new(path)).unwrap_err();
+            assert!(error.to_string().contains("invalid plugin relative path"));
+        }
+    }
+
+    #[test]
+    fn plugin_relative_path_keeps_normal_components_after_the_client_root() {
+        for (path, relative) in [
+            (".claude/skills/a/SKILL.md", "skills/a/SKILL.md"),
+            (
+                ".github/agents/reviewer.agent.md",
+                "agents/reviewer.agent.md",
+            ),
+        ] {
+            assert_eq!(
+                plugin_relative_path(Path::new(path)).unwrap(),
+                Path::new(relative)
+            );
+        }
+    }
 }

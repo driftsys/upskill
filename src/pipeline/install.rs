@@ -1593,6 +1593,7 @@ mod tests {
     #[test]
     fn merge_keeps_one_copy_of_each_shared_item_in_by_source() {
         let root = tempfile::tempdir().unwrap();
+        let later_root = tempfile::tempdir().unwrap();
         let items = [
             (ItemKind::Rule, "r".to_string()),
             (ItemKind::Skill, "s".to_string()),
@@ -1600,16 +1601,70 @@ mod tests {
         ];
         for (kind, name) in &items {
             write_item(root.path(), *kind, name, "");
+            write_item(later_root.path(), *kind, name, "");
         }
         let mut closure =
             resolve_requires_closure("local:shared", root.path(), None, None, &items).unwrap();
-        let other =
-            resolve_requires_closure("local:shared", root.path(), None, None, &items).unwrap();
+        let other = resolve_requires_closure("local:shared", later_root.path(), None, None, &items)
+            .unwrap();
         closure.merge(other).unwrap();
         let source = &closure.by_source["local:shared"];
+        assert_eq!(source.root, root.path());
+        assert_eq!(closure.source_roots["local:shared"], root.path());
         assert_eq!(source.items.rules, ["r"]);
         assert_eq!(source.items.skills, ["s"]);
         assert_eq!(source.items.agents, ["a"]);
+    }
+
+    #[test]
+    fn retain_kinds_removes_other_kinds_from_items_and_provenance() {
+        let root = tempfile::tempdir().unwrap();
+        write_item(
+            root.path(),
+            ItemKind::Rule,
+            "r",
+            "requires:\n  skills: [s]\n",
+        );
+        write_item(
+            root.path(),
+            ItemKind::Skill,
+            "s",
+            "requires:\n  agents: [a]\n",
+        );
+        write_item(
+            root.path(),
+            ItemKind::Agent,
+            "a",
+            "requires:\n  rules: [base]\n",
+        );
+        write_item(root.path(), ItemKind::Rule, "base", "");
+        let mut closure = resolve_requires_closure(
+            "local:source",
+            root.path(),
+            None,
+            None,
+            &[(ItemKind::Rule, "r".to_string())],
+        )
+        .unwrap();
+        closure.retain_kinds(&[ItemKind::Rule]);
+        let source = &closure.by_source["local:source"];
+        assert_eq!(source.items.rules, ["base", "r"]);
+        assert!(source.items.skills.is_empty());
+        assert!(source.items.agents.is_empty());
+        assert_eq!(
+            closure.item_source.keys().cloned().collect::<Vec<_>>(),
+            [
+                (ItemKind::Rule, "base".into()),
+                (ItemKind::Rule, "r".into())
+            ]
+        );
+        assert_eq!(
+            closure.required_by,
+            BTreeMap::from([(
+                (ItemKind::Rule, "base".into()),
+                BTreeSet::from(["agent:a".into()])
+            )])
+        );
     }
 
     #[test]
