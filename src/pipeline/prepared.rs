@@ -534,6 +534,16 @@ impl PreparedInstall {
         self.report.items.iter().any(|i| i.kind == ItemKind::Rule)
     }
 
+    /// Names of the rules that this install writes for opencode.
+    fn opencode_rule_names(&self) -> BTreeSet<String> {
+        self.report
+            .items
+            .iter()
+            .filter(|i| i.kind == ItemKind::Rule && i.client == crate::generate::Client::OpenCode)
+            .map(|i| i.name.clone())
+            .collect()
+    }
+
     /// `alias -> source name` of every planned item installed under an
     /// `--as` alias.
     fn aliased_names(&self) -> HashMap<String, String> {
@@ -683,18 +693,9 @@ impl PreparedInstall {
         )?;
         let (items, kept_notes) =
             preview_items(target, lock, &self.report.planned, decision, &new_items);
-        // The rules that the global opencode config would list: the
-        // installed ones and the ones this install plans for opencode.
-        let mut opencode_rules = lock.opencode_rule_names();
-        opencode_rules.extend(
-            self.report
-                .items
-                .iter()
-                .filter(|i| {
-                    i.kind == ItemKind::Rule && i.client == crate::generate::Client::OpenCode
-                })
-                .map(|i| i.name.clone()),
-        );
+        // The rules that this install writes for opencode, whose entries the
+        // global opencode config would get.
+        let opencode_rules = self.opencode_rule_names();
         let handshake = crate::ancillary::pending_handshake_changes(
             target,
             plugin_scope,
@@ -741,6 +742,7 @@ impl PreparedInstall {
         let new_items = self.new_items();
         let provenance = self.requires_provenance();
         let has_rules = self.has_rules();
+        let opencode_rules = self.opencode_rule_names();
         let PreparedInstall {
             label,
             git_ref,
@@ -922,7 +924,11 @@ impl PreparedInstall {
                 crate::ancillary::ensure_opencode_rules_registered(target, has_rules)?;
             }
             PluginScope::User => {
-                crate::ancillary::sync_opencode_global_rules(target, &lock.opencode_rule_names())?;
+                crate::ancillary::sync_opencode_global_rules(
+                    target,
+                    &opencode_rules,
+                    &BTreeSet::new(),
+                )?;
             }
         }
 

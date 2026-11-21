@@ -243,6 +243,15 @@ impl Default for Lockfile {
     }
 }
 
+impl LockedItem {
+    /// True for a rule whose output was written for opencode: `clients` is
+    /// empty (all clients) or lists `opencode`.
+    pub fn is_opencode_rule(&self) -> bool {
+        self.kind == ItemKind::Rule
+            && (self.clients.is_empty() || self.clients.iter().any(|c| c == "opencode"))
+    }
+}
+
 impl Lockfile {
     /// An empty lockfile with schema [`CURRENT_SCHEMA`] (2).
     pub fn new() -> Self {
@@ -320,10 +329,7 @@ impl Lockfile {
     pub fn opencode_rule_names(&self) -> std::collections::BTreeSet<String> {
         self.items
             .iter()
-            .filter(|i| {
-                i.kind == ItemKind::Rule
-                    && (i.clients.is_empty() || i.clients.iter().any(|c| c == "opencode"))
-            })
+            .filter(|i| i.is_opencode_rule())
             .map(|i| i.name.clone())
             .collect()
     }

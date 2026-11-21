@@ -165,8 +165,9 @@ was not tested. upskill writes plugin entries to its `plugins` array and MCP
 servers to its `mcp` map. In the global scope it also writes, for each rule that
 is installed for opencode, the absolute path of the rule's generated file
 (`<home>/.agents/rules/<name>/RULE.md`) to its `instructions` array, because
-opencode expands no `**` glob there; `remove` deletes the entry, `update` keeps
-the entries equal to the installed rules, and `doctor` reports a missing entry
+opencode expands no `**` glob there; `remove` deletes the entry, `update` writes
+the entries of the rules it installs and deletes those of rules that left the
+source, and `doctor` reports a missing entry
 ([ADR-0008](docs/adr/0008-plugin-install-shellout.md), issue #581).
 
 Without a scope flag, `add` stops outside a git repo (exit 2); `update`,

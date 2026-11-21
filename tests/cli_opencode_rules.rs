@@ -313,3 +313,79 @@ fn project_add_still_writes_the_single_relative_glob() {
     );
     assert!(!env.config().exists());
 }
+
+const JSONC: &str = "{ // a comment\n  \"theme\": \"x\"\n}\n";
+
+fn write_jsonc_config(env: &Env) {
+    fs::create_dir_all(env.config().parent().unwrap()).unwrap();
+    fs::write(env.config(), JSONC).unwrap();
+}
+
+#[test]
+fn global_add_of_a_skill_does_not_read_the_opencode_config() {
+    let env = Env::new();
+    fs::remove_dir_all(env.source.join("rule-a")).unwrap();
+    fs::remove_dir_all(env.source.join("rule-b")).unwrap();
+    let skill = env.source.join("skill-a/SKILL.md");
+    fs::create_dir_all(skill.parent().unwrap()).unwrap();
+    fs::write(
+        &skill,
+        "---\nschema: 1\nname: skill-a\ndescription: skill for the issue 581 tests.\n---\n\n## Body\n\nText.\n",
+    )
+    .unwrap();
+    write_jsonc_config(&env);
+
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+
+    assert_eq!(fs::read_to_string(env.config()).unwrap(), JSONC);
+}
+
+#[test]
+fn global_add_of_a_rule_for_another_client_does_not_read_the_opencode_config() {
+    let env = Env::new();
+    write_jsonc_config(&env);
+
+    let source = env.source.to_str().unwrap();
+    env.run(&["add", source, "--claude", "--global"], None)
+        .success();
+    env.run(&["update", "--yes", "--global"], None).code(0);
+    env.run(&["remove", "rule-a", "--global"], None).success();
+
+    assert_eq!(fs::read_to_string(env.config()).unwrap(), JSONC);
+}
+
+#[test]
+fn a_hand_written_entry_of_the_same_form_survives_add_update_and_remove() {
+    let env = Env::new();
+    let mine = env.entry("mine");
+    fs::create_dir_all(env.config().parent().unwrap()).unwrap();
+    fs::write(
+        env.config(),
+        serde_json::json!({ "instructions": [mine] }).to_string(),
+    )
+    .unwrap();
+
+    env.add_global(None);
+    let has_mine = |env: &Env| {
+        read_json(&env.config())["instructions"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!(env.entry("mine")))
+    };
+    assert!(has_mine(&env));
+
+    fs::remove_dir_all(env.source.join("rule-b")).unwrap();
+    env.run(&["update", "--yes", "--global"], None).code(0);
+    assert!(has_mine(&env));
+
+    env.run(&["remove", "rule-a", "--global"], None).success();
+    assert!(has_mine(&env));
+    let config = read_json(&env.config());
+    assert_eq!(
+        config["instructions"],
+        serde_json::json!([env.entry("mine")]),
+        "{config}"
+    );
+}

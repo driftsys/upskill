@@ -17,8 +17,8 @@
 //!   Idempotent (existing entry → no-op); unknown keys preserved. opencode
 //!   discovers rules through this glob; without it, rules under
 //!   `.agents/rules/` are invisible. In the global scope the file is the
-//!   global opencode config, and it gets one absolute path per installed
-//!   rule instead of the glob (`sync_opencode_global_rules`).
+//!   global opencode config, and it gets one absolute path per rule that the
+//!   install writes instead of the glob (`sync_opencode_global_rules`).
 //!
 //! - **`.vscode/settings.json`** — when an install includes any rule item,
 //!   the entry `".github/instructions": true` is added to the
@@ -172,11 +172,12 @@ fn apply_pending(pending: Option<PendingWrite>) -> Result<AncillaryAction> {
 /// cannot be read or has an unsupported shape.
 ///
 /// In the global scope opencode gets one absolute path per rule in
-/// `opencode_rules`, the names of the rules that are installed for opencode
-/// or would be (see `sync_opencode_global_rules`), instead of the glob. The
-/// global opencode config file is listed when an entry would be added; the
-/// path is relative to `target` when the file is inside it. `opencode_rules`
-/// is not read in the project scope.
+/// `opencode_rules`, the names of the rules that this install writes for
+/// opencode (see `sync_opencode_global_rules`), instead of the glob. The
+/// global opencode config file is listed when an entry would be added, and is
+/// not read when `opencode_rules` is empty; the path is relative to `target`
+/// when the file is inside it. `opencode_rules` is not used in the project
+/// scope.
 pub fn pending_handshake_changes(
     target: &Path,
     scope: PluginScope,
@@ -189,7 +190,7 @@ pub fn pending_handshake_changes(
             &opencode_json_path(scope, target),
             target,
             opencode_rules,
-            false,
+            &BTreeSet::new(),
         )?,
     };
     let pending = [
@@ -298,40 +299,34 @@ fn opencode_rules_pending(target: &Path, has_rules: bool) -> Result<Option<Pendi
 
 /// The `instructions` entry of the global opencode config for the rule
 /// `name`: the absolute path of its generated file under `root`, the global
-/// root.
+/// root. The path is built from separate components, so that one separator
+/// style results on every platform.
 ///
 /// A trial with opencode 2.1.4 showed that the global config expands neither
 /// `**` nor a wildcard in a directory segment. It loads a single absolute
 /// path (ADR-0008, issue #581).
 fn opencode_global_rule_entry(root: &Path, name: &str) -> String {
-    root.join(".agents/rules")
+    root.join(".agents")
+        .join("rules")
         .join(name)
         .join("RULE.md")
         .to_string_lossy()
         .into_owned()
 }
 
-/// True when `entry` has the form of an entry that
-/// [`opencode_global_rule_entry`] writes under `root`, for any rule name.
-fn is_opencode_global_rule_entry(root: &Path, entry: &str) -> bool {
-    let Ok(rest) = Path::new(entry).strip_prefix(root.join(".agents/rules")) else {
-        return false;
-    };
-    let parts: Vec<_> = rest.components().collect();
-    parts.len() == 2 && parts[1].as_os_str() == "RULE.md"
-}
-
-/// Make the `instructions` array of the global opencode config list exactly
-/// the rules in `rules` among the entries that upskill writes, and write
-/// the file when that changes it. `root` is the global root (the home
+/// Add the entries of the rules in `add` to the `instructions` array of the
+/// global opencode config, delete the entries of the rules in `remove`, and
+/// write the file when that changes it. `root` is the global root (the home
 /// directory); the file is `<opencode config dir>/opencode.json`.
 ///
-/// `rules` holds the names of the rules that are installed for opencode. For
-/// each name the array gets the absolute path `<root>/.agents/rules/<name>/RULE.md`
-/// (the path of the generated file); an entry of that form for another
-/// name is removed. Every other entry and every other key is kept.
+/// For each name the entry is the absolute path
+/// `<root>/.agents/rules/<name>/RULE.md`. Only the entries of the names in
+/// `add` and `remove` are touched: every other entry, also one of the same
+/// form for another rule, and every other key is kept. The file is not read
+/// when both sets are empty.
 ///
-/// - File absent and `rules` empty → `Preserved`, nothing is created.
+/// - Nothing to add and nothing to remove → `Preserved`, file not read.
+/// - File absent and nothing to add → `Preserved`, nothing is created.
 /// - File absent → `Created`.
 /// - Entries already as wanted → `Preserved`.
 /// - Otherwise → `Updated`.
@@ -340,13 +335,14 @@ fn is_opencode_global_rule_entry(root: &Path, entry: &str) -> bool {
 /// function returns an error and leaves the file as it is.
 pub fn sync_opencode_global_rules(
     root: &Path,
-    rules: &BTreeSet<String>,
+    add: &BTreeSet<String>,
+    remove: &BTreeSet<String>,
 ) -> Result<AncillaryAction> {
     apply_pending(opencode_global_rules_pending(
         &opencode_json_path(PluginScope::User, root),
         root,
-        rules,
-        true,
+        add,
+        remove,
     )?)
 }
 
@@ -369,17 +365,24 @@ fn registered_in(path: &Path, root: &Path, name: &str) -> bool {
         .is_some_and(|arr| arr.iter().any(|v| v.as_str() == Some(wanted.as_str())))
 }
 
-/// The change that [`sync_opencode_global_rules`] would make. With
-/// `remove_stale` false, an entry of upskill's form for a rule that is not in
-/// `rules` is kept: the preview of an install lists additions only.
+/// The change that [`sync_opencode_global_rules`] would make, to the file at
+/// `path`. Returns `None` without reading the file when `add` and `remove`
+/// are both empty.
 fn opencode_global_rules_pending(
     path: &Path,
     root: &Path,
-    rules: &BTreeSet<String>,
-    remove_stale: bool,
+    add: &BTreeSet<String>,
+    remove: &BTreeSet<String>,
 ) -> Result<Option<PendingWrite>> {
+    if add.is_empty() && remove.is_empty() {
+        return Ok(None);
+    }
     let path = path.to_path_buf();
-    let wanted: Vec<String> = rules
+    let wanted: Vec<String> = add
+        .iter()
+        .map(|name| opencode_global_rule_entry(root, name))
+        .collect();
+    let unwanted: Vec<String> = remove
         .iter()
         .map(|name| opencode_global_rule_entry(root, name))
         .collect();
@@ -410,13 +413,7 @@ fn opencode_global_rules_pending(
         .as_array_mut()
         .with_context(|| format!("{}: `instructions` must be an array", path.display()))?;
     let before = arr.clone();
-    if remove_stale {
-        arr.retain(|v| {
-            v.as_str().is_none_or(|s| {
-                !is_opencode_global_rule_entry(root, s) || wanted.iter().any(|w| w == s)
-            })
-        });
-    }
+    arr.retain(|v| v.as_str().is_none_or(|s| !unwanted.iter().any(|u| u == s)));
     for entry in wanted {
         if !arr.iter().any(|v| v.as_str() == Some(entry.as_str())) {
             arr.push(json!(entry));
@@ -1751,14 +1748,14 @@ mod tests {
         list.iter().map(|n| (*n).to_string()).collect()
     }
 
-    /// Applies the global rules sync to `<tmp>/cfg/opencode.json`, with the
-    /// global root `/home/u`.
-    fn sync_at(cfg: &Path, rules: &[&str]) -> Result<AncillaryAction> {
+    /// Applies the global rules sync to the file at `cfg`, with the global
+    /// root `/home/u`.
+    fn sync_at(cfg: &Path, add: &[&str], remove: &[&str]) -> Result<AncillaryAction> {
         apply_pending(opencode_global_rules_pending(
             cfg,
             Path::new("/home/u"),
-            &names(rules),
-            true,
+            &names(add),
+            &names(remove),
         )?)
     }
 
@@ -1777,23 +1774,37 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let cfg = tmp.path().join("cfg/opencode.json");
         assert_eq!(
-            sync_at(&cfg, &["b", "a"]).unwrap(),
+            sync_at(&cfg, &["b", "a"], &[]).unwrap(),
             AncillaryAction::Created
         );
         assert_eq!(
             instructions(&cfg),
             vec![
-                "/home/u/.agents/rules/a/RULE.md",
-                "/home/u/.agents/rules/b/RULE.md"
+                opencode_global_rule_entry(Path::new("/home/u"), "a"),
+                opencode_global_rule_entry(Path::new("/home/u"), "b"),
             ]
         );
     }
 
     #[test]
-    fn global_rules_sync_without_rules_creates_nothing() {
+    fn global_rules_sync_with_nothing_to_do_does_not_read_the_file() {
         let tmp = tempfile::tempdir().unwrap();
         let cfg = tmp.path().join("opencode.json");
-        assert_eq!(sync_at(&cfg, &[]).unwrap(), AncillaryAction::Preserved);
+        assert_eq!(sync_at(&cfg, &[], &[]).unwrap(), AncillaryAction::Preserved);
+        assert!(!cfg.exists());
+        // JSONC: a read would fail to parse.
+        std::fs::write(&cfg, "{ // comment\n \"theme\": \"x\" }").unwrap();
+        assert_eq!(sync_at(&cfg, &[], &[]).unwrap(), AncillaryAction::Preserved);
+    }
+
+    #[test]
+    fn global_rules_sync_removing_from_an_absent_file_creates_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cfg = tmp.path().join("opencode.json");
+        assert_eq!(
+            sync_at(&cfg, &[], &["a"]).unwrap(),
+            AncillaryAction::Preserved
+        );
         assert!(!cfg.exists());
     }
 
@@ -1806,14 +1817,20 @@ mod tests {
             r#"{"theme": "dark", "instructions": ["/x/foreign.md", ".agents/rules/**/RULE.md"]}"#,
         )
         .unwrap();
-        assert_eq!(sync_at(&cfg, &["a"]).unwrap(), AncillaryAction::Updated);
-        assert_eq!(sync_at(&cfg, &["a"]).unwrap(), AncillaryAction::Preserved);
+        assert_eq!(
+            sync_at(&cfg, &["a"], &[]).unwrap(),
+            AncillaryAction::Updated
+        );
+        assert_eq!(
+            sync_at(&cfg, &["a"], &[]).unwrap(),
+            AncillaryAction::Preserved
+        );
         assert_eq!(
             instructions(&cfg),
             vec![
-                "/x/foreign.md",
-                ".agents/rules/**/RULE.md",
-                "/home/u/.agents/rules/a/RULE.md"
+                "/x/foreign.md".to_string(),
+                ".agents/rules/**/RULE.md".to_string(),
+                opencode_global_rule_entry(Path::new("/home/u"), "a"),
             ]
         );
         let doc: Value = serde_json::from_str(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
@@ -1821,24 +1838,25 @@ mod tests {
     }
 
     #[test]
-    fn global_rules_sync_removes_only_the_entries_of_rules_that_are_gone() {
+    fn global_rules_sync_removes_only_the_entries_of_the_named_rules() {
         let tmp = tempfile::tempdir().unwrap();
         let cfg = tmp.path().join("opencode.json");
-        std::fs::write(
-            &cfg,
-            r#"{"instructions": ["/x/foreign.md", "/home/u/.agents/rules/a/RULE.md",
-                "/home/u/.agents/rules/b/RULE.md", "/home/u/.agents/rules/b/other.md",
-                "/other/.agents/rules/c/RULE.md"]}"#,
-        )
-        .unwrap();
-        assert_eq!(sync_at(&cfg, &["a"]).unwrap(), AncillaryAction::Updated);
+        let entry = |n: &str| opencode_global_rule_entry(Path::new("/home/u"), n);
+        let doc = json!({"instructions": [
+            "/x/foreign.md", entry("a"), entry("b"), entry("mine"), "/other/.agents/rules/c/RULE.md"
+        ]});
+        std::fs::write(&cfg, doc.to_string()).unwrap();
+        assert_eq!(
+            sync_at(&cfg, &[], &["a", "gone"]).unwrap(),
+            AncillaryAction::Updated
+        );
         assert_eq!(
             instructions(&cfg),
             vec![
-                "/x/foreign.md",
-                "/home/u/.agents/rules/a/RULE.md",
-                "/home/u/.agents/rules/b/other.md",
-                "/other/.agents/rules/c/RULE.md"
+                "/x/foreign.md".to_string(),
+                entry("b"),
+                entry("mine"),
+                "/other/.agents/rules/c/RULE.md".to_string(),
             ]
         );
     }
@@ -1848,7 +1866,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let cfg = tmp.path().join("opencode.json");
         std::fs::write(&cfg, r#"{"instructions": "x"}"#).unwrap();
-        let err = sync_at(&cfg, &["a"]).expect_err("must reject");
+        let err = sync_at(&cfg, &["a"], &[]).expect_err("must reject");
         assert!(err.to_string().contains("instructions"));
         assert_eq!(
             std::fs::read_to_string(&cfg).unwrap(),
@@ -1861,7 +1879,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let cfg = tmp.path().join("opencode.json");
         assert!(!registered_in(&cfg, Path::new("/home/u"), "a"));
-        sync_at(&cfg, &["a"]).unwrap();
+        sync_at(&cfg, &["a"], &[]).unwrap();
         assert!(registered_in(&cfg, Path::new("/home/u"), "a"));
         assert!(!registered_in(&cfg, Path::new("/home/u"), "b"));
     }

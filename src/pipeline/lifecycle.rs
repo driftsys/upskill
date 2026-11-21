@@ -71,7 +71,7 @@ use super::{
 /// (`remove_opencode_plugin_uri`; an error is ignored). Second, in the global
 /// scope the `instructions` entry of each removed rule is deleted from the
 /// global opencode config, other entries are kept, and an error is ignored
-/// (`sync_global_opencode_rules`).
+/// (`drop_global_opencode_rules`).
 pub fn remove(at: &ScopeRoot, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
     let target = at.root.as_path();
     let mut lock = crate::lockfile::Lockfile::load(target)?;
@@ -357,6 +357,18 @@ fn remove_selected(
         plans.push(plan_removal(target, entry, force)?);
     }
 
+    // The rules whose opencode entry this removal deletes.
+    let opencode_rules: std::collections::BTreeSet<String> = keys
+        .iter()
+        .filter_map(|(kind, name)| {
+            lock.items
+                .iter()
+                .find(|i| i.kind == *kind && &i.name == name)
+        })
+        .filter(|i| i.is_opencode_rule())
+        .map(|i| i.name.clone())
+        .collect();
+
     let mut report = RemoveReport::default();
     // A path recorded by two removed items is reported once, for the first.
     let mut reported = std::collections::BTreeSet::new();
@@ -408,17 +420,25 @@ fn remove_selected(
         .retain(|b| !bundles_to_remove.contains(&b.name));
 
     lock.save(target)?;
-    sync_global_opencode_rules(at.scope, target, lock);
+    drop_global_opencode_rules(at.scope, target, &opencode_rules);
     Ok(report)
 }
 
-/// In the global scope, make the global opencode config list the rules that
-/// `lock` records for opencode. Nothing happens in the project scope. An
-/// error is ignored: the lockfile is already saved, and `doctor` reports an
-/// entry that is missing.
-fn sync_global_opencode_rules(scope: Scope, root: &Path, lock: &crate::lockfile::Lockfile) {
+/// In the global scope, delete from the global opencode config the entries of
+/// the rules in `names`. Nothing happens in the project scope, and the file is
+/// not read when `names` is empty. An error is ignored: the lockfile is
+/// already saved, and the entry of a rule that is not installed does no harm.
+fn drop_global_opencode_rules(
+    scope: Scope,
+    root: &Path,
+    names: &std::collections::BTreeSet<String>,
+) {
     if scope == Scope::Global {
-        let _ = crate::ancillary::sync_opencode_global_rules(root, &lock.opencode_rule_names());
+        let _ = crate::ancillary::sync_opencode_global_rules(
+            root,
+            &std::collections::BTreeSet::new(),
+            names,
+        );
     }
 }
 
@@ -1676,6 +1696,11 @@ pub fn update(
                     }
                 }
                 let mut reported = std::collections::BTreeSet::new();
+                let dropped: std::collections::BTreeSet<String> = orphans
+                    .iter()
+                    .filter(|o| o.is_opencode_rule())
+                    .map(|o| o.name.clone())
+                    .collect();
                 for plan in plans {
                     report
                         .changed
@@ -1691,7 +1716,7 @@ pub fn update(
                     });
                 }
                 lock.save(target)?;
-                sync_global_opencode_rules(at.scope, target, &lock);
+                drop_global_opencode_rules(at.scope, target, &dropped);
             }
             for entry in &source_entries {
                 let kind = entry.kind;

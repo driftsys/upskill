@@ -983,11 +983,14 @@ as in a project; the `.vscode/settings.json` entry points at
   `<home>/.agents/rules/<name>/RULE.md` to the `instructions` array of the
   global opencode config, and no glob, because opencode expands no `**` there
   (ADR-0008, issue #581). `remove` deletes the entry of a removed rule, `update`
-  writes and removes entries to match the lockfile, and `doctor` reports a
-  missing entry. The plugin and MCP writers of both scopes use the opencode
-  config file of the scope: the project root in the project scope, and
-  `$XDG_CONFIG_HOME/opencode/` (when set and absolute) or `~/.config/opencode/`
-  in the global scope. A trial with opencode 2.1.4 confirmed that opencode reads
+  writes the entries of the rules it installs and deletes those of the rules
+  that left the source, and `doctor` reports a missing entry. Other entries,
+  also one of the same form that upskill does not track, are kept, and a run
+  with no opencode rule to add or remove does not read the file. The plugin and
+  MCP writers of both scopes use the opencode config file of the scope: the
+  project root in the project scope, and `$XDG_CONFIG_HOME/opencode/` (when set
+  and absolute) or `~/.config/opencode/` in the global scope. A trial with
+  opencode 2.1.4 confirmed that opencode reads
   `~/.config/opencode/opencode.json` and ignores `~/opencode.json`. The
   `XDG_CONFIG_HOME` location is used when set and absolute, and was not tested.
   A `plugin_uri` plugin is written to the `plugins` array. upskill neither reads

@@ -1512,8 +1512,9 @@ Limits of the global scope:
   file lists the absolute path of the generated file,
   `$HOME/.agents/rules/<name>/RULE.md`; opencode expands no `**` glob in the
   global config. `remove` deletes the entry of a removed rule, and `update`
-  keeps the entries equal to the installed rules. Other entries of the file are
-  kept.
+  writes the entries of the rules it installs and deletes those of the rules
+  that left the source. Other entries of the file are kept, and a run with no
+  opencode rule to add or remove does not read the file.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.
