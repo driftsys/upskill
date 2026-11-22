@@ -1156,7 +1156,7 @@ fn doctor_reports_an_unreadable_kind_directory_with_the_read_error() {
     fs::set_permissions(&kind_dir, fs::Permissions::from_mode(0o000)).unwrap();
     let _restore = Restore(&kind_dir);
     if fs::read_dir(&kind_dir).is_ok() {
-        // Running as root: the permission has no effect.
+        eprintln!("skipped: running as root, the permission has no effect");
         return;
     }
     let (code, v) = doctor_json(&target, &home);

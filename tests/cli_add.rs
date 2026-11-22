@@ -1774,7 +1774,7 @@ fn add_fails_when_a_kind_directory_of_the_source_is_unreadable() {
     fs::set_permissions(&kind_dir, fs::Permissions::from_mode(0o000)).unwrap();
     let _restore = Restore(&kind_dir);
     if fs::read_dir(&kind_dir).is_ok() {
-        // Running as root: the permission has no effect.
+        eprintln!("skipped: running as root, the permission has no effect");
         return;
     }
     let out = common::upskill_cmd(&home)
@@ -1786,4 +1786,98 @@ fn add_fails_when_a_kind_directory_of_the_source_is_unreadable() {
     assert_eq!(out.status.code(), Some(1), "{out:?}");
     let stderr = String::from_utf8(out.stderr).unwrap();
     assert!(stderr.contains(&kind_dir.display().to_string()), "{stderr}");
+    assert!(!target.join(".upskill-lock.json").exists(), "no lockfile");
+    assert!(!target.join(".claude").exists(), "no client output");
+}
+
+/// Issue #607: an unreadable directory under the source root that is not a
+/// kind directory holds no items by convention and is skipped.
+#[cfg(unix)]
+#[test]
+fn add_skips_an_unreadable_directory_that_is_not_a_kind_directory() {
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Restores the mode of the directory on drop, also when the test panics.
+    struct Restore<'a>(&'a Path);
+    impl Drop for Restore<'_> {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    let item = source.join("skills/one");
+    fs::create_dir_all(&item).unwrap();
+    fs::write(
+        item.join("SKILL.md"),
+        "---\nname: one\ndescription: Skill one.\n---\n\nBody.\n",
+    )
+    .unwrap();
+    let docs = source.join("docs");
+    fs::create_dir_all(&docs).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    fs::set_permissions(&docs, fs::Permissions::from_mode(0o000)).unwrap();
+    let _restore = Restore(&docs);
+    if fs::read_dir(&docs).is_ok() {
+        eprintln!("skipped: running as root, the permission has no effect");
+        return;
+    }
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap()])
+        .assert()
+        .success();
+    assert!(target.join(".claude/skills/one/SKILL.md").exists());
+}
+
+/// Issue #607: when the source is a kind directory, an unreadable category
+/// directory in it makes `add` fail with an error that names it.
+#[cfg(unix)]
+#[test]
+fn add_fails_when_a_category_of_a_kind_directory_source_is_unreadable() {
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Restores the mode of the directory on drop, also when the test panics.
+    struct Restore<'a>(&'a Path);
+    impl Drop for Restore<'_> {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg/skills");
+    let item = source.join("category/one");
+    fs::create_dir_all(&item).unwrap();
+    fs::write(
+        item.join("SKILL.md"),
+        "---\nname: one\ndescription: Skill one.\n---\n\nBody.\n",
+    )
+    .unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let category = source.join("category");
+    fs::set_permissions(&category, fs::Permissions::from_mode(0o000)).unwrap();
+    let _restore = Restore(&category);
+    if fs::read_dir(&category).is_ok() {
+        eprintln!("skipped: running as root, the permission has no effect");
+        return;
+    }
+    let out = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(1), "{out:?}");
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(stderr.contains(&category.display().to_string()), "{stderr}");
 }
