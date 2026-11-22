@@ -1015,42 +1015,6 @@ fn doctor_is_clean_for_two_sources_with_kind_directories() {
 }
 
 #[test]
-fn doctor_reports_an_excludes_record_with_no_installed_source() {
-    let tmp = tempfile::tempdir().unwrap();
-    let home = tmp.path().join("home");
-    fs::create_dir_all(&home).unwrap();
-    let target = tmp.path().join("target");
-    fs::create_dir_all(target.join(".git")).unwrap();
-    let content = serde_json::json!({
-        "schema": 2,
-        "items": [],
-        "bundles": [],
-        "excludes": [{ "source": "owner/gone", "names": ["x"] }]
-    });
-    fs::write(
-        target.join(".upskill-lock.json"),
-        serde_json::to_string_pretty(&content).unwrap(),
-    )
-    .unwrap();
-
-    let assert = common::upskill_cmd(&home)
-        .current_dir(&target)
-        .args(["doctor", "--project"])
-        .assert()
-        .failure()
-        .code(1);
-    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    assert!(
-        out.contains("no installed item or bundle"),
-        "expected the orphan excludes header: {out}"
-    );
-    assert!(
-        out.lines().any(|l| l.trim() == "excludes (owner/gone)"),
-        "expected the source label line: {out}"
-    );
-}
-
-#[test]
 fn doctor_is_clean_with_a_valid_excludes_record() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");

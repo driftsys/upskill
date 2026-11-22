@@ -2128,16 +2128,6 @@ fn print_doctor_report(report: &DoctorReport) {
         }
     }
 
-    if !report.orphan_excludes.is_empty() {
-        println!(
-            "{} excludes record(s) for a source with no installed item or bundle — edit or delete `excludes` in the lockfile",
-            style::dim("doctor:"),
-        );
-        for source in &report.orphan_excludes {
-            println!("  excludes {}", style::dim(&format!("({source})")));
-        }
-    }
-
     print_doctor_orphaned_dependencies(report);
     print_doctor_skipped_plugins(report);
     print_doctor_mcps(report);

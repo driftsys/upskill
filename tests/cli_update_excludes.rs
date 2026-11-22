@@ -40,14 +40,6 @@ impl Env {
             .success()
     }
 
-    fn remove(&self, name: &str) {
-        common::upskill_cmd(&self.tmp.path().join("home"))
-            .current_dir(self.consumer())
-            .args(["remove", name, "--project"])
-            .assert()
-            .success();
-    }
-
     fn lock(&self) -> serde_json::Value {
         let text = fs::read_to_string(self.consumer().join(".upskill-lock.json")).unwrap();
         serde_json::from_str(&text).unwrap()
@@ -180,11 +172,7 @@ fn an_unrelated_add_from_the_same_source_keeps_the_exclude() {
     env.run(&["add", s(&reg), "other"]);
 
     let lock = env.lock();
-    assert_eq!(
-        lock["excludes"][0]["names"],
-        serde_json::json!(["d"]),
-        "{lock}"
-    );
+    assert_eq!(lock["excludes"], serde_json::json!(["d"]), "{lock}");
 
     env.run(&["update", "--yes"]);
     assert!(!env.installed("d"));
@@ -209,19 +197,29 @@ fn naming_an_excluded_item_undoes_the_exclude() {
 }
 
 #[test]
-fn update_does_not_touch_an_excluded_name_installed_from_another_source() {
+fn an_excluded_name_applies_to_an_item_installed_from_another_source() {
     let env = Env::new();
     let x = env.registry("x");
     let reg = env.registry("reg");
     write_skill(&x, "d", "", "from x");
     write_skill(&reg, "r", &cross_requires(&x), "first");
     env.run(&["add", s(&x), "d"]);
-    let file = env.consumer().join(".claude/skills/d/SKILL.md");
-    let before = fs::read(&file).unwrap();
     env.run(&["add", s(&reg), "r", "--exclude", "d"]);
+    assert_eq!(env.lock()["excludes"], serde_json::json!(["d"]));
 
-    write_skill(&reg, "r", &cross_requires(&x), "second");
+    // The excluded names are one set for the scope, so the item `d` of
+    // source x leaves with the next update.
     env.run(&["update", "--yes"]);
+    assert!(!env.installed("d"));
+    assert!(!has_lock_item(&env.lock(), "d"), "{}", env.lock());
+}
+
+#[test]
+fn the_source_label_of_a_local_item_is_local_and_the_path() {
+    let env = Env::new();
+    let x = env.registry("x");
+    write_skill(&x, "d", "", "from x");
+    env.run(&["add", s(&x), "d"]);
 
     let lock = env.lock();
     let d = lock["items"]
@@ -230,47 +228,46 @@ fn update_does_not_touch_an_excluded_name_installed_from_another_source() {
         .iter()
         .find(|i| i["name"] == "d")
         .unwrap();
-    assert!(d["source"].as_str().unwrap().contains("/x"), "{lock}");
-    assert_eq!(fs::read(&file).unwrap(), before);
+    let expected = format!("local:{}", x.display());
+    assert_eq!(d["source"].as_str().unwrap(), expected, "{lock}");
 }
 
 fn excluded_names(lock: &serde_json::Value) -> Vec<String> {
-    lock["excludes"][0]["names"]
+    lock["excludes"]
         .as_array()
         .map(|a| a.iter().map(|n| n.as_str().unwrap().to_string()).collect())
         .unwrap_or_default()
 }
 
 #[test]
-fn removing_the_last_item_of_a_source_deletes_its_excludes_record() {
+fn the_lockfile_records_one_sorted_excludes_list() {
     let env = Env::new();
     let reg = env.registry("reg");
     write_skill(&reg, "d", "", "dependency");
-    write_skill(&reg, "r", "requires:\n  skills: [d]\n", "first");
-    env.run(&["add", s(&reg), "r", "--exclude", "d"]);
-    assert_eq!(excluded_names(&env.lock()), ["d"]);
-
-    env.remove("r");
-
-    let lock = env.lock();
-    assert!(lock.get("excludes").is_none(), "{lock}");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "r", "requires:\n  skills: [d, e]\n", "first");
+    env.run(&["add", s(&reg), "r", "--exclude", "e", "--exclude", "d"]);
+    assert_eq!(env.lock()["excludes"], serde_json::json!(["d", "e"]));
 }
 
 #[test]
-fn removing_one_of_two_items_keeps_the_excludes_record() {
+fn an_exclude_holds_across_a_symlinked_source_path() {
     let env = Env::new();
     let reg = env.registry("reg");
     write_skill(&reg, "d", "", "dependency");
     write_skill(&reg, "r", "requires:\n  skills: [d]\n", "first");
-    write_skill(&reg, "q", "", "other");
-    env.run(&["add", s(&reg), "r", "q", "--exclude", "d"]);
-    assert_eq!(excluded_names(&env.lock()), ["d"]);
+    let link = env.tmp.path().join("link");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&reg, &link).unwrap();
+    #[cfg(not(unix))]
+    return;
+    env.run(&["add", s(&link), "r", "--exclude", "d"]);
+    assert!(!env.installed("d"));
 
-    env.remove("r");
-
-    let lock = env.lock();
-    assert!(has_lock_item(&lock, "q"), "{lock}");
-    assert_eq!(excluded_names(&lock), ["d"], "{lock}");
+    write_skill(&reg, "r", "requires:\n  skills: [d]\n", "second");
+    env.run(&["update", "--yes"]);
+    assert!(!env.installed("d"));
+    assert_eq!(env.lock()["excludes"], serde_json::json!(["d"]));
 }
 
 #[test]
@@ -387,17 +384,14 @@ fn update_removes_the_only_installed_item_once_it_is_excluded() {
 }
 
 #[test]
-fn an_add_that_installs_nothing_writes_no_excludes_record() {
+fn an_add_that_installs_nothing_still_records_the_exclude() {
     let env = Env::new();
     let reg = env.registry("reg");
     write_skill(&reg, "b", "", "first");
     env.run(&["add", s(&reg), "--exclude", "b"]);
 
     assert!(!env.installed("b"));
-    if env.consumer().join(".upskill-lock.json").exists() {
-        let lock = env.lock();
-        assert!(lock.get("excludes").is_none(), "{lock}");
-    }
+    assert_eq!(env.lock()["excludes"], serde_json::json!(["b"]));
     common::upskill_cmd(&env.tmp.path().join("home"))
         .current_dir(env.consumer())
         .args(["doctor", "--project"])

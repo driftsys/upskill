@@ -197,12 +197,16 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Git `git_ref`); local-path sources record `None`.
 /// `source` label is the [`InstallSource`] `Display` form.
-/// The excludes of an `add`: the recorded names that `items` does not
-/// name, plus the `--exclude` names of the command.
-fn effective_add_excludes(recorded: &[String], own: &[String], items: &[String]) -> Vec<String> {
+/// The excludes of a run: the recorded names that `named` does not name,
+/// plus the `--exclude` names of the command (`own`).
+pub(crate) fn effective_excludes(
+    recorded: &[String],
+    own: &[String],
+    named: &[String],
+) -> Vec<String> {
     let mut names: std::collections::BTreeSet<String> = recorded
         .iter()
-        .filter(|name| !items.contains(name))
+        .filter(|name| !named.contains(name))
         .cloned()
         .collect();
     names.extend(own.iter().cloned());
@@ -231,12 +235,12 @@ pub fn install_with_lockfile(
             },
         )?;
     }
-    // `add` also applies the excludes recorded for its source (issue #570).
+    // `add` also applies the excludes recorded for the scope (issue #570).
     // An item named on the command line is not excluded unless the same
     // command also excludes it.
-    let recorded = crate::lockfile::Lockfile::load(target)?.excludes_for(&source.to_string());
+    let recorded = crate::lockfile::Lockfile::load(target)?.excludes;
     let mut effective = options.clone();
-    effective.excludes = effective_add_excludes(&recorded, &options.excludes, items);
+    effective.excludes = effective_excludes(&recorded, &options.excludes, items);
     let options = &effective;
     let prepared = prepared::prepare_install(source, target, items, options)?;
     // A git subfolder or repository root that is one item directory

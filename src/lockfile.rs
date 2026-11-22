@@ -63,19 +63,10 @@ pub struct Lockfile {
     pub plugins: Vec<LockedPlugin>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcps: Vec<LockedMcp>,
-    /// Items that `add --exclude` left out, per source. Sorted by `source`.
+    /// Item names that `add --exclude` left out of this scope. Sorted,
+    /// without duplicates, and omitted from the file when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub excludes: Vec<LockedExclude>,
-}
-
-/// The item names that `add --exclude` left out of one source. `update`
-/// keeps these items out of the source.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct LockedExclude {
-    /// Canonical source label, as in [`LockedItem::source`].
-    pub source: String,
-    /// Sorted, without duplicates, never empty.
-    pub names: Vec<String>,
+    pub excludes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -396,43 +387,15 @@ impl Lockfile {
         self.mcps.retain(|existing| existing.name != name);
     }
 
-    /// Update the excludes of `source`: the recorded names plus `added`,
-    /// minus `requested`. The names are sorted and without duplicates. An
-    /// empty result deletes the record. Records stay sorted by `source`.
-    pub fn record_excludes(&mut self, source: &str, added: &[String], requested: &[String]) {
-        let mut names: std::collections::BTreeSet<String> =
-            self.excludes_for(source).into_iter().collect();
+    /// Update the excludes of the scope: the recorded names plus `added`,
+    /// minus `requested`. The names are sorted and without duplicates.
+    pub fn record_excludes(&mut self, added: &[String], requested: &[String]) {
+        let mut names: std::collections::BTreeSet<String> = self.excludes.iter().cloned().collect();
         names.extend(added.iter().cloned());
         for name in requested {
             names.remove(name);
         }
-        self.excludes.retain(|e| e.source != source);
-        if !names.is_empty() {
-            self.excludes.push(LockedExclude {
-                source: source.to_string(),
-                names: names.into_iter().collect(),
-            });
-            self.excludes.sort_by(|a, b| a.source.cmp(&b.source));
-        }
-    }
-
-    /// The names recorded as excluded for `source`, or an empty vector.
-    pub fn excludes_for(&self, source: &str) -> Vec<String> {
-        self.excludes
-            .iter()
-            .find(|e| e.source == source)
-            .map(|e| e.names.clone())
-            .unwrap_or_default()
-    }
-
-    /// Delete each excludes record whose source has no item and no bundle.
-    pub fn prune_excludes(&mut self) {
-        let items = &self.items;
-        let bundles = &self.bundles;
-        self.excludes.retain(|e| {
-            items.iter().any(|i| i.source == e.source)
-                || bundles.iter().any(|b| b.source == e.source)
-        });
+        self.excludes = names.into_iter().collect();
     }
 
     /// Persist to `<project_root>/.upskill-lock.json`. Pretty-printed JSON
@@ -541,59 +504,20 @@ mod tests {
     #[test]
     fn record_excludes_accumulates_sorts_and_deduplicates() {
         let mut lock = Lockfile::new();
-        lock.record_excludes("s", &names(&["b", "a", "b"]), &[]);
-        assert_eq!(lock.excludes_for("s"), names(&["a", "b"]));
-        lock.record_excludes("s", &names(&["c"]), &[]);
-        assert_eq!(lock.excludes_for("s"), names(&["a", "b", "c"]));
-        assert_eq!(lock.excludes_for("other"), Vec::<String>::new());
+        lock.record_excludes(&names(&["b", "a", "b"]), &[]);
+        assert_eq!(lock.excludes, names(&["a", "b"]));
+        lock.record_excludes(&names(&["c"]), &[]);
+        assert_eq!(lock.excludes, names(&["a", "b", "c"]));
     }
 
     #[test]
     fn record_excludes_removes_the_requested_names() {
         let mut lock = Lockfile::new();
-        lock.record_excludes("s", &names(&["a", "b"]), &[]);
-        lock.record_excludes("s", &names(&["c"]), &names(&["a"]));
-        assert_eq!(lock.excludes_for("s"), names(&["b", "c"]));
-    }
-
-    #[test]
-    fn record_excludes_with_no_remaining_names_deletes_the_record() {
-        let mut lock = Lockfile::new();
-        lock.record_excludes("s", &names(&["a"]), &[]);
-        lock.record_excludes("s", &[], &names(&["a"]));
+        lock.record_excludes(&names(&["a", "b"]), &[]);
+        lock.record_excludes(&names(&["c"]), &names(&["a"]));
+        assert_eq!(lock.excludes, names(&["b", "c"]));
+        lock.record_excludes(&[], &names(&["b", "c"]));
         assert!(lock.excludes.is_empty());
-        lock.record_excludes("t", &[], &[]);
-        assert!(lock.excludes.is_empty());
-    }
-
-    #[test]
-    fn excludes_records_stay_sorted_by_source() {
-        let mut lock = Lockfile::new();
-        lock.record_excludes("b", &names(&["x"]), &[]);
-        lock.record_excludes("a", &names(&["y"]), &[]);
-        let sources: Vec<&str> = lock.excludes.iter().map(|e| e.source.as_str()).collect();
-        assert_eq!(sources, ["a", "b"]);
-    }
-
-    #[test]
-    fn prune_excludes_keeps_a_source_with_an_item_or_a_bundle() {
-        let mut lock = Lockfile::new();
-        let mut a = item(ItemKind::Skill, "i");
-        a.source = "a".to_string();
-        lock.upsert(a);
-        lock.upsert_bundle(LockedBundle {
-            name: "bun".to_string(),
-            source: "b".to_string(),
-            git_ref: None,
-            items: vec![],
-            kinds: vec![],
-        });
-        for s in ["a", "b", "c"] {
-            lock.record_excludes(s, &names(&["x"]), &[]);
-        }
-        lock.prune_excludes();
-        let sources: Vec<&str> = lock.excludes.iter().map(|e| e.source.as_str()).collect();
-        assert_eq!(sources, ["a", "b"]);
     }
 
     #[test]
@@ -615,8 +539,7 @@ mod tests {
     #[test]
     fn record_excludes_drops_a_name_that_is_both_added_and_requested() {
         let mut lock = Lockfile::new();
-        lock.record_excludes("s", &names(&["a"]), &names(&["a"]));
-        assert_eq!(lock.excludes_for("s"), Vec::<String>::new());
+        lock.record_excludes(&names(&["a"]), &names(&["a"]));
         assert!(lock.excludes.is_empty());
     }
 

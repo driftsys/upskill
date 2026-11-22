@@ -897,7 +897,7 @@ impl PreparedInstall {
             .filter(|name| !options.excludes.contains(name))
             .cloned()
             .collect();
-        lock.record_excludes(&label, &options.excludes, &named);
+        lock.record_excludes(&options.excludes, &named);
         if resolved_bundles.is_empty() {
             // Same-source bundle install (no cross-source provenance): every bundle
             // came from the entry source.
@@ -950,9 +950,6 @@ impl PreparedInstall {
                 status,
             });
         }
-        // An excludes record whose source has no item and no bundle is not
-        // kept, for example after an `add` that installs nothing.
-        lock.prune_excludes();
         lock.save(target)?;
 
         // Per ADR-0003 / format-spec §7.4: ensure the Claude Code bridge file

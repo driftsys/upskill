@@ -419,8 +419,6 @@ fn remove_selected(
         .retain(|p| !bundles_to_remove.contains(&p.bundle));
     lock.bundles
         .retain(|b| !bundles_to_remove.contains(&b.name));
-    lock.prune_excludes();
-
     lock.save(target)?;
     drop_global_opencode_rules(at.scope, target, &opencode_rules);
     Ok(report)
@@ -791,21 +789,6 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                 config: config.clone(),
                 recorded: other_rules.contains(name),
             });
-        }
-    }
-
-    // -- Orphan excludes records (issue #570) --
-    // A record of `--exclude` names whose source has no installed item and no
-    // bundle. `add`, `update` and `remove` delete such a record when they save
-    // the lockfile, so one that remains comes from a hand edit or from an
-    // older binary.
-    {
-        let mut pruned = lock.clone();
-        pruned.prune_excludes();
-        for e in &lock.excludes {
-            if !pruned.excludes.iter().any(|k| k.source == e.source) {
-                report.orphan_excludes.push(e.source.clone());
-            }
         }
     }
 
@@ -1388,7 +1371,7 @@ pub fn update(
                 force: true,
                 overwrite,
                 aliases,
-                excludes: lock.excludes_for(&source_label),
+                excludes: super::effective_excludes(&lock.excludes, &[], names),
                 kinds,
                 bundles: if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
                     Vec::new()
@@ -1610,8 +1593,8 @@ pub fn update(
         {
             let new_hashes = prepared.planned_hashes();
             // An entry whose in-source name the lockfile records as excluded
-            // for this source is removed (issue #570).
-            let excluded = lock.excludes_for(&source_label);
+            // is removed, unless the user named it (issue #570).
+            let excluded = super::effective_excludes(&lock.excludes, &[], names);
             let is_excluded = |e: &crate::lockfile::LockedItem| {
                 excluded.contains(e.source_name.as_ref().unwrap_or(&e.name))
             };
@@ -1845,9 +1828,6 @@ pub fn update(
                         status,
                     });
                 }
-                // A source left with no item and no bundle keeps no excludes
-                // record.
-                lock.prune_excludes();
                 lock.save(target)?;
                 drop_global_opencode_rules(at.scope, target, &dropped);
             }
