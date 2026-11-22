@@ -654,7 +654,14 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
         }
 
         if let Some(local_path) = entry.source.strip_prefix("local:") {
-            let ssot_root = Path::new(local_path);
+            // A bundle-file source (issue #602): the items are in the
+            // registry root that `add` resolves for the bundle file. A root
+            // that cannot be resolved is reported as "local path gone".
+            let ssot_root = match local_bundle_root(Path::new(local_path)) {
+                Some(Ok(root)) => root,
+                Some(Err(_)) => PathBuf::new(),
+                None => PathBuf::from(local_path),
+            };
             if !ssot_root.is_dir() {
                 report.orphan_entries.push(OrphanEntry {
                     kind,
@@ -676,7 +683,22 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                 .as_deref()
                 .or(entry.source_name.as_deref())
                 .unwrap_or(&entry.name);
-            let item_dir = ssot_root.join(folder);
+            let mut item_dir = ssot_root.join(folder);
+            if !item_dir.is_dir() {
+                // The item can be in a kind directory (`skills/<folder>`)
+                // or deeper; find it as `add` discovers it.
+                let mut found = Vec::new();
+                let none = crate::bundle::ResolvedItems::default();
+                let names = super::plan::PlanNames::default();
+                if super::install::collect_source_items(&ssot_root, Some(&none), &names, &mut found)
+                    .is_ok()
+                    && let Some(item) = found
+                        .into_iter()
+                        .find(|i| i.kind == kind && i.name == folder)
+                {
+                    item_dir = item.dir;
+                }
+            }
             if !item_dir.is_dir() {
                 report.orphan_entries.push(OrphanEntry {
                     kind,
@@ -1979,6 +2001,18 @@ fn removal_preview(plan: RemovalPlan) -> PreviewItem {
 /// output path. A path that exists and cannot be read as a directory (for
 /// example a plain file that is not a bundle file) is an error that names
 /// `label`.
+/// The registry root of `path` when `path` is a bundle-file source: a path
+/// that is not a directory and whose name ends in `.bundle.yaml`, whether or
+/// not the file exists. `None` for any other path.
+fn local_bundle_root(path: &Path) -> Option<Result<PathBuf>> {
+    let is_bundle_label = !path.is_dir()
+        && path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX));
+    is_bundle_label.then(|| super::install::bundle_file_root(path))
+}
+
 fn collect_recorded_local_items(
     label: &str,
     out: &mut Vec<super::output::SourceItem>,
@@ -1991,15 +2025,9 @@ fn collect_recorded_local_items(
     // A bundle-file label, whether or not the file still exists: the root
     // that `add` resolves for it. A path that is a directory is a directory
     // source, whatever its name.
-    let is_bundle_label = !path.is_dir()
-        && path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX));
-    let root = if is_bundle_label {
-        super::install::bundle_file_root(&path)?
-    } else {
-        path
+    let root = match local_bundle_root(&path) {
+        Some(root) => root?,
+        None => path,
     };
     let none = crate::bundle::ResolvedItems::default();
     super::install::collect_source_items(

@@ -804,3 +804,91 @@ fn doctor_skips_a_recorded_path_that_remove_would_never_delete() {
     assert_eq!(code, Some(0), "{v}");
     assert!(v["missing_outputs"].as_array().unwrap().is_empty(), "{v}");
 }
+
+/// Stage a registry at `root` with the fixture items under `skills/` and a
+/// bundle file `bundles/b.bundle.yaml` that selects one skill and one rule.
+fn stage_bundle_registry(root: &Path) -> std::path::PathBuf {
+    stage_source(&root.join("skills"));
+    let bundle = root.join("bundles/b.bundle.yaml");
+    fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+    fs::write(
+        &bundle,
+        "schema: 1\nname: b\ndescription: Test bundle\n\nitems:\n  skills:\n    - create-api-endpoint\n  rules:\n    - api-conventions\n",
+    )
+    .unwrap();
+    bundle
+}
+
+/// Issue #602: the lockfile records the bundle file as the source of each
+/// item. `doctor` must resolve the items in the registry root of that bundle
+/// file and not report the source as "local path gone".
+#[test]
+fn doctor_is_clean_after_add_from_a_bundle_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let bundle = stage_bundle_registry(&tmp.path().join("registry"));
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &bundle, &home);
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(0), "doctor must be clean: {v}");
+    assert_eq!(v["orphan_entries"], serde_json::json!([]));
+}
+
+/// Issue #602: hash drift of an item installed from a bundle file is
+/// reported as a stale hash, and `update` from the bundle file fixes it.
+#[test]
+fn doctor_reports_drift_of_a_bundle_file_item_and_update_fixes_it() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("registry");
+    let bundle = stage_bundle_registry(&registry);
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &bundle, &home);
+
+    let skill = registry.join("skills/create-api-endpoint/SKILL.md");
+    let body = fs::read_to_string(&skill).unwrap();
+    fs::write(&skill, format!("{body}\nChanged.\n")).unwrap();
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(1), "drift expected: {v}");
+    let stale = v["stale_hashes"].as_array().unwrap();
+    assert_eq!(stale.len(), 1, "one stale hash: {v}");
+    assert_eq!(stale[0]["name"], "create-api-endpoint");
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .success();
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(0), "doctor must be clean after update: {v}");
+}
+
+/// A bundle-file source whose registry root was deleted is reported as
+/// "local path gone".
+#[test]
+fn doctor_reports_a_bundle_file_source_whose_registry_is_gone() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("registry");
+    let bundle = stage_bundle_registry(&registry);
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &bundle, &home);
+    fs::remove_dir_all(&registry).unwrap();
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(1), "orphans expected: {v}");
+    let orphans = v["orphan_entries"].as_array().unwrap();
+    assert_eq!(orphans.len(), 2, "{v}");
+    assert!(
+        orphans.iter().all(|o| o["reason"] == "local-path-gone"),
+        "{v}"
+    );
+}
