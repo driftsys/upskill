@@ -647,25 +647,30 @@ their edges on planned entries as well, because they are not evaluated. Within
 the entries being refreshed, an evaluated requirer is removed and added back
 where it still requires the item (also an item that `--exclude` leaves out).
 Every other requirer is kept, also when it is not installed. The result does not
-depend on the order of the sources or of two `add` commands. Each `add` records
-its `--exclude` names in the lockfile for its source. `add` and `update` apply
-the recorded names of the source as excludes, also for excluded bundle members
-and for excluded `requires:` dependencies from other sources: an `add` excludes
-the recorded names plus its own `--exclude` names, minus the item names given on
-its command line that it does not also exclude. An item name given on the
-command line of an `add` is removed from the record, unless the same `add` also
+depend on the order of the sources or of two `add` commands. Each lockfile
+records one set of excluded item names, for its install scope. `add` and
+`update` skip every item of the set, also an excluded bundle member and an
+excluded `requires:` dependency from another source, before they link a
+`required_by` entry to it; an excluded dependency does not pull its own
+`requires:` items, and a whole-source `add` skips excluded items too. An `add`
+records its `--exclude` names in the set. The excludes of an `add` are the
+recorded names, minus the item names that it installs by name, plus its own
+`--exclude` names; an `update` uses the same rule, with the item names that are
+installed by name in place of the item names of the command line, so an exclude
+never removes an item that was installed by name. An item name given on the
+command line of an `add` is removed from the set, unless the same `add` also
 excludes it, so `add <source> <name>` installs an item that an earlier `add`
-excluded. An `add` without item names and without `--exclude` keeps the record
-and keeps the recorded items out. An `--exclude` name that matches no item is
-still recorded, and it stays in the record until an `add` names it without
-excluding it. When an `add` excludes an item that is already installed, the item
-stays installed until the next `update`, which removes its files and its lock
-entry, also when it is the only item of the source, and reports it as
-`removed — excluded`; the name stays in the record while the source has an item
-entry or a bundle record. An `add`, `update` or `remove` that leaves a source
-with no item entry and no bundle record deletes the record of that source, so an
-`add --exclude` that installs nothing writes no record. `doctor` reports a
-record whose source has no item and no bundle (`orphan_excludes`).
+excluded. An `add` without item names and without `--exclude` keeps the set and
+keeps the recorded items out. When `add <source> --exclude <name>` names an item
+that is installed from the same source, `add` removes that item only: its files
+and its lock entry, no other item of a co-located group, no bundle record and no
+plugin entry. It also deletes each `required_by` link that names the item, and
+prints `removed — excluded <kind> <name>` on stdout. An `--exclude` name that
+matches no item of the entry source and no item that the resolver skipped is a
+usage error (exit code 2) that writes nothing, so the lockfile is unchanged.
+`add` and `update` print `excluded <kind> <name>` on stderr, once for each item
+that an exclude kept out of the run; `--quiet` hides the line, and `update`
+prints it with `--dry-run` too. `doctor` reports nothing about excludes.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.
@@ -990,7 +995,9 @@ directory, in or outside a git repository), then the global scope (`$HOME`).
 When at least one reported scope has items, each scope is a block that starts
 with `<scope> (<root>)`, and a scope without items shows `No items installed.`
 in its block. When every reported scope is empty, there is no block header: the
-output is `No items installed.` followed by two hint lines. `--global` or
+output is `No items installed.` followed by two hint lines. A scope with
+excluded item names ends its block with `excluded: <name>, <name>`, also when it
+has no items. A scope without excluded names prints no such line. `--global` or
 `--project` limits the report to that scope. When the current directory is the
 home directory, only the global scope is reported, and `--project` is refused
 with exit code 2 and a message that asks for `--global`. When neither `HOME` nor
@@ -1011,7 +1018,8 @@ Pass `--json` for a stable machine-readable document:
       "rules":   [{ "kind": "rule",  "name": "...", "source": "...", "git_ref": null }],
       "skills":  [{ "kind": "skill", "name": "...", "source": "...", "git_ref": null }],
       "agents":  [{ "kind": "agent", "name": "...", "source": "...", "git_ref": null }],
-      "bundles": [{ "name": "...", "source": "...", "git_ref": null, "items": [] }]
+      "bundles": [{ "name": "...", "source": "...", "git_ref": null, "items": [] }],
+      "excludes": ["..."]
     }
   ]
 }
@@ -1019,7 +1027,8 @@ Pass `--json` for a stable machine-readable document:
 
 `scopes` has one element for each reported scope, in the order project, global,
 also when `--global` or `--project` selects one scope. `scope` is `"project"` or
-`"global"`.
+`"global"`. `excludes` is the sorted array of the excluded item names of the
+scope; it is omitted when empty.
 
 `kind` is one of `"rule"`, `"skill"`, `"agent"`. `git_ref` is the pinned
 ref/tag/branch when the source is a git URL, otherwise `null`. `source` matches
@@ -1135,13 +1144,13 @@ line for each client and kind with its level, as in
 `--quiet` hides it with the rest of the report.
 
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
-modified files, unreadable files, stale hashes, orphan entries, orphan excludes
-records, missing plugins, unregistered MCP servers, interrupted items, files at
-earlier global paths, missing rule entries, or stale rule entries). Skipped
-plugins and unverifiable MCP entries are informational warnings and do not
-affect the exit code. `doctor` never fetches; remote-source drift detection is
-`update --check` (a lookup of the remote commit, without a fetch) and
-`update --dry-run` (a fetch and a preview).
+modified files, unreadable files, stale hashes, orphan entries, missing plugins,
+unregistered MCP servers, interrupted items, files at earlier global paths,
+missing rule entries, or stale rule entries). Skipped plugins and unverifiable
+MCP entries are informational warnings and do not affect the exit code. `doctor`
+never fetches; remote-source drift detection is `update --check` (a lookup of
+the remote commit, without a fetch) and `update --dry-run` (a fetch and a
+preview).
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 The document has one element in `scopes` for each checked scope (also when
@@ -1217,8 +1226,7 @@ Each element of `scopes` has these keys besides `scope` and `root`:
   "stale_rule_entries": [
     { "name": "...", "config": "/home/user/.config/opencode/opencode.json",
       "recorded": true }
-  ],
-  "orphan_excludes": ["local:..."]
+  ]
 }
 ```
 
@@ -1228,9 +1236,8 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 `{ "query-failed": { "stderr": "..." } }`, or
 `{ "config-unreadable": { "detail": "..." } }`. The plugin and item arrays are
 always present (possibly empty); `mcp_entries` is omitted when no MCP servers
-are recorded, and `missing_rule_entries`, `stale_rule_entries` and
-`orphan_excludes` are omitted when empty. `orphan_excludes` lists the source
-labels. An entry of `missing_plugins` or `skipped_plugins` has the key
+are recorded, and `missing_rule_entries` and `stale_rule_entries` are omitted
+when empty. An entry of `missing_plugins` or `skipped_plugins` has the key
 `repair_command` only when `update` does not install the plugin (no recorded
 item comes from the recorded source of its bundle, or that source is under a
 kind restriction); the value is the `upskill add` command that installs it

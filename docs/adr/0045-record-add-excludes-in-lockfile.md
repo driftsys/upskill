@@ -22,68 +22,95 @@ source installed, or make `update` fail.
 
 Duration of an exclude:
 
-- A: it lasts until a later `add` of the same source undoes it (chosen).
+- A: it lasts until a later `add` undoes it (chosen).
 - B: `remove` also records an exclude.
 - C: the exclude ends when the requiring item changes.
 
 Storage:
 
-- A top-level record per source (chosen): one place and one meaning, matching
-  the per-command scope of `--exclude`.
+- One set of names for the lockfile, so for the install scope (chosen):
+  `--exclude` matches by item name across every source of the closure, so the
+  set has the same key.
+- A record per source: see "Alternatives considered".
 - A list copied onto each item entry of the `add`: the list is duplicated, two
   `add` commands of one source with different excludes are ambiguous, and an
   excluded dependency has no entry of its own.
 - Excludes on the bundle record and on the requiring item: one concept in two
   places, and a plain directory source is not covered.
 
-How a later `add` changes the record:
+How a later `add` changes the set:
 
 - Excludes accumulate, and naming an item undoes its exclude (chosen).
-- Replace the record at each `add`: an unrelated `add` of the same source would
-  silently undo an exclude.
+- Replace the set at each `add`: an unrelated `add` would silently undo an
+  exclude.
 - A separate `--include` option: naming the item already says the same thing.
 
 ## Decision
 
-1. The lockfile has an optional top-level `excludes` array. A record is
-   `{ source, names }`, where `source` is the canonical source label of the
-   `add` and `names` is sorted and without duplicates. The array is omitted when
-   empty, the schema number does not change, and a lockfile without excludes
-   keeps its bytes.
-2. After a successful commit, `add` sets the record of its entry source to the
-   recorded names plus its `--exclude` names, minus the item names that it was
-   given and does not also exclude. An empty result deletes the record. An `add`
-   without item names and without `--exclude` keeps the record.
-3. `add` also applies the recorded names of its entry source: its excludes are
-   the recorded names that it does not name, plus its own `--exclude` names. So
-   an `add` that does not name an excluded item keeps it out, also when another
-   named item requires it, and an `add` without item names keeps every recorded
-   item out. `update` passes the recorded names of a source as its excludes, in
-   all three paths above. `update` never removes names from the record. An item
-   excluded after it was installed stays installed until the next `update`,
-   which removes it, also when it is the only item of the source, and reports it
-   as removed because it is excluded; the name stays recorded while the source
-   has an item entry or a bundle record.
-4. `add`, `update` and `remove` delete the record of a source when no item entry
-   and no bundle record of that source remain, so an `add --exclude` that
-   installs nothing writes no record.
-5. `doctor` reports a record whose source has no item entry and no bundle record
-   (`orphan_excludes`); the report is not clean.
-6. `--exclude` keeps matching by source name across every source of the closure.
+1. The lockfile has an optional top-level `excludes` array of item names. The
+   array is sorted and without duplicates, it has no source key, it is omitted
+   when empty, the schema number does not change, and a lockfile without
+   excludes keeps its bytes. One lockfile is one install scope, so the set is
+   per scope.
+2. `add` and `update` compute their excludes as the recorded names, minus the
+   names installed by name, plus the `--exclude` names of the command. `add`
+   passes the item names of its command line as the names installed by name;
+   `update` passes its item filter (the installed names), so an exclude never
+   removes an item that was installed by name.
+3. The resolvers skip an excluded dependency or bundle member before they link a
+   `required_by` entry to it, and they do not pull its own `requires:` items. A
+   whole-source `add` skips excluded items too. This holds in the bundle,
+   directory-with-bundles and plain directory paths, also for a dependency from
+   another source.
+4. After a successful commit, `add` writes the set: the recorded names plus its
+   `--exclude` names, minus the item names that it was given and does not also
+   exclude. An `add` without item names and without `--exclude` keeps the set.
+   `add <source> <name>` installs `<name>` and removes it from the set.
+5. `add <source> --exclude d` removes an installed item `d` of the same source:
+   that item only, with no member of a co-located group, no bundle record and no
+   plugin entry. It deletes each `required_by` link that names `d` and prints
+   `removed — excluded <kind> <name>` on stdout. `update` has no such removal
+   and no `removed — excluded` status.
+6. An `--exclude` name of an `add` that matches no item of the entry source and
+   no item that the resolver skipped is a usage error (exit code 2), and the
+   lockfile is unchanged. The recorded names are not checked, because an item
+   can leave its source.
+7. `add` and `update` print `excluded <kind> <name>` on stderr for each skipped
+   item, once; `--quiet` hides the line, and `update` prints it with
+   `--dry-run`. `list` prints `excluded: <names>` for each scope, also for a
+   scope with no items, and `list --json` has an `excludes` key for each scope.
+8. `remove` records no exclude and prunes none. `doctor` has no check for
+   excludes.
+
+## Alternatives considered
+
+A top-level record per source, `{ source, names }`, with `source` the canonical
+label of the `add`. It was built first and dropped, because the label did not
+match the name-based `--exclude`, which applies across the whole closure:
+
+- A cross-source item returned: an exclude recorded for one source label did not
+  apply to a dependency that another source supplied.
+- A different spelling of the same source gave another label, so a later `add`
+  or `update` did not find the record and lost the excludes.
+- The undo failed: `add <other-source> <name>` could not remove a name that was
+  recorded under the first source.
+
+The per-source design also needed record pruning (delete the record when the
+source had no item entry and no bundle record) and a `doctor` check for orphan
+records (`orphan_excludes`). The per-scope set needs neither.
 
 ## Consequences
 
 - A removed dependency still comes back through its requirer; `remove` records
   nothing (option B not taken).
-- An `--exclude` name that matches no item is recorded and stays until an `add`
-  names it.
-- `remove` of the last item and the last bundle of a source also deletes the
-  record of that source, so a later `add` of the source installs the formerly
-  excluded items again.
-- `update --check` does not need the record, because it plans no items.
-- The only way to undo an exclude is `add <source> <name>`, or editing the
+- An `--exclude` name that matched an item when `add` ran stays in the set until
+  an `add` names it, also after the item leaves its source.
+- `remove` does not change the set, so a later `add` keeps the formerly excluded
+  items out until an `add` names them.
+- `update --check` does not need the set, because it plans no items.
+- The ways to undo an exclude are `add <source> <name>` and editing the
   lockfile.
 
-Satisfies: #570. Code: `src/lockfile.rs` (`record_excludes`, `excludes_for`,
-`prune_excludes`), `src/pipeline/prepared.rs`, `src/pipeline/lifecycle.rs`.
-Tests: `tests/cli_update_excludes.rs`, `tests/cli_doctor.rs`.
+Satisfies: #570. Code: `src/lockfile.rs`, `src/pipeline/prepared.rs`,
+`src/pipeline/lifecycle.rs`, `src/pipeline/mod.rs`, `src/pipeline/report.rs`,
+`src/main.rs`. Tests: `tests/cli_update_excludes.rs`.
