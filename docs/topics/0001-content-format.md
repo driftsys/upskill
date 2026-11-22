@@ -1286,13 +1286,15 @@ project root. In the global scope it is at `$XDG_CONFIG_HOME/opencode/` when
 `XDG_CONFIG_HOME` is set and absolute, and otherwise at
 `$HOME/.config/opencode/`. A trial with opencode 2.1.4 showed that opencode
 reads `$HOME/.config/opencode/opencode.json` and ignores `$HOME/opencode.json`;
-the `XDG_CONFIG_HOME` location is used when set and absolute, and was not
-tested. An implementation writes the plugin URI of a `plugin_uri` descriptor to
-the `plugins` array of that file. A reader accepts an entry under `plugin` or
-`plugins`. In the global file, opencode expands no `**` and resolves a relative
-`instructions` path against the project directory (trials in issue #581). It
-loads a single absolute file path, so a global install writes one absolute
-`instructions` entry per rule, the path of the generated `RULE.md`, and no glob.
+the `XDG_CONFIG_HOME` location is used when set and absolute. In the trials of
+issue #581, opencode loaded the `instructions` of that location; no trial tested
+the plugin or MCP entries there. An implementation writes the plugin URI of a
+`plugin_uri` descriptor to the `plugins` array of that file. A reader accepts an
+entry under `plugin` or `plugins`. In the global file, opencode expands no `**`
+and resolves a relative `instructions` path against the project directory
+(trials in issue #581). It loads a single absolute file path, so a global
+install writes one absolute `instructions` entry per rule, the path of the
+generated `RULE.md`, and no glob.
 
 ### 7.4 Formatting guarantee
 

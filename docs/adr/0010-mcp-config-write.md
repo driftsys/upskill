@@ -134,8 +134,9 @@ The opencode file is the `opencode.json` of the scope: the project root in the
 project scope, and `$XDG_CONFIG_HOME/opencode/` (or `~/.config/opencode/`) in
 the global scope. A trial with opencode 2.1.4 showed that opencode reads
 `~/.config/opencode/opencode.json` and ignores `~/opencode.json`; the
-`$XDG_CONFIG_HOME` location is used when set and absolute, and was not tested
-(ADR-0008, issues #565 and #573).
+`$XDG_CONFIG_HOME` location is used when set and absolute. In the trials of
+issue #581, opencode loaded the `instructions` of that location; no trial tested
+the plugin or MCP entries there (ADR-0008, issues #565, #573 and #581).
 
 The Claude forms are unchanged:
 
@@ -196,10 +197,12 @@ Status values:
 | `"installed"` | Configured successfully via CLI shellout or config-write.           |
 | `"skipped"`   | CLI was not on PATH and no config-write target applied (warn-skip). |
 
-`upsert_mcp` / `remove_mcps_by_name` mirror the plugin equivalents. The lockfile
-`schema` field stays at **1** — the `mcps` array is additive and
-backward-compatible; old upskill versions reading a lockfile with `mcps` entries
-silently ignore the unknown array (serde `default`).
+`upsert_mcp` / `remove_mcps_by_name` mirror the plugin equivalents. Adding the
+`mcps` array did not change the lockfile `schema` value, which was 1 at that
+time (a newly created lockfile has `schema: 2` as of a later change; see
+`src/lockfile.rs`). The array is additive and backward-compatible; old upskill
+versions reading a lockfile with `mcps` entries silently ignore the unknown
+array (serde `default`).
 
 ### Removal and reconciliation
 
@@ -346,7 +349,7 @@ _Per-target install contract_ above.
 
 None — additive. `mcps:` is optional on Bundle. Existing bundles without `mcps:`
 are unaffected. Old lockfiles without an `mcps` array load fine (serde
-`#[serde(default)]`). Lockfile `schema` stays at `1`.
+`#[serde(default)]`). This change did not change the lockfile `schema` value.
 
 ## References
 

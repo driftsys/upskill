@@ -26,6 +26,17 @@ pub enum PluginScope {
 }
 
 impl PluginScope {
+    /// The plugin scope of an install scope: the scope that `resolve_scope`
+    /// returned, so the flags, the git-repo detection and the home-directory
+    /// refusal are decided in one place. It also selects the opencode config
+    /// file, for the scope whose lockfile a run works on.
+    pub fn of(scope: crate::scope::Scope) -> Self {
+        match scope {
+            crate::scope::Scope::Project => Self::Project,
+            crate::scope::Scope::Global => Self::User,
+        }
+    }
+
     /// Returns the CLI flag value for `claude plugin install --scope`.
     pub fn as_claude_flag(&self) -> &'static str {
         match self {

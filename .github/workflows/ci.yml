@@ -23,6 +23,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: extractions/setup-just@v4
       - name: Install git-std and prim
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.local/bin:$PATH"

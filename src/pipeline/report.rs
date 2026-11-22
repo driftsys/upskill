@@ -362,6 +362,16 @@ pub struct MissingRuleEntry {
     pub config: PathBuf,
 }
 
+/// A rule that the lockfile records for other clients than opencode in the
+/// global scope, whose `instructions` entry is still in the global opencode
+/// config. An earlier removal can have failed after the lockfile was saved.
+#[derive(Debug, Clone, Serialize)]
+pub struct StaleRuleEntry {
+    pub name: String,
+    /// The global opencode config file that holds the entry.
+    pub config: PathBuf,
+}
+
 /// Plugin in lockfile (status: skipped) because the client CLI was not on
 /// PATH, or opencode was below version 2 or gave no version, at install
 /// time.  The plugin has never been installed.
@@ -489,6 +499,11 @@ pub struct DoctorReport {
     /// `is_clean()` returns false.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub missing_rule_entries: Vec<MissingRuleEntry>,
+    /// Entries in the global opencode config of rules that the lockfile does
+    /// not record for opencode. Always empty for the project scope.
+    /// Non-empty → `is_clean()` returns false.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stale_rule_entries: Vec<StaleRuleEntry>,
 }
 
 impl DoctorReport {
@@ -513,6 +528,7 @@ impl DoctorReport {
             && self.interrupted.is_empty()
             && self.earlier_layout.is_empty()
             && self.missing_rule_entries.is_empty()
+            && self.stale_rule_entries.is_empty()
             && !self
                 .mcp_entries
                 .iter()

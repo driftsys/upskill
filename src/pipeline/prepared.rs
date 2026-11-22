@@ -722,7 +722,8 @@ impl PreparedInstall {
                 after.upsert(item);
             }
         }
-        let dropped = dropped_opencode_rules(lock, &after, &opencode_rules);
+        let stale_root = (plugin_scope == PluginScope::User).then_some(target);
+        let dropped = dropped_opencode_rules(lock, &after, stale_root);
         let handshake = crate::ancillary::pending_handshake_changes(
             target,
             plugin_scope,
@@ -967,7 +968,7 @@ impl PreparedInstall {
                     })
                     .cloned()
                     .collect();
-                let dropped = dropped_opencode_rules(&lock_before, &lock, &written);
+                let dropped = dropped_opencode_rules(&lock_before, &lock, Some(target));
                 crate::ancillary::sync_opencode_global_rules(target, &written, &dropped)?;
             }
         }
@@ -985,21 +986,37 @@ impl PreparedInstall {
     }
 }
 
-/// The rules that `before` records for opencode and `after` does not, and
-/// that `added` does not write again: a rule that an install records for
-/// fewer clients no longer targets opencode, and its entry in the global
-/// opencode config is deleted.
+/// The rules that `before` records for opencode and `after` does not: a rule
+/// that an install records for fewer clients no longer targets opencode, and
+/// its entry in the global opencode config is deleted. A rule that this install
+/// writes for opencode is in `after` as an opencode rule, so it is not here.
+///
+/// With `stale_root`, the global root, the result also holds each rule that
+/// `after` records for other clients than opencode and whose entry the global
+/// opencode config still lists. An earlier removal of that entry can have
+/// failed after the lockfile was saved; `doctor` reports such an entry, and
+/// this deletes it. The config is read for this; a file that cannot be read as
+/// JSON adds no name.
 fn dropped_opencode_rules(
     before: &Lockfile,
     after: &Lockfile,
-    added: &BTreeSet<String>,
+    stale_root: Option<&Path>,
 ) -> BTreeSet<String> {
     let remaining = after.opencode_rule_names();
-    before
+    let mut dropped: BTreeSet<String> = before
         .opencode_rule_names()
         .into_iter()
-        .filter(|name| !remaining.contains(name) && !added.contains(name))
-        .collect()
+        .filter(|name| !remaining.contains(name))
+        .collect();
+    if let Some(root) = stale_root {
+        dropped.extend(
+            after
+                .other_client_rule_names()
+                .into_iter()
+                .filter(|name| crate::ancillary::opencode_global_rule_registered(root, name)),
+        );
+    }
+    dropped
 }
 
 /// Refreshes `required_by` of every entry of `lock` with the provenance of

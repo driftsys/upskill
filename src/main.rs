@@ -353,7 +353,7 @@ fn run_add(args: AddArgs) -> i32 {
         }
     };
 
-    let plugin_scope = scope_to_plugin_scope(at.scope);
+    let plugin_scope = PluginScope::of(at.scope);
 
     let is_global = at.scope == Scope::Global;
 
@@ -616,17 +616,6 @@ fn is_inside_git_repo() -> bool {
         if !dir.pop() {
             return false;
         }
-    }
-}
-
-/// Map the resolved scope to a `PluginScope` for plugin installation (used by
-/// clients that support scoped installs, e.g. Claude Code). The scope is the
-/// one `resolve_scope` returned, so the flags, the git-repo detection and the
-/// home-directory refusal are decided in one place.
-fn scope_to_plugin_scope(scope: Scope) -> PluginScope {
-    match scope {
-        Scope::Project => PluginScope::Project,
-        Scope::Global => PluginScope::User,
     }
 }
 
@@ -1117,7 +1106,7 @@ fn run_update(args: UpdateArgs) -> i32 {
         }
     };
 
-    let plugin_scope = scope_to_plugin_scope(at.scope);
+    let plugin_scope = PluginScope::of(at.scope);
     let is_global = at.scope == Scope::Global;
     let selection = resolve_selection(&flag_clients, project_config_root(is_global));
 
@@ -2104,6 +2093,22 @@ fn print_doctor_report(report: &DoctorReport) {
         }
     }
 
+    if !report.stale_rule_entries.is_empty() {
+        println!(
+            "{} {} rule(s) not installed for opencode are listed in the global opencode config — `upskill update --global` deletes the entries",
+            style::error_label("doctor:"),
+            report.stale_rule_entries.len()
+        );
+        for r in &report.stale_rule_entries {
+            println!(
+                "  {} {} {}",
+                style::dim("rule"),
+                style::name(&r.name),
+                style::dim(&format!("({})", r.config.display())),
+            );
+        }
+    }
+
     if !report.interrupted.is_empty() {
         println!(
             "{} interrupted add or update ({} item(s)) — run the same command again to complete it",
@@ -2776,7 +2781,7 @@ fn run_remove_mcp(name: &str, global: bool, project: bool) -> i32 {
         }
     };
     print_scope_line(&at);
-    let mcp_scope = scope_to_plugin_scope(at.scope);
+    let mcp_scope = PluginScope::of(at.scope);
     let target = at.root;
 
     let mut lock = match upskill::lockfile::Lockfile::load(&target) {
