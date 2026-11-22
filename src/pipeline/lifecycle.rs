@@ -75,7 +75,7 @@ use super::{
 /// (`drop_global_opencode_rules`).
 pub fn remove(at: &ScopeRoot, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
     let target = at.root.as_path();
-    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    let lock = crate::lockfile::Lockfile::load(target)?;
     check_lockfile_records(target, &lock)?;
 
     let mut to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
@@ -129,11 +129,40 @@ pub fn remove(at: &ScopeRoot, filter: RemoveFilter, force: bool) -> Result<Remov
         }
     }
 
+    remove_items(at, lock, filter, &to_remove, force)
+}
+
+/// Remove exactly the items `keys`, without the co-location expansion of
+/// [`remove`]. `add --exclude` uses it so that a member of the same group
+/// that the command does not exclude stays installed (issue #570).
+pub(crate) fn remove_exact(at: &ScopeRoot, keys: &[(ItemKind, String)]) -> Result<RemoveReport> {
+    let lock = crate::lockfile::Lockfile::load(at.root.as_path())?;
+    check_lockfile_records(at.root.as_path(), &lock)?;
+    let to_remove: Vec<crate::lockfile::LockedItem> = lock
+        .items
+        .iter()
+        .filter(|i| keys.iter().any(|(k, n)| *k == i.kind && n == &i.name))
+        .cloned()
+        .collect();
+    let filter = RemoveFilter::ByNames(keys.iter().map(|(_, n)| n.clone()).collect());
+    remove_items(at, lock, filter, &to_remove, false)
+}
+
+/// The part of `remove` that runs once the items are selected: check, adopt
+/// a `schema: 1` lockfile, then plan and delete.
+fn remove_items(
+    at: &ScopeRoot,
+    mut lock: crate::lockfile::Lockfile,
+    filter: RemoveFilter,
+    to_remove: &[crate::lockfile::LockedItem],
+    force: bool,
+) -> Result<RemoveReport> {
+    let target = at.root.as_path();
     let keys: Vec<(ItemKind, String)> =
         to_remove.iter().map(|i| (i.kind, i.name.clone())).collect();
 
     // Before the adoption and before any deletion, whatever `force` is.
-    check_removal_outside_sources(target, &lock, &to_remove)?;
+    check_removal_outside_sources(target, &lock, to_remove)?;
 
     // The adoption is saved before any file is deleted. Every later error
     // carries the adopted paths, so that `main.rs` can still print the adoption notice.

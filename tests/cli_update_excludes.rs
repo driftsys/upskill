@@ -393,6 +393,53 @@ fn add_removes_the_only_installed_item_that_it_excludes() {
 }
 
 #[test]
+fn add_removes_only_the_excluded_member_of_a_group() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    let dir = reg.join("g");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nschema: 1\nname: g\ndescription: group skill.\n---\n\n# g\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("RULE.md"),
+        "---\nschema: 1\nname: g-rule\ndescription: group rule.\n---\n\n# g\n",
+    )
+    .unwrap();
+    env.run(&["add", s(&reg)]);
+    assert!(env.installed("g"));
+    let rule = env.consumer().join(".claude/rules/g-rule.md");
+    assert!(rule.exists());
+
+    env.run(&["add", s(&reg), "--exclude", "g"]);
+
+    assert!(!env.installed("g"));
+    assert!(rule.exists(), "the member that is not excluded stays");
+    assert!(has_lock_item(&env.lock(), "g-rule"), "{}", env.lock());
+    assert!(!has_lock_item(&env.lock(), "g"), "{}", env.lock());
+}
+
+#[test]
+fn add_reports_each_installed_item_that_it_removes_as_excluded() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "d", "", "first");
+    env.run(&["add", s(&reg)]);
+
+    let stdout = stdout_of(&env.run(&["add", s(&reg), "--exclude", "d"]));
+    assert!(
+        stdout
+            .lines()
+            .any(|l| l.contains("removed — excluded") && l.contains('d')),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("removed — excluded skill a"), "{stdout}");
+}
+
+#[test]
 fn an_add_that_installs_nothing_still_records_the_exclude() {
     let env = Env::new();
     let reg = env.registry("reg");

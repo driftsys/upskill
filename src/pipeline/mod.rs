@@ -283,11 +283,12 @@ pub fn install_with_lockfile(
         prepared.source_items(),
         output::RecordedUse::AddReads,
     )?;
-    let report = prepared.commit(target, plugin_scope)?;
+    let mut report = prepared.commit(target, plugin_scope)?;
     // An item of this source that the command excludes and that is already
-    // installed is removed, as `remove` removes it (issue #570).
+    // installed is removed, as `remove` removes it, but without the other
+    // members of its group (issue #570).
     let lock = crate::lockfile::Lockfile::load(target)?;
-    let excluded_installed: Vec<String> = lock
+    let excluded_installed: Vec<(ItemKind, String)> = lock
         .items
         .iter()
         .filter(|i| same_source_key(&i.source) == label)
@@ -295,14 +296,15 @@ pub fn install_with_lockfile(
             let in_source = i.source_name.as_ref().unwrap_or(&i.name);
             own_excludes.contains(in_source) && !items.contains(in_source)
         })
-        .map(|i| i.name.clone())
+        .map(|i| (i.kind, i.name.clone()))
         .collect();
     if !excluded_installed.is_empty() {
         let at = crate::scope::ScopeRoot {
             scope: options.scope,
             root: target.to_path_buf(),
         };
-        lifecycle::remove(&at, RemoveFilter::ByNames(excluded_installed), false)?;
+        lifecycle::remove_exact(&at, &excluded_installed)?;
+        report.removed_excluded = excluded_installed;
     }
     Ok(report)
 }

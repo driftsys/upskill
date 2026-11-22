@@ -663,6 +663,22 @@ fn print_install_report(report: &InstallReport, source: &str) {
             clients.join(", ")
         );
     }
+    for (kind, name) in &report.removed_excluded {
+        println!(
+            "{} {} {}",
+            style::error_label("removed — excluded"),
+            style::dim(kind_label_of(*kind)),
+            style::name(name)
+        );
+    }
+}
+
+fn kind_label_of(kind: ItemKind) -> &'static str {
+    match kind {
+        ItemKind::Rule => "rule",
+        ItemKind::Skill => "skill",
+        ItemKind::Agent => "agent",
+    }
 }
 
 /// Tell the user which files the adoption of a `schema: 1` lockfile

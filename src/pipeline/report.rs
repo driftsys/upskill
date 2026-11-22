@@ -86,6 +86,9 @@ pub struct InstallReport {
     /// destinations of the items that were not written because nothing is
     /// withheld from them; their lockfile entries are unchanged.
     pub kept_modified: Vec<PathBuf>,
+    /// Items that were already installed from the source and that the
+    /// command's `--exclude` names. `add` removed them (issue #570).
+    pub removed_excluded: Vec<(ItemKind, String)>,
 }
 
 /// What a commit would do to one item.
