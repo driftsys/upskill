@@ -315,15 +315,19 @@ pub struct StaleHash {
 }
 
 /// Lockfile entry whose source can no longer be reached: the local
-/// path is gone or the named item has been removed from the SSOT
-/// directory. The user has to `remove` it explicitly to clear the
-/// lockfile, since `update` would just fail trying to fetch.
+/// path is gone, the source directory cannot be listed, or the named
+/// item has been removed from the SSOT directory. The user has to
+/// `remove` it explicitly to clear the lockfile, since `update` would just
+/// fail trying to fetch.
 #[derive(Debug, Clone, Serialize)]
 pub struct OrphanEntry {
     pub kind: ItemKind,
     pub name: String,
     pub source: String,
     pub reason: OrphanReason,
+    /// The read error, for [`OrphanReason::SourceUnreadable`] only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -335,6 +339,9 @@ pub enum OrphanReason {
     /// Source still exists but no longer contains the item with this
     /// `(kind, name)` (e.g., it was renamed or removed in the SSOT).
     ItemMissingInSource,
+    /// Source directory exists but its items cannot be listed (for example,
+    /// a permission error); the entry carries the read error.
+    SourceUnreadable,
 }
 
 /// Plugin in lockfile (status: installed) but not found when querying the
@@ -919,6 +926,7 @@ mod tests {
             name: "x".into(),
             source: "local:/p".into(),
             reason: OrphanReason::LocalPathGone,
+            error: None,
         });
         assert!(!report.is_clean());
     }

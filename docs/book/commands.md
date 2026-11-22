@@ -1040,8 +1040,10 @@ scope. For each scope it reports thirteen independent buckets:
   kind of the entry and the recorded folder name. When several such directories
   exist, the one whose item name is the recorded name is used; when none of them
   has that name, the entry is reported as missing in the source.
-- **Lockfile entries with no recoverable source** (the local path went away, or
-  the named item was removed in the source) — `upskill remove` to clear.
+- **Lockfile entries with no recoverable source** (the local path went away, the
+  named item was removed in the source, or the source directory itself exists
+  but cannot be listed, for example because of a permission error; the read
+  error is printed) — `upskill remove` to clear.
 - **Orphaned dependencies** (informational) — items installed only as a
   dependency of items that are no longer installed. Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
@@ -1206,9 +1208,11 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 }
 ```
 
-`reason` is `"local-path-gone"` or `"item-missing-in-source"`. Hashes may be
-`null` when the SSOT can't be hashed (e.g. unreadable). MCP `status` is one of
-`"ok"`, `"not-registered"`, `"cli-not-found"`, `"config-missing"`,
+`reason` is `"local-path-gone"`, `"item-missing-in-source"` or
+`"source-unreadable"`; a `"source-unreadable"` entry also has an `error` string
+with the read error. Hashes may be `null` when the SSOT can't be hashed (e.g.
+unreadable). MCP `status` is one of `"ok"`, `"not-registered"`,
+`"cli-not-found"`, `"config-missing"`,
 `{ "query-failed": { "stderr": "..." } }`, or
 `{ "config-unreadable": { "detail": "..." } }`. The plugin and item arrays are
 always present (possibly empty); `mcp_entries` is omitted when no MCP servers
