@@ -364,10 +364,11 @@ demand materialises.
 **(a) Patch `~/.claude/settings.json` directly.** Rejected: depends on
 undocumented internal schema, breaks across Claude Code versions, duplicates
 registration logic the CLI already implements, and doesn't generalise to VS Code
-or opencode (each has its own state file). The opencode `plugin_uri` form of the
-`opencode:` block does the same: upskill writes the URI to the `plugins` array
-of `opencode.json`, as `write_opencode_plugin_uri` does. That exception is the
-decision recorded in "The opencode config file and the `plugins` key" above.
+or opencode (each has its own state file). One exception exists: for the
+`plugin_uri` form of the `opencode:` block, upskill writes the URI to the
+`plugins` array of `opencode.json` itself (`write_opencode_plugin_uri`). That
+exception is the decision recorded in "The opencode config file and the
+`plugins` key" above.
 
 **(b) Re-emit plugin contents from SSOT.** Rejected: duplicates upstream plugins
 like `superpowers`, can't represent hooks or slash commands in the current item
@@ -395,8 +396,8 @@ for Claude Code" differs from "how to install the VS Code extension." Per-client
 `install_url:` is the natural home.
 
 **(f) Make `install_url:` required.** Rejected: forces every bundle author to
-track three URLs even when the warn-skip path is unlikely. Optional, with a
-graceful degradation in the warning message when absent.
+track one URL per client block even when the warn-skip path is unlikely.
+Optional, with a graceful degradation in the warning message when absent.
 
 ## Migration
 
