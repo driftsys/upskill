@@ -479,6 +479,9 @@ fn doctor_flags_a_copilot_entry_missing_from_its_config_file() {
     )
     .unwrap();
     let report = run_doctor_json(&home, &project, &path_val);
+    // Exit 1 below must come from the MCP drift alone.
+    assert_eq!(report["orphan_entries"], serde_json::json!([]), "{report}");
+    assert_eq!(report["stale_hashes"], serde_json::json!([]), "{report}");
     assert_eq!(
         doctor_mcp_status(&report, "copilot", "remote-srv"),
         "not-registered"

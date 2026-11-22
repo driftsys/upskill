@@ -939,3 +939,77 @@ fn doctor_is_clean_for_a_directory_source_with_kind_directories() {
     let (code, v) = doctor_json(&target, &home);
     assert_eq!(code, Some(0), "doctor must be clean: {v}");
 }
+
+fn write_rule(dir: &Path, name: &str) {
+    fs::create_dir_all(dir).unwrap();
+    fs::write(
+        dir.join("RULE.md"),
+        format!("---\nname: {name}\ndescription: Rule {name}.\n---\n\nBody of {name}.\n"),
+    )
+    .unwrap();
+}
+
+fn write_skill(dir: &Path, name: &str) {
+    fs::create_dir_all(dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        format!("---\nname: {name}\ndescription: Skill {name}.\n---\n\nBody of {name}.\n"),
+    )
+    .unwrap();
+}
+
+/// Two rules in folders with the same name in different category
+/// directories are each hashed from their own directory.
+#[test]
+fn doctor_is_clean_for_same_named_folders_in_two_categories() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_rule(&source.join("category-a/shared"), "rule-a");
+    write_rule(&source.join("category-b/shared"), "rule-b");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(0), "doctor must be clean: {v}");
+}
+
+/// A skill and a rule in folders with the same name are each hashed from
+/// the directory of their own kind.
+#[test]
+fn doctor_is_clean_for_a_skill_and_a_rule_with_the_same_folder_name() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_skill(&source.join("skills/x"), "x");
+    write_rule(&source.join("rules/x"), "x");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(0), "doctor must be clean: {v}");
+}
+
+/// Two local sources in one lockfile, each with items in kind directories,
+/// are each searched in their own root.
+#[test]
+fn doctor_is_clean_for_two_sources_with_kind_directories() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let first = tmp.path().join("first");
+    let second = tmp.path().join("second");
+    write_skill(&first.join("skills/one"), "one");
+    write_skill(&second.join("skills/two"), "two");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &first, &home);
+    install(&target, &second, &home);
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(0), "doctor must be clean: {v}");
+}
