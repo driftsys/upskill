@@ -190,7 +190,14 @@ pub(super) fn prepare_install(
     // `resolved_bundles` carries each bundle's own source for the bundle
     // lockfile recording and plugin/MCP install.
     let bundle_resolution = if options.bundles.is_empty() {
-        resolve_bundle_request(&label, &local_source, git_ref, commit.as_deref(), items)?
+        resolve_bundle_request(
+            &label,
+            &local_source,
+            git_ref,
+            commit.as_deref(),
+            items,
+            &options.excludes,
+        )?
     } else {
         for name in &options.bundles {
             if discovery::find_bundle_by_name(&local_source, name).is_none() {
@@ -203,6 +210,7 @@ pub(super) fn prepare_install(
             git_ref,
             commit.as_deref(),
             &options.bundles,
+            &options.excludes,
         )?;
         if !items.is_empty() {
             closure.merge(resolve_requires_closure(
@@ -211,6 +219,7 @@ pub(super) fn prepare_install(
                 git_ref,
                 commit.as_deref(),
                 &requested,
+                &options.excludes,
             )?)?;
         }
         Some((closure, bundles))
@@ -228,6 +237,7 @@ pub(super) fn prepare_install(
                     git_ref,
                     commit.as_deref(),
                     &requested,
+                    &options.excludes,
                 )?),
                 Vec::new(),
             )

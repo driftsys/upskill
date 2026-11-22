@@ -320,6 +320,9 @@ pub(super) struct DependencyClosure {
     /// `(kind, name) -> { "<requirer-kind>:<requirer-name>", .. }`. Empty
     /// for directly-requested items. Drives the lockfile's `required_by`.
     pub required_by: BTreeMap<(ItemKind, String), BTreeSet<String>>,
+    /// Dependencies and bundle members that the run's excludes left out of
+    /// the closure. A directly-requested item is never in this set.
+    pub skipped: BTreeSet<(ItemKind, String)>,
     /// Tempdir guards for cross-source fetches. Held here so the clones
     /// outlive the per-source install calls in `prepared::prepare_install`;
     /// a `PreparedInstall` keeps the closure until its `commit` returns or
@@ -369,6 +372,7 @@ impl DependencyClosure {
         for (item, requirers) in other.required_by {
             self.required_by.entry(item).or_default().extend(requirers);
         }
+        self.skipped.extend(other.skipped);
         self.guards.extend(other.guards);
         Ok(())
     }
@@ -476,6 +480,11 @@ struct Resolver {
     on_path: BTreeSet<(String, ItemKind, String)>,
     /// Dependency provenance keyed by identity.
     required_by: BTreeMap<(ItemKind, String), BTreeSet<String>>,
+    /// Names that the run excludes. A dependency with one of these names is
+    /// not resolved and gets no `required_by` link.
+    excludes: BTreeSet<String>,
+    /// Dependencies left out because their name is in `excludes`.
+    skipped: BTreeSet<(ItemKind, String)>,
 }
 
 impl Resolver {
@@ -512,6 +521,14 @@ impl Resolver {
         requirer: Option<&(ItemKind, String)>,
     ) -> Result<()> {
         let (kind, name) = node.clone();
+
+        // An excluded dependency is left out before any lookup, so it is not
+        // fetched, not checked for conflicts and gets no `required_by` link.
+        // A directly-requested item (no requirer) is never checked here.
+        if requirer.is_some() && self.excludes.contains(&name) {
+            self.skipped.insert(node);
+            return Ok(());
+        }
 
         // Cross-source identity conflict: the same (kind, name) reached from
         // two different sources (format-spec §3.7).
@@ -595,12 +612,16 @@ fn source_git_ref(s: &InstallSource) -> Option<String> {
 /// are fetched via [`fetch_ssot`](super::git::fetch_ssot), cached by canonical label. Cycles
 /// (keyed `(label, kind, name)`) and same-`(kind,name)`-different-source
 /// clashes are errors; a required item missing from its source is an error.
+/// A dependency whose name is in `excludes` is left out and recorded in
+/// [`DependencyClosure::skipped`]; the items of `initial` are never excluded
+/// here.
 pub(super) fn resolve_requires_closure(
     entry_label: &str,
     entry_root: &Path,
     entry_git_ref: Option<&str>,
     entry_commit: Option<&str>,
     initial: &[(ItemKind, String)],
+    excludes: &[String],
 ) -> Result<DependencyClosure> {
     let mut resolver = Resolver {
         sources: BTreeMap::new(),
@@ -610,6 +631,8 @@ pub(super) fn resolve_requires_closure(
         order: Vec::new(),
         on_path: BTreeSet::new(),
         required_by: BTreeMap::new(),
+        excludes: excludes.iter().cloned().collect(),
+        skipped: BTreeSet::new(),
     };
     resolver.sources.insert(
         entry_label.to_string(),
@@ -660,6 +683,7 @@ pub(super) fn resolve_requires_closure(
         item_source,
         source_roots,
         required_by: resolver.required_by,
+        skipped: resolver.skipped,
         guards: resolver.guards,
     })
 }
@@ -744,6 +768,11 @@ struct BundleResolver {
     item_owner: BTreeMap<(ItemKind, String), (String, String)>,
     /// Canonical source label each resolved item identity came from.
     item_source: BTreeMap<(ItemKind, String), String>,
+    /// Names that the run excludes. A bundle member with one of these names
+    /// is not added to the closure.
+    excludes: BTreeSet<String>,
+    /// Bundle members left out because their name is in `excludes`.
+    skipped: BTreeSet<(ItemKind, String)>,
 }
 
 impl BundleResolver {
@@ -805,6 +834,10 @@ impl BundleResolver {
         // Accumulate this bundle's items into its source, detecting conflicts.
         for (kind, item_name) in bundle_item_identities(&bundle) {
             let id = (kind, item_name.clone());
+            if self.excludes.contains(&item_name) {
+                self.skipped.insert(id);
+                continue;
+            }
             match self.item_owner.get(&id) {
                 Some((ol, ob)) if (ol.as_str(), ob.as_str()) != (label, name) => {
                     anyhow::bail!(
@@ -853,13 +886,16 @@ impl BundleResolver {
 /// in the already-fetched entry source). Returns the item-level
 /// [`DependencyClosure`] — so the existing per-source install and item lockfile
 /// machinery is reused verbatim — plus the ordered resolved bundles for
-/// plugin/MCP install and per-bundle lockfile recording.
+/// plugin/MCP install and per-bundle lockfile recording. A member item whose
+/// name is in `excludes` is left out and recorded in
+/// [`DependencyClosure::skipped`].
 pub(super) fn resolve_bundle_closure(
     entry_label: &str,
     entry_root: &Path,
     entry_git_ref: Option<&str>,
     entry_commit: Option<&str>,
     entry_bundles: &[String],
+    excludes: &[String],
 ) -> Result<(DependencyClosure, Vec<ResolvedBundle>)> {
     let mut resolver = BundleResolver {
         sources: BTreeMap::new(),
@@ -871,6 +907,8 @@ pub(super) fn resolve_bundle_closure(
         items_by_source: BTreeMap::new(),
         item_owner: BTreeMap::new(),
         item_source: BTreeMap::new(),
+        excludes: excludes.iter().cloned().collect(),
+        skipped: BTreeSet::new(),
     };
     resolver.sources.insert(
         entry_label.to_string(),
@@ -911,6 +949,7 @@ pub(super) fn resolve_bundle_closure(
         // Bundle items carry no item-level `required_by`; each bundle's own
         // lockfile entry records which items it provides.
         required_by: BTreeMap::new(),
+        skipped: resolver.skipped,
         guards: resolver.guards,
     };
     Ok((closure, resolver.order))
@@ -972,6 +1011,7 @@ pub(super) fn resolve_bundle_request(
     git_ref: Option<&str>,
     commit: Option<&str>,
     names: &[String],
+    excludes: &[String],
 ) -> Result<Option<(DependencyClosure, Vec<ResolvedBundle>)>> {
     if is_bundle_file(local_source) {
         let registry_root = bundle_file_root(local_source)?;
@@ -982,6 +1022,7 @@ pub(super) fn resolve_bundle_request(
             git_ref,
             commit,
             std::slice::from_ref(&entry.name),
+            excludes,
         )
         .map(Some);
     }
@@ -995,7 +1036,7 @@ pub(super) fn resolve_bundle_request(
     if !all_bundles || any_item {
         return Ok(None);
     }
-    resolve_bundle_closure(label, local_source, git_ref, commit, names).map(Some)
+    resolve_bundle_closure(label, local_source, git_ref, commit, names, excludes).map(Some)
 }
 
 // ---------------------------------------------------------------------------
@@ -1581,9 +1622,10 @@ mod tests {
         }
         let items = [(ItemKind::Skill, "s".to_string())];
         let mut closure =
-            resolve_requires_closure("local:first", first.path(), None, None, &items).unwrap();
+            resolve_requires_closure("local:first", first.path(), None, None, &items, &[]).unwrap();
         let other =
-            resolve_requires_closure("local:second", second.path(), None, None, &items).unwrap();
+            resolve_requires_closure("local:second", second.path(), None, None, &items, &[])
+                .unwrap();
         assert_eq!(
             closure.merge(other).unwrap_err().to_string(),
             "skill 's' resolves from both local:first and local:second"
@@ -1604,9 +1646,10 @@ mod tests {
             write_item(later_root.path(), *kind, name, "");
         }
         let mut closure =
-            resolve_requires_closure("local:shared", root.path(), None, None, &items).unwrap();
-        let other = resolve_requires_closure("local:shared", later_root.path(), None, None, &items)
-            .unwrap();
+            resolve_requires_closure("local:shared", root.path(), None, None, &items, &[]).unwrap();
+        let other =
+            resolve_requires_closure("local:shared", later_root.path(), None, None, &items, &[])
+                .unwrap();
         closure.merge(other).unwrap();
         let source = &closure.by_source["local:shared"];
         assert_eq!(source.root, root.path());
@@ -1644,6 +1687,7 @@ mod tests {
             None,
             None,
             &[(ItemKind::Rule, "r".to_string())],
+            &[],
         )
         .unwrap();
         closure.retain_kinds(&[ItemKind::Rule]);
@@ -1710,6 +1754,40 @@ mod tests {
     }
 
     #[test]
+    fn closure_skips_an_excluded_dependency_but_not_a_requested_item() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path();
+        write_item(
+            src,
+            ItemKind::Agent,
+            "code-review",
+            "requires:\n  skills: [sarif]\n",
+        );
+        write_item(src, ItemKind::Skill, "sarif", "");
+        let excludes = ["sarif".to_string(), "code-review".to_string()];
+
+        let closure = resolve_requires_closure(
+            "local:test",
+            src,
+            None,
+            None,
+            &[(ItemKind::Agent, "code-review".to_string())],
+            &excludes,
+        )
+        .expect("closure");
+
+        let sarif = (ItemKind::Skill, "sarif".to_string());
+        assert!(!closure.item_source.contains_key(&sarif));
+        assert!(!closure.required_by.contains_key(&sarif));
+        assert_eq!(closure.skipped, BTreeSet::from([sarif]));
+        assert!(
+            closure
+                .item_source
+                .contains_key(&(ItemKind::Agent, "code-review".to_string()))
+        );
+    }
+
+    #[test]
     fn closure_pulls_same_source_dependency() {
         let tmp = tempfile::tempdir().unwrap();
         let src = tmp.path();
@@ -1727,6 +1805,7 @@ mod tests {
             None,
             None,
             &[(ItemKind::Agent, "code-review".to_string())],
+            &[],
         )
         .expect("closure");
 
@@ -1773,6 +1852,7 @@ mod tests {
             None,
             None,
             &[(ItemKind::Agent, "code-review".to_string())],
+            &[],
         )
         .expect("closure");
 
@@ -1814,6 +1894,7 @@ mod tests {
             None,
             None,
             &[(ItemKind::Rule, "a".to_string())],
+            &[],
         )
         .expect_err("cycle");
         assert!(err.to_string().contains("circular"), "{err}");
@@ -1842,6 +1923,7 @@ mod tests {
             None,
             None,
             &[(ItemKind::Rule, "a".to_string())],
+            &[],
         )
         .expect_err("missing cross-source item");
         assert!(err.to_string().contains("not found in source"), "{err}");
@@ -1879,6 +1961,7 @@ mod tests {
             None,
             None,
             &[(ItemKind::Rule, "alpha".to_string())],
+            &[],
         )
         .expect_err("cross-source cycle");
         assert!(err.to_string().contains("circular"), "{err}");
@@ -1923,6 +2006,7 @@ mod tests {
                 (ItemKind::Rule, "wants-b".to_string()),
                 (ItemKind::Rule, "wants-c".to_string()),
             ],
+            &[],
         )
         .expect_err("conflict");
         assert!(err.to_string().contains("two different sources"), "{err}");
@@ -1946,6 +2030,7 @@ mod tests {
             None,
             None,
             &[(ItemKind::Agent, "code-review".to_string())],
+            &[],
         )
         .expect("closure");
 
@@ -1978,6 +2063,7 @@ mod tests {
             None,
             None,
             &[(ItemKind::Agent, "reviewer".to_string())],
+            &[],
         )
         .expect("closure");
 

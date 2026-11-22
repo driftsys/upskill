@@ -476,3 +476,98 @@ fn an_add_that_installs_nothing_still_records_the_exclude() {
         .assert()
         .success();
 }
+
+fn lock_item<'a>(lock: &'a serde_json::Value, name: &str) -> &'a serde_json::Value {
+    lock["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == name)
+        .unwrap()
+}
+
+fn required_by_is_empty(item: &serde_json::Value) -> bool {
+    item.get("required_by")
+        .and_then(|r| r.as_array())
+        .is_none_or(|a| a.is_empty())
+}
+
+#[test]
+fn an_excluded_dependency_gets_no_required_by_link_on_a_direct_install() {
+    let env = Env::new();
+    let (reg, dep) = cross_source_setup(&env);
+    env.run(&["add", s(&dep), "d"]);
+    env.run(&["add", s(&reg), "r", "--exclude", "d"]);
+
+    let lock = env.lock();
+    let d = lock_item(&lock, "d");
+    assert_eq!(
+        d["source"].as_str().unwrap(),
+        format!("local:{}", dep.display()),
+        "{lock}"
+    );
+    assert!(required_by_is_empty(d), "{lock}");
+
+    env.run(&["update", "--yes"]);
+    let lock = env.lock();
+    assert!(env.installed("d"));
+    assert!(required_by_is_empty(lock_item(&lock, "d")), "{lock}");
+}
+
+#[test]
+fn an_excluded_dependency_required_by_another_source_stays_out() {
+    let env = Env::new();
+    let (reg, dep) = cross_source_setup(&env);
+    env.run(&["add", s(&reg), "r", "--exclude", "d"]);
+
+    write_skill(&reg, "r", &cross_requires(&dep), "second");
+    env.run(&["update", "--yes"]);
+    assert!(!env.installed("d"));
+    assert!(!has_lock_item(&env.lock(), "d"), "{}", env.lock());
+
+    let stdout = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(!env.installed("d"));
+    assert!(!stdout.contains("removed"), "{stdout}");
+}
+
+#[test]
+fn an_excluded_cross_source_transitive_dependency_stays_out() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    let dep = env.registry("dep");
+    write_skill(&dep, "d", "", "dependency");
+    write_skill(&dep, "m", "requires:\n  skills: [d]\n", "middle");
+    write_skill(
+        &reg,
+        "r",
+        &format!(
+            "requires:\n  skills: [{{ name: m, source: {} }}]\n",
+            s(&dep)
+        ),
+        "first",
+    );
+    env.run(&["add", s(&reg), "r", "--exclude", "d"]);
+
+    assert!(env.installed("r") && env.installed("m"));
+    assert!(!env.installed("d"));
+    assert!(!has_lock_item(&env.lock(), "d"), "{}", env.lock());
+}
+
+#[test]
+fn an_excluded_member_of_a_required_bundle_stays_out() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "d", "", "first");
+    write_skill(&reg, "e", "", "first");
+    write_bundle(&reg, "inner.bundle.yaml", &["d", "e"]);
+    write_bundle(&reg, "outer.bundle.yaml", &["a"]);
+    let outer = reg.join("outer.bundle.yaml");
+    let text = fs::read_to_string(&outer).unwrap();
+    fs::write(&outer, format!("{text}requires:\n  - name: inner\n")).unwrap();
+
+    env.run(&["add", s(&outer), "--exclude", "d"]);
+    assert!(env.installed("a") && env.installed("e"));
+    assert!(!env.installed("d"));
+    assert!(!has_lock_item(&env.lock(), "d"), "{}", env.lock());
+}
