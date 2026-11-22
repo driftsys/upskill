@@ -23,7 +23,7 @@ impl Env {
     /// the rules `rule-a` and `rule-b`.
     fn new() -> Self {
         let tmp = tempfile::tempdir().unwrap();
-        let root = plain_path(tmp.path().canonicalize().unwrap());
+        let root = common::plain_path(tmp.path().canonicalize().unwrap());
         let home = root.join("home");
         let cwd = root.join("cwd");
         let source = root.join("source");
@@ -83,15 +83,6 @@ impl Env {
             .to_str()
             .unwrap()
             .to_string()
-    }
-}
-
-/// `canonicalize` returns a `\\?\` path on Windows, which `add` does not accept
-/// as a local source. Remove that prefix.
-fn plain_path(path: PathBuf) -> PathBuf {
-    match path.to_str().and_then(|p| p.strip_prefix(r"\\?\")) {
-        Some(plain) => PathBuf::from(plain),
-        None => path,
     }
 }
 

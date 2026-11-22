@@ -5,7 +5,7 @@
 //! directory. See <https://github.com/driftsys/upskill/issues/193>.
 
 use assert_cmd::Command;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Returns a `Command` for the `upskill` binary with `HOME` pointed at
 /// `fake_home` (which the caller should create inside a `tempfile::TempDir`).
@@ -138,4 +138,14 @@ fn run_update_in_terminal(
     );
     assert_eq!(result["timed_out"], false, "{result}");
     result
+}
+
+/// `canonicalize` returns a `\\?\` path on Windows, which `add` does not accept
+/// as a local source. Remove that prefix.
+#[allow(dead_code)] // Not every test binary that includes this module uses it.
+pub fn plain_path(path: PathBuf) -> PathBuf {
+    match path.to_str().and_then(|p| p.strip_prefix(r"\\?\")) {
+        Some(plain) => PathBuf::from(plain),
+        None => path,
+    }
 }
