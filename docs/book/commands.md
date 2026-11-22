@@ -651,16 +651,16 @@ depend on the order of the sources or of two `add` commands. Each `add` records
 its `--exclude` names in the lockfile for its source, and `update` applies the
 recorded names of each source as its excludes, also for excluded bundle members
 and for excluded `requires:` dependencies from other sources. An item name given
-on the command line of an `add` is removed from the record, so
-`add <source> <name>` installs an item that an earlier `add` excluded. An `add`
-without item names and without `--exclude` keeps the record. An `--exclude` name
-that matches no item is still recorded, and it stays in the record until an
-`add` names it. When an `add` excludes an item that is already installed, the
-item stays installed until the next `update`, which removes its files and its
-lock entry; the name stays in the record. `remove` deletes the record of a
-source when no item entry and no bundle record of that source remain, and
-`doctor` reports a record whose source has no item and no bundle
-(`orphan_excludes`).
+on the command line of an `add` is removed from the record, unless the same
+`add` also excludes it, so `add <source> <name>` installs an item that an
+earlier `add` excluded. An `add` without item names and without `--exclude`
+keeps the record. An `--exclude` name that matches no item is still recorded,
+and it stays in the record until an `add` names it without excluding it. When an
+`add` excludes an item that is already installed, the item stays installed until
+the next `update`, which removes its files and its lock entry; the name stays in
+the record. `remove` deletes the record of a source when no item entry and no
+bundle record of that source remain, and `doctor` reports a record whose source
+has no item and no bundle (`orphan_excludes`).
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.
