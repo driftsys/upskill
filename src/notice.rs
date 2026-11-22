@@ -3,7 +3,8 @@
 //! The cache file records, for each scope root, the time of the last check
 //! (a check that reached no source also sets it), the updates that check
 //! found, and the set that the last printed notice reported. Time-dependent
-//! functions take the time as an argument. Cache loading and saving, run lock
+//! functions take the time as an argument; run lock acquisition uses it as a
+//! lower bound and also reads the clock after it observes a lock. Cache loading and saving, run lock
 //! acquisition, run lock cleanup, and [`mark_current_in_file`] perform file I/O.
 //!
 //! Runs sharing a cache directory share a run lock. A run that finds a lock
@@ -502,7 +503,7 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "expired owner").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 60);
         BEFORE_STALE_LOCK_REMOVAL.with(|hook| {
             *hook.borrow_mut() = Some(Box::new(|path| {
@@ -534,7 +535,7 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "expired owner").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 60);
         // The lock disappears after it was read, so the token check cannot
         // read it again.
@@ -556,7 +557,7 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "expired owner").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 60);
         AFTER_STALE_LOCK_REMOVAL.with(|hook| {
             *hook.borrow_mut() = Some(Box::new(|path| fs::write(path, "other run").unwrap()));
@@ -573,6 +574,12 @@ mod tests {
 
     fn lock_path(dir: &tempfile::TempDir) -> PathBuf {
         dir.path().join("cache").join(LOCK_FILE_NAME)
+    }
+
+    /// A time after the clock, so the lock age uses this value exactly and does
+    /// not grow with the elapsed test time.
+    fn future_now() -> SystemTime {
+        SystemTime::now() + Duration::from_secs(3600)
     }
 
     fn set_age(path: &Path, now: SystemTime, secs: u64) {
@@ -668,7 +675,7 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 59);
         assert!(matches!(acquire_run_lock(&path, now), LockAttempt::Busy));
         assert!(path.is_file());
@@ -680,7 +687,7 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 60);
         let attempt = acquire_run_lock(&path, now);
         assert!(matches!(attempt, LockAttempt::Held(_)));
