@@ -352,8 +352,9 @@ demand materialises.
   marketplaces they have configured, and which upstream plugin versions resolve
   at install time. Integration tests must shim the client CLIs on PATH (the
   pattern already used by `fetch.rs::tests` for `git`).
-- Bundle schema growth: `plugins:` is a non-trivial sub-shape with three
-  client-specific variants. Future clients add more variants.
+- Bundle schema growth: `plugins:` is a non-trivial sub-shape with four
+  client-specific blocks (`claude`, `copilot`, `vscode`, `opencode`). Future
+  clients add more blocks.
 - Warn-skip can mask a real misconfiguration (user expected the plugin to
   install but the CLI was missing). Mitigated by `doctor`, which surfaces every
   skipped plugin during reconciliation.
@@ -363,7 +364,9 @@ demand materialises.
 **(a) Patch `~/.claude/settings.json` directly.** Rejected: depends on
 undocumented internal schema, breaks across Claude Code versions, duplicates
 registration logic the CLI already implements, and doesn't generalise to VS Code
-or opencode (each has its own state file).
+or opencode (each has its own state file). The opencode `plugin_uri` form of the
+`opencode:` block does the same: upskill writes the URI to the `plugins` array
+of `opencode.json`, as `write_opencode_plugin_uri` does.
 
 **(b) Re-emit plugin contents from SSOT.** Rejected: duplicates upstream plugins
 like `superpowers`, can't represent hooks or slash commands in the current item
