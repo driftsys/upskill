@@ -67,14 +67,13 @@ is gone; `doctor` reports orphan records.
 
 - [ ] **Step 1: Write the failing unit tests** in the `tests` module of
       `src/lockfile.rs`:
-  - `set_excludes_sorts_deduplicates_and_replaces`:
-    `set_excludes("s", ["b",
-    "a", "b"])` then
-    `excludes_for("s") == ["a", "b"]`; a second `set_excludes("s", ["c"])` gives
-    `["c"]`.
-  - `set_excludes_with_no_names_deletes_the_record`: after
-    `set_excludes("s",
-    [])`, `excludes.is_empty()`.
+  - `record_excludes_accumulates_sorted_and_deduplicated`:
+    `record_excludes("s", ["b", "a", "b"], [])` gives
+    `excludes_for("s") ==
+    ["a", "b"]`; a second
+    `record_excludes("s", ["c"], [])` gives `["a", "b", "c"]`.
+  - `record_excludes_removes_requested_names_and_deletes_an_empty_record`: from
+    `["a"]`, `record_excludes("s", [], ["a"])` leaves no record.
   - `prune_excludes_keeps_a_source_with_an_item_or_a_bundle`: records for `a`
     (has an item), `b` (has a bundle), `c` (has neither); after the prune, only
     `a` and `b` remain.
