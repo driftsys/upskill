@@ -511,10 +511,16 @@ planned entries as well, because they are not evaluated. Within the entries
 being refreshed, an evaluated requirer is removed and added back where it still
 requires the item (also an item that `--exclude` leaves out). Every other
 requirer is kept, also when it is not installed. The result does not depend on
-the order of the sources or of two `add` commands. Current limitation (#570):
-the lockfile does not record the `--exclude` of an earlier `add`, so `update`
-plans an item that the earlier `add` excluded: it can install that item, replace
-the same item from another source, or fail.
+the order of the sources or of two `add` commands. Each `add` records its
+`--exclude` names in the lockfile for its source, and `update` applies the
+recorded names of each source as its excludes, also for excluded bundle members
+and for excluded `requires:` dependencies from other sources. An item name given
+on the command line of an `add` is removed from the record, so
+`add <source> <name>` installs an item that an earlier `add` excluded. An `add`
+without item names and without `--exclude` keeps the record. `remove` deletes
+the record of a source when no item entry and no bundle record of that source
+remain, and `doctor` reports a record whose source has no item and no bundle
+(`orphan_excludes`).
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
@@ -809,14 +815,14 @@ the check above refuses it.
   guide page "Support levels"); the section does not change the exit code and is
   not based on a detection of client versions (the plugin check runs
   `opencode --version` before any `opencode plugin list`, ADR-0008). Exit 0 when
-  clean, 1 when any drift bucket is non-empty, including `earlier_layout`.
-  Skipped plugins are warnings and do not affect the exit code. Missing,
-  modified and unreadable files are checked against the `files` record; a
-  recorded path that `remove` would never delete (outside the client roots,
-  fewer than three components, or with a `..` component) is skipped without a
-  report. For an item with an empty or missing `files` record (a `schema: 1`
-  lockfile, or a `schema: 2` item with an empty list), `doctor` checks each
-  per-client entry file instead.
+  clean, 1 when any drift bucket is non-empty, including `earlier_layout` and
+  `orphan_excludes`. Skipped plugins are warnings and do not affect the exit
+  code. Missing, modified and unreadable files are checked against the `files`
+  record; a recorded path that `remove` would never delete (outside the client
+  roots, fewer than three components, or with a `..` component) is skipped
+  without a report. For an item with an empty or missing `files` record (a
+  `schema: 1` lockfile, or a `schema: 2` item with an empty list), `doctor`
+  checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -1159,6 +1165,11 @@ across-repo continuity for global scope.
   "plugins": []
 }
 ```
+
+The optional top-level `excludes` array holds one record for each source that an
+`add --exclude` left items out of. A record has a `source` label and a sorted
+`names` array. The array is omitted when empty and does not change the schema
+number. The rules for the record are in §2.2.
 
 Each entry of `plugins` records one plugin for one client: `name`, `client`,
 `identifier`, `scope`, `bundle` and `status` (`installed`, `skipped` or

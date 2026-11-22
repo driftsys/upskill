@@ -647,10 +647,16 @@ their edges on planned entries as well, because they are not evaluated. Within
 the entries being refreshed, an evaluated requirer is removed and added back
 where it still requires the item (also an item that `--exclude` leaves out).
 Every other requirer is kept, also when it is not installed. The result does not
-depend on the order of the sources or of two `add` commands. Current limitation
-(#570): the lockfile does not record the `--exclude` of an earlier `add`, so
-`update` plans an item that the earlier `add` excluded: it can install that
-item, replace the same item from another source, or fail.
+depend on the order of the sources or of two `add` commands. Each `add` records
+its `--exclude` names in the lockfile for its source, and `update` applies the
+recorded names of each source as its excludes, also for excluded bundle members
+and for excluded `requires:` dependencies from other sources. An item name given
+on the command line of an `add` is removed from the record, so
+`add <source> <name>` installs an item that an earlier `add` excluded. An `add`
+without item names and without `--exclude` keeps the record. `remove` deletes
+the record of a source when no item entry and no bundle record of that source
+remain, and `doctor` reports a record whose source has no item and no bundle
+(`orphan_excludes`).
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.
@@ -1120,13 +1126,13 @@ line for each client and kind with its level, as in
 `--quiet` hides it with the rest of the report.
 
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
-modified files, unreadable files, stale hashes, orphan entries, missing plugins,
-unregistered MCP servers, interrupted items, files at earlier global paths,
-missing rule entries, or stale rule entries). Skipped plugins and unverifiable
-MCP entries are informational warnings and do not affect the exit code. `doctor`
-never fetches; remote-source drift detection is `update --check` (a lookup of
-the remote commit, without a fetch) and `update --dry-run` (a fetch and a
-preview).
+modified files, unreadable files, stale hashes, orphan entries, orphan excludes
+records, missing plugins, unregistered MCP servers, interrupted items, files at
+earlier global paths, missing rule entries, or stale rule entries). Skipped
+plugins and unverifiable MCP entries are informational warnings and do not
+affect the exit code. `doctor` never fetches; remote-source drift detection is
+`update --check` (a lookup of the remote commit, without a fetch) and
+`update --dry-run` (a fetch and a preview).
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 The document has one element in `scopes` for each checked scope (also when
@@ -1202,7 +1208,8 @@ Each element of `scopes` has these keys besides `scope` and `root`:
   "stale_rule_entries": [
     { "name": "...", "config": "/home/user/.config/opencode/opencode.json",
       "recorded": true }
-  ]
+  ],
+  "orphan_excludes": ["local:..."]
 }
 ```
 
@@ -1212,8 +1219,9 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 `{ "query-failed": { "stderr": "..." } }`, or
 `{ "config-unreadable": { "detail": "..." } }`. The plugin and item arrays are
 always present (possibly empty); `mcp_entries` is omitted when no MCP servers
-are recorded, and `missing_rule_entries` and `stale_rule_entries` are omitted
-when empty. An entry of `missing_plugins` or `skipped_plugins` has the key
+are recorded, and `missing_rule_entries`, `stale_rule_entries` and
+`orphan_excludes` are omitted when empty. `orphan_excludes` lists the source
+labels. An entry of `missing_plugins` or `skipped_plugins` has the key
 `repair_command` only when `update` does not install the plugin (no recorded
 item comes from the recorded source of its bundle, or that source is under a
 kind restriction); the value is the `upskill add` command that installs it
