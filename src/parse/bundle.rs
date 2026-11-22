@@ -141,6 +141,12 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
             {
                 continue;
             }
+            // A subdirectory that cannot be read holds no bundle that can
+            // be used; skip it (issue #611). The root itself is read above
+            // and its read error is returned.
+            if fs::read_dir(&path).is_err() {
+                continue;
+            }
             walk(&path, out)?;
         } else if file_type.is_file() && filename_stem(&path).is_some() {
             out.push(path);
@@ -789,5 +795,54 @@ plugins:
             }
             _ => panic!("expected ConfigWrite variant"),
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn discover_skips_an_unreadable_subdirectory() {
+        // Issue #611: a directory that cannot be read holds no bundle that
+        // upskill can use; it must not fail the search.
+        use std::os::unix::fs::PermissionsExt;
+        struct Restore<'a>(&'a Path);
+        impl Drop for Restore<'_> {
+            fn drop(&mut self) {
+                let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+            }
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        write_file(
+            tmp.path(),
+            "bundles/b.bundle.yaml",
+            "schema: 1\nname: b\ndescription: d\n\nitems:\n  skills:\n    - one\n",
+        );
+        let docs = tmp.path().join("docs");
+        fs::create_dir_all(&docs).unwrap();
+        fs::set_permissions(&docs, fs::Permissions::from_mode(0o000)).unwrap();
+        let _guard = Restore(&docs);
+        if fs::read_dir(&docs).is_ok() {
+            eprintln!("skipped: running as root, the permission has no effect");
+            return;
+        }
+        let found = discover(tmp.path()).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].1.name, "b");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn discover_fails_on_an_unreadable_root() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("reg");
+        fs::create_dir_all(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o000)).unwrap();
+        let readable = fs::read_dir(&root).is_ok();
+        let result = discover(&root);
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).unwrap();
+        if readable {
+            eprintln!("skipped: running as root, the permission has no effect");
+            return;
+        }
+        assert!(result.is_err());
     }
 }

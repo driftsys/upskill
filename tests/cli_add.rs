@@ -1881,3 +1881,55 @@ fn add_fails_when_a_category_of_a_kind_directory_source_is_unreadable() {
     let stderr = String::from_utf8(out.stderr).unwrap();
     assert!(stderr.contains(&category.display().to_string()), "{stderr}");
 }
+
+/// Issue #611: `add` of a bundle file succeeds when the registry holds an
+/// unreadable directory that is not a kind directory.
+#[cfg(unix)]
+#[test]
+fn add_of_a_bundle_file_skips_an_unreadable_directory_in_the_registry() {
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Restores the mode of the directory on drop, also when the test panics.
+    struct Restore<'a>(&'a Path);
+    impl Drop for Restore<'_> {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("reg");
+    let item = registry.join("skills/one");
+    fs::create_dir_all(&item).unwrap();
+    fs::write(
+        item.join("SKILL.md"),
+        "---\nname: one\ndescription: Skill one.\n---\n\nBody.\n",
+    )
+    .unwrap();
+    let bundle = registry.join("bundles/b.bundle.yaml");
+    fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+    fs::write(
+        &bundle,
+        "schema: 1\nname: b\ndescription: Test bundle\n\nitems:\n  skills:\n    - one\n",
+    )
+    .unwrap();
+    let docs = registry.join("docs");
+    fs::create_dir_all(&docs).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    fs::set_permissions(&docs, fs::Permissions::from_mode(0o000)).unwrap();
+    let _restore = Restore(&docs);
+    if fs::read_dir(&docs).is_ok() {
+        eprintln!("skipped: running as root, the permission has no effect");
+        return;
+    }
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", bundle.to_str().unwrap()])
+        .assert()
+        .success();
+    assert!(target.join(".claude/skills/one/SKILL.md").exists());
+}
