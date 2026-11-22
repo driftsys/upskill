@@ -197,21 +197,34 @@ fn naming_an_excluded_item_undoes_the_exclude() {
 }
 
 #[test]
-fn an_excluded_name_applies_to_an_item_installed_from_another_source() {
+fn update_does_not_touch_an_excluded_name_installed_from_another_source() {
     let env = Env::new();
     let x = env.registry("x");
     let reg = env.registry("reg");
     write_skill(&x, "d", "", "from x");
     write_skill(&reg, "r", &cross_requires(&x), "first");
     env.run(&["add", s(&x), "d"]);
+    let file = env.consumer().join(".claude/skills/d/SKILL.md");
+    let before = fs::read(&file).unwrap();
     env.run(&["add", s(&reg), "r", "--exclude", "d"]);
     assert_eq!(env.lock()["excludes"], serde_json::json!(["d"]));
 
-    // The excluded names are one set for the scope, so the item `d` of
-    // source x leaves with the next update.
+    write_skill(&reg, "r", &cross_requires(&x), "second");
     env.run(&["update", "--yes"]);
-    assert!(!env.installed("d"));
-    assert!(!has_lock_item(&env.lock(), "d"), "{}", env.lock());
+
+    let lock = env.lock();
+    let d = lock["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == "d")
+        .unwrap();
+    assert_eq!(
+        d["source"].as_str().unwrap(),
+        format!("local:{}", x.display()),
+        "{lock}"
+    );
+    assert_eq!(fs::read(&file).unwrap(), before);
 }
 
 #[test]
@@ -280,17 +293,15 @@ fn update_keeps_the_exclude_of_an_item_installed_before_the_exclude() {
     assert!(env.installed("a") && env.installed("d"));
     env.run(&["add", s(&reg), "--exclude", "d"]);
     assert_eq!(excluded_names(&env.lock()), ["d"]);
-    assert!(env.installed("d"), "add --exclude keeps an installed item");
+    // The add removes the installed d, files and lock entry.
+    assert!(!env.installed("d"));
+    assert!(!has_lock_item(&env.lock(), "d"), "{}", env.lock());
 
     env.run(&["update", "--yes"]);
     let lock = env.lock();
     assert_eq!(excluded_names(&lock), ["d"], "{lock}");
-    // The first `update` removes the installed d (files and lock entry).
     assert!(!env.installed("d"));
-    assert!(!has_lock_item(&lock, "d"), "{lock}");
-
-    env.run(&["update", "--yes"]);
-    assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
+    assert!(env.installed("a"));
 }
 
 #[test]
@@ -366,21 +377,19 @@ fn naming_and_excluding_the_same_item_keeps_it_excluded() {
 }
 
 #[test]
-fn update_removes_the_only_installed_item_once_it_is_excluded() {
+fn add_removes_the_only_installed_item_that_it_excludes() {
     let env = Env::new();
     let reg = env.registry("reg");
     write_skill(&reg, "b", "", "first");
     env.run(&["add", s(&reg), "b"]);
-    env.run(&["add", s(&reg), "--exclude", "b"]);
     assert!(env.installed("b"));
-
-    let stdout = stdout_of(&env.run(&["update", "--yes"]));
-    assert!(stdout.contains("removed — excluded"), "{stdout}");
-    assert!(!stdout.contains("no longer in source"), "{stdout}");
+    env.run(&["add", s(&reg), "--exclude", "b"]);
     assert!(!env.installed("b"));
     assert!(!has_lock_item(&env.lock(), "b"), "{}", env.lock());
+    assert_eq!(excluded_names(&env.lock()), ["b"]);
 
     env.run(&["update", "--yes"]);
+    assert!(!env.installed("b"));
 }
 
 #[test]

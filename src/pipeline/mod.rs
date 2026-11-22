@@ -239,6 +239,7 @@ pub fn install_with_lockfile(
     // An item named on the command line is not excluded unless the same
     // command also excludes it.
     let recorded = crate::lockfile::Lockfile::load(target)?.excludes;
+    let own_excludes = options.excludes.clone();
     let mut effective = options.clone();
     effective.excludes = effective_excludes(&recorded, &options.excludes, items);
     let options = &effective;
@@ -282,5 +283,26 @@ pub fn install_with_lockfile(
         prepared.source_items(),
         output::RecordedUse::AddReads,
     )?;
-    prepared.commit(target, plugin_scope)
+    let report = prepared.commit(target, plugin_scope)?;
+    // An item of this source that the command excludes and that is already
+    // installed is removed, as `remove` removes it (issue #570).
+    let lock = crate::lockfile::Lockfile::load(target)?;
+    let excluded_installed: Vec<String> = lock
+        .items
+        .iter()
+        .filter(|i| same_source_key(&i.source) == label)
+        .filter(|i| {
+            let in_source = i.source_name.as_ref().unwrap_or(&i.name);
+            own_excludes.contains(in_source) && !items.contains(in_source)
+        })
+        .map(|i| i.name.clone())
+        .collect();
+    if !excluded_installed.is_empty() {
+        let at = crate::scope::ScopeRoot {
+            scope: options.scope,
+            root: target.to_path_buf(),
+        };
+        lifecycle::remove(&at, RemoveFilter::ByNames(excluded_installed), false)?;
+    }
+    Ok(report)
 }

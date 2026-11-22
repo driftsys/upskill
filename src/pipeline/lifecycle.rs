@@ -1367,11 +1367,11 @@ pub fn update(
             } else {
                 Vec::new()
             };
-            let options = AddOptions {
+            let mut options = AddOptions {
                 force: true,
                 overwrite,
                 aliases,
-                excludes: super::effective_excludes(&lock.excludes, &[], names),
+                excludes: Vec::new(),
                 kinds,
                 bundles: if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
                     Vec::new()
@@ -1417,6 +1417,10 @@ pub fn update(
                         .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
                         .collect()
                 };
+
+            // The recorded excludes apply to what the source pulls in, not to
+            // an installed item: every name of the filter is kept (issue #570).
+            options.excludes = super::effective_excludes(&lock.excludes, &[], &item_filter);
 
             // A source that cannot be fetched (a [`FetchFailed`] in the
             // error chain, also for a dependency source) is skipped: it is
@@ -1592,18 +1596,7 @@ pub fn update(
             prepared_sources.into_iter().enumerate()
         {
             let new_hashes = prepared.planned_hashes();
-            // An entry whose in-source name the lockfile records as excluded
-            // is removed, unless the user named it (issue #570).
-            let excluded = super::effective_excludes(&lock.excludes, &[], names);
-            let is_excluded = |e: &crate::lockfile::LockedItem| {
-                excluded.contains(e.source_name.as_ref().unwrap_or(&e.name))
-            };
-            let kept_entries: Vec<crate::lockfile::LockedItem> = source_entries
-                .iter()
-                .filter(|e| !is_excluded(e))
-                .cloned()
-                .collect();
-            guard_against_empty_source(&new_hashes, &kept_entries, &source_label)?;
+            guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
             // The bundles that the lockfile records for this source, as the
             // fetched source declares them now: the plugin repair below
             // installs from them (issue #229). A source under a kind
@@ -1813,19 +1806,11 @@ pub fn update(
                     report.kept_modified.extend(plan.kept.iter().cloned());
                     report.forced.extend(plan.forced.iter().cloned());
                     lock.remove(plan.kind, &plan.name);
-                    let status = if orphans
-                        .iter()
-                        .any(|o| o.kind == plan.kind && o.name == plan.name && is_excluded(o))
-                    {
-                        UpdateStatus::RemovedExcluded
-                    } else {
-                        UpdateStatus::Removed
-                    };
                     report.items.push(UpdatedItem {
                         kind: plan.kind,
                         name: plan.name,
                         source: source_label.clone(),
-                        status,
+                        status: UpdateStatus::Removed,
                     });
                 }
                 lock.save(target)?;
@@ -1926,9 +1911,7 @@ pub fn update(
                     match item.status {
                         UpdateStatus::Updated { .. } => result.updated += 1,
                         UpdateStatus::CompletedInterrupted => result.completed += 1,
-                        UpdateStatus::Removed | UpdateStatus::RemovedExcluded => {
-                            result.removed += 1
-                        }
+                        UpdateStatus::Removed => result.removed += 1,
                         UpdateStatus::UpToDate
                         | UpdateStatus::SkippedModified { .. }
                         | UpdateStatus::NotApplied { .. }

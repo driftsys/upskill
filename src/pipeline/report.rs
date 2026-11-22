@@ -583,10 +583,6 @@ pub enum UpdateStatus {
     /// [`UpdateReport::kept_modified`], unless `--force`), and its lockfile
     /// entry was removed.
     Removed,
-    /// The item is still in the source, and the lockfile records its name
-    /// as excluded for the source (issue #570). It was removed as for
-    /// [`UpdateStatus::Removed`].
-    RemovedExcluded,
     /// The item was not written because these destinations (relative to
     /// the install target root) are modified or not managed by upskill.
     /// The files are unchanged, and the lockfile entry is unchanged except
@@ -611,14 +607,12 @@ pub enum UpdateStatus {
 impl UpdateStatus {
     /// True for a status that counts as a change of the item in the
     /// summaries of `update`: [`UpdateStatus::Updated`],
-    /// [`UpdateStatus::CompletedInterrupted`], [`UpdateStatus::Removed`] and
-    /// [`UpdateStatus::RemovedExcluded`].
+    /// [`UpdateStatus::CompletedInterrupted`], and [`UpdateStatus::Removed`].
     pub fn is_change(&self) -> bool {
         match self {
             UpdateStatus::Updated { .. }
             | UpdateStatus::CompletedInterrupted
-            | UpdateStatus::Removed
-            | UpdateStatus::RemovedExcluded => true,
+            | UpdateStatus::Removed => true,
             UpdateStatus::UpToDate
             | UpdateStatus::SkippedModified { .. }
             | UpdateStatus::NotApplied { .. }

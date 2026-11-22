@@ -1814,7 +1814,6 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
                 style::success(&format!("updated → {}", short(new_hash)))
             }
             UpdateStatus::Removed => style::error_label("removed — no longer in source"),
-            UpdateStatus::RemovedExcluded => style::error_label("removed — excluded"),
             UpdateStatus::CompletedInterrupted => style::success("completed — interrupted before"),
             UpdateStatus::SkippedModified { .. } => {
                 style::warn("skipped — modified or unmanaged files kept")
