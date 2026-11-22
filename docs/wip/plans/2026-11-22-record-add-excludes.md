@@ -129,11 +129,9 @@ is gone; `doctor` reports orphan records.
   - `an_unrelated_add_from_the_same_source_keeps_the_exclude`: after the
     plain-directory `add`, run `add <reg> other`; the record still lists `d`,
     and the next `update --yes` does not install `d`.
-  - `naming_an_excluded_item_undoes_the_exclude`: after the plain-directory
-    `add`, run `add <second-registry> d`... no: run `add <reg> d` only if `d` is
-    in `<reg>`; for the cross-source case, put `d` in `<reg>` as well, run
-    `add <reg> d`, and assert the record no longer lists `d` and `d` is
-    installed.
+  - `naming_an_excluded_item_undoes_the_exclude`: `r` requires skill `d`, both
+    in `<reg>`; `add <reg> r --exclude d`, then `add <reg> d`; the lock has no
+    `"excludes"` key and `d` is installed; the next `update --yes` keeps `d`.
   - `update_does_not_touch_an_excluded_name_installed_from_another_source`: `d`
     installed directly from source `x`; `add <reg> r --exclude d`;
     `update
