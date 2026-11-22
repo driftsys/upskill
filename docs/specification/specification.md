@@ -521,10 +521,11 @@ names in the set. The excludes of an `add` are the recorded names, minus the
 item names that it installs by name, plus its own `--exclude` names; an `update`
 uses the same rule, with the item names that are installed by name in place of
 the item names of the command line, so an exclude never removes an item that was
-installed by name. An item name given on the command line of an `add` is removed
-from the set, unless the same `add` also excludes it, so `add <source> <name>`
-installs an item that an earlier `add` excluded. An `add` without item names and
-without `--exclude` keeps the set and keeps the recorded items out. When
+installed by name. An `update` never removes a name from the set. An item name
+given on the command line of an `add` is removed from the set, unless the same
+`add` also excludes it, so `add <source> <name>` installs an item that an
+earlier `add` excluded. An `add` without item names and without `--exclude`
+keeps the set and keeps the recorded items out. When
 `add <source> --exclude <name>` names an item that is installed from the same
 source, `add` removes that item only: its files and its lock entry, no other
 item of a co-located group, no bundle record and no plugin entry. It also

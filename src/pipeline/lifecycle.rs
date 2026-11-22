@@ -1420,6 +1420,7 @@ pub fn update(
                 },
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
+                keep_recorded_excludes: true,
                 scope: at.scope,
             };
             // Scope the reinstall to exactly the items this source already

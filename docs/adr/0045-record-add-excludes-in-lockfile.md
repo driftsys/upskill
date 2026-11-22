@@ -56,7 +56,8 @@ How a later `add` changes the set:
    names installed by name, plus the `--exclude` names of the command. `add`
    passes the item names of its command line as the names installed by name;
    `update` passes its item filter (the installed names), so an exclude never
-   removes an item that was installed by name.
+   removes an item that was installed by name. `update` never removes a name
+   from the recorded set; only a positional name of `add` does.
 3. The resolvers skip an excluded dependency or bundle member before they link a
    `required_by` entry to it, and they do not pull its own `requires:` items. A
    whole-source `add` skips excluded items too. This holds in the bundle,
@@ -76,7 +77,8 @@ How a later `add` changes the set:
    lockfile is unchanged. The recorded names are not checked, because an item
    can leave its source.
 7. `add` and `update` print `excluded <kind> <name>` on stderr for each skipped
-   item, once; `--quiet` hides the line, and `update` prints it with
+   item, once; an item that the same run removes is reported only as removed,
+   not also as excluded; `--quiet` hides the line, and `update` prints it with
    `--dry-run`. `list` prints `excluded: <names>` for each scope, also for a
    scope with no items, and `list --json` has an `excludes` key for each scope.
 8. `remove` records no exclude and prunes none. `doctor` has no check for

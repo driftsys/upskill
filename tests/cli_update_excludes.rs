@@ -225,6 +225,7 @@ fn update_does_not_touch_an_excluded_name_installed_from_another_source() {
         "{lock}"
     );
     assert_eq!(fs::read(&file).unwrap(), before);
+    assert_eq!(lock["excludes"], serde_json::json!(["d"]), "{lock}");
 }
 
 #[test]
@@ -263,6 +264,7 @@ fn the_lockfile_records_one_sorted_excludes_list() {
     assert_eq!(env.lock()["excludes"], serde_json::json!(["d", "e"]));
 }
 
+#[cfg(unix)]
 #[test]
 fn an_exclude_holds_across_a_symlinked_source_path() {
     let env = Env::new();
@@ -270,10 +272,7 @@ fn an_exclude_holds_across_a_symlinked_source_path() {
     write_skill(&reg, "d", "", "dependency");
     write_skill(&reg, "r", "requires:\n  skills: [d]\n", "first");
     let link = env.tmp.path().join("link");
-    #[cfg(unix)]
     std::os::unix::fs::symlink(&reg, &link).unwrap();
-    #[cfg(not(unix))]
-    return;
     env.run(&["add", s(&link), "r", "--exclude", "d"]);
     assert!(!env.installed("d"));
 
@@ -372,6 +371,10 @@ fn naming_and_excluding_the_same_item_keeps_it_excluded() {
     env.run(&["add", s(&reg), "a", "--exclude", "d"]);
     env.run(&["add", s(&reg), "d", "--exclude", "d"]);
 
+    assert!(!env.installed("d"));
+    assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
+
+    env.run(&["update", "--yes"]);
     assert!(!env.installed("d"));
     assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
 }

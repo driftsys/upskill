@@ -129,6 +129,10 @@ pub struct AddOptions {
     /// [`InstallReport::kept_modified`], and its lockfile entry is unchanged
     /// except its commit and its `required_by`.
     pub keep_unwithheld_edits: bool,
+    /// Set by `update`. When true, the run never removes a name from the
+    /// excludes recorded for the scope. Only the positional names of `add`
+    /// remove names from the record.
+    pub keep_recorded_excludes: bool,
     /// The scope of the install. It selects the output paths: the global
     /// scope writes Copilot content under `~/.copilot`. The default is the
     /// project scope.
