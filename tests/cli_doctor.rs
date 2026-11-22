@@ -892,3 +892,50 @@ fn doctor_reports_a_bundle_file_source_whose_registry_is_gone() {
         "{v}"
     );
 }
+
+/// A relaxed-named rule (folder name differs from `name:`) in a kind
+/// directory of a bundle registry is found by its folder name.
+#[test]
+fn doctor_is_clean_for_a_relaxed_named_rule_from_a_bundle_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("registry");
+    let rule = registry.join("rules/my-folder");
+    fs::create_dir_all(&rule).unwrap();
+    fs::write(
+        rule.join("RULE.md"),
+        "---\nname: other-name\ndescription: A relaxed-named rule.\n---\n\nBody.\n",
+    )
+    .unwrap();
+    let bundle = registry.join("bundles/b.bundle.yaml");
+    fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+    fs::write(
+        &bundle,
+        "schema: 1\nname: b\ndescription: Test bundle\n\nitems:\n  rules:\n    - other-name\n",
+    )
+    .unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &bundle, &home);
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(0), "doctor must be clean: {v}");
+}
+
+/// A plain directory source with the item under a kind directory
+/// (`<source>/skills/<name>`) is clean right after `add`.
+#[test]
+fn doctor_is_clean_for_a_directory_source_with_kind_directories() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    stage_source(&source.join("skills"));
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(0), "doctor must be clean: {v}");
+}
