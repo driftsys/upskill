@@ -85,7 +85,7 @@ pub(super) fn refuse_item_dir_source(
     source_kind: ItemDirSource<'_>,
 ) -> Result<()> {
     if !is_item_dir(source)
-        || !scan_source_items(source).is_empty()
+        || !scan_source_items(source)?.is_empty()
         || holds_bundle_file(source)
         || names
             .iter()
@@ -304,12 +304,17 @@ pub(super) fn has_matching_items(source: &Path, name: &str) -> bool {
 }
 
 /// Scan a source directory for item (kind, name) pairs without generating output.
-pub(super) fn scan_source_items(source: &Path) -> Vec<(ItemKind, String)> {
+/// A `source` that is not a directory (a bundle file) has no items. A
+/// directory that cannot be listed is an error, and so is a kind directory
+/// in it that cannot be listed (see [`read_category_dir`]).
+pub(super) fn scan_source_items(source: &Path) -> Result<Vec<(ItemKind, String)>> {
     let mut items = Vec::new();
-    let Ok(entries) = fs::read_dir(source) else {
-        return items;
-    };
-    for entry in entries.flatten() {
+    if !source.is_dir() {
+        return Ok(items);
+    }
+    let entries = fs::read_dir(source).with_context(|| format!("read_dir {}", source.display()))?;
+    for entry in entries {
+        let entry = entry.with_context(|| format!("read_dir {}", source.display()))?;
         let path = entry.path();
         if !path.is_dir() {
             continue;
@@ -338,8 +343,10 @@ pub(super) fn scan_source_items(source: &Path) -> Vec<(ItemKind, String)> {
             }
         } else {
             // Category subdir: source/<category>/<item>/ENTRY.md
-            if let Ok(sub_entries) = fs::read_dir(&path) {
-                for sub_entry in sub_entries.flatten() {
+            if let Some(sub_entries) = read_category_dir(&path, source)? {
+                for sub_entry in sub_entries {
+                    let sub_entry =
+                        sub_entry.with_context(|| format!("read_dir {}", path.display()))?;
                     let sub_path = sub_entry.path();
                     if !sub_path.is_dir() {
                         continue;
@@ -377,7 +384,7 @@ pub(super) fn scan_source_items(source: &Path) -> Vec<(ItemKind, String)> {
             }
         }
     }
-    items
+    Ok(items)
 }
 
 /// Walk up from `bundle_path`'s parent until a directory is found that
@@ -392,7 +399,7 @@ pub(super) fn find_registry_root(bundle_path: &Path) -> Result<PathBuf> {
         .ok_or_else(|| anyhow!("bundle path {} has no parent", bundle_path.display()))?;
     let mut cursor = parent;
     loop {
-        if has_ssot_layout(cursor) {
+        if has_ssot_layout(cursor)? {
             return Ok(cursor.to_path_buf());
         }
         match cursor.parent() {
@@ -403,9 +410,13 @@ pub(super) fn find_registry_root(bundle_path: &Path) -> Result<PathBuf> {
     Ok(parent.to_path_buf())
 }
 
-pub(super) fn has_ssot_layout(dir: &Path) -> bool {
+/// Whether `dir` holds an item directory as a child or grandchild. A `dir`
+/// that cannot be listed is not an SSOT root (`find_registry_root` walks up
+/// through directories that may be unreadable); a kind directory in `dir`
+/// that cannot be listed is an error (see [`read_category_dir`]).
+pub(super) fn has_ssot_layout(dir: &Path) -> Result<bool> {
     let Ok(entries) = fs::read_dir(dir) else {
-        return false;
+        return Ok(false);
     };
     for entry in entries.flatten() {
         let path = entry.path();
@@ -414,21 +425,21 @@ pub(super) fn has_ssot_layout(dir: &Path) -> bool {
         }
         // Direct item check: dir/<item>/ENTRY.md
         if is_item_dir(&path) {
-            return true;
+            return Ok(true);
         }
         // Grandchild check: dir/<category>/<item>/ENTRY.md
         // Handles sibling layouts where items live in subdirectories
         // (e.g. `skills/<item>/RULE.md` alongside `bundles/`).
-        if let Ok(sub_entries) = fs::read_dir(&path) {
+        if let Some(sub_entries) = read_category_dir(&path, dir)? {
             for sub_entry in sub_entries.flatten() {
                 let sub_path = sub_entry.path();
                 if sub_path.is_dir() && is_item_dir(&sub_path) {
-                    return true;
+                    return Ok(true);
                 }
             }
         }
     }
-    false
+    Ok(false)
 }
 
 /// Detect which entrypoint file (SKILL.md, RULE.md, AGENT.md) exists for
@@ -443,6 +454,19 @@ pub(super) fn detect_item_entrypoint(source: &Path, name: &str) -> &'static str 
         "AGENT.md"
     } else {
         "SKILL.md" // fallback for error message
+    }
+}
+
+/// Read the entries of `dir`, a directory under `parent` that is not an
+/// item directory. A read error is returned when `dir` is a kind directory
+/// (`skills/`, `rules/`, `agents/`), or a category directory of a `parent`
+/// that is itself a kind directory. Any other unreadable directory holds no
+/// items by convention: `Ok(None)`.
+fn read_category_dir(dir: &Path, parent: &Path) -> Result<Option<fs::ReadDir>> {
+    match fs::read_dir(dir) {
+        Ok(entries) => Ok(Some(entries)),
+        Err(_) if !is_kind_dir(dir) && !is_kind_dir(parent) => Ok(None),
+        Err(e) => Err(e).with_context(|| format!("read_dir {}", dir.display())),
     }
 }
 
@@ -483,17 +507,8 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
         } else {
             // Category subdir: kind_root/<category>/<item>/ENTRY.md
             // Descend one level to find items in subdirectories (format-spec §2.2).
-            // A read error is returned when the directory is a kind
-            // directory (`skills/`, `rules/`, `agents/`), or a category
-            // directory of a source that is itself a kind directory. Any
-            // other unreadable directory holds no items by convention and is
-            // skipped.
-            let sub_entries = match fs::read_dir(&path) {
-                Ok(entries) => entries,
-                Err(_) if !is_kind_dir(&path) && !is_kind_dir(kind_root) => continue,
-                Err(e) => {
-                    return Err(e).with_context(|| format!("read_dir {}", path.display()));
-                }
+            let Some(sub_entries) = read_category_dir(&path, kind_root)? else {
+                continue;
             };
             for sub_entry in sub_entries {
                 let sub_entry =
@@ -666,7 +681,7 @@ mod tests {
         std::fs::create_dir_all(&item).unwrap();
         std::fs::write(item.join("RULE.md"), "").unwrap();
 
-        assert!(has_ssot_layout(tmp.path()));
+        assert!(has_ssot_layout(tmp.path()).unwrap());
     }
 
     #[test]
@@ -678,7 +693,7 @@ mod tests {
         std::fs::write(item.join("RULE.md"), "").unwrap();
 
         assert!(
-            has_ssot_layout(tmp.path()),
+            has_ssot_layout(tmp.path()).unwrap(),
             "has_ssot_layout must detect items nested one level deeper"
         );
     }
@@ -686,7 +701,7 @@ mod tests {
     #[test]
     fn has_ssot_layout_returns_false_for_empty_dir() {
         let tmp = tempfile::tempdir().unwrap();
-        assert!(!has_ssot_layout(tmp.path()));
+        assert!(!has_ssot_layout(tmp.path()).unwrap());
     }
 
     #[test]
@@ -796,5 +811,114 @@ mod tests {
             !res.iter().any(|p| p.to_string_lossy().contains("loop")),
             "the symlinked directory must be skipped, not traversed: {res:?}"
         );
+    }
+
+    /// Makes `dir` unreadable; `None` when running as root, where the
+    /// permission has no effect. The guard restores the mode on drop.
+    #[cfg(unix)]
+    fn unreadable(dir: &Path) -> Option<impl Drop + '_> {
+        use std::os::unix::fs::PermissionsExt;
+        struct Restore<'a>(&'a Path);
+        impl Drop for Restore<'_> {
+            fn drop(&mut self) {
+                let _ = std::fs::set_permissions(self.0, std::fs::Permissions::from_mode(0o755));
+            }
+        }
+        std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o000)).unwrap();
+        let guard = Restore(dir);
+        if std::fs::read_dir(dir).is_ok() {
+            eprintln!("skipped: running as root, the permission has no effect");
+            return None;
+        }
+        Some(guard)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn find_registry_root_fails_on_an_unreadable_kind_directory() {
+        // Issue #610: without the error, the walk continues to the
+        // ancestors and returns a wrong root.
+        let tmp = tempfile::tempdir().unwrap();
+        let reg = tmp.path().join("reg");
+        std::fs::create_dir_all(reg.join("skills/one")).unwrap();
+        std::fs::write(reg.join("skills/one/SKILL.md"), "").unwrap();
+        let bundle = reg.join("bundles/b.bundle.yaml");
+        std::fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+        std::fs::write(&bundle, "").unwrap();
+        let kind_dir = reg.join("skills");
+        let Some(_guard) = unreadable(&kind_dir) else {
+            return;
+        };
+        let err = find_registry_root(&bundle).unwrap_err();
+        assert!(
+            format!("{err:#}").contains(&kind_dir.display().to_string()),
+            "{err:#}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn has_ssot_layout_skips_an_unreadable_directory_that_is_not_a_kind_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("skills/one")).unwrap();
+        std::fs::write(tmp.path().join("skills/one/SKILL.md"), "").unwrap();
+        let docs = tmp.path().join("docs");
+        std::fs::create_dir_all(&docs).unwrap();
+        let Some(_guard) = unreadable(&docs) else {
+            return;
+        };
+        assert!(has_ssot_layout(tmp.path()).unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn has_ssot_layout_is_false_for_an_unreadable_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("locked");
+        std::fs::create_dir_all(&dir).unwrap();
+        let Some(_guard) = unreadable(&dir) else {
+            return;
+        };
+        assert!(!has_ssot_layout(&dir).unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scan_source_items_fails_on_an_unreadable_kind_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("skills/one")).unwrap();
+        std::fs::write(tmp.path().join("skills/one/SKILL.md"), "").unwrap();
+        let kind_dir = tmp.path().join("skills");
+        let Some(_guard) = unreadable(&kind_dir) else {
+            return;
+        };
+        let err = scan_source_items(tmp.path()).unwrap_err();
+        assert!(
+            format!("{err:#}").contains(&kind_dir.display().to_string()),
+            "{err:#}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scan_source_items_skips_an_unreadable_directory_that_is_not_a_kind_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tmp.path().join("skills/one")).unwrap();
+        std::fs::write(tmp.path().join("skills/one/SKILL.md"), "").unwrap();
+        let docs = tmp.path().join("docs");
+        std::fs::create_dir_all(&docs).unwrap();
+        let Some(_guard) = unreadable(&docs) else {
+            return;
+        };
+        let items = scan_source_items(tmp.path()).unwrap();
+        assert_eq!(items, vec![(ItemKind::Skill, "one".to_string())]);
+    }
+
+    #[test]
+    fn scan_source_items_of_a_bundle_file_is_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bundle = tmp.path().join("b.bundle.yaml");
+        std::fs::write(&bundle, "").unwrap();
+        assert!(scan_source_items(&bundle).unwrap().is_empty());
     }
 }
