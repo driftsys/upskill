@@ -243,3 +243,40 @@ fn list_shows_the_recorded_excludes() {
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(out.contains("excluded: api-conventions"), "{out}");
 }
+
+#[test]
+fn list_shows_the_recorded_excludes_of_a_scope_without_items() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let source = tmp.path().join("source");
+    stage_source(&source);
+    install(tmp.path(), &source, &home);
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", source.to_str().unwrap()])
+        .args([
+            "--exclude",
+            "api-conventions",
+            "--exclude",
+            "create-api-endpoint",
+        ])
+        .args([
+            "--exclude",
+            "license-awareness",
+            "--exclude",
+            "security-reviewer",
+        ])
+        .assert()
+        .success();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["list", "--project"])
+        .assert()
+        .success();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(out.contains("No items installed"), "{out}");
+    assert!(out.contains("excluded: api-conventions"), "{out}");
+}

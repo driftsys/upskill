@@ -680,10 +680,14 @@ fn print_install_report(report: &InstallReport, source: &str) {
 
 /// One stderr line for each item that an exclude kept out of the run.
 fn print_excluded(report: &InstallReport) {
+    print_excluded_items(&report.excluded);
+}
+
+fn print_excluded_items(excluded: &[(ItemKind, String)]) {
     if style::is_quiet() {
         return;
     }
-    for (kind, name) in &report.excluded {
+    for (kind, name) in excluded {
         eprintln!(
             "excluded {} {}",
             style::dim(kind_label_of(*kind)),
@@ -1169,6 +1173,7 @@ fn run_update(args: UpdateArgs) -> i32 {
     );
     match result {
         Ok(report) => {
+            print_excluded_items(&report.excluded);
             // The plugin results of the run, with any outcome: the plugin step
             // of each applied source and the plugin repair (issue #229).
             print_plugin_result_list(&report.plugin_results);
@@ -2414,7 +2419,10 @@ fn print_list_report(scoped: &[ScopedList]) {
     if style::is_quiet() {
         return;
     }
-    if scoped.iter().all(|s| s.report.is_empty()) {
+    if scoped
+        .iter()
+        .all(|s| s.report.is_empty() && s.report.excludes.is_empty())
+    {
         println!("No items installed.");
         println!();
         println!("  Get started: upskill add owner/repo");
@@ -2434,15 +2442,20 @@ fn print_list_report(scoped: &[ScopedList]) {
         let report = &entry.report;
         if report.is_empty() {
             println!("  No items installed.");
+            print_list_excludes(&report.excludes);
             continue;
         }
         print_list_section("rules", &report.rules);
         print_list_section("skills", &report.skills);
         print_list_section("agents", &report.agents);
         print_list_bundles(&report.bundles);
-        if !report.excludes.is_empty() {
-            println!("  excluded: {}", report.excludes.join(", "));
-        }
+        print_list_excludes(&report.excludes);
+    }
+}
+
+fn print_list_excludes(excludes: &[String]) {
+    if !excludes.is_empty() {
+        println!("  excluded: {}", excludes.join(", "));
     }
 }
 

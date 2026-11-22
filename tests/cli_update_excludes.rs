@@ -668,3 +668,20 @@ fn quiet_hides_the_excluded_lines() {
     let stderr = stderr_of(&out);
     assert!(!stderr.contains("excluded"), "{stderr}");
 }
+
+#[test]
+fn update_prints_the_items_that_an_exclude_keeps_out() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "d", "", "dependency");
+    write_skill(&reg, "r", "requires:\n  skills: [d]\n", "first");
+    write_skill(&reg, "x", "", "other");
+    env.run(&["add", s(&reg), "r", "x", "--exclude", "d"]);
+
+    let stderr = stderr_of(&env.run(&["update", "--yes"]));
+    assert_eq!(stderr.matches("excluded skill d").count(), 1, "{stderr}");
+    let stderr = stderr_of(&env.run(&["update", "--dry-run"]));
+    assert!(stderr.contains("excluded skill d"), "{stderr}");
+    let stderr = stderr_of(&env.run(&["update", "--yes", "--quiet"]));
+    assert!(!stderr.contains("excluded"), "{stderr}");
+}

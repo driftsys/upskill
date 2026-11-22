@@ -1488,6 +1488,11 @@ pub fn update(
                 }
                 Err(err) => return Err(err),
             };
+            for item in prepared.excluded() {
+                if !report.excluded.contains(item) {
+                    report.excluded.push(item.clone());
+                }
+            }
             // Every entry outside the recorded kinds is kept unchanged.
             let source_entries: Vec<_> = source_entries
                 .into_iter()

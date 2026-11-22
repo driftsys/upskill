@@ -483,6 +483,11 @@ pub(super) fn prepare_install(
 }
 
 impl PreparedInstall {
+    /// The items that an exclude kept out of this run, each once.
+    pub fn excluded(&self) -> &[(ItemKind, String)] {
+        &self.report.excluded
+    }
+
     /// The names of `own` that match no item of the entry source and no
     /// item that the resolver skipped. Such a name is most likely a typo.
     pub fn unknown_excludes(&self, own: &[String]) -> Vec<String> {

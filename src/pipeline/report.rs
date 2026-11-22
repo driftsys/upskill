@@ -659,6 +659,9 @@ pub struct UpdatedItem {
 #[derive(Debug, Default, Clone)]
 pub struct UpdateReport {
     pub items: Vec<UpdatedItem>,
+    /// Items that an exclude kept out of the run, each once, over all
+    /// sources. Also set by a dry run.
+    pub excluded: Vec<(ItemKind, String)>,
     /// Paths recorded when `update` adopted a `schema: 1` lockfile, sorted
     /// and without duplicates; `None` when no adoption happened.
     pub adopted: Option<Vec<String>>,
