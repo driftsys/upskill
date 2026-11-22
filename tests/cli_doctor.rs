@@ -1013,3 +1013,86 @@ fn doctor_is_clean_for_two_sources_with_kind_directories() {
     let (code, v) = doctor_json(&target, &home);
     assert_eq!(code, Some(0), "doctor must be clean: {v}");
 }
+
+/// Issue #605: an item removed from a source with kind directories is
+/// reported as missing in the source, not as clean or as "local path gone".
+#[test]
+fn doctor_reports_an_item_removed_from_a_source_with_kind_directories() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_skill(&source.join("skills/one"), "one");
+    write_skill(&source.join("skills/two"), "two");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    fs::remove_dir_all(source.join("skills/two")).unwrap();
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(1), "doctor must fail: {v}");
+    let orphans = v["orphan_entries"].as_array().unwrap();
+    assert_eq!(orphans.len(), 1, "{v}");
+    assert_eq!(orphans[0]["name"], "two");
+    assert_eq!(orphans[0]["reason"], "item-missing-in-source");
+}
+
+/// Issue #605: an item installed under an alias from a source with kind
+/// directories is found by its source folder.
+#[test]
+fn doctor_is_clean_for_an_aliased_item_from_a_source_with_kind_directories() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_skill(&source.join("skills/one"), "one");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap(), "one", "--as", "renamed"])
+        .assert()
+        .success();
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(0), "doctor must be clean: {v}");
+}
+
+/// Issue #605: a source directory that exists but cannot be read is reported
+/// with its own reason and the read error, not as "item missing in source".
+#[cfg(unix)]
+#[test]
+fn doctor_reports_an_unreadable_source_with_the_read_error() {
+    use std::os::unix::fs::PermissionsExt;
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_skill(&source.join("skills/one"), "one");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    fs::set_permissions(&source, fs::Permissions::from_mode(0o000)).unwrap();
+    let (code, v) = doctor_json(&target, &home);
+    let text = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["doctor", "--project"])
+        .output()
+        .unwrap();
+    fs::set_permissions(&source, fs::Permissions::from_mode(0o755)).unwrap();
+
+    assert_eq!(code, Some(1), "doctor must fail: {v}");
+    let orphans = v["orphan_entries"].as_array().unwrap();
+    assert_eq!(orphans.len(), 1, "{v}");
+    assert_eq!(orphans[0]["reason"], "source-unreadable");
+    assert!(
+        orphans[0]["error"]
+            .as_str()
+            .is_some_and(|e| e.contains("read_dir")),
+        "{v}"
+    );
+    let stdout = String::from_utf8(text.stdout).unwrap();
+    assert!(stdout.contains("source not readable"), "{stdout}");
+}

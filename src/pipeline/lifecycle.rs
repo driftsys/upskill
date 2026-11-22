@@ -553,8 +553,11 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     let mut report = DoctorReport::default();
 
     // Items found by discovery, per source root (see the `local:` check).
-    let mut source_items: std::collections::HashMap<PathBuf, Vec<super::output::SourceItem>> =
-        std::collections::HashMap::new();
+    // A scan that fails keeps its error message.
+    let mut source_items: std::collections::HashMap<
+        PathBuf,
+        std::result::Result<Vec<super::output::SourceItem>, String>,
+    > = std::collections::HashMap::new();
     for entry in &lock.items {
         let kind = entry.kind;
         if !entry.pending.is_empty() {
@@ -671,6 +674,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     name: entry.name.clone(),
                     source: entry.source.clone(),
                     reason: OrphanReason::LocalPathGone,
+                    error: None,
                 });
                 continue;
             }
@@ -701,14 +705,28 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     let mut found = Vec::new();
                     let none = crate::bundle::ResolvedItems::default();
                     let names = super::plan::PlanNames::default();
-                    let _ = super::install::collect_source_items(
+                    super::install::collect_source_items(
                         &ssot_root,
                         Some(&none),
                         &names,
                         &mut found,
-                    );
-                    found
+                    )
+                    .map(|()| found)
+                    .map_err(|e| format!("{e:#}"))
                 });
+                let found = match found {
+                    Ok(found) => found,
+                    Err(error) => {
+                        report.orphan_entries.push(OrphanEntry {
+                            kind,
+                            name: entry.name.clone(),
+                            source: entry.source.clone(),
+                            reason: OrphanReason::SourceUnreadable,
+                            error: Some(error.clone()),
+                        });
+                        continue;
+                    }
+                };
                 let candidates: Vec<_> = found
                     .iter()
                     .filter(|i| i.kind == kind && i.dir.file_name().is_some_and(|n| n == folder))
@@ -728,18 +746,10 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     name: entry.name.clone(),
                     source: entry.source.clone(),
                     reason: OrphanReason::ItemMissingInSource,
+                    error: None,
                 });
                 continue;
             };
-            if !item_dir.is_dir() {
-                report.orphan_entries.push(OrphanEntry {
-                    kind,
-                    name: entry.name.clone(),
-                    source: entry.source.clone(),
-                    reason: OrphanReason::ItemMissingInSource,
-                });
-                continue;
-            }
             let current = hash_item_dir(&item_dir);
             if current != entry.hash {
                 report.stale_hashes.push(StaleHash {

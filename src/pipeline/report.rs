@@ -324,6 +324,9 @@ pub struct OrphanEntry {
     pub name: String,
     pub source: String,
     pub reason: OrphanReason,
+    /// The read error, for [`OrphanReason::SourceUnreadable`] only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -335,6 +338,9 @@ pub enum OrphanReason {
     /// Source still exists but no longer contains the item with this
     /// `(kind, name)` (e.g., it was renamed or removed in the SSOT).
     ItemMissingInSource,
+    /// Source directory exists but its items cannot be listed (for example,
+    /// a permission error); the entry carries the read error.
+    SourceUnreadable,
 }
 
 /// Plugin in lockfile (status: installed) but not found when querying the
@@ -919,6 +925,7 @@ mod tests {
             name: "x".into(),
             source: "local:/p".into(),
             reason: OrphanReason::LocalPathGone,
+            error: None,
         });
         assert!(!report.is_clean());
     }
