@@ -140,6 +140,10 @@ pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt 
         Ok(observed) => observed,
         Err(_) => return LockAttempt::Unavailable,
     };
+    // A run that started at the same time can create the lock after the
+    // caller read the clock. Its lock must count as young, not as dated in
+    // the future, so the age uses a clock reading taken after the observation.
+    let now = now.max(std::time::SystemTime::now());
     if now
         .duration_since(modified)
         .is_ok_and(|age| age < std::time::Duration::from_secs(LOCK_MAX_AGE_SECS))
@@ -670,6 +674,22 @@ mod tests {
         let attempt = acquire_run_lock(&path, now);
         assert!(matches!(attempt, LockAttempt::Held(_)));
         assert!(path.is_file());
+    }
+
+    #[test]
+    fn a_lock_created_after_the_caller_read_the_clock_is_busy() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        // The caller read the clock, then another run created the lock.
+        let now = SystemTime::now() - Duration::from_secs(2);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "other run").unwrap();
+        let attempt = acquire_run_lock(&path, now);
+        assert!(
+            matches!(attempt, LockAttempt::Busy),
+            "a lock of another run that started at the same time must be busy"
+        );
+        assert_eq!(fs::read(&path).unwrap(), b"other run");
     }
 
     #[test]
