@@ -1933,3 +1933,59 @@ fn add_of_a_bundle_file_skips_an_unreadable_directory_in_the_registry() {
         .success();
     assert!(target.join(".claude/skills/one/SKILL.md").exists());
 }
+
+/// Issue #611: `add` of a bundle file still fails, writes nothing and names
+/// the directory when a kind directory of the registry cannot be read.
+#[cfg(unix)]
+#[test]
+fn add_of_a_bundle_file_fails_when_a_kind_directory_of_the_registry_is_unreadable() {
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Restores the mode of the directory on drop, also when the test panics.
+    struct Restore<'a>(&'a Path);
+    impl Drop for Restore<'_> {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("reg");
+    for kind in ["skills/one/SKILL.md", "rules/two/RULE.md"] {
+        let path = registry.join(kind);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "---\nname: x\ndescription: X.\n---\n\nBody.\n").unwrap();
+    }
+    let bundle = registry.join("bundles/b.bundle.yaml");
+    fs::create_dir_all(bundle.parent().unwrap()).unwrap();
+    fs::write(
+        &bundle,
+        "schema: 1\nname: b\ndescription: Test bundle\n\nitems:\n  rules:\n    - two\n",
+    )
+    .unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    // The readable rules/ directory makes the registry root recognisable
+    // whatever the content of the temp directory above it.
+    let kind_dir = registry.join("skills");
+    fs::set_permissions(&kind_dir, fs::Permissions::from_mode(0o000)).unwrap();
+    let _restore = Restore(&kind_dir);
+    if fs::read_dir(&kind_dir).is_ok() {
+        eprintln!("skipped: running as root, the permission has no effect");
+        return;
+    }
+    let out = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", bundle.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(1), "{out:?}");
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(stderr.contains(&kind_dir.display().to_string()), "{stderr}");
+    assert!(!target.join(".upskill-lock.json").exists(), "no lockfile");
+    assert!(!target.join(".claude").exists(), "no client output");
+}

@@ -62,13 +62,17 @@ pub fn load(path: &Path) -> Result<Bundle> {
 /// bundles, and the `schema:` field is the contract gate (ADR-0007). A
 /// file with `schema:` present but otherwise malformed is reported as an
 /// error: the author intended a bundle and got it wrong.
+///
+/// A `source_root` that cannot be listed is an error. A subdirectory that
+/// cannot be listed, at any depth, is skipped without a message, so a
+/// bundle inside it is not found.
 pub fn discover(source_root: &Path) -> Result<Vec<(PathBuf, Bundle)>> {
     let mut out: Vec<(PathBuf, Bundle)> = Vec::new();
     if !source_root.exists() {
         return Ok(out);
     }
     let mut paths = Vec::new();
-    walk(source_root, &mut paths)?;
+    walk(source_root, &mut paths, true)?;
     for path in paths {
         let Some(bundle) = load_if_bundle(&path)? else {
             continue;
@@ -125,8 +129,15 @@ fn has_schema_field(raw: &str) -> bool {
         .is_some_and(|v| v.is_u64() || v.is_i64())
 }
 
-fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
-    let entries = fs::read_dir(dir).with_context(|| format!("read_dir {}", dir.display()))?;
+/// Collect the bundle files under `dir`. A read error of the root is
+/// returned; a subdirectory that cannot be read holds no bundle that can be
+/// used and is skipped (issue #611).
+fn walk(dir: &Path, out: &mut Vec<PathBuf>, is_root: bool) -> Result<()> {
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) if !is_root => return Ok(()),
+        Err(e) => return Err(e).with_context(|| format!("read_dir {}", dir.display())),
+    };
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
@@ -141,13 +152,7 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
             {
                 continue;
             }
-            // A subdirectory that cannot be read holds no bundle that can
-            // be used; skip it (issue #611). The root itself is read above
-            // and its read error is returned.
-            if fs::read_dir(&path).is_err() {
-                continue;
-            }
-            walk(&path, out)?;
+            walk(&path, out, false)?;
         } else if file_type.is_file() && filename_stem(&path).is_some() {
             out.push(path);
         }
@@ -802,13 +807,6 @@ plugins:
     fn discover_skips_an_unreadable_subdirectory() {
         // Issue #611: a directory that cannot be read holds no bundle that
         // upskill can use; it must not fail the search.
-        use std::os::unix::fs::PermissionsExt;
-        struct Restore<'a>(&'a Path);
-        impl Drop for Restore<'_> {
-            fn drop(&mut self) {
-                let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
-            }
-        }
         let tmp = tempfile::tempdir().unwrap();
         write_file(
             tmp.path(),
@@ -817,12 +815,9 @@ plugins:
         );
         let docs = tmp.path().join("docs");
         fs::create_dir_all(&docs).unwrap();
-        fs::set_permissions(&docs, fs::Permissions::from_mode(0o000)).unwrap();
-        let _guard = Restore(&docs);
-        if fs::read_dir(&docs).is_ok() {
-            eprintln!("skipped: running as root, the permission has no effect");
+        let Some(_guard) = unreadable(&docs) else {
             return;
-        }
+        };
         let found = discover(tmp.path()).unwrap();
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].1.name, "b");
@@ -830,19 +825,51 @@ plugins:
 
     #[cfg(unix)]
     #[test]
-    fn discover_fails_on_an_unreadable_root() {
+    fn discover_skips_a_nested_unreadable_subdirectory() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_file(
+            tmp.path(),
+            "bundles/b.bundle.yaml",
+            "schema: 1\nname: b\ndescription: d\n\nitems:\n  skills:\n    - one\n",
+        );
+        let nested = tmp.path().join("docs/internal");
+        fs::create_dir_all(&nested).unwrap();
+        let Some(_guard) = unreadable(&nested) else {
+            return;
+        };
+        let found = discover(tmp.path()).unwrap();
+        assert_eq!(found.len(), 1);
+    }
+
+    /// Makes `dir` unreadable; `None` when running as root, where the
+    /// permission has no effect. The guard restores the mode on drop.
+    #[cfg(unix)]
+    fn unreadable(dir: &Path) -> Option<impl Drop + '_> {
         use std::os::unix::fs::PermissionsExt;
+        struct Restore<'a>(&'a Path);
+        impl Drop for Restore<'_> {
+            fn drop(&mut self) {
+                let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+            }
+        }
+        fs::set_permissions(dir, fs::Permissions::from_mode(0o000)).unwrap();
+        let guard = Restore(dir);
+        if fs::read_dir(dir).is_ok() {
+            eprintln!("skipped: running as root, the permission has no effect");
+            return None;
+        }
+        Some(guard)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn discover_fails_on_an_unreadable_root() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path().join("reg");
         fs::create_dir_all(&root).unwrap();
-        fs::set_permissions(&root, fs::Permissions::from_mode(0o000)).unwrap();
-        let readable = fs::read_dir(&root).is_ok();
-        let result = discover(&root);
-        fs::set_permissions(&root, fs::Permissions::from_mode(0o755)).unwrap();
-        if readable {
-            eprintln!("skipped: running as root, the permission has no effect");
+        let Some(_guard) = unreadable(&root) else {
             return;
-        }
-        assert!(result.is_err());
+        };
+        assert!(discover(&root).is_err());
     }
 }
