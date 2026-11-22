@@ -118,6 +118,9 @@ pub enum LockAttempt {
 }
 
 /// Create a run lock, replacing an expired or future-dated lock once.
+///
+/// `now` is a lower bound: the age of an existing lock uses the later of
+/// `now` and a clock reading taken after the lock is observed.
 pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt {
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
     if fs::create_dir_all(dir).is_err() {
