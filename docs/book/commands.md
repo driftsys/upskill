@@ -1032,7 +1032,14 @@ scope. For each scope it reports thirteen independent buckets:
 - **Unreadable files** — recorded files that could not be inspected (for example
   a permission error). `doctor` continues with the other files and items. Causes
   exit 1.
-- **SSOT hash drift on `local:` sources** — `upskill update` fixes.
+- **SSOT hash drift on `local:` sources** — `upskill update` fixes. For a
+  `.bundle.yaml` source, the lockfile records the bundle file, and `doctor`
+  looks for the items in the registry root that `add` resolves for that file.
+  `doctor` finds each item in the source the way `add` discovers items: in a
+  child or grandchild directory of the source, such as `skills/<name>`, with the
+  kind of the entry and the recorded folder name. When several such directories
+  exist, the one whose item name is the recorded name is used; when none of them
+  has that name, the entry is reported as missing in the source.
 - **Lockfile entries with no recoverable source** (the local path went away, or
   the named item was removed in the source) — `upskill remove` to clear.
 - **Orphaned dependencies** (informational) — items installed only as a

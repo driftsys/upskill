@@ -552,6 +552,9 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     let lock = crate::lockfile::Lockfile::load(target)?;
     let mut report = DoctorReport::default();
 
+    // Items found by discovery, per source root (see the `local:` check).
+    let mut source_items: std::collections::HashMap<PathBuf, Vec<super::output::SourceItem>> =
+        std::collections::HashMap::new();
     for entry in &lock.items {
         let kind = entry.kind;
         if !entry.pending.is_empty() {
@@ -654,7 +657,14 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
         }
 
         if let Some(local_path) = entry.source.strip_prefix("local:") {
-            let ssot_root = Path::new(local_path);
+            // A bundle-file source (issue #602): the items are in the
+            // registry root that `add` resolves for the bundle file. A root
+            // that cannot be resolved is reported as "local path gone".
+            let ssot_root = match local_bundle_root(Path::new(local_path)) {
+                Some(Ok(root)) => root,
+                Some(Err(_)) => PathBuf::new(),
+                None => PathBuf::from(local_path),
+            };
             if !ssot_root.is_dir() {
                 report.orphan_entries.push(OrphanEntry {
                     kind,
@@ -676,7 +686,51 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                 .as_deref()
                 .or(entry.source_name.as_deref())
                 .unwrap_or(&entry.name);
-            let item_dir = ssot_root.join(folder);
+            let direct = ssot_root.join(folder);
+            let item_dir = if super::discovery::is_item_dir(&direct) {
+                Some(direct)
+            } else {
+                // The item can be in a child or grandchild directory of the
+                // root (`skills/<folder>`); `add` discovers items at those
+                // depths. Candidates have the entry's kind and a directory
+                // named `folder`. A sole candidate is the item; among several,
+                // the one whose name is the entry's source name; several
+                // without such a match leave the item missing. The scan runs
+                // at most once per source root.
+                let found = source_items.entry(ssot_root.clone()).or_insert_with(|| {
+                    let mut found = Vec::new();
+                    let none = crate::bundle::ResolvedItems::default();
+                    let names = super::plan::PlanNames::default();
+                    let _ = super::install::collect_source_items(
+                        &ssot_root,
+                        Some(&none),
+                        &names,
+                        &mut found,
+                    );
+                    found
+                });
+                let candidates: Vec<_> = found
+                    .iter()
+                    .filter(|i| i.kind == kind && i.dir.file_name().is_some_and(|n| n == folder))
+                    .collect();
+                let source_name = entry.source_name.as_deref().unwrap_or(&entry.name);
+                match candidates.as_slice() {
+                    [only] => Some(only.dir.clone()),
+                    _ => candidates
+                        .iter()
+                        .find(|i| i.name == source_name)
+                        .map(|i| i.dir.clone()),
+                }
+            };
+            let Some(item_dir) = item_dir else {
+                report.orphan_entries.push(OrphanEntry {
+                    kind,
+                    name: entry.name.clone(),
+                    source: entry.source.clone(),
+                    reason: OrphanReason::ItemMissingInSource,
+                });
+                continue;
+            };
             if !item_dir.is_dir() {
                 report.orphan_entries.push(OrphanEntry {
                     kind,
@@ -1966,6 +2020,18 @@ fn removal_preview(plan: RemovalPlan) -> PreviewItem {
     }
 }
 
+/// The registry root of `path` when `path` is a bundle-file source: a path
+/// that is not a directory and whose name ends in `.bundle.yaml`, whether or
+/// not the file exists. `None` for any other path.
+fn local_bundle_root(path: &Path) -> Option<Result<PathBuf>> {
+    let is_bundle_label = !path.is_dir()
+        && path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX));
+    is_bundle_label.then(|| super::install::bundle_file_root(path))
+}
+
 /// Push to `out` the item directories of the source recorded as `label`,
 /// for the overlap checks of [`update`] and of [`remove`]
 /// (`check_removal_outside_sources`), when `label` is a local path. Every
@@ -1991,15 +2057,9 @@ fn collect_recorded_local_items(
     // A bundle-file label, whether or not the file still exists: the root
     // that `add` resolves for it. A path that is a directory is a directory
     // source, whatever its name.
-    let is_bundle_label = !path.is_dir()
-        && path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .is_some_and(|n| n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX));
-    let root = if is_bundle_label {
-        super::install::bundle_file_root(&path)?
-    } else {
-        path
+    let root = match local_bundle_root(&path) {
+        Some(root) => root?,
+        None => path,
     };
     let none = crate::bundle::ResolvedItems::default();
     super::install::collect_source_items(

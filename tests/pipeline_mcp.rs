@@ -86,21 +86,6 @@ fn read_json(path: &Path) -> serde_json::Value {
     serde_json::from_str(&raw).unwrap()
 }
 
-/// Records `registry` as the source of every item in the project lockfile.
-///
-/// `add <bundle file>` records the bundle file as the item source, and
-/// `doctor` reports such a source as "local path gone" (exit 1) because it
-/// is not a directory. The doctor tests that assert an exit code call this
-/// so that the exit code depends only on the MCP state under test.
-fn record_registry_as_item_source(project: &Path, registry: &Path) {
-    let path = project.join(".upskill-lock.json");
-    let mut lock = read_json(&path);
-    for item in lock["items"].as_array_mut().unwrap() {
-        item["source"] = serde_json::json!(format!("local:{}", registry.display()));
-    }
-    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
-}
-
 #[test]
 fn add_then_remove_mcp_updates_lockfile() {
     let tmp = tempfile::tempdir().unwrap();
@@ -380,7 +365,6 @@ fn doctor_surfaces_missing_config_file_without_flagging_drift() {
         .args(["add", bundle_path.to_str().unwrap()])
         .assert()
         .success();
-    record_registry_as_item_source(&project, &registry);
 
     // Delete VS Code's config file entirely (the server may have been
     // configured via the `code` CLI instead) — this is *undetermined*, not
@@ -434,7 +418,6 @@ fn doctor_surfaces_unreadable_config_file() {
         .args(["add", bundle_path.to_str().unwrap()])
         .assert()
         .success();
-    record_registry_as_item_source(&project, &registry);
 
     // Corrupt opencode's config file so it no longer parses as JSON.
     fs::write(project.join("opencode.json"), "{ not valid json").unwrap();
@@ -487,7 +470,6 @@ fn doctor_flags_a_copilot_entry_missing_from_its_config_file() {
         .args(["add", bundle_path.to_str().unwrap()])
         .assert()
         .success();
-    record_registry_as_item_source(&project, &registry);
 
     // Drop the server from the Copilot config file only. The file is still
     // present and valid, so this is drift.
@@ -497,6 +479,9 @@ fn doctor_flags_a_copilot_entry_missing_from_its_config_file() {
     )
     .unwrap();
     let report = run_doctor_json(&home, &project, &path_val);
+    // Exit 1 below must come from the MCP drift alone.
+    assert_eq!(report["orphan_entries"], serde_json::json!([]), "{report}");
+    assert_eq!(report["stale_hashes"], serde_json::json!([]), "{report}");
     assert_eq!(
         doctor_mcp_status(&report, "copilot", "remote-srv"),
         "not-registered"

@@ -329,7 +329,8 @@ pub struct OrphanEntry {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum OrphanReason {
-    /// `local:<path>` source no longer resolves to a directory on disk.
+    /// `local:<path>` source no longer resolves to a directory on disk (for
+    /// a bundle-file path, the registry root of the bundle file).
     LocalPathGone,
     /// Source still exists but no longer contains the item with this
     /// `(kind, name)` (e.g., it was renamed or removed in the SSOT).
