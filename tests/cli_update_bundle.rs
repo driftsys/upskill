@@ -847,6 +847,18 @@ fn add_under_a_kind_restriction_keeps_the_provenance_of_an_unplanned_item() {
         );
         let skill_path = consumer.path().join(".claude/skills/s/SKILL.md");
         let skill_before = fs::read(&skill_path).unwrap();
+        let entry_before = read_update_lock(consumer.path())["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["name"] == "s")
+            .unwrap()
+            .clone();
+        // A changed source makes a rewrite of `s` visible.
+        write(
+            &registry.path().join("s/SKILL.md"),
+            "---\nschema: 1\nname: s\ndescription: changed skill s.\n---\n\nChanged.\n",
+        );
         if remove_requirement {
             write_rule_body(registry.path(), "r2", "No dependency remains.");
         }
@@ -872,6 +884,8 @@ fn add_under_a_kind_restriction_keeps_the_provenance_of_an_unplanned_item() {
             .unwrap();
         assert_eq!(item["required_by"], serde_json::json!(["rule:r2"]));
         assert_eq!(fs::read(&skill_path).unwrap(), skill_before);
+        assert_eq!(item["hash"], entry_before["hash"]);
+        assert_eq!(item["files"], entry_before["files"]);
     }
 }
 
