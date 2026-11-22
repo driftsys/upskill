@@ -128,7 +128,7 @@ pub(super) fn prepare_install(
     let local_source = fetched.root;
     let tmp_guard = fetched.guard;
     let commit = fetched.commit;
-    let scanned_items = scan_source_items(&local_source);
+    let scanned_items = scan_source_items(&local_source)?;
 
     // -- Validate bare --as with multi-item source --
     if options.aliases.iter().any(|(from, _)| from.is_empty()) {
