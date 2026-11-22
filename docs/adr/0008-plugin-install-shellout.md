@@ -233,10 +233,16 @@ Decision:
   with exit code 1, and `update --global` writes it again, also when the file
   has no `instructions` array. It also reports, as drift, the entry of a rule
   that the lockfile records for other clients than opencode
-  (`stale_rule_entries`), and `update --global` deletes it. The removal of an
-  entry that fails during `remove` or the orphan cleanup of `update` leaves an
-  entry of a rule that the lockfile no longer records; `doctor` does not report
-  it. When the file is not strict JSON, `doctor` reports every recorded rule as
+  (`stale_rule_entries` with `recorded: true`), and `update --global` deletes
+  it. The removal of an entry that fails during `remove` or the orphan cleanup
+  of `update` leaves an entry of a rule that the lockfile no longer records;
+  `doctor --global` reports every entry of the form
+  `<home>/.agents/rules/<name>/RULE.md` whose name the lockfile does not record
+  as an opencode rule (`stale_rule_entries` with `recorded: false`), as drift
+  with exit code 1. upskill does not delete such an entry, because it cannot
+  tell it from an entry that the user wrote by hand in the same form; the user
+  deletes it by hand. Entries in another form are not reported (issue #596).
+  When the file is not strict JSON, `doctor` reports every recorded rule as
   missing, and `update` cannot repair it: it fails with a parse error until the
   user fixes the file. Other entries and other keys of the file are kept. An
   `instructions` value that is not an array is an error, and `update` cannot

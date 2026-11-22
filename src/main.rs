@@ -2093,20 +2093,23 @@ fn print_doctor_report(report: &DoctorReport) {
         }
     }
 
-    if !report.stale_rule_entries.is_empty() {
+    let (recorded, unrecorded): (Vec<_>, Vec<_>) =
+        report.stale_rule_entries.iter().partition(|r| r.recorded);
+    if !recorded.is_empty() {
         println!(
             "{} {} rule(s) not installed for opencode are listed in the global opencode config — `upskill update --global` deletes the entries",
             style::error_label("doctor:"),
-            report.stale_rule_entries.len()
+            recorded.len()
         );
-        for r in &report.stale_rule_entries {
-            println!(
-                "  {} {} {}",
-                style::dim("rule"),
-                style::name(&r.name),
-                style::dim(&format!("({})", r.config.display())),
-            );
-        }
+        print_stale_rule_entries(&recorded);
+    }
+    if !unrecorded.is_empty() {
+        println!(
+            "{} {} entry(ies) in the global opencode config name rule(s) that the lockfile does not record — delete the entries by hand",
+            style::error_label("doctor:"),
+            unrecorded.len()
+        );
+        print_stale_rule_entries(&unrecorded);
     }
 
     if !report.interrupted.is_empty() {
@@ -2127,6 +2130,17 @@ fn print_doctor_report(report: &DoctorReport) {
     print_doctor_orphaned_dependencies(report);
     print_doctor_skipped_plugins(report);
     print_doctor_mcps(report);
+}
+
+fn print_stale_rule_entries(entries: &[&upskill::pipeline::StaleRuleEntry]) {
+    for r in entries {
+        println!(
+            "  {} {} {}",
+            style::dim("rule"),
+            style::name(&r.name),
+            style::dim(&format!("({})", r.config.display())),
+        );
+    }
 }
 
 fn print_doctor_orphaned_dependencies(report: &DoctorReport) {

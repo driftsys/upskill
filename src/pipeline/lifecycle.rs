@@ -536,10 +536,13 @@ fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> 
 ///   that is not an array is not.
 /// - **stale rule entries** — for the global scope only: an entry of the form
 ///   `<home>/.agents/rules/<name>/RULE.md` in the `instructions` array of the
-///   global opencode config, for a rule that the lockfile records for other
-///   clients than opencode. `upskill add --global` and `upskill update
-///   --global` delete it. An entry for a name that the lockfile does not
-///   record is not reported.
+///   global opencode config, for a name that the lockfile does not record as
+///   an opencode rule. When the lockfile records the rule for other clients
+///   (`recorded: true`), `upskill add --global` and `upskill update --global`
+///   delete the entry. An entry for a name that the lockfile does not record
+///   at all (`recorded: false`), for example one left by a failed removal, is
+///   reported and kept; the user deletes it by hand. Entries in another form
+///   are not reported.
 ///
 /// Doctor never adopts a `schema: 1` lockfile and never saves. Doctor
 /// never fetches. Remote-source drift is detected by `update --check`, which
@@ -703,39 +706,36 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     // A rule installed for opencode in the global scope is listed in the
     // `instructions` array of the global opencode config. An entry that is
     // missing is drift: opencode does not load the rule.
+    //
+    // An entry of the form that upskill writes, for a name that the lockfile
+    // does not record as an opencode rule, is left from a removal that failed
+    // after the lockfile was saved (or was written by hand in that form). It
+    // is reported with `recorded` set when the lockfile records the rule for
+    // other clients; `update --global` deletes only those entries. Entries in
+    // another form are not upskill's and are not reported. The config is read
+    // once (issue #596).
     if at.scope == Scope::Global {
-        for name in lock.opencode_rule_names() {
-            if !crate::ancillary::opencode_global_rule_registered(target, &name) {
+        let config =
+            crate::ancillary::opencode_config_dir(crate::plugin::PluginScope::User, target)
+                .join("opencode.json");
+        let listed = crate::ancillary::opencode_global_rule_names(target);
+        let opencode_rules = lock.opencode_rule_names();
+        let other_rules = lock.other_client_rule_names();
+        for name in &opencode_rules {
+            if !listed.contains(name) {
                 report.missing_rule_entries.push(MissingRuleEntry {
-                    name,
+                    name: name.clone(),
                     client: "opencode".to_string(),
-                    config: crate::ancillary::opencode_config_dir(
-                        crate::plugin::PluginScope::User,
-                        target,
-                    )
-                    .join("opencode.json"),
+                    config: config.clone(),
                 });
             }
         }
-    }
-
-    // A rule that the lockfile records for other clients than opencode has no
-    // entry of its own in the global opencode config. An entry of the form
-    // that upskill writes, for such a rule, is left from a removal that
-    // failed after the lockfile was saved. `update --global` deletes it.
-    // An entry for a name that the lockfile does not know is not reported.
-    if at.scope == Scope::Global {
-        for name in lock.other_client_rule_names() {
-            if crate::ancillary::opencode_global_rule_registered(target, &name) {
-                report.stale_rule_entries.push(StaleRuleEntry {
-                    name,
-                    config: crate::ancillary::opencode_config_dir(
-                        crate::plugin::PluginScope::User,
-                        target,
-                    )
-                    .join("opencode.json"),
-                });
-            }
+        for name in listed.difference(&opencode_rules) {
+            report.stale_rule_entries.push(StaleRuleEntry {
+                name: name.clone(),
+                config: config.clone(),
+                recorded: other_rules.contains(name),
+            });
         }
     }
 

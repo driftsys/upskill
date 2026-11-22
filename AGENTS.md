@@ -170,8 +170,10 @@ rule's generated file (`<home>/.agents/rules/<name>/RULE.md`) to its
 deletes the entry, `update` writes the entries of the rules it installs and
 deletes those of rules that left the source, `add` and `update` delete the entry
 of a rule that the lockfile records for other clients than opencode (`remove`
-keeps it), and `doctor` reports a missing entry and such a stale entry
-([ADR-0008](docs/adr/0008-plugin-install-shellout.md), issue #581).
+keeps it), and `doctor` reports a missing entry, such a stale entry, and an
+entry of the same form for a name that the lockfile does not record, which
+upskill keeps ([ADR-0008](docs/adr/0008-plugin-install-shellout.md), issue
+#581).
 
 Without a scope flag, `add` stops outside a git repo (exit 2); `update`,
 `remove` and `remove-mcp` use the global scope there; `list`, `doctor`,

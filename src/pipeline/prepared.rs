@@ -1009,11 +1009,12 @@ fn dropped_opencode_rules(
         .filter(|name| !remaining.contains(name))
         .collect();
     if let Some(root) = stale_root {
+        let listed = crate::ancillary::opencode_global_rule_names(root);
         dropped.extend(
             after
                 .other_client_rule_names()
                 .into_iter()
-                .filter(|name| crate::ancillary::opencode_global_rule_registered(root, name)),
+                .filter(|name| listed.contains(name)),
         );
     }
     dropped
