@@ -446,9 +446,19 @@ pub(super) fn detect_item_entrypoint(source: &Path, name: &str) -> &'static str 
     }
 }
 
+/// Whether the last component of `path` is `skills`, `rules` or `agents`,
+/// the kind directory names of the recommended layout (conventions.md).
+fn is_kind_dir(path: &Path) -> bool {
+    path.file_name()
+        .is_some_and(|n| ["skills", "rules", "agents"].iter().any(|k| n == *k))
+}
+
 /// Iterate `(name, dir)` for every immediate subdirectory of `kind_root`.
 /// Returns an empty iterator when the kind root does not exist (treating
-/// "no items of this kind" as a non-error).
+/// "no items of this kind" as a non-error). A kind directory under
+/// `kind_root` that cannot be listed is an error, and so is a category
+/// directory that cannot be listed when `kind_root` is a kind directory
+/// (see [`is_kind_dir`]); other unreadable directories are skipped.
 pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>> {
     if !kind_root.exists() {
         return Ok(Vec::new());
@@ -473,17 +483,29 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
         } else {
             // Category subdir: kind_root/<category>/<item>/ENTRY.md
             // Descend one level to find items in subdirectories (format-spec §2.2).
-            if let Ok(sub_entries) = fs::read_dir(&path) {
-                for sub_entry in sub_entries.flatten() {
-                    let sub_path = sub_entry.path();
-                    if sub_path.is_dir() && is_item_dir(&sub_path) {
-                        let name = sub_entry
-                            .file_name()
-                            .to_str()
-                            .map(str::to_owned)
-                            .with_context(|| format!("non-UTF8 name in {}", path.display()))?;
-                        out.push((name, sub_path));
-                    }
+            // A read error is returned when the directory is a kind
+            // directory (`skills/`, `rules/`, `agents/`), or a category
+            // directory of a source that is itself a kind directory. Any
+            // other unreadable directory holds no items by convention and is
+            // skipped.
+            let sub_entries = match fs::read_dir(&path) {
+                Ok(entries) => entries,
+                Err(_) if !is_kind_dir(&path) && !is_kind_dir(kind_root) => continue,
+                Err(e) => {
+                    return Err(e).with_context(|| format!("read_dir {}", path.display()));
+                }
+            };
+            for sub_entry in sub_entries {
+                let sub_entry =
+                    sub_entry.with_context(|| format!("read_dir {}", path.display()))?;
+                let sub_path = sub_entry.path();
+                if sub_path.is_dir() && is_item_dir(&sub_path) {
+                    let name = sub_entry
+                        .file_name()
+                        .to_str()
+                        .map(str::to_owned)
+                        .with_context(|| format!("non-UTF8 name in {}", path.display()))?;
+                    out.push((name, sub_path));
                 }
             }
         }
