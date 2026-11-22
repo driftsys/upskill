@@ -110,6 +110,14 @@ records (`orphan_excludes`). The per-scope set needs neither.
 - `remove` does not change the set, so a later `add` keeps the formerly excluded
   items out until an `add` names them.
 - `update --check` does not need the set, because it plans no items.
+- A name applies to every source and every item kind in the scope, so a later,
+  unrelated item with the same name is skipped too. The skip line on stderr and
+  the `list` output make this visible. Excluding a name for one source only is
+  not possible; this loss is accepted.
+- The project lockfile is committed, so an exclude applies to every user of the
+  repository, as every other lockfile entry does.
+- `required_by` links that earlier lockfiles already hold wrongly are not
+  repaired.
 - The ways to undo an exclude are `add <source> <name>` and editing the
   lockfile.
 
