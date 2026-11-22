@@ -366,7 +366,8 @@ undocumented internal schema, breaks across Claude Code versions, duplicates
 registration logic the CLI already implements, and doesn't generalise to VS Code
 or opencode (each has its own state file). The opencode `plugin_uri` form of the
 `opencode:` block does the same: upskill writes the URI to the `plugins` array
-of `opencode.json`, as `write_opencode_plugin_uri` does.
+of `opencode.json`, as `write_opencode_plugin_uri` does. That exception is the
+decision recorded in "The opencode config file and the `plugins` key" above.
 
 **(b) Re-emit plugin contents from SSOT.** Rejected: duplicates upstream plugins
 like `superpowers`, can't represent hooks or slash commands in the current item

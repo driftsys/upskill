@@ -1072,8 +1072,8 @@ scope. For each scope it reports thirteen independent buckets:
   (`upskill update --yes` reconfigures it; a run in a terminal applies a source
   only when its preview changes something, and the plugin and MCP steps are not
   part of the preview; a source under a kind restriction skips both steps). A
-  missing `claude` CLI or a failed query is advisory and does **not** cause
-  exit 1.
+  missing `claude` CLI, a failed query, or a client config file that is missing
+  or cannot be read is advisory and does **not** cause exit 1.
 - **Interrupted** — items with a non-empty `pending` record: an `add` or
   `update` failed or was stopped before it completed. Run the same command again
   to complete it. Causes exit 1.
