@@ -888,7 +888,16 @@ impl PreparedInstall {
             }
             lock.upsert(item);
         }
-        lock.record_excludes(&label, &options.excludes, &requested);
+        // A requested name that this run also excludes stays in the record.
+        // `update` passes the recorded names as its excludes, so it never
+        // removes a name from the record, also when the item is still
+        // installed and its name is in the item filter.
+        let named: Vec<String> = requested
+            .iter()
+            .filter(|name| !options.excludes.contains(name))
+            .cloned()
+            .collect();
+        lock.record_excludes(&label, &options.excludes, &named);
         if resolved_bundles.is_empty() {
             // Same-source bundle install (no cross-source provenance): every bundle
             // came from the entry source.

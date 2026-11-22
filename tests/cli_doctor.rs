@@ -1041,8 +1041,11 @@ fn doctor_reports_an_excludes_record_with_no_installed_source() {
         .code(1);
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(
-        out.contains("owner/gone"),
-        "expected the source label: {out}"
+        out.contains("no installed item or bundle"),
+        "expected the orphan excludes header: {out}"
     );
-    assert!(out.contains("excludes"), "expected an excludes line: {out}");
+    assert!(
+        out.lines().any(|l| l.trim() == "excludes (owner/gone)"),
+        "expected the source label line: {out}"
+    );
 }

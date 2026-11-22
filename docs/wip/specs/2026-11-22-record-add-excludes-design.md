@@ -79,9 +79,10 @@ exclude) and C (the exclude ends when the requiring item changes).
 
 ## Left to the builder
 
-- Acceptance tests first, one per path above, plus: re-`add` without `--exclude`
-  clears the record; `remove` of the last item deletes it; a lockfile without
-  excludes stays byte-identical; `doctor` reports an orphan record.
+- Acceptance tests first, one per path above, plus: an `add` that names an
+  excluded item removes it from the record; `remove` of the last item deletes
+  it; a lockfile without excludes stays byte-identical; `doctor` reports an
+  orphan record.
 - Whether `update --check` needs the record (it does not plan items; probably
   not).
 

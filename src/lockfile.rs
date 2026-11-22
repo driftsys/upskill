@@ -529,6 +529,11 @@ pub fn items_from_report(
 #[cfg(test)]
 mod tests {
 
+    use super::*;
+    use crate::generate::Client;
+    use crate::pipeline::InstalledItem;
+    use std::path::PathBuf;
+
     fn names(list: &[&str]) -> Vec<String> {
         list.iter().map(|n| (*n).to_string()).collect()
     }
@@ -606,10 +611,14 @@ mod tests {
             assert!(!saved.contains("\"excludes\""));
         }
     }
-    use super::*;
-    use crate::generate::Client;
-    use crate::pipeline::InstalledItem;
-    use std::path::PathBuf;
+
+    #[test]
+    fn record_excludes_drops_a_name_that_is_both_added_and_requested() {
+        let mut lock = Lockfile::new();
+        lock.record_excludes("s", &names(&["a"]), &names(&["a"]));
+        assert_eq!(lock.excludes_for("s"), Vec::<String>::new());
+        assert!(lock.excludes.is_empty());
+    }
 
     #[test]
     fn bundle_kinds_default_to_empty_and_are_omitted_when_empty() {

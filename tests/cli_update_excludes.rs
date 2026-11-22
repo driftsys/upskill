@@ -272,3 +272,47 @@ fn removing_one_of_two_items_keeps_the_excludes_record() {
     assert!(has_lock_item(&lock, "q"), "{lock}");
     assert_eq!(excluded_names(&lock), ["d"], "{lock}");
 }
+
+#[test]
+fn update_keeps_the_exclude_of_an_item_installed_before_the_exclude() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "d", "", "first");
+    env.run(&["add", s(&reg)]);
+    assert!(env.installed("a") && env.installed("d"));
+    env.run(&["add", s(&reg), "--exclude", "d"]);
+    assert_eq!(excluded_names(&env.lock()), ["d"]);
+    assert!(env.installed("d"), "add --exclude keeps an installed item");
+
+    env.run(&["update", "--yes"]);
+    let lock = env.lock();
+    assert_eq!(excluded_names(&lock), ["d"], "{lock}");
+    // The first `update` removes the installed d (files and lock entry).
+    assert!(!env.installed("d"));
+    assert!(!has_lock_item(&lock, "d"), "{lock}");
+
+    env.run(&["update", "--yes"]);
+    assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
+}
+
+#[test]
+fn update_keeps_the_exclude_of_a_dependency_installed_before_the_exclude() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "d", "", "dependency");
+    write_skill(&reg, "r", "requires:\n  skills: [d]\n", "first");
+    write_skill(&reg, "x", "", "other");
+    env.run(&["add", s(&reg), "r"]);
+    assert!(env.installed("d"));
+    env.run(&["add", s(&reg), "x", "--exclude", "d"]);
+    assert_eq!(excluded_names(&env.lock()), ["d"]);
+
+    env.run(&["update", "--yes"]);
+    let lock = env.lock();
+    assert_eq!(excluded_names(&lock), ["d"], "{lock}");
+    assert!(!env.installed("d"));
+    assert!(!has_lock_item(&lock, "d"), "{lock}");
+    env.run(&["update", "--yes"]);
+    assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
+}
