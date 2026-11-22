@@ -513,7 +513,8 @@ requires the item (also an item that `--exclude` leaves out). Every other
 requirer is kept, also when it is not installed. The result does not depend on
 the order of the sources or of two `add` commands. Current limitation (#570):
 the lockfile does not record the `--exclude` of an earlier `add`, so `update`
-can install an excluded bundle member again.
+plans an item that the earlier `add` excluded: it can install that item, replace
+the same item from another source, or fail.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
