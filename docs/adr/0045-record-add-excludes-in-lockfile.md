@@ -54,12 +54,19 @@ How a later `add` changes the record:
    recorded names plus its `--exclude` names, minus the item names that it was
    given and does not also exclude. An empty result deletes the record. An `add`
    without item names and without `--exclude` keeps the record.
-3. `update` passes the recorded names of a source as its excludes, in all three
-   paths above. `update` never removes names from the record. An item excluded
-   after it was installed stays installed until the next `update`, which removes
-   it; the name stays recorded.
-4. `remove` deletes the record of a source when no item entry and no bundle
-   record of that source remain.
+3. `add` also applies the recorded names of its entry source: its excludes are
+   the recorded names that it does not name, plus its own `--exclude` names. So
+   an `add` that does not name an excluded item keeps it out, also when another
+   named item requires it, and an `add` without item names keeps every recorded
+   item out. `update` passes the recorded names of a source as its excludes, in
+   all three paths above. `update` never removes names from the record. An item
+   excluded after it was installed stays installed until the next `update`,
+   which removes it, also when it is the only item of the source, and reports it
+   as removed because it is excluded; the name stays recorded while the source
+   has an item entry or a bundle record.
+4. `add`, `update` and `remove` delete the record of a source when no item entry
+   and no bundle record of that source remain, so an `add --exclude` that
+   installs nothing writes no record.
 5. `doctor` reports a record whose source has no item entry and no bundle record
    (`orphan_excludes`); the report is not clean.
 6. `--exclude` keeps matching by source name across every source of the closure.
@@ -70,6 +77,9 @@ How a later `add` changes the record:
   nothing (option B not taken).
 - An `--exclude` name that matches no item is recorded and stays until an `add`
   names it.
+- `remove` of the last item and the last bundle of a source also deletes the
+  record of that source, so a later `add` of the source installs the formerly
+  excluded items again.
 - `update --check` does not need the record, because it plans no items.
 - The only way to undo an exclude is `add <source> <name>`, or editing the
   lockfile.

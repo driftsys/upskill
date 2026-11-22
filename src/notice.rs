@@ -412,6 +412,7 @@ pub fn current_items(report: &UpdateReport) -> Vec<String> {
                     | UpdateStatus::Updated { .. }
                     | UpdateStatus::CompletedInterrupted
                     | UpdateStatus::Removed
+                    | UpdateStatus::RemovedExcluded
             )
         })
         .map(|item| format!("{}:{}", item.kind, item.name))

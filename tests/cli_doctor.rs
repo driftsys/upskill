@@ -1049,3 +1049,53 @@ fn doctor_reports_an_excludes_record_with_no_installed_source() {
         "expected the source label line: {out}"
     );
 }
+
+#[test]
+fn doctor_is_clean_with_a_valid_excludes_record() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let reg = tmp.path().join("reg");
+    let target = tmp.path().join("target");
+    for (name, extra) in [("d", ""), ("r", "requires:\n  skills: [d]\n")] {
+        fs::create_dir_all(reg.join(name)).unwrap();
+        fs::write(
+            reg.join(name).join("SKILL.md"),
+            format!("---\nschema: 1\nname: {name}\ndescription: test skill {name}.\n{extra}---\n\n# {name}\n"),
+        )
+        .unwrap();
+    }
+    fs::create_dir_all(target.join(".git")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            reg.to_str().unwrap(),
+            "r",
+            "--exclude",
+            "d",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let lock = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
+    assert!(lock.contains("\"excludes\""), "{lock}");
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["doctor", "--project"])
+        .assert()
+        .success();
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["doctor", "--project", "--json"])
+        .assert();
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let orphans = &json["scopes"][0]["orphan_excludes"];
+    assert!(
+        orphans.is_null() || orphans.as_array().is_some_and(|a| a.is_empty()),
+        "{out}"
+    );
+}

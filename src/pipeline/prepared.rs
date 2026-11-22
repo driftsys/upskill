@@ -950,6 +950,9 @@ impl PreparedInstall {
                 status,
             });
         }
+        // An excludes record whose source has no item and no bundle is not
+        // kept, for example after an `add` that installs nothing.
+        lock.prune_excludes();
         lock.save(target)?;
 
         // Per ADR-0003 / format-spec §7.4: ensure the Claude Code bridge file

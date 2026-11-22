@@ -512,19 +512,24 @@ being refreshed, an evaluated requirer is removed and added back where it still
 requires the item (also an item that `--exclude` leaves out). Every other
 requirer is kept, also when it is not installed. The result does not depend on
 the order of the sources or of two `add` commands. Each `add` records its
-`--exclude` names in the lockfile for its source, and `update` applies the
-recorded names of each source as its excludes, also for excluded bundle members
-and for excluded `requires:` dependencies from other sources. An item name given
-on the command line of an `add` is removed from the record, unless the same
-`add` also excludes it, so `add <source> <name>` installs an item that an
-earlier `add` excluded. An `add` without item names and without `--exclude`
-keeps the record. An `--exclude` name that matches no item is still recorded,
+`--exclude` names in the lockfile for its source. `add` and `update` apply the
+recorded names of the source as excludes, also for excluded bundle members and
+for excluded `requires:` dependencies from other sources: an `add` excludes the
+recorded names plus its own `--exclude` names, minus the item names given on its
+command line that it does not also exclude. An item name given on the command
+line of an `add` is removed from the record, unless the same `add` also excludes
+it, so `add <source> <name>` installs an item that an earlier `add` excluded. An
+`add` without item names and without `--exclude` keeps the record and keeps the
+recorded items out. An `--exclude` name that matches no item is still recorded,
 and it stays in the record until an `add` names it without excluding it. When an
 `add` excludes an item that is already installed, the item stays installed until
-the next `update`, which removes its files and its lock entry; the name stays in
-the record. `remove` deletes the record of a source when no item entry and no
-bundle record of that source remain, and `doctor` reports a record whose source
-has no item and no bundle (`orphan_excludes`).
+the next `update`, which removes its files and its lock entry, also when it is
+the only item of the source, and reports it as `removed — excluded`; the name
+stays in the record while the source has an item entry or a bundle record. An
+`add`, `update` or `remove` that leaves a source with no item entry and no
+bundle record deletes the record of that source, so an `add --exclude` that
+installs nothing writes no record. `doctor` reports a record whose source has no
+item and no bundle (`orphan_excludes`).
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,

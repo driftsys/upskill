@@ -796,8 +796,9 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
 
     // -- Orphan excludes records (issue #570) --
     // A record of `--exclude` names whose source has no installed item and no
-    // bundle. `remove` deletes such a record; one that remains was left by an
-    // interrupted run or written by hand.
+    // bundle. `add`, `update` and `remove` delete such a record when they save
+    // the lockfile, so one that remains comes from a hand edit or from an
+    // older binary.
     {
         let mut pruned = lock.clone();
         pruned.prune_excludes();
@@ -1608,7 +1609,18 @@ pub fn update(
             prepared_sources.into_iter().enumerate()
         {
             let new_hashes = prepared.planned_hashes();
-            guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
+            // An entry whose in-source name the lockfile records as excluded
+            // for this source is removed (issue #570).
+            let excluded = lock.excludes_for(&source_label);
+            let is_excluded = |e: &crate::lockfile::LockedItem| {
+                excluded.contains(e.source_name.as_ref().unwrap_or(&e.name))
+            };
+            let kept_entries: Vec<crate::lockfile::LockedItem> = source_entries
+                .iter()
+                .filter(|e| !is_excluded(e))
+                .cloned()
+                .collect();
+            guard_against_empty_source(&new_hashes, &kept_entries, &source_label)?;
             // The bundles that the lockfile records for this source, as the
             // fetched source declares them now: the plugin repair below
             // installs from them (issue #229). A source under a kind
@@ -1818,13 +1830,24 @@ pub fn update(
                     report.kept_modified.extend(plan.kept.iter().cloned());
                     report.forced.extend(plan.forced.iter().cloned());
                     lock.remove(plan.kind, &plan.name);
+                    let status = if orphans
+                        .iter()
+                        .any(|o| o.kind == plan.kind && o.name == plan.name && is_excluded(o))
+                    {
+                        UpdateStatus::RemovedExcluded
+                    } else {
+                        UpdateStatus::Removed
+                    };
                     report.items.push(UpdatedItem {
                         kind: plan.kind,
                         name: plan.name,
                         source: source_label.clone(),
-                        status: UpdateStatus::Removed,
+                        status,
                     });
                 }
+                // A source left with no item and no bundle keeps no excludes
+                // record.
+                lock.prune_excludes();
                 lock.save(target)?;
                 drop_global_opencode_rules(at.scope, target, &dropped);
             }
@@ -1923,7 +1946,9 @@ pub fn update(
                     match item.status {
                         UpdateStatus::Updated { .. } => result.updated += 1,
                         UpdateStatus::CompletedInterrupted => result.completed += 1,
-                        UpdateStatus::Removed => result.removed += 1,
+                        UpdateStatus::Removed | UpdateStatus::RemovedExcluded => {
+                            result.removed += 1
+                        }
                         UpdateStatus::UpToDate
                         | UpdateStatus::SkippedModified { .. }
                         | UpdateStatus::NotApplied { .. }

@@ -316,3 +316,91 @@ fn update_keeps_the_exclude_of_a_dependency_installed_before_the_exclude() {
     env.run(&["update", "--yes"]);
     assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
 }
+
+fn stdout_of(out: &Assert) -> String {
+    String::from_utf8(out.get_output().stdout.clone()).unwrap()
+}
+
+#[test]
+fn add_of_a_requiring_item_keeps_an_excluded_dependency_out() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "d", "", "dependency");
+    write_skill(&reg, "r", "requires:\n  skills: [d]\n", "first");
+    write_skill(&reg, "x", "", "other");
+    env.run(&["add", s(&reg), "x", "--exclude", "d"]);
+    env.run(&["add", s(&reg), "r"]);
+
+    assert!(env.installed("r"));
+    assert!(!env.installed("d"));
+    let lock = env.lock();
+    assert!(!has_lock_item(&lock, "d"), "{lock}");
+    assert_eq!(excluded_names(&lock), ["d"], "{lock}");
+
+    let stdout = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(!stdout.contains("removed"), "{stdout}");
+}
+
+#[test]
+fn a_whole_source_add_keeps_excluded_items_out() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "d", "", "first");
+    env.run(&["add", s(&reg), "a", "--exclude", "d"]);
+    env.run(&["add", s(&reg)]);
+
+    assert!(env.installed("a"));
+    assert!(!env.installed("d"));
+    assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
+}
+
+#[test]
+fn naming_and_excluding_the_same_item_keeps_it_excluded() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "d", "", "first");
+    env.run(&["add", s(&reg), "a", "--exclude", "d"]);
+    env.run(&["add", s(&reg), "d", "--exclude", "d"]);
+
+    assert!(!env.installed("d"));
+    assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
+}
+
+#[test]
+fn update_removes_the_only_installed_item_once_it_is_excluded() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "b", "", "first");
+    env.run(&["add", s(&reg), "b"]);
+    env.run(&["add", s(&reg), "--exclude", "b"]);
+    assert!(env.installed("b"));
+
+    let stdout = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(stdout.contains("removed — excluded"), "{stdout}");
+    assert!(!stdout.contains("no longer in source"), "{stdout}");
+    assert!(!env.installed("b"));
+    assert!(!has_lock_item(&env.lock(), "b"), "{}", env.lock());
+
+    env.run(&["update", "--yes"]);
+}
+
+#[test]
+fn an_add_that_installs_nothing_writes_no_excludes_record() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "b", "", "first");
+    env.run(&["add", s(&reg), "--exclude", "b"]);
+
+    assert!(!env.installed("b"));
+    if env.consumer().join(".upskill-lock.json").exists() {
+        let lock = env.lock();
+        assert!(lock.get("excludes").is_none(), "{lock}");
+    }
+    common::upskill_cmd(&env.tmp.path().join("home"))
+        .current_dir(env.consumer())
+        .args(["doctor", "--project"])
+        .assert()
+        .success();
+}
