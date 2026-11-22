@@ -1372,7 +1372,7 @@ pub fn update(
                 force: true,
                 overwrite,
                 aliases,
-                excludes: vec![],
+                excludes: lock.excludes_for(&source_label),
                 kinds,
                 bundles: if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
                     Vec::new()

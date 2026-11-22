@@ -135,9 +135,15 @@ fn add_with_exclude_skips_named_item() {
         lock_content.contains("skill-a"),
         "expected skill-a: {lock_content}"
     );
+    // The excludes record names `skill-b`, so only the items are checked.
+    let lock: serde_json::Value = serde_json::from_str(&lock_content).unwrap();
     assert!(
-        !lock_content.contains("skill-b"),
-        "expected no skill-b: {lock_content}"
+        !lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["name"] == "skill-b"),
+        "expected no skill-b item: {lock_content}"
     );
 }
 

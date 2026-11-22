@@ -38,6 +38,9 @@ pub(super) struct PreparedInstall {
     /// local path.
     commit: Option<String>,
     options: AddOptions,
+    /// The item names given to this run, before any alias. Empty for a
+    /// whole-source or bundle-file install.
+    requested: Vec<String>,
     /// The plan, after `plan::merge_duplicates`.
     report: InstallReport,
     /// Holds the clone guards of the cross-source fetches.
@@ -443,6 +446,7 @@ pub(super) fn prepare_install(
         git_ref: git_ref.map(str::to_string),
         commit,
         options,
+        requested: items.to_vec(),
         report,
         closure,
         resolved_bundles,
@@ -779,6 +783,7 @@ impl PreparedInstall {
             git_ref,
             commit: _,
             options,
+            requested,
             mut report,
             closure: _closure,
             resolved_bundles,
@@ -883,6 +888,7 @@ impl PreparedInstall {
             }
             lock.upsert(item);
         }
+        lock.record_excludes(&label, &options.excludes, &requested);
         if resolved_bundles.is_empty() {
             // Same-source bundle install (no cross-source provenance): every bundle
             // came from the entry source.
