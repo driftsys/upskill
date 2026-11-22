@@ -422,6 +422,30 @@ fn add_removes_only_the_excluded_member_of_a_group() {
 }
 
 #[test]
+fn add_that_removes_an_excluded_bundle_member_keeps_the_bundle_record() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "d", "", "first");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "d"]);
+    let bundle = reg.join("b.bundle.yaml");
+    env.run(&["add", s(&bundle)]);
+    assert!(env.installed("a") && env.installed("d"));
+
+    env.run(&["add", s(&bundle), "--exclude", "d"]);
+    let lock = env.lock();
+    assert!(env.installed("a") && !env.installed("d"));
+    assert_eq!(lock["bundles"].as_array().unwrap().len(), 1, "{lock}");
+    assert!(!has_lock_item(&lock, "d"), "{lock}");
+
+    write_skill(&reg, "a", "", "second");
+    env.run(&["update", "--yes"]);
+    let lock = env.lock();
+    assert!(env.installed("a") && !env.installed("d"));
+    assert_eq!(lock["bundles"].as_array().unwrap().len(), 1, "{lock}");
+}
+
+#[test]
 fn add_reports_each_installed_item_that_it_removes_as_excluded() {
     let env = Env::new();
     let reg = env.registry("reg");
@@ -430,13 +454,11 @@ fn add_reports_each_installed_item_that_it_removes_as_excluded() {
     env.run(&["add", s(&reg)]);
 
     let stdout = stdout_of(&env.run(&["add", s(&reg), "--exclude", "d"]));
-    assert!(
-        stdout
-            .lines()
-            .any(|l| l.contains("removed — excluded") && l.contains('d')),
-        "{stdout}"
-    );
-    assert!(!stdout.contains("removed — excluded skill a"), "{stdout}");
+    let lines: Vec<&str> = stdout
+        .lines()
+        .filter(|l| l.contains("removed — excluded"))
+        .collect();
+    assert_eq!(lines, ["removed — excluded skill d"], "{stdout}");
 }
 
 #[test]

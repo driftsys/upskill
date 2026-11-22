@@ -134,7 +134,8 @@ pub fn remove(at: &ScopeRoot, filter: RemoveFilter, force: bool) -> Result<Remov
 
 /// Remove exactly the items `keys`, without the co-location expansion of
 /// [`remove`]. `add --exclude` uses it so that a member of the same group
-/// that the command does not exclude stays installed (issue #570).
+/// that the command does not exclude stays installed. Bundle records stay
+/// (issue #570).
 pub(crate) fn remove_exact(at: &ScopeRoot, keys: &[(ItemKind, String)]) -> Result<RemoveReport> {
     let lock = crate::lockfile::Lockfile::load(at.root.as_path())?;
     check_lockfile_records(at.root.as_path(), &lock)?;
@@ -144,8 +145,15 @@ pub(crate) fn remove_exact(at: &ScopeRoot, keys: &[(ItemKind, String)]) -> Resul
         .filter(|i| keys.iter().any(|(k, n)| *k == i.kind && n == &i.name))
         .cloned()
         .collect();
-    let filter = RemoveFilter::ByNames(keys.iter().map(|(_, n)| n.clone()).collect());
-    remove_items(at, lock, filter, &to_remove, false)
+    // An empty name list selects no bundle, so the bundle records, their
+    // plugin entries and the opencode plugin URIs stay.
+    remove_items(
+        at,
+        lock,
+        RemoveFilter::ByNames(Vec::new()),
+        &to_remove,
+        false,
+    )
 }
 
 /// The part of `remove` that runs once the items are selected: check, adopt
