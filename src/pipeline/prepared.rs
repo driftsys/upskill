@@ -451,6 +451,22 @@ pub(super) fn prepare_install(
     let mut options = options.clone();
     options.kinds.sort();
     options.kinds.dedup();
+    let mut excluded: BTreeSet<(ItemKind, String)> = closure
+        .as_ref()
+        .map(|c| c.skipped.clone())
+        .unwrap_or_default();
+    // A whole-source install takes every item of the source; the items
+    // with an excluded name are the ones it does not take.
+    if items.is_empty() {
+        excluded.extend(
+            scanned_items
+                .iter()
+                .filter(|(_, n)| options.excludes.contains(n))
+                .filter(|(kind, _)| options.kinds.is_empty() || options.kinds.contains(kind))
+                .map(|(kind, name)| (*kind, name.clone())),
+        );
+    }
+    report.excluded = excluded.into_iter().collect();
     Ok(PreparedInstall {
         label,
         git_ref: git_ref.map(str::to_string),
@@ -467,6 +483,20 @@ pub(super) fn prepare_install(
 }
 
 impl PreparedInstall {
+    /// The names of `own` that match no item of the entry source and no
+    /// item that the resolver skipped. Such a name is most likely a typo.
+    pub fn unknown_excludes(&self, own: &[String]) -> Vec<String> {
+        let known: BTreeSet<String> = scan_source_items(&self.local_source)
+            .into_iter()
+            .map(|(_, name)| name)
+            .chain(self.report.excluded.iter().map(|(_, name)| name.clone()))
+            .collect();
+        own.iter()
+            .filter(|name| !known.contains(*name))
+            .cloned()
+            .collect()
+    }
+
     /// The bundle `name` as the fetched entry source declares it now: a
     /// bundle that this install resolved (always the case for a bundle-file
     /// source), else the bundle file of that name in a directory source.

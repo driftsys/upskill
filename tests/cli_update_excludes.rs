@@ -598,3 +598,73 @@ fn add_that_removes_an_excluded_item_leaves_no_link_to_it() {
         "{lock}"
     );
 }
+
+fn stderr_of(out: &Assert) -> String {
+    String::from_utf8(out.get_output().stderr.clone()).unwrap()
+}
+
+#[test]
+fn an_exclude_that_matches_nothing_is_refused() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    env.run(&["add", s(&reg), "a"]);
+    let lock_path = env.consumer().join(".upskill-lock.json");
+    let before = fs::read(&lock_path).unwrap();
+
+    let out = common::upskill_cmd(&env.tmp.path().join("home"))
+        .current_dir(env.consumer())
+        .args(["add", s(&reg), "--exclude", "nothing-by-this-name"])
+        .args(["--project", "--claude"])
+        .assert()
+        .code(2);
+
+    let stderr = stderr_of(&out);
+    assert!(stderr.contains("typo"), "{stderr}");
+    assert!(stderr.contains("nothing-by-this-name"), "{stderr}");
+    assert_eq!(fs::read(&lock_path).unwrap(), before);
+    assert!(env.installed("a"));
+}
+
+#[test]
+fn add_prints_each_excluded_item() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "d", "", "dependency");
+    write_skill(&reg, "r", "requires:\n  skills: [d]\n", "first");
+    write_skill(&reg, "r2", "requires:\n  skills: [d]\n", "second");
+    write_skill(&reg, "w", "", "whole source skip");
+    let out = env.run(&["add", s(&reg), "--exclude", "d", "--exclude", "w"]);
+
+    let stderr = stderr_of(&out);
+    assert_eq!(stderr.matches("excluded skill d").count(), 1, "{stderr}");
+    assert!(stderr.contains("excluded skill w"), "{stderr}");
+    assert!(!env.installed("d"));
+}
+
+#[test]
+fn an_item_removed_by_this_run_is_not_also_listed_as_excluded() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "b", "", "first");
+    write_skill(&reg, "c", "", "second");
+    env.run(&["add", s(&reg), "b"]);
+    let out = env.run(&["add", s(&reg), "--exclude", "b"]);
+
+    let stderr = stderr_of(&out);
+    let stdout = stdout_of(&out);
+    assert!(stdout.contains("removed"), "{stdout}");
+    assert!(!stderr.contains("excluded skill b"), "{stderr}");
+}
+
+#[test]
+fn quiet_hides_the_excluded_lines() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "d", "", "first");
+    let out = env.run(&["add", s(&reg), "--exclude", "d", "--quiet"]);
+
+    let stderr = stderr_of(&out);
+    assert!(!stderr.contains("excluded"), "{stderr}");
+}

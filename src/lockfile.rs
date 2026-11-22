@@ -807,6 +807,7 @@ mod tests {
             conflicts: Vec::new(),
             kept_modified: Vec::new(),
             removed_excluded: Vec::new(),
+            excluded: Vec::new(),
             forced: Vec::new(),
             changed: Vec::new(),
             items: vec![

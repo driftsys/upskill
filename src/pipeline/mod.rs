@@ -244,6 +244,13 @@ pub fn install_with_lockfile(
     effective.excludes = effective_excludes(&recorded, &options.excludes, items);
     let options = &effective;
     let prepared = prepared::prepare_install(source, target, items, options)?;
+    // A name of the command's own `--exclude` that matches nothing is most
+    // likely a typo. The recorded names are not checked: an item can leave
+    // its source. Nothing is written before this point.
+    let unknown = prepared.unknown_excludes(&own_excludes);
+    if !unknown.is_empty() {
+        return Err(UnknownExclude { names: unknown }.into());
+    }
     // A git subfolder or repository root that is one item directory
     // installs nothing (#577). `prepare_install` writes nothing, so the
     // refusal still comes before any write. `update` does not run this check.
@@ -322,5 +329,7 @@ pub fn install_with_lockfile(
         }
         report.removed_excluded = excluded_installed;
     }
+    let removed = report.removed_excluded.clone();
+    report.excluded.retain(|item| !removed.contains(item));
     Ok(report)
 }

@@ -2169,6 +2169,7 @@ pub fn list(target: &Path) -> Result<ListReport> {
         });
     }
     report.bundles.sort_by(|a, b| a.name.cmp(&b.name));
+    report.excludes = lock.excludes.clone();
     Ok(report)
 }
 

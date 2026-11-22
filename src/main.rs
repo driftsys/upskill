@@ -375,6 +375,7 @@ fn run_add(args: AddArgs) -> i32 {
     match install_with_lockfile(&parsed, &at.root, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
+            print_excluded(&report);
             print_adoption_notice(report.adopted.as_deref());
             print_selection_skipped(&report);
             print_plugin_results(&report);
@@ -389,6 +390,10 @@ fn run_add(args: AddArgs) -> i32 {
             }
         }
         Err(err) => {
+            if let Some(unknown) = err.downcast_ref::<upskill::pipeline::UnknownExclude>() {
+                print_error(unknown);
+                return EXIT_USAGE;
+            }
             print_adoption_after_error(&err);
             print_error_chain(&err);
             eprintln!();
@@ -667,6 +672,20 @@ fn print_install_report(report: &InstallReport, source: &str) {
         println!(
             "{} {} {}",
             style::error_label("removed — excluded"),
+            style::dim(kind_label_of(*kind)),
+            style::name(name)
+        );
+    }
+}
+
+/// One stderr line for each item that an exclude kept out of the run.
+fn print_excluded(report: &InstallReport) {
+    if style::is_quiet() {
+        return;
+    }
+    for (kind, name) in &report.excluded {
+        eprintln!(
+            "excluded {} {}",
             style::dim(kind_label_of(*kind)),
             style::name(name)
         );
@@ -2421,6 +2440,9 @@ fn print_list_report(scoped: &[ScopedList]) {
         print_list_section("skills", &report.skills);
         print_list_section("agents", &report.agents);
         print_list_bundles(&report.bundles);
+        if !report.excludes.is_empty() {
+            println!("  excluded: {}", report.excludes.join(", "));
+        }
     }
 }
 

@@ -89,6 +89,11 @@ pub struct InstallReport {
     /// Items that were already installed from the source and that the
     /// command's `--exclude` names. `add` removed them (issue #570).
     pub removed_excluded: Vec<(ItemKind, String)>,
+    /// Items that an exclude kept out of this run, each once: dependencies
+    /// and bundle members that the resolver skipped, and items of the
+    /// source that a whole-source install did not take. An item in
+    /// `removed_excluded` is not listed here.
+    pub excluded: Vec<(ItemKind, String)>,
 }
 
 /// What a commit would do to one item.
@@ -153,6 +158,25 @@ impl std::fmt::Display for FetchFailed {
 }
 
 impl std::error::Error for FetchFailed {}
+
+/// `add` refused names of `--exclude` that match no item. `main.rs` maps it
+/// to the usage exit code.
+#[derive(Debug, Clone)]
+pub struct UnknownExclude {
+    pub names: Vec<String>,
+}
+
+impl std::fmt::Display for UnknownExclude {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "--exclude matches no item of the source (check for a typo): {}",
+            self.names.join(", ")
+        )
+    }
+}
+
+impl std::error::Error for UnknownExclude {}
 
 /// Error context attached, as the outermost layer, when `update` fails after
 /// it skipped sources (for either [`SkipCause`]), so that `main.rs` can print
@@ -817,6 +841,8 @@ pub struct ListReport {
     pub skills: Vec<ListedItem>,
     pub agents: Vec<ListedItem>,
     pub bundles: Vec<ListedBundle>,
+    /// The `--exclude` names that the lockfile records, sorted.
+    pub excludes: Vec<String>,
 }
 
 impl ListReport {
