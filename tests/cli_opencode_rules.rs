@@ -225,7 +225,17 @@ fn global_update_removes_the_entry_of_a_rule_that_the_source_no_longer_has() {
 fn global_doctor_reports_a_removed_entry_and_update_restores_it() {
     let env = Env::new();
     env.add_global(None);
-    env.run(&["doctor", "--global"], None).code(0);
+    let clean = env.run(&["doctor", "--global"], None).code(0);
+    let clean_text = stdout(&clean);
+    assert!(!clean_text.contains("doctor: 0"), "{clean_text}");
+    assert!(
+        !clean_text.contains("not installed for opencode are listed"),
+        "{clean_text}"
+    );
+    assert!(
+        !clean_text.contains("that the lockfile does not record"),
+        "{clean_text}"
+    );
 
     let mut config = read_json(&env.config());
     config["instructions"] = serde_json::json!([env.entry("rule-b")]);
@@ -507,8 +517,8 @@ fn doctor_reports_and_update_deletes_the_entry_of_a_recorded_rule_not_installed_
         .success();
     // The entry of `rule-a`, which the lockfile records for claude only, is
     // left in the config (as after a removal that failed). The entry of
-    // `rule-x`, a name that the lockfile does not know, and a foreign entry
-    // are not upskill's.
+    // `rule-x`, a name that the lockfile does not record, and a foreign entry
+    // are also in the config; `doctor` reports `rule-x` as unrecorded.
     set_instructions(
         &env,
         serde_json::json!([
@@ -525,7 +535,6 @@ fn doctor_reports_and_update_deletes_the_entry_of_a_recorded_rule_not_installed_
             .any(|l| l.trim_start().starts_with("rule rule-a")),
         "{text}"
     );
-    assert!(!text.contains("rule-x"), "{text}");
     assert!(
         text.lines().any(|l| l.contains(
             "1 rule(s) not installed for opencode are listed in the global opencode config"
@@ -535,8 +544,11 @@ fn doctor_reports_and_update_deletes_the_entry_of_a_recorded_rule_not_installed_
     let json = env.run(&["doctor", "--global", "--json"], None).code(1);
     let value: serde_json::Value = serde_json::from_str(&stdout(&json)).unwrap();
     let stale = value["scopes"][0]["stale_rule_entries"].as_array().unwrap();
-    assert_eq!(stale.len(), 1, "{value}");
+    assert_eq!(stale.len(), 2, "{value}");
     assert_eq!(stale[0]["name"], "rule-a", "{value}");
+    assert_eq!(stale[0]["recorded"], true, "{value}");
+    assert_eq!(stale[1]["name"], "rule-x", "{value}");
+    assert_eq!(stale[1]["recorded"], false, "{value}");
     assert_eq!(
         stale[0]["config"].as_str().unwrap(),
         env.config().to_str().unwrap(),
@@ -545,11 +557,73 @@ fn doctor_reports_and_update_deletes_the_entry_of_a_recorded_rule_not_installed_
 
     env.run(&["update", "--yes", "--global"], None).code(0);
 
+    // `update` deletes only the entry of the recorded rule; the entry of
+    // `rule-x` stays and `doctor` still reports it.
     assert_eq!(
         instructions_of(&env),
         serde_json::json!([env.entry("rule-x"), "/elsewhere/own.md"])
     );
-    env.run(&["doctor", "--global"], None).code(0);
+    let out = env.run(&["doctor", "--global"], None).code(1);
+    let text = stdout(&out);
+    assert!(
+        text.lines()
+            .any(|l| l.trim_start().starts_with("rule rule-x")),
+        "{text}"
+    );
+}
+
+#[test]
+fn doctor_reports_the_entry_of_a_rule_that_the_lockfile_no_longer_records() {
+    let env = Env::new();
+    env.add_global(None);
+    env.run(&["remove", "rule-a", "--global"], None).success();
+    // The entry of `rule-a` is left in the config, as after a removal that
+    // failed after the lockfile was saved. Entries in another form, also
+    // ones that name an unrecorded rule, are the user's.
+    let other_form = format!("{}/", env.entry("rule-z"));
+    set_instructions(
+        &env,
+        serde_json::json!([
+            env.entry("rule-a"),
+            env.entry("rule-b"),
+            other_form,
+            "/elsewhere/rule-z/RULE.md"
+        ]),
+    );
+
+    let out = env.run(&["doctor", "--global"], None).code(1);
+    let text = stdout(&out);
+    assert!(
+        text.lines().any(|l| l.contains(
+            "1 entry(ies) in the global opencode config name rule(s) that the lockfile does not record — delete the entries by hand"
+        )),
+        "{text}"
+    );
+    assert!(
+        text.lines()
+            .any(|l| l.trim_start().starts_with("rule rule-a")),
+        "{text}"
+    );
+    let json = env.run(&["doctor", "--global", "--json"], None).code(1);
+    let value: serde_json::Value = serde_json::from_str(&stdout(&json)).unwrap();
+    let stale = value["scopes"][0]["stale_rule_entries"].as_array().unwrap();
+    assert_eq!(stale.len(), 1, "{value}");
+    assert_eq!(stale[0]["name"], "rule-a", "{value}");
+    assert_eq!(stale[0]["recorded"], false, "{value}");
+    assert!(
+        value["scopes"][0].get("missing_rule_entries").is_none(),
+        "{value}"
+    );
+
+    // `update` does not delete an entry for a name that the lockfile does
+    // not record.
+    env.run(&["update", "--yes", "--global"], None).code(0);
+    assert!(
+        instructions_of(&env)
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!(env.entry("rule-a")))
+    );
 }
 
 #[test]
