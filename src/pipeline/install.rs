@@ -615,6 +615,8 @@ fn source_git_ref(s: &InstallSource) -> Option<String> {
 /// A dependency whose name is in `excludes` is left out and recorded in
 /// [`DependencyClosure::skipped`]; the items of `initial` are never excluded
 /// here.
+/// Callers pass `excludes` with the names of the run's by-name requests
+/// already removed, as [`super::effective_excludes`] does.
 pub(super) fn resolve_requires_closure(
     entry_label: &str,
     entry_root: &Path,
@@ -889,6 +891,8 @@ impl BundleResolver {
 /// plugin/MCP install and per-bundle lockfile recording. A member item whose
 /// name is in `excludes` is left out and recorded in
 /// [`DependencyClosure::skipped`].
+/// Callers pass `excludes` with the names of the run's by-name requests
+/// already removed, as [`super::effective_excludes`] does.
 pub(super) fn resolve_bundle_closure(
     entry_label: &str,
     entry_root: &Path,

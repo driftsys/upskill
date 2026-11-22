@@ -986,8 +986,9 @@ fn add_evaluates_a_transitive_cross_source_requirer() {
 }
 
 /// Issue #570: the resolver does not visit a dependency that `--exclude`
-/// leaves out, so its `requires` are not evaluated and the link that the
-/// installed `x` recorded on `y` stays.
+/// leaves out, so its `requires` are not evaluated. `x` comes from another
+/// source than `reg-a`, so the `add` does not remove it, and the link that
+/// the installed `x` recorded on `y` stays and is not dangling.
 #[test]
 fn add_does_not_evaluate_the_requires_of_an_excluded_dependency() {
     let (tmp, home) = chain_where_x_stops_requiring_y();
@@ -997,6 +998,15 @@ fn add_does_not_evaluate_the_requires_of_an_excluded_dependency() {
         .assert()
         .success();
     let lock = read_lock(tmp.path());
+    assert!(
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["kind"] == "skill" && i["name"] == "x"),
+        "{lock}"
+    );
+    assert!(tmp.path().join(".claude/skills/x/SKILL.md").exists());
     assert_eq!(
         required_by(&lock, "skill", "y"),
         vec!["skill:x".to_string()],

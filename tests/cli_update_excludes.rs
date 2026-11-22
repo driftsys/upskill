@@ -571,3 +571,30 @@ fn an_excluded_member_of_a_required_bundle_stays_out() {
     assert!(!env.installed("d"));
     assert!(!has_lock_item(&env.lock(), "d"), "{}", env.lock());
 }
+
+#[test]
+fn add_that_removes_an_excluded_item_leaves_no_link_to_it() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "x", "", "other");
+    env.run(&["add", s(&reg), "d"]);
+    assert_eq!(
+        lock_item(&env.lock(), "e")["required_by"],
+        serde_json::json!(["skill:d"])
+    );
+
+    env.run(&["add", s(&reg), "x", "--exclude", "d"]);
+
+    let lock = env.lock();
+    assert!(!has_lock_item(&lock, "d"), "{lock}");
+    assert!(
+        lock["items"].as_array().unwrap().iter().all(|i| {
+            i.get("required_by")
+                .and_then(|r| r.as_array())
+                .is_none_or(|a| a.iter().all(|r| r != "skill:d"))
+        }),
+        "{lock}"
+    );
+}

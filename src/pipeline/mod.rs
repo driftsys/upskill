@@ -304,6 +304,22 @@ pub fn install_with_lockfile(
             root: target.to_path_buf(),
         };
         lifecycle::remove_exact(&at, &excluded_installed)?;
+        // The other items must not keep a `required_by` link to an item
+        // that this run removed.
+        let gone: std::collections::BTreeSet<String> = excluded_installed
+            .iter()
+            .map(|(kind, name)| format!("{kind}:{name}"))
+            .collect();
+        let mut lock = crate::lockfile::Lockfile::load(target)?;
+        let mut changed = false;
+        for item in &mut lock.items {
+            let before = item.required_by.len();
+            item.required_by.retain(|r| !gone.contains(r));
+            changed |= item.required_by.len() != before;
+        }
+        if changed {
+            lock.save(target)?;
+        }
         report.removed_excluded = excluded_installed;
     }
     Ok(report)
