@@ -1091,7 +1091,7 @@ scope. For each scope it reports thirteen independent buckets:
   rule. An earlier removal of the entry can have failed after the lockfile was
   saved. When the lockfile records the rule for other clients than opencode
   (`recorded: true`), `upskill update --global` and `upskill add --global`
-  delete the entry. When the lockfile does not record the name at all
+  delete the entry. When the lockfile records no rule of that name
   (`recorded: false`), the entry is reported but not deleted, because upskill
   cannot tell it from an entry written by hand; delete it by hand. Entries in
   another form are not reported. Causes exit 1.

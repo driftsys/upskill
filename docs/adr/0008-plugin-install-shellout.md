@@ -219,34 +219,35 @@ Decision:
   of a rule that it removes in that operation, and `add` and `update` (not
   `remove`) delete the entry of a rule that the lockfile records for other
   clients than opencode (an earlier run can have saved the lockfile and then
-  failed to edit the file). An entry of the same form for a rule that the
-  lockfile does not record, written by hand, is kept. The rules step reads and
-  parses the file whenever the run installs an opencode rule (to find out
-  whether the entry is present), or deletes an entry. A run that installs no
-  opencode rule and deletes no entry reads the file only to find such a stale
-  entry, when the lockfile records a rule for other clients than opencode; a
-  file that cannot be read as JSON adds no deletion and no error there. The
-  plugin and MCP steps read it when the run writes an entry of theirs. A file
-  that is not strict JSON (for example one with comments) therefore breaks every
-  run that installs an opencode rule, also when all entries are present.
-  `doctor --global` reports a recorded rule whose entry is missing, as drift
-  with exit code 1, and `update --global` writes it again, also when the file
-  has no `instructions` array. It also reports, as drift, the entry of a rule
-  that the lockfile records for other clients than opencode
-  (`stale_rule_entries` with `recorded: true`), and `update --global` deletes
-  it. The removal of an entry that fails during `remove` or the orphan cleanup
-  of `update` leaves an entry of a rule that the lockfile no longer records;
-  `doctor --global` reports every entry of the form
+  failed to edit the file). An entry of the same form for a name that the
+  lockfile does not record at all is kept, because its origin is unknown;
+  `doctor` reports it. The rules step reads and parses the file whenever the run
+  installs an opencode rule (to find out whether the entry is present), or
+  deletes an entry. A run that installs no opencode rule and deletes no entry
+  reads the file only to find such a stale entry, when the lockfile records a
+  rule for other clients than opencode; a file that cannot be read as JSON adds
+  no deletion and no error there. The plugin and MCP steps read it when the run
+  writes an entry of theirs. A file that is not strict JSON (for example one
+  with comments) therefore breaks every run that installs an opencode rule, also
+  when all entries are present. `doctor --global` reports a recorded rule whose
+  entry is missing, as drift with exit code 1, and `update --global` writes it
+  again, also when the file has no `instructions` array. It also reports, as
+  drift, the entry of a rule that the lockfile records for other clients than
+  opencode (`stale_rule_entries` with `recorded: true`, which means that the
+  lockfile records a rule of that name for other clients), and `update --global`
+  deletes it. The removal of an entry that fails during `remove` or the orphan
+  cleanup of `update` leaves an entry of a rule that the lockfile no longer
+  records; `doctor --global` reports every entry of the form
   `<home>/.agents/rules/<name>/RULE.md` whose name the lockfile does not record
-  as an opencode rule (`stale_rule_entries` with `recorded: false`), as drift
-  with exit code 1. upskill does not delete such an entry, because it cannot
-  tell it from an entry that the user wrote by hand in the same form; the user
-  deletes it by hand. Entries in another form are not reported (issue #596).
-  When the file is not strict JSON, `doctor` reports every recorded rule as
-  missing, and `update` cannot repair it: it fails with a parse error until the
-  user fixes the file. Other entries and other keys of the file are kept. An
-  `instructions` value that is not an array is an error, and `update` cannot
-  repair it either.
+  as an opencode rule (`stale_rule_entries` with `recorded: false`, which means
+  that the lockfile records no rule of that name), as drift with exit code 1.
+  upskill does not delete such an entry, because it cannot tell it from an entry
+  that the user wrote by hand in the same form; the user deletes it by hand.
+  Entries in another form are not reported (issue #596). When the file is not
+  strict JSON, `doctor` reports every recorded rule as missing, and `update`
+  cannot repair it: it fails with a parse error until the user fixes the file.
+  Other entries and other keys of the file are kept. An `instructions` value
+  that is not an array is an error, and `update` cannot repair it either.
 - upskill does not read or write `$XDG_CONFIG_HOME/opencode/AGENTS.md`.
 
 ### Repair by `update`

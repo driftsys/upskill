@@ -1010,20 +1010,21 @@ as in a project; the `.vscode/settings.json` entry points at
   for a rule that the lockfile records for other clients than opencode, which
   `remove` keeps), and `doctor` reports a missing entry and a stale entry.
   `doctor` also reports an entry of the same form for a name that the lockfile
-  does not record; upskill keeps that entry and every other entry. The rules
-  step reads and parses the file whenever the run installs an opencode rule or
-  deletes an entry, so a file that is not strict JSON fails such an `add` or
-  `update` (`remove` ignores that error and leaves the entry), and `add` and
-  `update` (not `remove`) read it also to find a stale entry when the lockfile
-  records a rule for other clients than opencode (a file that cannot be read as
-  JSON adds no deletion and no error there); the plugin and MCP steps read it
-  when the run writes an entry of theirs. The plugin and MCP writers of both
-  scopes use the opencode config file of the scope: the project root in the
-  project scope, and `$XDG_CONFIG_HOME/opencode/` (when set and absolute) or
-  `~/.config/opencode/` in the global scope. `doctor`, `update` and `remove` use
-  the file of the scope whose lockfile they work on, not the scope that an entry
-  of that lockfile records. A trial with opencode 2.1.4 confirmed that opencode
-  reads `~/.config/opencode/opencode.json` and ignores `~/opencode.json`. The
+  does not record; upskill keeps that entry, and keeps every entry that it does
+  not delete as described above. The rules step reads and parses the file
+  whenever the run installs an opencode rule or deletes an entry, so a file that
+  is not strict JSON fails such an `add` or `update` (`remove` ignores that
+  error and leaves the entry), and `add` and `update` (not `remove`) read it
+  also to find a stale entry when the lockfile records a rule for other clients
+  than opencode (a file that cannot be read as JSON adds no deletion and no
+  error there); the plugin and MCP steps read it when the run writes an entry of
+  theirs. The plugin and MCP writers of both scopes use the opencode config file
+  of the scope: the project root in the project scope, and
+  `$XDG_CONFIG_HOME/opencode/` (when set and absolute) or `~/.config/opencode/`
+  in the global scope. `doctor`, `update` and `remove` use the file of the scope
+  whose lockfile they work on, not the scope that an entry of that lockfile
+  records. A trial with opencode 2.1.4 confirmed that opencode reads
+  `~/.config/opencode/opencode.json` and ignores `~/opencode.json`. The
   `XDG_CONFIG_HOME` location is used when set and absolute. In the trials of
   issue #581, opencode loaded the `instructions` of that location; no trial
   tested the plugin or MCP entries there. A `plugin_uri` plugin is written to

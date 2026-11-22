@@ -507,9 +507,10 @@ pub struct DoctorReport {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub missing_rule_entries: Vec<MissingRuleEntry>,
     /// Entries of the form that upskill writes, in the global opencode config,
-    /// for names that the lockfile does not record as opencode rules: rules
-    /// recorded for other clients (`recorded: true`) and names the lockfile
-    /// does not record at all (`recorded: false`). Entries in another form are
+    /// for names that the lockfile does not record as opencode rules: names
+    /// for which the lockfile records a rule for other clients
+    /// (`recorded: true`) and names for which the lockfile records no rule
+    /// (`recorded: false`). Entries in another form are
     /// not listed. Always empty for the project scope.
     /// Non-empty → `is_clean()` returns false.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

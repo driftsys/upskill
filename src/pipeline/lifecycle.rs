@@ -539,8 +539,8 @@ fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> 
 ///   global opencode config, for a name that the lockfile does not record as
 ///   an opencode rule. When the lockfile records the rule for other clients
 ///   (`recorded: true`), `upskill add --global` and `upskill update --global`
-///   delete the entry. An entry for a name that the lockfile does not record
-///   at all (`recorded: false`), for example one left by a failed removal, is
+///   delete the entry. An entry for a name of which the lockfile records no
+///   rule (`recorded: false`), for example one left by a failed removal, is
 ///   reported and kept; the user deletes it by hand. Entries in another form
 ///   are not reported.
 ///
