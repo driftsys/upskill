@@ -315,9 +315,10 @@ pub struct StaleHash {
 }
 
 /// Lockfile entry whose source can no longer be reached: the local
-/// path is gone or the named item has been removed from the SSOT
-/// directory. The user has to `remove` it explicitly to clear the
-/// lockfile, since `update` would just fail trying to fetch.
+/// path is gone, the source directory cannot be listed, or the named
+/// item has been removed from the SSOT directory. The user has to
+/// `remove` it explicitly to clear the lockfile, since `update` would just
+/// fail trying to fetch.
 #[derive(Debug, Clone, Serialize)]
 pub struct OrphanEntry {
     pub kind: ItemKind,

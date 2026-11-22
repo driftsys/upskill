@@ -509,8 +509,9 @@ fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> 
 ///   item directory hashes to a value that does not match the lockfile.
 ///   `upskill update` (or `--dry-run`) fixes it.
 /// - **orphan entries** — the lockfile points at a `local:` source that
-///   is gone, or at an item that no longer exists in its source. The
-///   user has to `upskill remove` to clear it.
+///   is gone, at a source directory whose items cannot be listed, or at
+///   an item that no longer exists in its source. The user has to
+///   `upskill remove` to clear it.
 /// - **orphaned dependencies** — items pulled in only as a dependency of
 ///   items that are no longer installed. Does not affect `is_clean`.
 /// - **missing plugins** — plugins recorded as installed that the client

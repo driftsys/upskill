@@ -1041,8 +1041,8 @@ scope. For each scope it reports thirteen independent buckets:
   exist, the one whose item name is the recorded name is used; when none of them
   has that name, the entry is reported as missing in the source.
 - **Lockfile entries with no recoverable source** (the local path went away, the
-  named item was removed in the source, or the source directory exists but its
-  items cannot be listed, for example because of a permission error; the read
+  named item was removed in the source, or the source directory itself exists
+  but cannot be listed, for example because of a permission error; the read
   error is printed) — `upskill remove` to clear.
 - **Orphaned dependencies** (informational) — items installed only as a
   dependency of items that are no longer installed. Does **not** cause exit 1.
