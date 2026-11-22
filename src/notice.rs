@@ -3,7 +3,8 @@
 //! The cache file records, for each scope root, the time of the last check
 //! (a check that reached no source also sets it), the updates that check
 //! found, and the set that the last printed notice reported. Time-dependent
-//! functions take the time as an argument. Cache loading and saving, run lock
+//! functions take the time as an argument; run lock acquisition uses it as a
+//! lower bound and also reads the clock after it observes a lock. Cache loading and saving, run lock
 //! acquisition, run lock cleanup, and [`mark_current_in_file`] perform file I/O.
 //!
 //! Runs sharing a cache directory share a run lock. A run that finds a lock
@@ -118,6 +119,9 @@ pub enum LockAttempt {
 }
 
 /// Create a run lock, replacing an expired or future-dated lock once.
+///
+/// `now` is a lower bound: the age of an existing lock uses the later of
+/// `now` and a clock reading taken after the lock is observed.
 pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt {
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
     if fs::create_dir_all(dir).is_err() {
@@ -128,6 +132,12 @@ pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt 
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
         Err(_) => return LockAttempt::Unavailable,
     }
+    #[cfg(test)]
+    tests::BEFORE_LOCK_OBSERVATION.with(|hook| {
+        if let Some(hook) = hook.borrow_mut().take() {
+            hook(path);
+        }
+    });
     // Read the token and timestamp from the same file, even if the path changes.
     let observed = (|| -> std::io::Result<_> {
         let mut file = fs::File::open(path)?;
@@ -140,6 +150,10 @@ pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt 
         Ok(observed) => observed,
         Err(_) => return LockAttempt::Unavailable,
     };
+    // A run that started at the same time can create the lock after the
+    // caller read the clock. Its lock must count as young, not as dated in
+    // the future, so the age uses a clock reading taken after the observation.
+    let now = now.max(std::time::SystemTime::now());
     if now
         .duration_since(modified)
         .is_ok_and(|age| age < std::time::Duration::from_secs(LOCK_MAX_AGE_SECS))
@@ -476,6 +490,8 @@ mod tests {
     thread_local! {
         pub(super) static BEFORE_STALE_LOCK_REMOVAL: std::cell::RefCell<Option<LockRemovalHook>> =
             const { std::cell::RefCell::new(None) };
+        pub(super) static BEFORE_LOCK_OBSERVATION: std::cell::RefCell<Option<LockRemovalHook>> =
+            const { std::cell::RefCell::new(None) };
         pub(super) static AFTER_STALE_LOCK_REMOVAL: std::cell::RefCell<Option<LockRemovalHook>> =
             const { std::cell::RefCell::new(None) };
         pub(super) static LOCK_CREATION_ATTEMPTS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
@@ -487,7 +503,7 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "expired owner").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 60);
         BEFORE_STALE_LOCK_REMOVAL.with(|hook| {
             *hook.borrow_mut() = Some(Box::new(|path| {
@@ -519,7 +535,7 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "expired owner").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 60);
         // The lock disappears after it was read, so the token check cannot
         // read it again.
@@ -541,7 +557,7 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "expired owner").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 60);
         AFTER_STALE_LOCK_REMOVAL.with(|hook| {
             *hook.borrow_mut() = Some(Box::new(|path| fs::write(path, "other run").unwrap()));
@@ -558,6 +574,12 @@ mod tests {
 
     fn lock_path(dir: &tempfile::TempDir) -> PathBuf {
         dir.path().join("cache").join(LOCK_FILE_NAME)
+    }
+
+    /// A time after the clock, so the lock age uses this value exactly and does
+    /// not grow with the elapsed test time.
+    fn future_now() -> SystemTime {
+        SystemTime::now() + Duration::from_secs(3600)
     }
 
     fn set_age(path: &Path, now: SystemTime, secs: u64) {
@@ -653,7 +675,7 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 59);
         assert!(matches!(acquire_run_lock(&path, now), LockAttempt::Busy));
         assert!(path.is_file());
@@ -665,11 +687,62 @@ mod tests {
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, "").unwrap();
-        let now = SystemTime::now();
+        let now = future_now();
         set_age(&path, now, 60);
         let attempt = acquire_run_lock(&path, now);
         assert!(matches!(attempt, LockAttempt::Held(_)));
         assert!(path.is_file());
+    }
+
+    #[test]
+    fn a_lock_created_after_the_caller_read_the_clock_is_busy() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        // The caller read the clock, then another run created the lock.
+        let now = SystemTime::now() - Duration::from_secs(2);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "other run").unwrap();
+        let attempt = acquire_run_lock(&path, now);
+        assert!(
+            matches!(attempt, LockAttempt::Busy),
+            "a lock of another run that started at the same time must be busy"
+        );
+        assert_eq!(fs::read(&path).unwrap(), b"other run");
+    }
+
+    #[test]
+    fn a_lock_replaced_between_the_failed_creation_and_the_observation_is_busy() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "expired owner").unwrap();
+        let now = SystemTime::now();
+        set_age(&path, now, 3600);
+        // Another run replaces the stale lock after this run read the clock
+        // and failed to create the lock, before this run observes it.
+        BEFORE_LOCK_OBSERVATION.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(|path| {
+                std::thread::sleep(Duration::from_millis(20));
+                fs::remove_file(path).unwrap();
+                fs::write(path, "other run").unwrap();
+            }));
+        });
+        let attempt = acquire_run_lock(&path, now);
+        assert!(
+            matches!(attempt, LockAttempt::Busy),
+            "a lock created after the clock reading must be busy"
+        );
+        assert_eq!(fs::read(&path).unwrap(), b"other run");
+    }
+
+    #[test]
+    fn a_now_later_than_the_clock_sets_the_age() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "owner").unwrap();
+        let attempt = acquire_run_lock(&path, SystemTime::now() + Duration::from_secs(61));
+        assert!(matches!(attempt, LockAttempt::Held(_)));
     }
 
     #[test]
