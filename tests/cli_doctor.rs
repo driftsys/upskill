@@ -1013,3 +1013,36 @@ fn doctor_is_clean_for_two_sources_with_kind_directories() {
     let (code, v) = doctor_json(&target, &home);
     assert_eq!(code, Some(0), "doctor must be clean: {v}");
 }
+
+#[test]
+fn doctor_reports_an_excludes_record_with_no_installed_source() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    let content = serde_json::json!({
+        "schema": 2,
+        "items": [],
+        "bundles": [],
+        "excludes": [{ "source": "owner/gone", "names": ["x"] }]
+    });
+    fs::write(
+        target.join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&content).unwrap(),
+    )
+    .unwrap();
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["doctor", "--project"])
+        .assert()
+        .failure()
+        .code(1);
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(
+        out.contains("owner/gone"),
+        "expected the source label: {out}"
+    );
+    assert!(out.contains("excludes"), "expected an excludes line: {out}");
+}

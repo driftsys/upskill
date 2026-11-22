@@ -419,6 +419,7 @@ fn remove_selected(
         .retain(|p| !bundles_to_remove.contains(&p.bundle));
     lock.bundles
         .retain(|b| !bundles_to_remove.contains(&b.name));
+    lock.prune_excludes();
 
     lock.save(target)?;
     drop_global_opencode_rules(at.scope, target, &opencode_rules);
@@ -790,6 +791,20 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                 config: config.clone(),
                 recorded: other_rules.contains(name),
             });
+        }
+    }
+
+    // -- Orphan excludes records (issue #570) --
+    // A record of `--exclude` names whose source has no installed item and no
+    // bundle. `remove` deletes such a record; one that remains was left by an
+    // interrupted run or written by hand.
+    {
+        let mut pruned = lock.clone();
+        pruned.prune_excludes();
+        for e in &lock.excludes {
+            if !pruned.excludes.iter().any(|k| k.source == e.source) {
+                report.orphan_excludes.push(e.source.clone());
+            }
         }
     }
 

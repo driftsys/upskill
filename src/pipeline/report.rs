@@ -516,6 +516,10 @@ pub struct DoctorReport {
     /// Non-empty → `is_clean()` returns false.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stale_rule_entries: Vec<StaleRuleEntry>,
+    /// Source labels of excludes records (issue #570) whose source has no
+    /// installed item and no bundle. Non-empty → `is_clean()` returns false.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub orphan_excludes: Vec<String>,
 }
 
 impl DoctorReport {
@@ -541,6 +545,7 @@ impl DoctorReport {
             && self.earlier_layout.is_empty()
             && self.missing_rule_entries.is_empty()
             && self.stale_rule_entries.is_empty()
+            && self.orphan_excludes.is_empty()
             && !self
                 .mcp_entries
                 .iter()
