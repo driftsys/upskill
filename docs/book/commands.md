@@ -62,11 +62,12 @@ nothing. With no item name, `add` of a local path that exists and holds no item
 (other than the refused item directory described below) installs no item, still
 writes the lockfile and `CLAUDE.md`, and exits with code 0.
 
-`add` of a source in which a `skills/`, `rules/` or `agents/` directory cannot
-be listed (for example because of a permission error), or, when the source is
-such a directory, a category directory in it cannot be listed, fails with exit
-code 1, writes nothing, and prints an error that names the directory. Any other
-unreadable directory in the source is skipped.
+`add` of a source (for a bundle file, of its registry root) in which a
+`skills/`, `rules/` or `agents/` directory cannot be listed (for example because
+of a permission error), or, when the source is such a directory, a category
+directory in it cannot be listed, fails with exit code 1, writes nothing, and
+prints an error that names the directory. Any other unreadable directory in the
+source is skipped.
 
 A local path whose directory is itself an item directory (it holds `SKILL.md`,
 `RULE.md` or `AGENT.md` at its root) is refused when it has no item in its child

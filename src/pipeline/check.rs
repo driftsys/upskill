@@ -256,7 +256,18 @@ fn check_local(label: String, path: &Path, entries: &[&LockedItem]) -> CheckedSo
     // The install walks the registry root of a bundle file, and the path
     // itself otherwise.
     let root = if is_bundle_file(path) {
-        find_registry_root(path).unwrap_or_else(|_| path.to_path_buf())
+        match find_registry_root(path) {
+            Ok(root) => root,
+            Err(e) => {
+                return CheckedSource {
+                    source: label,
+                    status: SourceStatus::NotReachable {
+                        reason: one_line(&format!("{e:#}")),
+                    },
+                    items: Vec::new(),
+                };
+            }
+        }
     } else {
         path.to_path_buf()
     };
