@@ -1126,3 +1126,48 @@ fn doctor_reports_an_unreadable_source_with_the_read_error() {
         "{stdout}"
     );
 }
+
+/// Issue #607: a kind directory under the source that cannot be read is
+/// reported as `source-unreadable` with a read error that names it, not as
+/// "item missing in source".
+#[cfg(unix)]
+#[test]
+fn doctor_reports_an_unreadable_kind_directory_with_the_read_error() {
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Restores the mode of the directory on drop, also when the test panics.
+    struct Restore<'a>(&'a Path);
+    impl Drop for Restore<'_> {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_skill(&source.join("skills/one"), "one");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    let kind_dir = source.join("skills");
+    fs::set_permissions(&kind_dir, fs::Permissions::from_mode(0o000)).unwrap();
+    let _restore = Restore(&kind_dir);
+    if fs::read_dir(&kind_dir).is_ok() {
+        // Running as root: the permission has no effect.
+        return;
+    }
+    let (code, v) = doctor_json(&target, &home);
+
+    assert_eq!(code, Some(1), "doctor must fail: {v}");
+    let orphans = v["orphan_entries"].as_array().unwrap();
+    assert_eq!(orphans.len(), 1, "{v}");
+    assert_eq!(orphans[0]["name"], "one", "{v}");
+    assert_eq!(orphans[0]["reason"], "source-unreadable", "{v}");
+    let error = orphans[0]["error"]
+        .as_str()
+        .unwrap_or_else(|| panic!("no error: {v}"));
+    assert!(error.contains(&kind_dir.display().to_string()), "{v}");
+}

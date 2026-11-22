@@ -448,7 +448,8 @@ pub(super) fn detect_item_entrypoint(source: &Path, name: &str) -> &'static str 
 
 /// Iterate `(name, dir)` for every immediate subdirectory of `kind_root`.
 /// Returns an empty iterator when the kind root does not exist (treating
-/// "no items of this kind" as a non-error).
+/// "no items of this kind" as a non-error). A directory under `kind_root`
+/// that cannot be read is an error.
 pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>> {
     if !kind_root.exists() {
         return Ok(Vec::new());
@@ -473,17 +474,20 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
         } else {
             // Category subdir: kind_root/<category>/<item>/ENTRY.md
             // Descend one level to find items in subdirectories (format-spec §2.2).
-            if let Ok(sub_entries) = fs::read_dir(&path) {
-                for sub_entry in sub_entries.flatten() {
-                    let sub_path = sub_entry.path();
-                    if sub_path.is_dir() && is_item_dir(&sub_path) {
-                        let name = sub_entry
-                            .file_name()
-                            .to_str()
-                            .map(str::to_owned)
-                            .with_context(|| format!("non-UTF8 name in {}", path.display()))?;
-                        out.push((name, sub_path));
-                    }
+            // A read error is returned, not skipped (issue #607).
+            let sub_entries =
+                fs::read_dir(&path).with_context(|| format!("read_dir {}", path.display()))?;
+            for sub_entry in sub_entries {
+                let sub_entry =
+                    sub_entry.with_context(|| format!("read_dir {}", path.display()))?;
+                let sub_path = sub_entry.path();
+                if sub_path.is_dir() && is_item_dir(&sub_path) {
+                    let name = sub_entry
+                        .file_name()
+                        .to_str()
+                        .map(str::to_owned)
+                        .with_context(|| format!("non-UTF8 name in {}", path.display()))?;
+                    out.push((name, sub_path));
                 }
             }
         }

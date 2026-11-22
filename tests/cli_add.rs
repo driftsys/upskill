@@ -1740,3 +1740,50 @@ fn add_kind_short_flag_installs_only_rules() {
         serde_json::json!(["rule"])
     );
 }
+
+/// Issue #607: `add` from a source whose kind directory cannot be read fails
+/// with an error that names the directory, instead of installing nothing.
+#[cfg(unix)]
+#[test]
+fn add_fails_when_a_kind_directory_of_the_source_is_unreadable() {
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Restores the mode of the directory on drop, also when the test panics.
+    struct Restore<'a>(&'a Path);
+    impl Drop for Restore<'_> {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    let item = source.join("skills/one");
+    fs::create_dir_all(&item).unwrap();
+    fs::write(
+        item.join("SKILL.md"),
+        "---\nname: one\ndescription: Skill one.\n---\n\nBody.\n",
+    )
+    .unwrap();
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    let kind_dir = source.join("skills");
+    fs::set_permissions(&kind_dir, fs::Permissions::from_mode(0o000)).unwrap();
+    let _restore = Restore(&kind_dir);
+    if fs::read_dir(&kind_dir).is_ok() {
+        // Running as root: the permission has no effect.
+        return;
+    }
+    let out = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(1), "{out:?}");
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(stderr.contains(&kind_dir.display().to_string()), "{stderr}");
+}
