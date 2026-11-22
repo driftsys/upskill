@@ -131,6 +131,12 @@ pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt 
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
         Err(_) => return LockAttempt::Unavailable,
     }
+    #[cfg(test)]
+    tests::BEFORE_LOCK_OBSERVATION.with(|hook| {
+        if let Some(hook) = hook.borrow_mut().take() {
+            hook(path);
+        }
+    });
     // Read the token and timestamp from the same file, even if the path changes.
     let observed = (|| -> std::io::Result<_> {
         let mut file = fs::File::open(path)?;
@@ -483,6 +489,8 @@ mod tests {
     thread_local! {
         pub(super) static BEFORE_STALE_LOCK_REMOVAL: std::cell::RefCell<Option<LockRemovalHook>> =
             const { std::cell::RefCell::new(None) };
+        pub(super) static BEFORE_LOCK_OBSERVATION: std::cell::RefCell<Option<LockRemovalHook>> =
+            const { std::cell::RefCell::new(None) };
         pub(super) static AFTER_STALE_LOCK_REMOVAL: std::cell::RefCell<Option<LockRemovalHook>> =
             const { std::cell::RefCell::new(None) };
         pub(super) static LOCK_CREATION_ATTEMPTS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
@@ -693,6 +701,41 @@ mod tests {
             "a lock of another run that started at the same time must be busy"
         );
         assert_eq!(fs::read(&path).unwrap(), b"other run");
+    }
+
+    #[test]
+    fn a_lock_replaced_between_the_failed_creation_and_the_observation_is_busy() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "expired owner").unwrap();
+        let now = SystemTime::now();
+        set_age(&path, now, 3600);
+        // Another run replaces the stale lock after this run read the clock
+        // and failed to create the lock, before this run observes it.
+        BEFORE_LOCK_OBSERVATION.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(|path| {
+                std::thread::sleep(Duration::from_millis(20));
+                fs::remove_file(path).unwrap();
+                fs::write(path, "other run").unwrap();
+            }));
+        });
+        let attempt = acquire_run_lock(&path, now);
+        assert!(
+            matches!(attempt, LockAttempt::Busy),
+            "a lock created after the clock reading must be busy"
+        );
+        assert_eq!(fs::read(&path).unwrap(), b"other run");
+    }
+
+    #[test]
+    fn a_now_later_than_the_clock_sets_the_age() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "owner").unwrap();
+        let attempt = acquire_run_lock(&path, SystemTime::now() + Duration::from_secs(61));
+        assert!(matches!(attempt, LockAttempt::Held(_)));
     }
 
     #[test]
