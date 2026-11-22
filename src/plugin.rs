@@ -15,13 +15,16 @@
 use std::io::ErrorKind;
 use std::process::Command;
 
-/// Scope for Claude plugin installation, derived from upskill's
-/// project/global flag.
+/// Scope of a plugin or MCP install, derived from upskill's install scope. It
+/// sets the `--scope` flag of the Claude CLI and selects the opencode config
+/// file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PluginScope {
-    /// Project-scoped install (`claude plugin install --scope project`).
+    /// Project scope (`claude plugin install --scope project`; the opencode
+    /// config file in the project root).
     Project,
-    /// User-scoped install (`claude plugin install --scope user`).
+    /// Global scope (`claude plugin install --scope user`; the opencode config
+    /// file in the global opencode config directory).
     User,
 }
 

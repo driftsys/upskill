@@ -51,7 +51,7 @@ impl Env {
         let tmp = tempfile::tempdir().unwrap();
         // The canonical path: the recorded local source label must name the
         // same path that `doctor` resolves later (`/var` is a link on macOS).
-        let root = plain_path(tmp.path().canonicalize().unwrap());
+        let root = common::plain_path(tmp.path().canonicalize().unwrap());
         let home = root.join("home");
         fs::create_dir_all(&home).unwrap();
         let project = root.join("project");
@@ -194,15 +194,6 @@ fn write_script(path: &std::path::Path, body: &str) {
     {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
-    }
-}
-
-/// `canonicalize` returns a `\\?\` path on Windows, which `add` does not accept
-/// as a local source. Remove that prefix.
-fn plain_path(path: PathBuf) -> PathBuf {
-    match path.to_str().and_then(|p| p.strip_prefix(r"\\?\")) {
-        Some(plain) => PathBuf::from(plain),
-        None => path,
     }
 }
 

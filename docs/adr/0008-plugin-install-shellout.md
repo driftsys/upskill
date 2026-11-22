@@ -352,8 +352,9 @@ demand materialises.
   marketplaces they have configured, and which upstream plugin versions resolve
   at install time. Integration tests must shim the client CLIs on PATH (the
   pattern already used by `fetch.rs::tests` for `git`).
-- Bundle schema growth: `plugins:` is a non-trivial sub-shape with three
-  client-specific variants. Future clients add more variants.
+- Bundle schema growth: `plugins:` is a non-trivial sub-shape with four
+  client-specific blocks (`claude`, `copilot`, `vscode`, `opencode`). Future
+  clients add more blocks.
 - Warn-skip can mask a real misconfiguration (user expected the plugin to
   install but the CLI was missing). Mitigated by `doctor`, which surfaces every
   skipped plugin during reconciliation.
@@ -363,7 +364,11 @@ demand materialises.
 **(a) Patch `~/.claude/settings.json` directly.** Rejected: depends on
 undocumented internal schema, breaks across Claude Code versions, duplicates
 registration logic the CLI already implements, and doesn't generalise to VS Code
-or opencode (each has its own state file).
+or opencode (each has its own state file). One exception exists: for the
+`plugin_uri` form of the `opencode:` block, upskill writes the URI to the
+`plugins` array of `opencode.json` itself (`write_opencode_plugin_uri`). That
+exception is the decision recorded in "The opencode config file and the
+`plugins` key" above.
 
 **(b) Re-emit plugin contents from SSOT.** Rejected: duplicates upstream plugins
 like `superpowers`, can't represent hooks or slash commands in the current item
@@ -391,8 +396,8 @@ for Claude Code" differs from "how to install the VS Code extension." Per-client
 `install_url:` is the natural home.
 
 **(f) Make `install_url:` required.** Rejected: forces every bundle author to
-track three URLs even when the warn-skip path is unlikely. Optional, with a
-graceful degradation in the warning message when absent.
+track one URL per client block even when the warn-skip path is unlikely.
+Optional, with a graceful degradation in the warning message when absent.
 
 ## Migration
 

@@ -1065,13 +1065,15 @@ scope. For each scope it reports thirteen independent buckets:
   needs a manual step (status `instructions`) is listed here too and keeps its
   instructions: `update` runs no install for it, and prints its instructions
   again when it applies the source. Does **not** cause exit 1.
-- **MCP servers** — each Claude-client MCP entry in the lockfile is checked
-  against `claude mcp list`. A server in the lockfile but **not registered** in
-  the client causes exit 1 (`upskill update --yes` reconfigures it; a run in a
-  terminal applies a source only when its preview changes something, and the
-  plugin and MCP steps are not part of the preview; a source under a kind
-  restriction skips both steps). A missing `claude` CLI or a failed query is
-  advisory and does **not** cause exit 1.
+- **MCP servers** — each MCP entry in the lockfile is checked. An entry for
+  Claude is checked against `claude mcp list`. An entry for Copilot, VS Code or
+  opencode is checked against the config file of that client. A server in the
+  lockfile but **not registered** in the client causes exit 1
+  (`upskill update --yes` reconfigures it; a run in a terminal applies a source
+  only when its preview changes something, and the plugin and MCP steps are not
+  part of the preview; a source under a kind restriction skips both steps). A
+  missing `claude` CLI, a failed query, or a client config file that is missing
+  or cannot be read is advisory and does **not** cause exit 1.
 - **Interrupted** — items with a non-empty `pending` record: an `add` or
   `update` failed or was stopped before it completed. Run the same command again
   to complete it. Causes exit 1.
@@ -1194,11 +1196,12 @@ Each element of `scopes` has these keys besides `scope` and `root`:
 
 `reason` is `"local-path-gone"` or `"item-missing-in-source"`. Hashes may be
 `null` when the SSOT can't be hashed (e.g. unreadable). MCP `status` is one of
-`"ok"`, `"not-registered"`, `"cli-not-found"`, or
-`{ "query-failed": { "stderr": "..." } }`. The plugin and item arrays are always
-present (possibly empty); `mcp_entries` is omitted when no MCP servers are
-recorded, and `missing_rule_entries` and `stale_rule_entries` are omitted when
-empty. An entry of `missing_plugins` or `skipped_plugins` has the key
+`"ok"`, `"not-registered"`, `"cli-not-found"`, `"config-missing"`,
+`{ "query-failed": { "stderr": "..." } }`, or
+`{ "config-unreadable": { "detail": "..." } }`. The plugin and item arrays are
+always present (possibly empty); `mcp_entries` is omitted when no MCP servers
+are recorded, and `missing_rule_entries` and `stale_rule_entries` are omitted
+when empty. An entry of `missing_plugins` or `skipped_plugins` has the key
 `repair_command` only when `update` does not install the plugin (no recorded
 item comes from the recorded source of its bundle, or that source is under a
 kind restriction); the value is the `upskill add` command that installs it
