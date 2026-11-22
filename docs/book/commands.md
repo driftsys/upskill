@@ -1088,11 +1088,14 @@ scope. For each scope it reports thirteen independent buckets:
   too. The user fixes the file by hand in both cases. Causes exit 1.
 - **Stale rule entries** (global scope only) — an entry of the form
   `$HOME/.agents/rules/<name>/RULE.md` in the `instructions` array of the global
-  opencode config, for a rule that the lockfile records for other clients than
-  opencode. An earlier removal of the entry can have failed after the lockfile
-  was saved. `upskill update --global` and `upskill add --global` delete the
-  entry. An entry for a name that the lockfile does not record is not reported
-  and not deleted. Causes exit 1.
+  opencode config, for a name that the lockfile does not record as an opencode
+  rule. An earlier removal of the entry can have failed after the lockfile was
+  saved. When the lockfile records the rule for other clients than opencode
+  (`recorded: true`), `upskill update --global` and `upskill add --global`
+  delete the entry. When the lockfile records no rule of that name
+  (`recorded: false`), the entry is reported but not deleted, because upskill
+  cannot tell it from an entry written by hand; delete it by hand. Entries in
+  another form are not reported. Causes exit 1.
 - **Earlier layout** (global scope only) — files of a global install at the
   earlier global Copilot paths (`.github/skills`, `.github/instructions` and
   `.github/agents` under `$HOME`). `upskill update --global` moves them. Causes
@@ -1190,7 +1193,8 @@ Each element of `scopes` has these keys besides `scope` and `root`:
       "config": "/home/user/.config/opencode/opencode.json" }
   ],
   "stale_rule_entries": [
-    { "name": "...", "config": "/home/user/.config/opencode/opencode.json" }
+    { "name": "...", "config": "/home/user/.config/opencode/opencode.json",
+      "recorded": true }
   ]
 }
 ```
@@ -1550,14 +1554,15 @@ Limits of the global scope:
   deletes the entry of that rule. An `add` or `update` also deletes a stale
   entry (`doctor` reports it): an entry for a rule that the lockfile records for
   other clients than opencode. `remove` keeps such an entry. Other entries of
-  the file are kept. The rules step reads and parses the file whenever the run
-  installs an opencode rule or deletes an entry, so a file that is not strict
-  JSON (for example one with comments) fails such an `add` or `update`. `remove`
-  ignores that error and leaves the entry in the file. When the lockfile records
-  a rule for other clients than opencode, `add` and `update` (not `remove`) also
-  read the file to find an entry of that rule (see `doctor`, stale rule
-  entries); a file that cannot be read as JSON adds no deletion and no error
-  there.
+  the file are kept; `doctor` reports an entry of the same form for a name that
+  the lockfile does not record, and upskill does not delete it. The rules step
+  reads and parses the file whenever the run installs an opencode rule or
+  deletes an entry, so a file that is not strict JSON (for example one with
+  comments) fails such an `add` or `update`. `remove` ignores that error and
+  leaves the entry in the file. When the lockfile records a rule for other
+  clients than opencode, `add` and `update` (not `remove`) also read the file to
+  find an entry of that rule (see `doctor`, stale rule entries); a file that
+  cannot be read as JSON adds no deletion and no error there.
 
 All output is **copy** (not symlink) — Windows portability without Developer
 Mode.

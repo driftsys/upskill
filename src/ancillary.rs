@@ -368,23 +368,45 @@ pub fn sync_opencode_global_rules(
     )?)
 }
 
-/// `true` when the global opencode config lists the entry of the rule `name`
-/// under `root`. `false` when the file is absent or cannot be read as JSON.
-pub fn opencode_global_rule_registered(root: &Path, name: &str) -> bool {
-    registered_in(&opencode_json_path(PluginScope::User, root), root, name)
+/// The names of the rules whose entry the global opencode config under
+/// `root` lists: each string in its `instructions` array that is exactly
+/// `<root>/.agents/rules/<name>/RULE.md`, as [`sync_opencode_global_rules`]
+/// writes it. Entries in another form are ignored. The file is read and
+/// parsed once. The set is empty when the file is absent, cannot be read as
+/// JSON, or has no `instructions` array.
+pub fn opencode_global_rule_names(root: &Path) -> BTreeSet<String> {
+    rule_names_in(&opencode_json_path(PluginScope::User, root), root)
 }
 
-fn registered_in(path: &Path, root: &Path, name: &str) -> bool {
+fn rule_names_in(path: &Path, root: &Path) -> BTreeSet<String> {
     let Ok(raw) = std::fs::read_to_string(path) else {
-        return false;
+        return BTreeSet::new();
     };
     let Ok(doc) = serde_json::from_str::<Value>(&raw) else {
-        return false;
+        return BTreeSet::new();
     };
-    let wanted = opencode_global_rule_entry(root, name);
-    doc.get("instructions")
-        .and_then(Value::as_array)
-        .is_some_and(|arr| arr.iter().any(|v| v.as_str() == Some(wanted.as_str())))
+    let Some(arr) = doc.get("instructions").and_then(Value::as_array) else {
+        return BTreeSet::new();
+    };
+    let rules_dir = root.join(".agents").join("rules");
+    arr.iter()
+        .filter_map(Value::as_str)
+        .filter_map(|entry| {
+            let path = Path::new(entry);
+            if path.file_name()? != "RULE.md" {
+                return None;
+            }
+            let dir = path.parent()?;
+            if dir.parent()? != rules_dir {
+                return None;
+            }
+            let name = dir.file_name()?.to_str()?;
+            // Keep only the exact string that upskill writes, so that an
+            // entry with another separator or a trailing separator is not
+            // taken as upskill's.
+            (opencode_global_rule_entry(root, name) == entry).then(|| name.to_string())
+        })
+        .collect()
 }
 
 /// The change that [`sync_opencode_global_rules`] would make, to the file at
@@ -1977,13 +1999,19 @@ mod tests {
     }
 
     #[test]
-    fn global_rule_registered_checks_the_exact_entry() {
+    fn global_rule_names_lists_only_entries_of_the_exact_form() {
         let tmp = tempfile::tempdir().unwrap();
         let cfg = tmp.path().join("opencode.json");
-        assert!(!registered_in(&cfg, Path::new("/home/u"), "a"));
+        let root = Path::new("/home/u");
+        assert!(rule_names_in(&cfg, root).is_empty());
         sync_at(&cfg, &["a"], &[]).unwrap();
-        assert!(registered_in(&cfg, Path::new("/home/u"), "a"));
-        assert!(!registered_in(&cfg, Path::new("/home/u"), "b"));
+        let mut doc: Value = serde_json::from_str(&std::fs::read_to_string(&cfg).unwrap()).unwrap();
+        let arr = doc["instructions"].as_array_mut().unwrap();
+        arr.push(json!(format!("{}/", opencode_global_rule_entry(root, "b"))));
+        arr.push(json!("/elsewhere/c/RULE.md"));
+        arr.push(json!("/home/u/.agents/rules/RULE.md"));
+        std::fs::write(&cfg, doc.to_string()).unwrap();
+        assert_eq!(rule_names_in(&cfg, root), BTreeSet::from(["a".to_string()]));
     }
 
     #[test]

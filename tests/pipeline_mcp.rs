@@ -86,6 +86,21 @@ fn read_json(path: &Path) -> serde_json::Value {
     serde_json::from_str(&raw).unwrap()
 }
 
+/// Records `registry` as the source of every item in the project lockfile.
+///
+/// `add <bundle file>` records the bundle file as the item source, and
+/// `doctor` reports such a source as "local path gone" (exit 1) because it
+/// is not a directory. The doctor tests that assert an exit code call this
+/// so that the exit code depends only on the MCP state under test.
+fn record_registry_as_item_source(project: &Path, registry: &Path) {
+    let path = project.join(".upskill-lock.json");
+    let mut lock = read_json(&path);
+    for item in lock["items"].as_array_mut().unwrap() {
+        item["source"] = serde_json::json!(format!("local:{}", registry.display()));
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+}
+
 #[test]
 fn add_then_remove_mcp_updates_lockfile() {
     let tmp = tempfile::tempdir().unwrap();
@@ -365,6 +380,7 @@ fn doctor_surfaces_missing_config_file_without_flagging_drift() {
         .args(["add", bundle_path.to_str().unwrap()])
         .assert()
         .success();
+    record_registry_as_item_source(&project, &registry);
 
     // Delete VS Code's config file entirely (the server may have been
     // configured via the `code` CLI instead) — this is *undetermined*, not
@@ -388,7 +404,9 @@ fn doctor_surfaces_missing_config_file_without_flagging_drift() {
         .current_dir(&project)
         .env("PATH", &path_val)
         .args(["doctor"])
-        .assert();
+        .assert()
+        // An undetermined state is not drift: doctor exits 0.
+        .code(0);
     let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
     assert!(
         stdout.contains("config file not found") && stdout.contains("vscode"),
@@ -416,6 +434,7 @@ fn doctor_surfaces_unreadable_config_file() {
         .args(["add", bundle_path.to_str().unwrap()])
         .assert()
         .success();
+    record_registry_as_item_source(&project, &registry);
 
     // Corrupt opencode's config file so it no longer parses as JSON.
     fs::write(project.join("opencode.json"), "{ not valid json").unwrap();
@@ -438,11 +457,62 @@ fn doctor_surfaces_unreadable_config_file() {
         .current_dir(&project)
         .env("PATH", &path_val)
         .args(["doctor"])
-        .assert();
+        .assert()
+        // An undetermined state is not drift: doctor exits 0.
+        .code(0);
     let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
     assert!(
         stdout.contains("config file could not be read") && stdout.contains("opencode"),
         "doctor must surface the unreadable opencode config: {stdout}"
+    );
+}
+
+#[test]
+fn doctor_flags_a_copilot_entry_missing_from_its_config_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+
+    let registry = tmp.path().join("registry");
+    let project = tmp.path().join("project");
+    stage_registry(&registry, BUNDLE_REMOTE_YAML);
+    fs::create_dir_all(project.join(".git")).unwrap();
+
+    let bundle_path = registry.join("bundles/b.bundle.yaml");
+    let path_val = empty_bin_path(tmp.path());
+
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &path_val)
+        .args(["add", bundle_path.to_str().unwrap()])
+        .assert()
+        .success();
+    record_registry_as_item_source(&project, &registry);
+
+    // Drop the server from the Copilot config file only. The file is still
+    // present and valid, so this is drift.
+    fs::write(
+        home.join(".copilot/mcp-config.json"),
+        "{\"mcpServers\":{}}\n",
+    )
+    .unwrap();
+    let report = run_doctor_json(&home, &project, &path_val);
+    assert_eq!(
+        doctor_mcp_status(&report, "copilot", "remote-srv"),
+        "not-registered"
+    );
+    assert_eq!(doctor_mcp_status(&report, "vscode", "remote-srv"), "ok");
+
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &path_val)
+        .args(["doctor"])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("not registered in copilot"),
+        "doctor must attribute the drift to copilot: {stdout}"
     );
 }
 

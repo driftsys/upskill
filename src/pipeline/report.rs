@@ -362,14 +362,21 @@ pub struct MissingRuleEntry {
     pub config: PathBuf,
 }
 
-/// A rule that the lockfile records for other clients than opencode in the
-/// global scope, whose `instructions` entry is still in the global opencode
-/// config. An earlier removal can have failed after the lockfile was saved.
+/// An entry of the form that upskill writes
+/// (`<home>/.agents/rules/<name>/RULE.md`) in the `instructions` array of the
+/// global opencode config, for a name that the lockfile of the global scope
+/// does not record as an opencode rule. An earlier removal can have failed
+/// after the lockfile was saved.
 #[derive(Debug, Clone, Serialize)]
 pub struct StaleRuleEntry {
     pub name: String,
     /// The global opencode config file that holds the entry.
     pub config: PathBuf,
+    /// `true` when the lockfile records a rule of this name for other clients
+    /// than opencode; `update --global` deletes such an entry. `false` when
+    /// the lockfile does not record a rule of this name; the entry must be
+    /// deleted by hand.
+    pub recorded: bool,
 }
 
 /// Plugin in lockfile (status: skipped) because the client CLI was not on
@@ -500,9 +507,11 @@ pub struct DoctorReport {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub missing_rule_entries: Vec<MissingRuleEntry>,
     /// Entries of the form that upskill writes, in the global opencode config,
-    /// for rules that the lockfile records for other clients than opencode.
-    /// Entries for names that the lockfile does not record are not listed.
-    /// Always empty for the project scope.
+    /// for names that the lockfile does not record as opencode rules: names
+    /// for which the lockfile records a rule for other clients
+    /// (`recorded: true`) and names for which the lockfile records no rule
+    /// (`recorded: false`). Entries in another form are
+    /// not listed. Always empty for the project scope.
     /// Non-empty → `is_clean()` returns false.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stale_rule_entries: Vec<StaleRuleEntry>,
