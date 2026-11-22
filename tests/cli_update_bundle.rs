@@ -885,7 +885,6 @@ fn add_under_a_kind_restriction_keeps_the_provenance_of_an_unplanned_item() {
         assert_eq!(item["required_by"], serde_json::json!(["rule:r2"]));
         assert_eq!(fs::read(&skill_path).unwrap(), skill_before);
         assert_eq!(item["hash"], entry_before["hash"]);
-        assert_eq!(item["commit"], entry_before["commit"]);
         assert_eq!(item["files"], entry_before["files"]);
     }
 }

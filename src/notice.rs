@@ -514,7 +514,7 @@ mod tests {
     }
 
     #[test]
-    fn acquiring_a_stale_lock_is_unavailable_when_the_removal_fails() {
+    fn acquiring_a_stale_lock_is_unavailable_when_the_token_check_cannot_read_it() {
         let dir = tempfile::tempdir().unwrap();
         let path = lock_path(&dir);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -531,7 +531,7 @@ mod tests {
 
         assert!(
             matches!(attempt, LockAttempt::Unavailable),
-            "a failed removal must be unavailable"
+            "a failed token check must be unavailable"
         );
     }
 
