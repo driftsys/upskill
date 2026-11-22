@@ -85,8 +85,7 @@ is gone; `doctor` reports orphan records.
 - [ ] **Step 3: Implement** the interfaces above.
 - [ ] **Step 4: Run** `cargo test -q --lib lockfile::` — expect PASS.
 - [ ] **Step 5: Commit**
-      `feat(lockfile): add a per-source excludes record
-      (#570)`.
+      `feat(lockfile): add a per-source excludes record (#570)`.
 
 ### Task 2: `add` writes the record, `update` applies it
 
@@ -142,8 +141,7 @@ is gone; `doctor` reports orphan records.
       `cargo test -q` — expect PASS. A golden lockfile that changes means a
       record was written for an empty set: fix the code, not the golden file.
 - [ ] **Step 5: Commit**
-      `fix(update): apply the excludes of the last add of a
-      source (#570)`.
+      `fix(update): apply the excludes of the last add of a source (#570)`.
 
 ### Task 3: `remove` prunes the record, `doctor` reports an orphan
 
@@ -175,8 +173,7 @@ is gone; `doctor` reports orphan records.
       lockfile is saved; add the doctor check and its output line.
 - [ ] **Step 4: Run** `cargo test -q` — expect PASS.
 - [ ] **Step 5: Commit**
-      `feat(doctor): report an orphan excludes record
-      (#570)`.
+      `feat(doctor): report an orphan excludes record (#570)`.
 
 ### Task 4: Docs
 
@@ -191,9 +188,9 @@ is gone; `doctor` reports orphan records.
 - [ ] **Step 1:** Replace the "Current limitation (#570)" sentence in both files
       with the as-built rule: the lockfile records the `--exclude` names of the
       last `add` of each source; `update` applies them; a later `add` of the
-      source replaces them, and one without `--exclude` clears them; `remove`
-      deletes the record when nothing of the source remains; `doctor` reports an
-      orphan record.
+      source adds its excludes, and an `add` that names an excluded item removes
+      it; `remove` deletes the record when nothing of the source remains;
+      `doctor` reports an orphan record.
 - [ ] **Step 2:** Describe the `excludes` field in the lockfile section of the
       specification.
 - [ ] **Step 3: Run** `just fmt` then `just verify` — expect exit 0.
