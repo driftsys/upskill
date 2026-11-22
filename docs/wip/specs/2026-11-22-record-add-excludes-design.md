@@ -22,9 +22,10 @@ installed, or make `update` fail.
 
 - `update` leaves out every name that the last `add` of the same source
   excluded, in all three paths above.
-- A later `add` of the same source replaces the recorded excludes with its own
-  `--exclude` set. An `add` without `--exclude` clears them. This is the only
-  way to undo an exclude.
+- A later `add` of the same source adds its `--exclude` names to the record. An
+  `add` that names an excluded item explicitly (`add <source> d`) removes `d`
+  from the record and installs it. This is the only way to undo an exclude. An
+  `add` without item names and without `--exclude` keeps the record.
 
 ## Non-goals
 
@@ -44,8 +45,9 @@ installed, or make `update` fail.
   `LockedExclude { source: String, names: Vec<String> }`, where `source` is the
   canonical source label of the `add` (the entry source) and `names` is sorted
   and deduplicated.
-- `add`: after a successful commit, set the record of its entry source to its
-  `--exclude` set. An empty set deletes the record.
+- `add`: after a successful commit, the record of its entry source becomes
+  (recorded names ∪ its `--exclude` names) minus the item names that it
+  requested explicitly. An empty result deletes the record.
 - `update`: when it builds the options for a source
   (`src/pipeline/lifecycle.rs`, today `excludes: vec![]`), use the recorded
   names of that source.
@@ -72,8 +74,8 @@ installed, or make `update` fail.
    source with no requiring entry is not covered.
 
 Duration of an exclude, decided by the user: option A (until a later `add` of
-the same source). Options not taken: B (`remove` also records an exclude) and C
-(the exclude ends when the requiring item changes).
+the same source undoes it). Options not taken: B (`remove` also records an
+exclude) and C (the exclude ends when the requiring item changes).
 
 ## Left to the builder
 
@@ -82,3 +84,9 @@ the same source). Options not taken: B (`remove` also records an exclude) and C
   excludes stays byte-identical; `doctor` reports an orphan record.
 - Whether `update --check` needs the record (it does not plan items; probably
   not).
+
+How a later `add` changes the record, decided by the user after a review of this
+design: excludes accumulate, and naming an excluded item undoes it (option B).
+Not taken: replacing the record at each `add` (an unrelated `add` from the same
+source would silently undo an exclude), and a separate `--include` option
+(naming the item already says the same thing).

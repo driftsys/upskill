@@ -31,8 +31,8 @@ is gone; `doctor` reports orphan records.
 
 ## Review Focus
 
-1. Two `add`s of one source, the second without `--exclude`: the record is
-   deleted and the next `update` installs the item (Task 2 test).
+1. Two `add`s of one source, the second for an unrelated item without
+   `--exclude`: the record keeps the exclude (Task 2 test).
 2. An excluded name that is also installed from another source: `update` of the
    first source must not touch the other source's entry (Task 2 test).
 3. A schema-1 lockfile with no excludes is saved unchanged (Task 1 test).
@@ -56,9 +56,10 @@ is gone; `doctor` reports orphan records.
     (Serialize, Deserialize, Debug, Clone, PartialEq, Eq).
   - `Lockfile.excludes: Vec<LockedExclude>` with
     `#[serde(default, skip_serializing_if = "Vec::is_empty")]`, after `mcps`.
-  - `pub fn set_excludes(&mut self, source: &str, names: &[String])`: sorts and
-    deduplicates `names`; an empty set deletes the record of `source`; otherwise
-    replaces or inserts it. Records stay sorted by `source`.
+  - `pub fn record_excludes(&mut self, source: &str, added: &[String], requested: &[String])`:
+    the record of `source` becomes (recorded names ∪ `added`) minus `requested`,
+    sorted and deduplicated; an empty result deletes the record. Records stay
+    sorted by `source`.
   - `pub fn excludes_for(&self, source: &str) -> Vec<String>`: the recorded
     names, or an empty vector.
   - `pub fn prune_excludes(&mut self)`: deletes each record whose `source` has
@@ -100,11 +101,14 @@ is gone; `doctor` reports orphan records.
 
 **Interfaces:**
 
-- Consumes: `Lockfile::set_excludes`, `Lockfile::excludes_for` (Task 1).
+- Consumes: `Lockfile::record_excludes`, `Lockfile::excludes_for` (Task 1).
 - Produces: after any committed install, the lockfile holds
-  `set_excludes(<entry source label>, <options.excludes>)`. `update` sets its
-  install options' `excludes` to `lock.excludes_for(<source label>)`, so an
-  `update` writes back the same record.
+  `record_excludes(<entry source label>, <options.excludes>, <requested item
+  names>)`,
+  where the requested names are the item arguments of the command (empty for a
+  whole-source or bundle-file add). `update` sets its install options'
+  `excludes` to `lock.excludes_for(<source label>)`, so an `update` writes back
+  the same record.
 
 - [ ] **Step 1: Write the failing CLI tests** in `tests/cli_update_excludes.rs`
       (local registries in tempdirs; each test changes the source after `add` so
@@ -122,9 +126,14 @@ is gone; `doctor` reports orphan records.
   - `update_dry_run_plans_no_excluded_item`: the plain-directory setup;
     `update
     --dry-run` stdout has no line for `d`.
-  - `a_later_add_without_exclude_clears_the_record`: after the plain-directory
-    `add`, run `add <reg> r` again; the lock has no `"excludes"` key, and the
-    next `update --yes` installs `d`.
+  - `an_unrelated_add_from_the_same_source_keeps_the_exclude`: after the
+    plain-directory `add`, run `add <reg> other`; the record still lists `d`,
+    and the next `update --yes` does not install `d`.
+  - `naming_an_excluded_item_undoes_the_exclude`: after the plain-directory
+    `add`, run `add <second-registry> d`... no: run `add <reg> d` only if `d` is
+    in `<reg>`; for the cross-source case, put `d` in `<reg>` as well, run
+    `add <reg> d`, and assert the record no longer lists `d` and `d` is
+    installed.
   - `update_does_not_touch_an_excluded_name_installed_from_another_source`: `d`
     installed directly from source `x`; `add <reg> r --exclude d`;
     `update
