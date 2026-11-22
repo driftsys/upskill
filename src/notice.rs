@@ -109,8 +109,9 @@ fn create_run_lock(path: &Path) -> std::io::Result<RunLock> {
 pub enum LockAttempt {
     /// This run created the lock file.
     Held(RunLock),
-    /// Another run holds a lock younger than `LOCK_MAX_AGE_SECS`, or the
-    /// observed ownership token changed before removal.
+    /// Another run holds a lock younger than `LOCK_MAX_AGE_SECS`, the
+    /// observed ownership token changed before removal, or another run
+    /// created a lock between the removal of a stale lock and the retry.
     Busy,
     /// The lock file cannot be created for another reason.
     Unavailable,
@@ -156,6 +157,12 @@ pub fn acquire_run_lock(path: &Path, now: std::time::SystemTime) -> LockAttempt 
         Ok(false) => return LockAttempt::Busy,
         Err(_) => return LockAttempt::Unavailable,
     }
+    #[cfg(test)]
+    tests::AFTER_STALE_LOCK_REMOVAL.with(|hook| {
+        if let Some(hook) = hook.borrow_mut().take() {
+            hook(path);
+        }
+    });
     match create_run_lock(path) {
         Ok(lock) => LockAttempt::Held(lock),
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => LockAttempt::Busy,
@@ -469,6 +476,8 @@ mod tests {
     thread_local! {
         pub(super) static BEFORE_STALE_LOCK_REMOVAL: std::cell::RefCell<Option<LockRemovalHook>> =
             const { std::cell::RefCell::new(None) };
+        pub(super) static AFTER_STALE_LOCK_REMOVAL: std::cell::RefCell<Option<LockRemovalHook>> =
+            const { std::cell::RefCell::new(None) };
         pub(super) static LOCK_CREATION_ATTEMPTS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
     }
 
@@ -502,6 +511,49 @@ mod tests {
                 "a changed token must stop before another creation attempt"
             );
         });
+    }
+
+    #[test]
+    fn acquiring_a_stale_lock_is_unavailable_when_the_removal_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "expired owner").unwrap();
+        let now = SystemTime::now();
+        set_age(&path, now, 60);
+        // The lock disappears after it was read, so the token check cannot
+        // read it again.
+        BEFORE_STALE_LOCK_REMOVAL.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(|path| fs::remove_file(path).unwrap()));
+        });
+
+        let attempt = acquire_run_lock(&path, now);
+
+        assert!(
+            matches!(attempt, LockAttempt::Unavailable),
+            "a failed removal must be unavailable"
+        );
+    }
+
+    #[test]
+    fn acquiring_a_stale_lock_is_busy_when_another_run_creates_the_lock_first() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = lock_path(&dir);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "expired owner").unwrap();
+        let now = SystemTime::now();
+        set_age(&path, now, 60);
+        AFTER_STALE_LOCK_REMOVAL.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(|path| fs::write(path, "other run").unwrap()));
+        });
+
+        let attempt = acquire_run_lock(&path, now);
+
+        assert!(
+            matches!(attempt, LockAttempt::Busy),
+            "a lock created before the retry must be busy"
+        );
+        assert_eq!(fs::read(&path).unwrap(), b"other run");
     }
 
     fn lock_path(dir: &tempfile::TempDir) -> PathBuf {
