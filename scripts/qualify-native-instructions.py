@@ -48,7 +48,8 @@ def invoke(command, cwd, timeout, env):
     state = 'success' if result.returncode == 0 else 'failure'
     if state != 'success' and any(term in lower for term in ('not logged in', 'authentication', 'unauthorized', 'login required', 'please log in')):
         state = 'authentication_failure'
-    # Preserve only the exact response text, never arbitrary client output or credentials.
+    # The result holds the raw stdout and stderr of the client, a hash of them
+    # and a diagnostic category. The smoke code prints only the cell result.
     reason = next((label for label, terms in {'permission_denied': ('operation not permitted', 'permission denied'), 'network_failure': ('connection refused', 'failed to connect', 'network', 'dns'), 'authentication_failure': ('not logged in', 'authentication', 'unauthorized', 'login required'), 'configuration_error': ('invalid', 'unknown option', 'unexpected argument')}.items() if any(term in lower for term in terms)), None)
     return {'state': state, 'stdout': result.stdout, 'stderr': result.stderr, 'sha256': digest, 'exit_code': result.returncode, 'diagnostic_category': reason}
 
@@ -122,10 +123,9 @@ def smoke_command(client, kind, prompt, scope):
 def smoke_response(client, stdout):
     """The text that the client answered, or None when the run is not complete.
     A Copilot run is complete when its stream has exactly one `result` event,
-    that event is the last one, and its exit code is 0. This is weaker than
-    `copilot_response`, which also rejects tool events, several messages and
-    unknown event types: a skill or agent cell uses a tool and may answer in
-    several messages."""
+    that event is the last one, and its exit code is 0. The function does not
+    reject tool events, several messages or unknown event types: a skill or
+    agent cell uses a tool and may answer in several messages."""
     if client != 'copilot':
         return stdout.strip()
     texts = []
@@ -198,8 +198,8 @@ def smoke_cell_result(client, kind, scope, cwd, markers, name, args, runner, env
         return 'fail', None
     response = smoke_response(client, result.get('stdout', ''))
     if response is None:
-        # `run` also sets the state `failure` for a Copilot run without a
-        # successful terminal `result` event.
+        # A Copilot run without a successful terminal `result` event has no
+        # response; the cell fails.
         return 'fail', None
     others = [value for other, value in markers.items() if other != kind]
     return classify_smoke(response, markers[kind], others), None
@@ -345,7 +345,7 @@ def run_smoke(args, runner=invoke):
 
 def smoke_main(args, runner=invoke):
     """Print one line for each cell, then the level for each client and kind.
-    The exit code is 0 whenever the mode ran, whatever the results."""
+    The exit code is 0 whenever the smoke test ran, whatever the results."""
     results = run_smoke(args, runner)
     for cell in results:
         print(cell['client'], cell['kind'], cell['scope'], cell['result'].replace(' ', '-') if cell['result'] == 'not run' else cell['result'], cell['client_version'])
