@@ -56,16 +56,17 @@ bundle; it does not replace the bundle or change its schema.
    Under a kind restriction, `update` skips both the plugin and MCP steps.
 7. For a directory source with recorded bundles, `update` passes the recorded
    bundle names separately from the directly installed item names of that
-   source. Bundle names resolve only as bundles, including cross-source
-   `requires`. Direct items resolve their item `requires` closure, which is
-   merged with the bundle closure. Before this decision, `update` after
-   `add <dir> <bundle>` installed every item of the source. Every lockfile entry
-   of that source whose kind is outside the restriction is left untouched and
-   reported as up to date, regardless of bundle membership or `required_by`,
-   unless its source is skipped. It then shares the source's skipped status,
-   also when the source is skipped later because it requires an item of a
-   skipped source. `add <source> <item>` updates it. A recorded bundle that is
-   no longer in its source causes
+   source, and also the dependencies of that source that no installed item
+   requires (amendment of AD-0045, #613). Bundle names resolve only as bundles,
+   including cross-source `requires`. Direct items resolve their item `requires`
+   closure, which is merged with the bundle closure. Before this decision,
+   `update` after `add <dir> <bundle>` installed every item of the source. Every
+   lockfile entry of that source whose kind is outside the restriction is left
+   untouched and reported as up to date, regardless of bundle membership or
+   `required_by`, unless its source is skipped. It then shares the source's
+   skipped status, also when the source is skipped later because it requires an
+   item of a skipped source. `add <source> <item>` updates it. A recorded bundle
+   that is no longer in its source causes
    `bundle '<name>' is no longer in source <label>` before any write, even if an
    item has the same name.
 8. `pack` resolves the entry bundle in the current directory. A `requires` entry

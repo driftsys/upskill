@@ -868,16 +868,8 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     // An item pulled in only as a dependency (`required_by` non-empty) whose
     // every recorded requirer is no longer installed. Surfaced as advisory
     // only — upskill never auto-removes; the user decides.
-    let installed: std::collections::BTreeSet<String> = lock
-        .items
-        .iter()
-        .map(|i| format!("{}:{}", i.kind, i.name))
-        .collect();
     for entry in &lock.items {
-        if entry.required_by.is_empty() {
-            continue;
-        }
-        if entry.required_by.iter().all(|r| !installed.contains(r)) {
+        if lock.is_orphaned_dependency(entry) {
             report.orphaned_dependencies.push(OrphanedDependency {
                 kind: entry.kind,
                 name: entry.name.clone(),
@@ -1468,14 +1460,19 @@ pub fn update(
             // the closure for each requested item.
             //
             // Bundle-file sources resolve as a whole. Directory sources with
-            // recorded bundles resolve those bundles and their direct items.
+            // recorded bundles resolve those bundles and their direct items,
+            // and the dependencies that no installed item requires any more
+            // (the `doctor` condition), so that `update` does not remove an
+            // orphaned dependency as `no longer in source` (#613).
             let item_filter: Vec<String> =
                 if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
                     Vec::new()
                 } else if !recorded_bundles.is_empty() {
                     source_entries
                         .iter()
-                        .filter(|entry| entry.required_by.is_empty())
+                        .filter(|entry| {
+                            entry.required_by.is_empty() || lock.is_orphaned_dependency(entry)
+                        })
                         .map(|entry| entry.source_name.as_ref().unwrap_or(&entry.name))
                         .filter(|name| {
                             !recorded_bundles

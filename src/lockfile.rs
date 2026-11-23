@@ -342,6 +342,19 @@ impl Lockfile {
             .retain(|existing| !(existing.kind == kind && existing.name == name));
     }
 
+    /// True when `entry` names requirers and none of them is installed in this
+    /// lockfile. `doctor` reports such an entry as an orphaned dependency
+    /// (#196), and `update` keeps it in the item filter of its source (#613).
+    pub fn is_orphaned_dependency(&self, entry: &LockedItem) -> bool {
+        !entry.required_by.is_empty()
+            && entry.required_by.iter().all(|requirer| {
+                !self
+                    .items
+                    .iter()
+                    .any(|i| format!("{}:{}", i.kind, i.name) == *requirer)
+            })
+    }
+
     /// Names of the rules whose output was written for opencode, by
     /// [`LockedItem::is_opencode_rule`].
     pub fn opencode_rule_names(&self) -> std::collections::BTreeSet<String> {

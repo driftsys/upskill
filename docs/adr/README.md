@@ -51,7 +51,7 @@ decision explicitly; documentation moves do not change its status.
 | [0042 — Re-steer customization delivery to reliable install, update and removal](0042-resteer-customization-delivery.md)       | Accepted                                                               |
 | [0043 — One exact preview and one question per source for `update`](0043-per-source-update-prompts.md)                         | Accepted                                                               |
 | [0044 — Plugin output of a bundle](0044-plugin-output-of-a-bundle.md)                                                          | Accepted                                                               |
-| [0045 — Record the excludes of `add` in the lockfile](0045-record-add-excludes-in-lockfile.md)                                 | Accepted                                                               |
+| [0045 — Record the excludes of `add` in the lockfile](0045-record-add-excludes-in-lockfile.md)                                 | Accepted; decision 5 amended (2026-11-23)                              |
 
 AD-0015 to AD-0039 describe library code that was removed from `main` and is
 kept on the branch `archive/lifecycle-2026-11`. They are retained as history.

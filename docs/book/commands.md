@@ -591,24 +591,25 @@ keeps its commit when the source is not applied. In an applied source, the
 reinstall covers the named items and the items that a named item requires. For a
 directory source with recorded bundles, it reinstalls the members of those
 bundles and the items of that source installed directly, including their
-`requires` closure; it installs no unrelated item of the source. It applies a
-kind restriction only when every recorded bundle of the source has recorded
-kinds, using their union. With one unrestricted bundle of the source, no kind
-restriction applies. Every lockfile entry of that source whose kind is outside
-the restriction is left untouched and reported as up to date, regardless of
-bundle membership or `required_by`, unless its source is skipped. Such an item
-is reported as skipped with the cause of its source, also when the source is
-skipped later because it requires an item of a skipped source. To update such an
-item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
-reinstalled as a whole. Each reinstalled entry gets the commit of its own
-source, unless its update is skipped, and any other entry keeps its commit. If a
-recorded bundle is missing from the source, update fails before any write with
-`bundle '<name>' is no longer in source <label>`, even if an item has that name;
-remove the bundle's items with `upskill remove` or restore the bundle. For a
-source that is not applied, only a changed commit value, or a changed
-`required_by` value, causes a lockfile write. This write is not a change: it
-does not count in the output above, and `update --dry-run` and a declined source
-record no commit.
+`requires` closure; and the dependencies of that source that no installed item
+requires, which `doctor` reports as orphaned dependencies; it installs no
+unrelated item of the source. It applies a kind restriction only when every
+recorded bundle of the source has recorded kinds, using their union. With one
+unrestricted bundle of the source, no kind restriction applies. Every lockfile
+entry of that source whose kind is outside the restriction is left untouched and
+reported as up to date, regardless of bundle membership or `required_by`, unless
+its source is skipped. Such an item is reported as skipped with the cause of its
+source, also when the source is skipped later because it requires an item of a
+skipped source. To update such an item, run `upskill add <source> <item>` again.
+A `.bundle.yaml` source is reinstalled as a whole. Each reinstalled entry gets
+the commit of its own source, unless its update is skipped, and any other entry
+keeps its commit. If a recorded bundle is missing from the source, update fails
+before any write with `bundle '<name>' is no longer in source <label>`, even if
+an item has that name; remove the bundle's items with `upskill remove` or
+restore the bundle. For a source that is not applied, only a changed commit
+value, or a changed `required_by` value, causes a lockfile write. This write is
+not a change: it does not count in the output above, and `update --dry-run` and
+a declined source record no commit.
 
 `update --dry-run` prints the blocks, then
 `Dry-run: would update <n> of <m> item(s)`. `<n>` is the number of selected
@@ -674,10 +675,12 @@ set and keeps the recorded items out. When `add <source> --exclude <name>` names
 an item that is installed from the same source, and the same `add` does not also
 name the item, `add` removes that item only, within the kinds that `--kind`
 selects: its files and its lock entry, no other item of a co-located group, no
-bundle record and no plugin entry. It also deletes each `required_by` link that
-names the item, and prints `removed — excluded <kind> <name>` on stdout. When a
-recorded file of the item was modified, `add` removes nothing of the item: its
-files and its lock entry stay, the exclude is recorded, and stderr gets
+bundle record and no plugin entry. It keeps each `required_by` link that names
+the item, as `remove` does, so `doctor` reports a dependency that no installed
+item requires as an orphaned dependency; it prints
+`removed — excluded <kind> <name>` on stdout. When a recorded file of the item
+was modified, `add` removes nothing of the item: its files and its lock entry
+stay, the exclude is recorded, and stderr gets
 `kept — excluded <kind> <name>: <path> was modified` for each modified file. An
 `--exclude` name that matches no item of the entry source and no item that the
 resolver skipped is a usage error (exit code 2) that writes nothing, so the
