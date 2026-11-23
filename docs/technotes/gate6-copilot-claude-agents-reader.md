@@ -1,5 +1,10 @@
 # Gate 6 Copilot reader of restricted Claude agents
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed the native
+probe mode of `scripts/qualify-native-instructions.py`, its
+`--replay-copilot-agent` option and their tests, which this note names; the
+commands in this note no longer run.
+
 Task [#383](https://github.com/driftsys/upskill/issues/383), Q2 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 records catalog discovery and a real delegated child on 2026-10-24. These are

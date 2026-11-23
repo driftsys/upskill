@@ -1,5 +1,6 @@
 import importlib.util
 import os
+from unittest import mock
 import signal
 import subprocess
 import sys
@@ -11,6 +12,73 @@ import unittest
 spec = importlib.util.spec_from_file_location('qualification', Path(__file__).parents[1] / 'qualify-native-instructions.py')
 q = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(q)
+
+SCRIPT = str(Path(q.__file__))
+
+
+class IsolatedGitEnvironmentTests(unittest.TestCase):
+    def test_no_git_variable_reaches_the_environment(self):
+        sentinels = {
+            'GIT_DIR': '/unrelated/repository.git',
+            'GIT_WORK_TREE': '/unrelated/worktree',
+            'GIT_INDEX_FILE': '/unrelated/index',
+            'GIT_COMMON_DIR': '/unrelated/common',
+            'GIT_OBJECT_DIRECTORY': '/unrelated/objects',
+            'GIT_CONFIG_COUNT': '1',
+            'GIT_CONFIG_KEY_0': 'core.worktree',
+            'GIT_CONFIG_VALUE_0': '/unrelated/config-worktree',
+            'GIT_UPSKILL_SENTINEL_X': 'synthetic-git-value',
+        }
+        kept = {'PATH': '/synthetic/bin', 'HOME': '/synthetic/home', 'UPSKILL_TEST_ORDINARY': 'x'}
+        with mock.patch.dict(os.environ, {**sentinels, **kept}, clear=True):
+            env = q.isolated_git_environment()
+        self.assertEqual([key for key in env if key.startswith('GIT_')], [])
+        for key, value in kept.items():
+            self.assertEqual(env[key], value)
+
+
+class InvokeStateTests(unittest.TestCase):
+    def run_child(self, code, timeout=10):
+        with tempfile.TemporaryDirectory() as tmp:
+            return q.invoke([sys.executable, '-c', code], Path(tmp), timeout, os.environ.copy())
+
+    def test_a_login_message_with_a_failing_exit_is_an_authentication_failure(self):
+        result = self.run_child("import sys; print('Not logged in', file=sys.stderr); sys.exit(1)")
+        self.assertEqual(result['state'], 'authentication_failure')
+
+    def test_a_failing_exit_without_a_login_message_is_a_failure(self):
+        self.assertEqual(self.run_child('import sys; sys.exit(3)')['state'], 'failure')
+
+    def test_a_zero_exit_is_a_success_even_with_a_login_message(self):
+        self.assertEqual(self.run_child("print('not logged in')")['state'], 'success')
+
+    def test_a_child_that_outlasts_the_timeout_is_a_timeout(self):
+        self.assertEqual(self.run_child('import time; time.sleep(30)', timeout=0.3)['state'], 'timeout')
+
+    def test_a_missing_executable_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = q.invoke([str(Path(tmp) / 'no-such-client')], Path(tmp), 5, os.environ.copy())
+        self.assertEqual(result['state'], 'unavailable')
+
+
+class CommandLineTests(unittest.TestCase):
+    # test_smoke_native.py pins the refusal of the smoke-only flags without
+    # --smoke; the three refusals below are pinned only here.
+    def run_script(self, *flags):
+        done = subprocess.run([sys.executable, '-I', SCRIPT, *flags], capture_output=True, text=True)
+        self.assertEqual(done.returncode, 2, done.stderr)
+        return done.stderr
+
+    def test_the_script_without_smoke_is_a_usage_error(self):
+        self.assertIn('--smoke is required', self.run_script())
+
+    def test_a_client_that_is_not_a_smoke_client_is_refused(self):
+        self.assertIn('invalid choice', self.run_script('--smoke', '--upskill', 'x', '--clients', 'codex'))
+
+    def test_run_with_a_missing_upskill_file_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = str(Path(tmp) / 'no-such-upskill')
+            self.assertIn('--upskill does not name a file', self.run_script('--smoke', '--run', '--upskill', missing))
 
 
 @unittest.skipUnless(hasattr(os, 'killpg'), 'POSIX process groups are required')

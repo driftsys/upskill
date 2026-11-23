@@ -151,6 +151,9 @@ source or reader changes during the masked/unmasked/remasked trio.
    retry. If the remaining allowance is insufficient, do not start a partial
    paid sequence.
 
+The next paragraph names the qualification runner, which issue
+[#540](https://github.com/driftsys/upskill/issues/540) removed.
+
 The capture runner does not yet implement this profile. Before any execution,
 add failing offline examples for local-map conflicts, drift, event correlation,
 phase ordering, the reversal and preservation. Extend the existing qualification
@@ -218,7 +221,7 @@ minimum, check live account usage/reset times, leave the agreed reserve, and
 account for response overshoot. A CLI session cap alone cannot protect the
 account reserve; unknown or insufficient headroom blocks execution.
 
-The APIs and the classifiers that this passage names are code that issue
+The next two paragraphs name APIs, files and classifiers that issue
 [#540](https://github.com/driftsys/upskill/issues/540) removed.
 
 The pure APIs are
@@ -238,8 +241,8 @@ executable references for this layer. Issue
 [#540](https://github.com/driftsys/upskill/issues/540) removed both files. The
 archived [spec](../archive/specs/2026-10-31-copilot-overlay-offline-guards.md)
 and [plan](../archive/plans/2026-10-31-copilot-overlay-offline-guards.md) retain
-its working scope and execution ceremony. Existing Q11/Q11b classifiers are
-unchanged.
+its working scope and execution ceremony. Issue #540 also removed the Q11/Q11b
+classifiers.
 
 The
 [offline validation record](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-31-copilot-overlay-offline-planning/validation.json)

@@ -1,5 +1,9 @@
 # Gate 6 independent plugin fixture preparation
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed
+`scripts/qualify-plugin-rules.py`, its `--prepare` option and its tests, which
+this note names; the commands in this note no longer run.
+
 Task [#339](https://github.com/driftsys/upskill/issues/339) delivers the offline
 fixture prerequisite for native qualification
 [#337](https://github.com/driftsys/upskill/issues/337). It completes neither

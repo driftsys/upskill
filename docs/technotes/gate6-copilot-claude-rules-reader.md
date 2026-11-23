@@ -1,5 +1,10 @@
 # Gate 6 Copilot reader of Claude rules
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed the native
+probe mode of `scripts/qualify-native-instructions.py`, its
+`--replay-copilot-reader` option and their tests, which this note names; the
+commands in this note no longer run.
+
 Task [#382](https://github.com/driftsys/upskill/issues/382), Q1 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 records bounded project discovery on 2026-10-24. Production remains schema 1.

@@ -1,5 +1,9 @@
 # Gate 6 Codex package-owned agent registration
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed
+`scripts/qualify-plugin-rules.py` and its tests, which this note names; the
+commands in this note no longer run.
+
 Task [#393](https://github.com/driftsys/upskill/issues/393), Q7 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains bounded native results on Codex CLI 0.164.0, macOS arm64, 2026-10-24. An
