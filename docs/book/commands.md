@@ -591,25 +591,27 @@ keeps its commit when the source is not applied. In an applied source, the
 reinstall covers the named items and the items that a named item requires. For a
 directory source with recorded bundles, it reinstalls the members of those
 bundles and the items of that source installed directly, including their
-`requires` closure; and the dependencies of that source that no installed item
-requires, which `doctor` reports as orphaned dependencies; it installs no
-unrelated item of the source. It applies a kind restriction only when every
-recorded bundle of the source has recorded kinds, using their union. With one
-unrestricted bundle of the source, no kind restriction applies. Every lockfile
-entry of that source whose kind is outside the restriction is left untouched and
-reported as up to date, regardless of bundle membership or `required_by`, unless
-its source is skipped. Such an item is reported as skipped with the cause of its
-source, also when the source is skipped later because it requires an item of a
-skipped source. To update such an item, run `upskill add <source> <item>` again.
-A `.bundle.yaml` source is reinstalled as a whole. Each reinstalled entry gets
-the commit of its own source, unless its update is skipped, and any other entry
-keeps its commit. If a recorded bundle is missing from the source, update fails
-before any write with `bundle '<name>' is no longer in source <label>`, even if
-an item has that name; remove the bundle's items with `upskill remove` or
-restore the bundle. For a source that is not applied, only a changed commit
-value, or a changed `required_by` value, causes a lockfile write. This write is
-not a change: it does not count in the output above, and `update --dry-run` and
-a declined source record no commit.
+`requires` closure. It also reinstalls each dependency of that source that no
+installed item requires, which `doctor` reports as an orphaned dependency,
+unless a recorded bundle of the source lists it as a member: a bundle member
+follows its bundle. It installs no unrelated item of the source. It applies a
+kind restriction only when every recorded bundle of the source has recorded
+kinds, using their union. With one unrestricted bundle of the source, no kind
+restriction applies. Every lockfile entry of that source whose kind is outside
+the restriction is left untouched and reported as up to date, regardless of
+bundle membership or `required_by`, unless its source is skipped. Such an item
+is reported as skipped with the cause of its source, also when the source is
+skipped later because it requires an item of a skipped source. To update such an
+item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
+reinstalled as a whole. Each reinstalled entry gets the commit of its own
+source, unless its update is skipped, and any other entry keeps its commit. If a
+recorded bundle is missing from the source, update fails before any write with
+`bundle '<name>' is no longer in source <label>`, even if an item has that name;
+remove the bundle's items with `upskill remove` or restore the bundle. For a
+source that is not applied, only a changed commit value, or a changed
+`required_by` value, causes a lockfile write. This write is not a change: it
+does not count in the output above, and `update --dry-run` and a declined source
+record no commit.
 
 `update --dry-run` prints the blocks, then
 `Dry-run: would update <n> of <m> item(s)`. `<n>` is the number of selected

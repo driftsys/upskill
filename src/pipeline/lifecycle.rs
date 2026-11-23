@@ -1277,16 +1277,17 @@ fn repair_missing_plugins(
 /// reinstall covers the selected entries, the entries that a selected item
 /// requires (from this source or from another one). For a directory source
 /// with recorded bundles, it reinstalls the members of those bundles and the
-/// directly installed items of that source, and the dependencies of that
-/// source whose requirers are all absent from the lockfile (orphaned
-/// dependencies, #613); it reinstalls no other source item. It
-/// applies a kind restriction only when every recorded bundle of the source
-/// has recorded kinds, using their union. With one unrestricted bundle of the
-/// source, no restriction applies. Every entry of that source whose kind is
-/// outside the restriction is kept unchanged and is not updated. If its source is
-/// skipped, the entry is reported as skipped too. To update it,
-/// run `upskill add <source> <item>` again. A `.bundle.yaml` source is reinstalled
-/// as a whole. Each reinstalled entry gets the commit of its own source,
+/// directly installed items of that source. It also reinstalls each
+/// dependency of that source whose requirers are all absent from the
+/// lockfile (an orphaned dependency, #613), unless a recorded bundle of the
+/// source lists it: a bundle member follows its bundle. It reinstalls no other
+/// source item. It applies a kind restriction only when every recorded bundle
+/// of the source has recorded kinds, using their union. With one unrestricted
+/// bundle of the source, no restriction applies. Every entry of that source
+/// whose kind is outside the restriction is kept unchanged and is not updated.
+/// If its source is skipped, the entry is reported as skipped too. To update
+/// it, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
+/// reinstalled as a whole. Each reinstalled entry gets the commit of its own source,
 /// unless its update is skipped; any other entry keeps its recorded commit.
 /// Every source without changes that is not applied, in a run that is not
 /// a dry run and not stopped, a git source or a local path, also gets
@@ -1465,7 +1466,8 @@ pub fn update(
             // recorded bundles resolve those bundles and their direct items,
             // and the dependencies that no installed item requires any more
             // (the `doctor` condition), so that `update` does not remove an
-            // orphaned dependency as `no longer in source` (#613).
+            // orphaned dependency as `no longer in source` (#613). A member of
+            // a recorded bundle is left to its bundle by the next filter.
             let item_filter: Vec<String> =
                 if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
                     Vec::new()

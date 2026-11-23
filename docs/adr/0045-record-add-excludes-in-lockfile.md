@@ -165,8 +165,11 @@ bundles, the `update` item filter took only entries with an empty `required_by`.
 With the links kept, `e` was no longer in the filter, because no planned item
 required it, and `update` removed it with the message `no longer in source`,
 which is a cascade removal. The filter now also takes an entry whose
-`required_by` is not empty and names no requirer that the lockfile records. This
-is the `doctor` condition for an orphaned dependency, shared as
+`required_by` is not empty, names no requirer that the lockfile records, and is
+listed by no recorded bundle of the source. A member of a recorded bundle
+follows its bundle: when the bundle no longer lists it in the source, `update`
+removes it as `no longer in source`, as it did before. This is the `doctor`
+condition for an orphaned dependency, shared as
 `Lockfile::is_orphaned_dependency`. An entry that still has an installed
 requirer keeps the earlier behaviour: when that requirer no longer requires the
 entry in the source, `update` still removes the entry as `no longer in source`.

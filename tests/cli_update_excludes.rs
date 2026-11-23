@@ -775,7 +775,15 @@ fn a_bundle_source_treats_an_exclude_and_remove_alike_for_a_dependency_outside_t
             remove_item(&env, "d");
         }
         write_skill(&reg, "a", "", "second");
+        write_skill(&reg, "e", "", "refreshed dependency");
         let out = stdout_of(&env.run(&["update", "--yes"]));
+        // `update` reinstalls `e`, so the installed file holds the new text.
+        let installed_e =
+            fs::read_to_string(env.consumer().join(".claude/skills/e/SKILL.md")).unwrap();
+        assert!(
+            installed_e.contains("refreshed dependency"),
+            "{installed_e}"
+        );
         let lock = env.lock();
         let e_item = if has_lock_item(&lock, "e") {
             lock_item(&lock, "e")["required_by"].clone()
@@ -1095,4 +1103,74 @@ fn update_removes_a_dependency_that_its_installed_requirer_no_longer_requires_in
         (env.installed("e"), out.contains("no longer in source")),
         (false, true)
     );
+}
+
+#[test]
+fn update_keeps_and_refreshes_a_chain_of_orphaned_dependencies_of_a_bundle_source() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "f", "", "dependency");
+    write_skill(&reg, "e", "requires:\n  skills: [f]\n", "dependency");
+    write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "a", "", "first");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "d"]);
+    env.run(&["add", s(&reg), "d"]);
+    env.run(&["add", s(&reg), "b"]);
+    env.run(&["add", s(&reg), "b", "--exclude", "d"]);
+    assert!(env.installed("e") && env.installed("f"));
+
+    write_skill(&reg, "f", "", "refreshed f");
+    let out = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(!out.contains("no longer in source"), "{out}");
+    assert!(env.installed("e") && env.installed("f"), "{out}");
+    let f = fs::read_to_string(env.consumer().join(".claude/skills/f/SKILL.md")).unwrap();
+    assert!(f.contains("refreshed f"), "{f}");
+}
+
+#[test]
+fn update_removes_an_orphaned_dependency_that_a_recorded_bundle_no_longer_lists() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "x", "", "other");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "e"]);
+    env.run(&["add", s(&reg), "d"]);
+    env.run(&["add", s(&reg), "b"]);
+    env.run(&["add", s(&reg), "x", "--exclude", "d"]);
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+
+    // The bundle no longer lists `e`: a bundle member follows its bundle.
+    write_bundle(&reg, "b.bundle.yaml", &["a"]);
+    let out = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(
+        out.lines()
+            .any(|l| l.contains("skill e") && l.contains("removed — no longer in source")),
+        "{out}"
+    );
+    assert!(!env.installed("e"));
+}
+
+#[test]
+fn update_removes_an_orphaned_dependency_that_the_source_deleted() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "a", "", "first");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "d"]);
+    env.run(&["add", s(&reg), "d"]);
+    env.run(&["add", s(&reg), "b"]);
+    env.run(&["add", s(&reg), "b", "--exclude", "d"]);
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+
+    fs::remove_dir_all(reg.join("e")).unwrap();
+    let out = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(
+        out.lines()
+            .any(|l| l.contains("skill e") && l.contains("removed — no longer in source")),
+        "{out}"
+    );
+    assert!(!env.installed("e"));
 }
