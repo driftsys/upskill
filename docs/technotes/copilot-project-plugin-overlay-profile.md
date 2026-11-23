@@ -225,12 +225,13 @@ managed-policy checks, persistent attempt accounting and native-effect recovery
 remain separate unimplemented boundaries. Passing these guards never admits a
 paid native process or substitutes for the required native replay.
 
-The [implementation](../../scripts/qualify-plugin-rules.py) and
-[offline acceptance tests](../../scripts/tests/test_copilot_overlay_planning.py)
-are the executable references for this layer. The archived
-[spec](../archive/specs/2026-10-31-copilot-overlay-offline-guards.md) and
-[plan](../archive/plans/2026-10-31-copilot-overlay-offline-guards.md) retain its
-working scope and execution ceremony. Existing Q11/Q11b classifiers are
+The implementation, `scripts/qualify-plugin-rules.py`, and the offline
+acceptance tests, `scripts/tests/test_copilot_overlay_planning.py`, were the
+executable references for this layer. Issue
+[#540](https://github.com/driftsys/upskill/issues/540) removed both files. The
+archived [spec](../archive/specs/2026-10-31-copilot-overlay-offline-guards.md)
+and [plan](../archive/plans/2026-10-31-copilot-overlay-offline-guards.md) retain
+its working scope and execution ceremony. Existing Q11/Q11b classifiers are
 unchanged.
 
 The
