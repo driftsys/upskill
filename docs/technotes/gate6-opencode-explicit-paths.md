@@ -1,9 +1,9 @@
 # Gate 6 OpenCode explicit-path retry: failed native positive
 
 Task [#391](https://github.com/driftsys/upskill/issues/391) follows the
-[adopted native-first direction](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules)
+[adopted native-first direction](../archive/specs/2026-10-23-customization-delivery-proposal.md#rules)
 and the
-[slice-1 order](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md).
+[slice-1 order](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md).
 This 2026-10-25 campaign on macOS arm64 retains one failed OpenCode 2.1.4 native
 positive. The provider returned HTTP 400 `model_not_supported`; the exported
 session selected the requested private model. No downstream model control ran
@@ -83,7 +83,7 @@ Q5 remains open. The explicit-path retry has no PASS, so the future OpenCode
 glob removal remains gated. The independent Codex attribution control can
 continue; no production route, schema-1 state or durable record changes in this
 packet
-([handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+([handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 [summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-opencode-explicit-paths/summary.json)).
 
 Packet review adds a failed regression before rejecting contradictory native

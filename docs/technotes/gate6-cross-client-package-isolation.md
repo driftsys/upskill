@@ -1,7 +1,7 @@
 # Gate 6 cross-client package isolation: Claude activation observed
 
 Task [#410](https://github.com/driftsys/upskill/issues/410), Q11 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains a bounded isolation FAIL on macOS arm64, 2026-10-25: Claude 2.1.308
 activates the Copilot-shaped package through the explicit session selector after
 its native positive and clean absence baseline pass. Copilot's opposite

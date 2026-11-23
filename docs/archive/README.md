@@ -4,10 +4,11 @@ This directory retains completed or superseded working documents for provenance.
 An archive entry records its source paths, delivered or superseding commit or
 PR, durable successor records, and any unfinished scope retained in WIP.
 
-No historical feature plans have been classified as complete by the
-documentation refactor. The [WIP inventory](../wip/README.md) tracks their
-reconciliation. Archive each feature only after its completion evidence has been
-checked; dates, approval labels and checked boxes are insufficient on their own.
+The [triage of 2026-11-23](#triage-of-2026-11-23) classified the feature
+documents that the documentation refactor had left in WIP. Archive a feature
+only after its completion evidence has been checked; dates, approval labels and
+checked boxes are insufficient on their own. The [WIP index](../wip/README.md)
+lists the documents that are still active.
 
 ## Legacy-state projection
 
@@ -30,14 +31,13 @@ and [AD-0015](../adr/0015-pure-legacy-state-projection.md). The
 [command guide](../book/commands.md) describes the unchanged command and
 persistence boundary.
 
-The
-[foundation](../wip/specs/2026-10-11-agent-customization-foundation-design.md)
-and [M1 plan](plans/2026-10-11-instructions-rules-m1.md) were active until
-2026-11-11 (the foundation remains in WIP): source verification, historical
-rendering and resources, adoption, requested-selection reconciliation, schema-2
-lifecycle preservation, exact backup and transactional execution are unfinished.
-Other WIP material retains its existing disposition; this archive entry concerns
-only the named pair.
+The [foundation](specs/2026-10-11-agent-customization-foundation-design.md) and
+[M1 plan](plans/2026-10-11-instructions-rules-m1.md) were active until
+2026-11-11 (the foundation was archived on 2026-11-23): source verification,
+historical rendering and resources, adoption, requested-selection
+reconciliation, schema-2 lifecycle preservation, exact backup and transactional
+execution are unfinished. Other WIP material retains its existing disposition;
+this archive entry concerns only the named pair.
 
 ## Owned instruction operation planning
 
@@ -1107,3 +1107,120 @@ the [recipe](../book/recipes.md#publish-a-bundle-as-client-plugins),
 [specification](../specification/specification.md) §2. The
 [hook item kind design](../wip/specs/2026-11-18-hook-item-kind-design.md) is a
 later slice and remains in WIP.
+
+## Triage of 2026-11-23
+
+Issue [#536](https://github.com/driftsys/upskill/issues/536). The 36 documents
+below were moved from `docs/wip/specs/` and `docs/wip/plans/` to the same file
+names under `docs/archive/specs/` and `docs/archive/plans/`. Their bodies are
+unchanged, except that every path to another moved document, in a link or in
+plain text, follows the move, and the formatter wrapped the changed lines again.
+Links from the ADRs, topics and technotes were updated in the same way; the
+evidence JSON files under `docs/technotes/evidence/` keep the old paths. Each
+entry was checked against the merged pull requests and the code at commit
+`4c07051`. Status lines inside the documents ("Approved", "pending
+implementation") are historical.
+
+The triage also ends two statements of earlier entries. The entries "Captured
+Codex instruction boundary" and "Source-backed Codex instruction lifecycle" say
+that the other working documents and `docs/wip/README.md` retain their paths and
+bytes. That was true until this triage moved the documents and rewrote the
+index.
+
+### Delivered
+
+| Documents                                                                                                                                                                                          | Delivered by                               | Durable records                                                                                                                     | Differences from the documents                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install script: [spec](specs/2026-05-16-install-script-design.md), [plan](plans/2026-05-16-install-script.md)                                                                                      | #135, #136                                 | [Getting started](../book/getting-started.md)                                                                                       | No release asset and no installer exists for native Windows.                                                                                                                          |
+| Bundle discovery by name: [spec](specs/2026-05-22-bundle-by-name-discovery-design.md), [plan](plans/2026-05-22-bundle-by-name-discovery.md)                                                        | #160                                       | [Specification](../specification/specification.md) §2.1, [command guide](../book/commands.md)                                       | None found.                                                                                                                                                                           |
+| Windows support: [plan](plans/2026-05-22-windows-support.md)                                                                                                                                       | #157                                       | [Specification](../specification/specification.md) §1.2, [getting started](../book/getting-started.md)                              | The plan has no spec.                                                                                                                                                                 |
+| Plugin descriptor modes: [plan](plans/2026-05-23-plugin-descriptor-modes.md)                                                                                                                       | #171 (issue #168)                          | [Content format](../topics/0001-content-format.md) §3.7, [ADR-0008](../adr/0008-plugin-install-shellout.md)                         | The design that the plan names was never committed. #584 later changed the location and the key of the OpenCode config entry.                                                         |
+| Comment-preserving `fmt`: [spec](specs/2026-05-23-comment-preserving-fmt-design.md)                                                                                                                | #170 (issue #169)                          | [Content format](../topics/0001-content-format.md) §3.8, [ADR-0004](../adr/0004-cli-surface.md)                                     | The key order lists of the spec are older than the current ones.                                                                                                                      |
+| Item conflict resolution: [spec](specs/2026-05-24-item-conflict-resolution-design.md), [plan](plans/2026-05-24-item-conflict-resolution.md)                                                        | #174                                       | [Specification](../specification/specification.md) §2.1 (partial)                                                                   | `--force` also covers modified and unowned files since #468 and #489. The lockfile is `schema: 2`. The durable records do not describe the conflict error; see the open points below. |
+| Multi-registry search: [spec](specs/2026-05-24-multi-registry-search-design.md), [plan](plans/2026-05-24-multi-registry-search.md)                                                                 | #175                                       | [Command guide](../book/commands.md) (`search`, `index`), [getting started](../book/getting-started.md)                             | The index holds no bundles. The `gitlab:` source examples are obsolete since #233.                                                                                                    |
+| Upgrade UX: [spec](specs/2026-05-24-upgrade-ux-design.md), [plan](plans/2026-05-24-upgrade-ux.md)                                                                                                  | #172                                       | [AD-0043](../adr/0043-per-source-update-prompts.md), [specification](../specification/specification.md) §2.2                        | Removal of items that left the source is kept. #468 and #489 replaced clean-and-regenerate with recorded files; #503 replaced the single question with one question per source.       |
+| Supporting resources: [spec](specs/2026-06-02-supporting-resources-design.md), [plan](plans/2026-06-02-supporting-resources.md)                                                                    | #201, #224, #225 (issues #199, #200, #203) | [Content format](../topics/0001-content-format.md) §2.4                                                                             | #225 replaced the `--as` guard with alias relocation. Client-named files are ordinary resources since #580.                                                                           |
+| Coupling redesign: [spec](specs/2026-06-03-coupling-redesign-design.md), plans [slice 1](plans/2026-06-03-coupling-redesign-slice1.md) and [slice 2](plans/2026-06-03-coupling-redesign-slice2.md) | #204, #210, #231                           | [ADR-0009](../adr/0009-coupling-tiers-and-dependencies.md), [content format](../topics/0001-content-format.md) §3.1                 | `requires.mcps` was not delivered. The status line of ADR-0009 still says "Proposed"; see the open points below.                                                                      |
+| MCP servers: specs [support](specs/2026-06-03-mcp-support-design.md) and [local-install convention](specs/2026-06-03-mcp-v2-convention-design.md), [plan](plans/2026-06-03-mcp-support-v1.md)      | #218, #219, #239, #242 (issues #237, #241) | [ADR-0010](../adr/0010-mcp-config-write.md), [content format](../topics/0001-content-format.md) §3.7, [recipes](../book/recipes.md) | The "v2" sketch of the support spec (`requires.mcps`, generated preflight, install agent) was not delivered; the convention spec rejects it. Debt #244 is open.                       |
+| `fmt` formats the body: [spec](specs/2026-06-04-fmt-format-body-design.md), [plan](plans/2026-06-04-fmt-format-body.md)                                                                            | #221                                       | [Content format](../topics/0001-content-format.md) §3.8, [ADR-0004](../adr/0004-cli-surface.md)                                     | None found.                                                                                                                                                                           |
+| Generic git URL source: [spec](specs/2026-06-10-generic-git-url-source-design.md), [plan](plans/2026-06-10-generic-git-url-source.md)                                                              | #232, #233, #234                           | [ADR-0011](../adr/0011-generic-git-url-source.md), [specification](../specification/specification.md) §2.1                          | The amendment of 2026-10-12 to ADR-0011 (#257) reversed the hard failure for `gitlab:` labels in existing lockfiles.                                                                  |
+| Customization target profiles: [plan](plans/2026-10-11-customization-target-profiles.md)                                                                                                           | #252                                       | [ADR-0012](../adr/0012-consumer-client-filtering.md), `src/target.rs`                                                               | #583 removed the capability validation of the plan, because no command called it.                                                                                                     |
+| Legacy source labels: [plan](plans/2026-10-12-legacy-source-labels.md)                                                                                                                             | #257 (issue #236)                          | [ADR-0011](../adr/0011-generic-git-url-source.md) amendment, [specification](../specification/specification.md)                     | None found.                                                                                                                                                                           |
+| Rust 1.85 compatibility: [plan](plans/2026-10-12-rust-185-compatibility.md)                                                                                                                        | #256                                       | `Cargo.toml` (`rust-version`), the `msrv` job of `.github/workflows/ci.yml`                                                         | None found.                                                                                                                                                                           |
+
+### Replaced by the re-steer of 2026-11-11
+
+[AD-0042](../adr/0042-resteer-customization-delivery.md) and the
+[re-steer design](specs/2026-11-11-customization-resteer-design.md) replaced the
+gate-based approach that these documents belong to. None of them is planned
+work. The [roadmap](../roadmap.md) holds the current delivery order.
+
+- [Agent customization foundation design](specs/2026-10-11-agent-customization-foundation-design.md).
+  Its target identities are in `src/target.rs` (#252). Its planning, ownership,
+  migration and recovery contracts were built as library code and removed by
+  #466. AD-0042 Decisions 1 and 2 replace them. Its permission preservation and
+  its Cursor and Gemini targets were not delivered.
+- [Agent customization delivery roadmap](specs/2026-10-11-agent-customization-roadmap.md).
+  The [roadmap](../roadmap.md) replaces it. Its own header already names it
+  historical planning.
+- [Shared updater design](specs/2026-10-14-shared-updater-design.md) and
+  [plan](plans/2026-10-14-shared-updater.md). AD-0042 Decision 8 delivered
+  `update --check`, `update --notice` and the session notice plugins in their
+  place (#524, #526, #532; stories #284 and #285 are closed). The `maintain`
+  command, the update of the upskill binary and the release channel were not
+  delivered; the re-steer design lists the binary update as a non-goal.
+- [Customization delivery proposal](specs/2026-10-23-customization-delivery-proposal.md)
+  and
+  [implementation handoff](specs/2026-10-23-customization-delivery-implementation-spec.md).
+  AD-0042 replaced the gates Q1 to Q11 and CD-01 to CD-11, the one-copy rule
+  policy and the Codex policy. The trial results stay in `docs/technotes/`. The
+  proposed amendments 1, 3 and 4 of
+  [AD-0040](../adr/0040-separate-customization-delivery-from-discovery.md)
+  (managed packages for each client, OpenCode skill sources, bundles outside the
+  MVP) were neither adopted nor implemented.
+- [Per-client package preservation contract](specs/2026-10-25-customization-preservation-contract.md)
+  (#415, #416). A design record without code. It covers native plugin
+  registration for all content, which AD-0042 rejects as an alternative. AD-0042
+  Decisions 1 and 2 state the preservation behaviour that was built.
+- [Preflight discovery and import inventory](specs/2026-10-25-preflight-discovery-inventory-design.md)
+  (#417). Never implemented. It was the entry design of the gated lifecycle;
+  AD-0042 replaced the clause that requires a complete preflight.
+
+Two technotes that the WIP index listed as active proposals stay in
+`docs/technotes/` as research:
+[the Copilot plugin exclusion profile](../technotes/copilot-project-plugin-overlay-profile.md)
+(#446, closed; its native trial never ran) and
+[the delivery policy comparison](../technotes/customization-delivery-policy-comparison.md)
+(#442, closed; AD-0041 adopted its recommendation).
+
+### Open points found by the triage
+
+These points are not fixed by the triage and have no issue yet:
+
+- ADR-0009 and ADR-0006 have the status "Proposed", and the
+  [ADR index](../adr/README.md) repeats it, although the code implements both.
+- No durable record describes the error for an item that is already installed
+  from another source, or the `--as` and `--exclude` flags of `add`.
+- `upskill search --kind` and `upskill index` do not cover bundles. No
+  integration test covers the registry index.
+
+## Stale documentation inventory of 2026-11-23
+
+The [inventory](2026-11-23-stale-docs-inventory.md) was a working note for the
+same session and is retained unchanged. Result for each of its items:
+
+| Item | Result                                                                                                                                             |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1, 2 | The paragraph in section 7 of the content format now cites AD-0041 and AD-0042.                                                                    |
+| 3    | The "Planned ancillary transition" block was removed from the specification. The `CLAUDE.md` bridge and the OpenCode glob entry are kept.          |
+| 4    | Topic 0009 has a new status paragraph, and its replaced sections are marked. The file was not moved, because the book and many records link to it. |
+| 5    | No change: the three lines are inside sections that are already marked withdrawn.                                                                  |
+| 6    | The content format states that upskill generates no output for Codex.                                                                              |
+| 7    | The capability matrix has no version label; two cells were corrected (Copilot subagents, OpenCode path scoping).                                   |
+| 8    | No change: the table is under the heading for installing Superpowers, a third-party plugin.                                                        |
+
+The same session added a withdrawn mark to the "Native-first transition" section
+of ADR-0003 and corrected the lint rule table of the command guide. The redirect
+pages at the `docs/` root, the pages of `docs/design/` and topics 0005 to 0008
+stay in place: `docs/compatibility.json` and the book depend on their paths. The
+part of the inventory named "Not covered by the sweep" is still not covered.

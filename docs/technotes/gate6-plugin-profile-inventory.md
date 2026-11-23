@@ -87,7 +87,7 @@ without native route qualification.
 
 Task [#382](https://github.com/driftsys/upskill/issues/382) opens a new campaign
 revision for the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md).
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md).
 The installed-version receipts on macOS arm64 record the following campaign
 releases. Every new control row must name its pin and retain a pre-run version
 receipt for its executing client. Historical 2026-10-19 evidence keeps its

@@ -336,7 +336,7 @@ remain unchanged.
 [q11b]: gate6-project-registration-isolation.md
 [receipts]: https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-31-copilot-plugin-overlay-reference/help-receipts.json
 [owner-receipts]: evidence/2026-10-30-q11b-registration-isolation/owner-install-receipts.json
-[preservation]: ../wip/specs/2026-10-25-customization-preservation-contract.md
+[preservation]: ../archive/specs/2026-10-25-customization-preservation-contract.md
 [q11-issue]: https://github.com/driftsys/upskill/issues/410
 [install-guide]: https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-finding-installing#turn-off-a-repository-default
 [config-reference]: https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference#configuration-file-settings

@@ -1,7 +1,7 @@
 # Gate 6 Copilot reader of Claude rules
 
 Task [#382](https://github.com/driftsys/upskill/issues/382), Q1 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 records bounded project discovery on 2026-10-24. Production remains schema 1.
 
 ## Method and pins
@@ -56,7 +56,7 @@ fixture hashes and root commits are retained. Failed positives are never
 reclassified as absence observations.
 
 The result informs the adopted native-first rules decision in the
-[delivery proposal](../wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24).
+[delivery proposal](../archive/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24).
 Unscoped `.claude/rules` is a demonstrated Copilot reader. In the selected
 shared Claude/Copilot route it is an explicitly declared per-item consumer of
 one native file, not a second `.github/instructions` copy. The scoped matching-

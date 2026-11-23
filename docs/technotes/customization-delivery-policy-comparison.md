@@ -599,8 +599,8 @@ in place.
 [gates]: ../topics/0009-customization-delivery.md#acceptance-and-evidence-gates
 [direction]: ../adr/0040-separate-customization-delivery-from-discovery.md
 [roadmap]: ../roadmap.md
-[handoff]: ../wip/specs/2026-10-23-customization-delivery-implementation-spec.md
-[preservation]: ../wip/specs/2026-10-25-customization-preservation-contract.md
+[handoff]: ../archive/specs/2026-10-23-customization-delivery-implementation-spec.md
+[preservation]: ../archive/specs/2026-10-25-customization-preservation-contract.md
 [q5]: gate6-opencode-explicit-paths-retry.md
 [q6]: gate6-claude-managed-root.md
 [q7]: gate6-codex-agent-registration.md

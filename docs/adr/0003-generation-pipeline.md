@@ -126,6 +126,12 @@ no equivalent `EXTERNAL_RULE_PATTERN`; rules reach opencode only via
 
 ### Native-first transition planned on 2026-10-24
 
+> **Withdrawn on 2026-11-11 by
+> [AD-0042](0042-resteer-customization-delivery.md).** This section is retained
+> as history. The transition was not implemented: upskill writes a rule for
+> Claude Code and Copilot to both client paths, generates no Codex output, and
+> keeps the `CLAUDE.md` bridge and the project-scope OpenCode glob entry.
+
 The tables above remain the current generation/installer contract. The selected
 next rule routes are native Claude rules, one shared Claude/Copilot file with
 per-item intended readers when both clients are selected, native Copilot modular

@@ -7,7 +7,8 @@ Goal: restore updates of existing schema-1 installations recorded with
 historical GitLab labels, closing #236 and satisfying foundation design section
 5 before legacy-state projection.
 
-Authority: `docs/wip/specs/2026-10-11-agent-customization-foundation-design.md`,
+Authority:
+`docs/archive/specs/2026-10-11-agent-customization-foundation-design.md`,
 section 5; `docs/wip/plans/2026-10-11-instructions-rules-m1.md`, M1-A2. This
 compatibility amendment supersedes ADR-0011's old-lockfile hard-fail policy
 only. New user input keeps the current source syntax.

@@ -80,8 +80,8 @@ Runs `markspec check` on the edited file.
 - A body without such a heading is one text for every event of the hook.
 - Text before the first event heading belongs to every event.
 - Headings of level 3 and below inside a section are content.
-- `@client` directive blocks and `HOOK.<client>.md` override files keep their
-  existing meaning.
+- `@client` directive blocks keep their existing meaning. A hook has no
+  per-client override file: #580 removed override files from the content format.
 
 ### 4. Lint rules
 

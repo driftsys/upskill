@@ -1,7 +1,7 @@
 # Gate 6 Copilot plugin components: failed rules and bounded delegation
 
 Task [#388](https://github.com/driftsys/upskill/issues/388), Q3 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains Copilot CLI 1.0.103 controls on macOS arm64, 2026-10-24. Native
 instruction positives pass. Plugin rule positives fail. A guarded retry observes
 one real namespaced user-scope custom child and its resource read, while its
@@ -152,9 +152,9 @@ roots under `.copilot` or a configured `COPILOT_HOME` are rejected before
 writes. Validation logs and their hashes are retained in the packet.
 
 The affected proposal rows are
-[Rules, Copilot](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules)
+[Rules, Copilot](../archive/specs/2026-10-23-customization-delivery-proposal.md#rules)
 and
-[Subagents, Copilot](../wip/specs/2026-10-23-customization-delivery-proposal.md#subagents).
+[Subagents, Copilot](../archive/specs/2026-10-23-customization-delivery-proposal.md#subagents).
 The rule route remains a failed candidate. A bounded user custom-child route is
 observed, with exact response and project activation limits. Failed positives
 cannot establish a universal absence reader result. The task stays open; Linux,

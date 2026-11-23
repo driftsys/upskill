@@ -1,7 +1,7 @@
 # Gate 6 Codex rule lifecycle: repeated native bodies
 
 Task [#379](https://github.com/driftsys/upskill/issues/379), Q9 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains a 2026-10-24 continuity experiment on Codex CLI 0.164.0, macOS arm64.
 Recorded developer-body counts are one per rule at startup, two in the combined
 reopened-session and first automatic-compaction window, then one after the
@@ -13,12 +13,12 @@ zero-duplicate criterion, not a separate resume-only result
 ## Current direction and historical criterion
 
 The user's
-[2026-10-24 rules decision](../wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24)
+[2026-10-24 rules decision](../archive/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24)
 accepts the transient duplicate as a declared limitation. Step 7 records Codex
 rules as supported with that limitation once a resume-only attribution control
 is retained, and lists the amendment of #379 from a K0 blocker to K1 debt. This
 packet does not implement that amendment or rewrite its historical FAIL
-([handoff Q9](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+([handoff Q9](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 [packet decisions](evidence/2026-10-24-codex-rule-lifecycle/decisions.json)).
 
 The offline classifier retains the stricter diagnostic criterion: a calibrated
@@ -159,7 +159,7 @@ Resume-only attribution, clear/fork, fresh registration, any changed-definition
 review, Linux and IDE/hosted surfaces remain unqualified. No production adapter,
 durable record or schema-1 route is changed by this packet
 ([summary](evidence/2026-10-24-codex-rule-lifecycle/summary.json),
-[step 7](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md)).
+[step 7](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md)).
 
 Final packet-review regressions independently corrupt each resume command,
 process-exit and automatic-input prerequisite. They also correct an inherited

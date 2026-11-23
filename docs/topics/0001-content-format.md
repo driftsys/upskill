@@ -38,7 +38,8 @@ This document uses **Claude Code**, **GitHub Copilot**, **Codex** and
 **opencode** in prose. The lowercase source family identifiers `claude`,
 `copilot`, `codex` and `opencode` appear in `audience` lists (§3.1) and
 conditional content directives (§6). Historical passthrough blocks (§3.5) use
-`claude`, `copilot` and `opencode`.
+`claude`, `copilot` and `opencode`. `codex` selects no generation client:
+upskill generates no output for Codex.
 
 ---
 
@@ -1222,21 +1223,18 @@ See §2.3 and §6.
 
 ## 7. Generation: client-specific output
 
-Delivery clarification (2026-10-19): the client output layouts below describe
-format/generation mappings, not exclusive native discovery or qualified runtime
-support. Compatibility directories, imports, globs and shared paths can expose
-those outputs to other clients. Future production activation must satisfy the
-[delivery/discovery/activation contract](https://github.com/driftsys/upskill/blob/main/docs/topics/0009-customization-delivery.md),
-including explicit intended consumers, negative/duplicate controls and ownership
-preservation. Independent Codex/OpenCode rule delivery must not be inferred from
-these historical file layouts or implemented by rewriting team `AGENTS.md`. The
-[user-decided native-first transition](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#native-first-rules-and-implementation-order-2026-10-24)
-uses one shared always-on Claude/Copilot file when both are selected, with
-per-item reader consent and no second Copilot copy. Explicit OpenCode paths
-await Q5 PASS; its shipped glob and other output tables remain current until a
-separate code change. Managed package defaults and new layout ownership remain
-pending adoption/implementation
-([amendment inventory](https://github.com/driftsys/upskill/blob/main/docs/topics/0009-customization-delivery.md#amendment-inventory)).
+Delivery clarification (2026-10-19, revised 2026-11-23): the client output
+layouts below describe format/generation mappings, not exclusive native
+discovery or qualified runtime support. Compatibility directories, imports,
+globs and shared paths can expose those outputs to other clients. Each selected
+client receives its own generated copy
+([AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md)).
+A rule that is installed for both Claude Code and Copilot is written to both
+client paths
+([AD-0042](https://github.com/driftsys/upskill/blob/main/docs/adr/0042-resteer-customization-delivery.md),
+Decision 7). The
+[support levels](https://github.com/driftsys/upskill/blob/main/docs/book/support-levels.md)
+state how far the output for each client and kind is verified.
 
 This section describes the expected output per client: which files an
 implementation writes for each item kind, and how SSOT frontmatter maps onto

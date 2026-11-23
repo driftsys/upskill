@@ -45,14 +45,14 @@ sections 1, 2, 6, and F-A.
 
 ## File responsibilities
 
-| File                                                                 | Responsibility                                                                                        |
-| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `src/target.rs` (new)                                                | Stable family/surface identifiers, contract revision, capability declarations and validation outcomes |
-| `src/lib.rs`                                                         | Export the new target module                                                                          |
-| `src/select.rs`                                                      | Map current consumer selections to surfaces and hold the frozen default set                           |
-| `src/config.rs`                                                      | Keep config behavior and tests aligned with the frozen default                                        |
-| `tests/cli_client_filtering.rs`                                      | Pin unchanged default install output and selection precedence                                         |
-| `docs/wip/specs/2026-10-11-agent-customization-foundation-design.md` | Record any implementation choice differing from the proposal                                          |
+| File                                                                     | Responsibility                                                                                        |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `src/target.rs` (new)                                                    | Stable family/surface identifiers, contract revision, capability declarations and validation outcomes |
+| `src/lib.rs`                                                             | Export the new target module                                                                          |
+| `src/select.rs`                                                          | Map current consumer selections to surfaces and hold the frozen default set                           |
+| `src/config.rs`                                                          | Keep config behavior and tests aligned with the frozen default                                        |
+| `tests/cli_client_filtering.rs`                                          | Pin unchanged default install output and selection precedence                                         |
+| `docs/archive/specs/2026-10-11-agent-customization-foundation-design.md` | Record any implementation choice differing from the proposal                                          |
 
 ## Review focus
 

@@ -57,7 +57,7 @@ retains existing-kind preservation. The later user amendment implements skills
 first on passed client candidates; Q10/Q11 and user adoption remain entry gates,
 and integrated qualification still blocks new layout adoption and the combined
 MVP release. No unadopted route gains production effects
-([current sequence](../../roadmap.md#implementation-dependencies)).
+([current sequence](../../roadmap.md)).
 
 Documentation reconciliation is the bounded deliverable of #349. Unchecked
 native feasibility work continues under #337; new owned-skill lifecycle and its

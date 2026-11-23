@@ -89,7 +89,7 @@ through the lockfile.
 ## Satisfies
 
 - Acceptance criteria from
-  `docs/wip/specs/2026-06-10-generic-git-url-source-design.md`
+  `docs/archive/specs/2026-06-10-generic-git-url-source-design.md`
 - Implemented in: `src/source.rs` (`GitRepo`, `parse_git_url`,
   `GitlabShorthandRemoved`), `src/pipeline/git.rs` (`git_clone_url`,
   `install_from_git`)

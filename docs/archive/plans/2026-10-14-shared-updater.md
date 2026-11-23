@@ -30,7 +30,7 @@ qualified filesystem locks, shell installer and GitHub Actions release workflow.
 Add no runtime dependencies.
 
 **Spec:**
-[docs/wip/specs/2026-10-14-shared-updater-design.md](../specs/2026-10-14-shared-updater-design.md)
+[docs/archive/specs/2026-10-14-shared-updater-design.md](../specs/2026-10-14-shared-updater-design.md)
 
 **Start gate:** Do not start #284 implementation until the M1 ownership-aware
 lifecycle completes its combined-state, qualified-apply, recovery, and adapter

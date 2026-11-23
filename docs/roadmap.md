@@ -33,14 +33,14 @@ client receives a support level instead of passing release gates.
 
 ## Delivery order
 
-| Stage | Content                                                                | Tracking |
-| ----- | ---------------------------------------------------------------------- | -------- |
-| MVP   | Install, update, removal and notices for Claude Code and Copilot CLI.  | #283     |
-| 1     | Stabilize the shipped features: review debt and old working documents. | #291     |
-| 2     | Plugin MVP: hooks, commands, MCP and LSP servers, catalog, smoke test. | #291     |
-| 3     | Refactor where the Codex adapter needs it.                             | #291     |
-| 4     | Codex adapter.                                                         | #291     |
-| 5     | Extra capabilities: tools, permissions, hooks outside a plugin, MCP.   | #291     |
+| Stage | Content                                                                | Tracking   |
+| ----- | ---------------------------------------------------------------------- | ---------- |
+| MVP   | Install, update, removal and notices for Claude Code and Copilot CLI.  | #283       |
+| 1     | Stabilize the shipped features: review debt and old working documents. | #283, #291 |
+| 2     | Plugin MVP: hooks, commands, MCP and LSP servers, catalog, smoke test. | #291       |
+| 3     | Refactor where the Codex adapter needs it.                             | #291       |
+| 4     | Codex adapter.                                                         | #291       |
+| 5     | Extra capabilities: tools, permissions, hooks outside a plugin, MCP.   | #291       |
 
 Stages 1 and 2 run in parallel. Stabilizing the shipped features does not block
 the design and development of the plugin MVP; both must be complete before stage
@@ -77,8 +77,10 @@ After 0.9.0:
   CLI plugin
   ([ADR-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-plugin-output-of-a-bundle.md)).
   Plugin output stays experimental until the smoke test of stage 2 passes.
-- 0.9.1 and 0.9.2 fixed OpenCode global installs, `doctor` and the notice lock.
+- 0.9.1 and 0.9.2 fixed the OpenCode plugin check and OpenCode global installs.
   OpenCode stays experimental: no smoke run has passed.
+- Fixes to `doctor`, to the discovery of unreadable directories and to the
+  notice lock are merged and are not in a release yet.
 
 ## Stage 1 — Stabilize the shipped features
 
@@ -89,8 +91,10 @@ is fixed in that change or before it.
 - Fix the K1 debt (#570, #613).
 - Triage the K2 debt filed against #283: fix the items that change behavior,
   close or merge the others.
-- Triage the working documents in `docs/wip/` (#536). Active designs stay; the
-  others are gardened or archived.
+- Triage the working documents in `docs/wip/` (#536). Done on 2026-11-23: only
+  the hook item kind design stays there, and the
+  [archive](https://github.com/driftsys/upskill/blob/main/docs/archive/README.md#triage-of-2026-11-23)
+  lists the other documents with three open points.
 - Delete the unused Python gate harness (#540).
 
 ## Stage 2 — Finish plugin distribution
@@ -98,13 +102,18 @@ is fixed in that change or before it.
 This stage is the plugin MVP and runs in parallel with stage 1. A plugin cannot
 hold an always-loaded rule file, so a bundle needs hooks and commands to be
 complete as a plugin. This stage starts with one design session and one decision
-record that covers all items below.
+record that covers all items below. The record amends
+[ADR-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-plugin-output-of-a-bundle.md)
+where an item changes it: ADR-0044 limits the plugin content to skills,
+resources and agents, and its `init` command lists the MCP servers of the bundle
+without installing them.
 
 - **Hook item kind (`HOOK.md`).** One file in an item directory holds all hook
   events of that directory, one `## <event>` section for each event. The draft
   is
   [the hook item kind design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-11-18-hook-item-kind-design.md).
-  The first target is `pack` output.
+  The convention is agreed; the design is not approved for implementation. The
+  first target is `pack` output.
 - **Command item kind (`COMMAND.md`).** A command that the user calls in the
   client, rendered for each client. The design decides how a command relates to
   a skill.
@@ -134,15 +143,20 @@ load from a plugin. Component types that only one client loads (Claude Code
 workflows, output styles, themes, monitors, `bin/`) are later work for that
 client.
 
+Entry file names are singular (`RULE.md`, `HOOK.md`, `COMMAND.md`). The keys of
+a bundle file are plural (`items.hooks`, `items.commands`).
+
 The design session also decides:
 
+- How a context hook delivers its text in each client, and in which order the
+  hooks of several items of one plugin are merged.
 - Which content the `init` command copies into the repository besides rules, and
   whether a session-start hook also delivers rule text.
 - Where packed plugins are built: committed in `driftsys/metapowers` or built by
   its CI.
 - Which Copilot CLI manifest `pack` writes. The Agent Plugins 1.0 format has a
-  closed schema with fixed paths under `com.github.copilot/` and forbids the
-  component path fields of the older format that `pack` writes today.
+  closed schema with fixed paths under `com.github.copilot/`. `pack` writes a
+  `plugin.json` at the plugin root today.
 - Whether the `com.github.copilot/rules/` directory of Agent Plugins 1.0 loads
   rules natively in Copilot CLI. If a trial confirms it, Copilot CLI rules need
   neither `init` nor a hook.

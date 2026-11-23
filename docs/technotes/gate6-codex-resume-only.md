@@ -2,7 +2,7 @@
 
 Task [#379](https://github.com/driftsys/upskill/issues/379) requires a separate
 resume turn without compaction under the
-[current handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md).
+[current handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md).
 The 2026-10-25 retry on macOS arm64, Codex 0.164.0, fails its native positive
 with HTTP 401. No resume invocation follows
 ([summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-codex-resume-only/summary.json),
@@ -60,7 +60,7 @@ remains unchanged. Resume-only attribution is still open. The proposed #379
 severity amendment and durable route adoption remain at the user's step 7
 review. No production route or durable record changes in this packet. Existing
 Q8 and Q7 captures can be prepared independently without another model request
-([handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+([handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 [summary](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-25-codex-resume-only/summary.json)).
 
 Packet review requires distinct native turn identities for startup and resume,

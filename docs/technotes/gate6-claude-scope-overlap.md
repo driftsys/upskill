@@ -1,7 +1,7 @@
 # Gate 6 Claude package scope overlap
 
 Task [#409](https://github.com/driftsys/upskill/issues/409), Q10 of the
-[delivery handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[delivery handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains a successful user-first retry on 2026-10-25. Claude Code 2.1.308 showed
 one visible target catalog entry and one activation with both scopes registered
 in the same workspace, then after either scope was removed. The
