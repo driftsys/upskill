@@ -156,8 +156,9 @@ glob description establishes current 2.1.4 conformance
 ### State file
 
 `.upskill-lock.json` records what was installed, from where, at what resolved
-git ref, with what content hashes. One shape, written as `schema: 2` for a new
-lockfile (`schema: 1` lockfiles are still read), two possible locations:
+git ref, with what content hashes. One shape, written as `schema: 3` for a new
+lockfile (`schema: 1` and `schema: 2` lockfiles are still read), two possible
+locations:
 
 | Scope   | Location                   | Committed? |
 | ------- | -------------------------- | ---------- |

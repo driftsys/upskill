@@ -44,8 +44,14 @@ pub fn plan_bundle_output(
         bail!("no bundle named '{bundle}' in {}", registry_root.display());
     }
     let label = InstallSource::LocalPath(registry_root.to_path_buf()).to_string();
-    let (closure, bundles) =
-        resolve_bundle_closure(&label, registry_root, None, None, &[bundle.to_string()])?;
+    let (closure, bundles) = resolve_bundle_closure(
+        &label,
+        registry_root,
+        None,
+        None,
+        &[bundle.to_string()],
+        &[],
+    )?;
     let selected = match client {
         Client::Claude => SelectedClient::Claude,
         Client::Copilot => SelectedClient::Copilot,

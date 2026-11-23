@@ -509,12 +509,39 @@ only items of the selected kinds in the closure; a kind-restricted `add` or
 other sources. Requirers outside the kind restriction keep their edges on
 planned entries as well, because they are not evaluated. Within the entries
 being refreshed, an evaluated requirer is removed and added back where it still
-requires the item (also an item that `--exclude` leaves out). Every other
+requires the item; an excluded dependency gets no link (see below). Every other
 requirer is kept, also when it is not installed. The result does not depend on
-the order of the sources or of two `add` commands. Current limitation (#570):
-the lockfile does not record the `--exclude` of an earlier `add`, so `update`
-plans an item that the earlier `add` excluded: it can install that item, replace
-the same item from another source, or fail.
+the order of the sources or of two `add` commands. Each lockfile records one set
+of excluded item names, for its install scope (§4). `add` and `update` skip
+every item of the set, also an excluded bundle member and an excluded
+`requires:` dependency from another source, before they link a `required_by`
+entry to it; an excluded dependency does not pull its own `requires:` items, and
+a whole-source `add` skips excluded items too. An `add` records its `--exclude`
+names in the set. The excludes of an `add` are the recorded names, minus the
+item names that it installs by name, plus its own `--exclude` names; an `update`
+uses the same rule, with the item names that are installed by name in place of
+the item names of the command line, so an exclude never removes an item that was
+installed by name. For this rule, `update` counts every item that the lockfile
+records for the source as installed by name, also a bundle member. An `update`
+never removes a name from the set. An item name given on the command line of an
+`add` is removed from the set, unless the same `add` also excludes it, so
+`add <source> <name>` installs an item that an earlier `add` excluded. An `add`
+without item names and without `--exclude` keeps the set and keeps the recorded
+items out. When `add <source> --exclude <name>` names an item that is installed
+from the same source, and the same `add` does not also name the item, `add`
+removes that item only, within the kinds that `--kind` selects: its files and
+its lock entry, no other item of a co-located group, no bundle record and no
+plugin entry. It also deletes each `required_by` link that names the item, and
+prints `removed — excluded <kind> <name>` on stdout. When a recorded file of the
+item was modified, `add` removes nothing of the item: its files and its lock
+entry stay, the exclude is recorded, and stderr gets
+`kept — excluded <kind> <name>: <path> was modified` for each modified file. An
+`--exclude` name that matches no item of the entry source and no item that the
+resolver skipped is a usage error (exit code 2) that writes nothing, so the
+lockfile is unchanged. `add` and `update` print `excluded <kind> <name>` on
+stderr, once for each item that an exclude kept out of the run; `--quiet` hides
+the line, and `update` prints it with `--dry-run` too. `doctor` reports nothing
+about excludes.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
@@ -760,7 +787,9 @@ the check above refuses it.
   `note: the global scope is not shown: HOME is not set`. With `--json`, `list`
   prints `{"scopes": [{"scope", "root", <the buckets>}]}` and `doctor` prints
   `{"scopes": [...], "in_both_scopes": [...], "support": [...]}`; both also when
-  one scope is selected.
+  one scope is selected. `list` prints `excluded: <names>` at the end of the
+  block of a scope that has excluded item names, also when the scope has no
+  items, and the `excludes` key of the scope in `--json` (omitted when empty).
 - `doctor` — verify on-disk state matches the lock file. Per scope, thirteen
   independent buckets: missing per-client outputs (reinstall fixes), modified
   recorded files (content differs from the recorded SHA-256, compared as in
@@ -815,8 +844,8 @@ the check above refuses it.
   recorded path that `remove` would never delete (outside the client roots,
   fewer than three components, or with a `..` component) is skipped without a
   report. For an item with an empty or missing `files` record (a `schema: 1`
-  lockfile, or a `schema: 2` item with an empty list), `doctor` checks each
-  per-client entry file instead.
+  lockfile, or a `schema: 2` or `schema: 3` item with an empty list), `doctor`
+  checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -1057,13 +1086,17 @@ does not change the bundle source schema.
 
 `.upskill-lock.json` records what was installed, from where, at what resolved
 git ref, with what content hashes. Same schema in both locations. A new lockfile
-is written with `schema: 2`; a `schema: 1` lockfile is still read. Each item
-entry may carry `files` and `pending` lists of records with `client`, `path` and
-`sha256` fields. `add` and `update` fill `files` with every file they write for
-the item and delete the recorded files that a reinstall no longer produces and
-that are unchanged, unless another item installed by the same command writes
-that path; a modified recorded file is kept and stays in `files`, unless
-`--force` deletes it (§2.1, §2.2). `remove` deletes only recorded files (§2.3).
+is written with `schema: 3`; a `schema: 1` or `schema: 2` lockfile is still
+read. A `schema: 2` lockfile has the same shape as `schema: 3` and is written
+back as `schema: 3` without other change. The number changed with the top-level
+`excludes` list: an upskill version that reads at most `schema: 2` refuses the
+file instead of rewriting it without that list. Each item entry may carry
+`files` and `pending` lists of records with `client`, `path` and `sha256`
+fields. `add` and `update` fill `files` with every file they write for the item
+and delete the recorded files that a reinstall no longer produces and that are
+unchanged, unless another item installed by the same command writes that path; a
+modified recorded file is kept and stays in `files`, unless `--force` deletes it
+(§2.1, §2.2). `remove` deletes only recorded files (§2.3).
 
 An `add` or `update` runs in this order. (1) It checks every destination and
 decides which items are written; nothing is changed yet. (2) For each item that
@@ -1111,7 +1144,7 @@ an `update` whose first source resolves to no items while the lockfile records
 items from it) adopt a `schema: 1` lockfile: they keep the old bytes as
 `.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
 replaced), record each existing file at the items' output paths with its current
-hash, save `schema: 2`, and print the adopted paths to stderr.
+hash, save `schema: 3`, and print the adopted paths to stderr.
 
 Two possible locations:
 
@@ -1126,7 +1159,7 @@ across-repo continuity for global scope.
 
 ```json
 {
-  "schema": 2,
+  "schema": 3,
   "items": [
     {
       "kind": "skill",
@@ -1148,6 +1181,11 @@ across-repo continuity for global scope.
   "plugins": []
 }
 ```
+
+The optional top-level `excludes` array holds the excluded item names of the
+lockfile, so of one install scope: strings, sorted and without duplicates, with
+no source key. The array is omitted when empty and does not change the schema
+number. The rules for the set are in §2.2.
 
 Each entry of `plugins` records one plugin for one client: `name`, `client`,
 `identifier`, `scope`, `bundle` and `status` (`installed`, `skipped` or

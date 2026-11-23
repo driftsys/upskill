@@ -1,4 +1,5 @@
-//! Lockfile (`.upskill-lock.json`, `schema: 2`; `schema: 1` is still read).
+//! Lockfile (`.upskill-lock.json`, `schema: 3`; `schema: 1` and `schema: 2`
+//! are still read).
 //!
 //! Per [ADR-0003](../../docs/adr/0003-generation-pipeline.md). Records what
 //! the pipeline installed into a consumer project so a future `update` /
@@ -6,10 +7,15 @@
 //!
 //! Scope:
 //! - Types + load/save/upsert for items and (placeholder) bundles. A new
-//!   lockfile is written as `schema: 2`. A `schema: 1` lockfile is loaded
-//!   as-is and `save` writes the schema it holds;
+//!   lockfile is written as `schema: 3`. A `schema: 2` lockfile has the same
+//!   shape; `load` sets its schema to 3, so the next `save` writes
+//!   `schema: 3`. Schema 3 adds no field to schema 2: the number changed
+//!   because the top-level `excludes` list was added, and an upskill version
+//!   that reads at most schema 2 would rewrite the file without that list.
+//!   Such a version refuses a `schema: 3` file instead. A `schema: 1`
+//!   lockfile is loaded as-is and `save` writes the schema it holds;
 //!   [`Lockfile::needs_adoption`] reports it. The install step of `add`
-//!   and `update`, and `remove`, convert it to `schema: 2` by adoption.
+//!   and `update`, and `remove`, convert it to `schema: 3` by adoption.
 //! - Each item may carry `files` and `pending` lists of [`OwnedFile`]
 //!   records. The install step of `add` and `update` fills `files` with
 //!   every file it writes, and `remove` deletes only recorded files. Before
@@ -33,8 +39,8 @@ use crate::pipeline::{InstallReport, ItemKind};
 pub const LOCKFILE_NAME: &str = ".upskill-lock.json";
 
 /// The schema version of a newly created lockfile. `load` also accepts
-/// `schema: 1`.
-pub const CURRENT_SCHEMA: u32 = 2;
+/// `schema: 1` and `schema: 2`.
+pub const CURRENT_SCHEMA: u32 = 3;
 
 /// File kept beside the lockfile by the adoption step: a copy of the
 /// `schema: 1` lockfile bytes before adoption.
@@ -63,6 +69,10 @@ pub struct Lockfile {
     pub plugins: Vec<LockedPlugin>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcps: Vec<LockedMcp>,
+    /// Item names that `add --exclude` left out of this scope. Sorted,
+    /// without duplicates, and omitted from the file when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub excludes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -255,7 +265,7 @@ impl LockedItem {
 }
 
 impl Lockfile {
-    /// An empty lockfile with schema [`CURRENT_SCHEMA`] (2).
+    /// An empty lockfile with schema [`CURRENT_SCHEMA`] (3).
     pub fn new() -> Self {
         Self {
             schema: CURRENT_SCHEMA,
@@ -263,12 +273,15 @@ impl Lockfile {
             bundles: Vec::new(),
             plugins: Vec::new(),
             mcps: Vec::new(),
+            excludes: Vec::new(),
         }
     }
 
     /// Load `<project_root>/.upskill-lock.json`. Returns an empty lockfile
     /// with schema [`CURRENT_SCHEMA`] when the file does not exist. Accepts
-    /// `schema` 1 and 2 and keeps the value it read.
+    /// `schema` 1, 2 and 3. A `schema: 2` lockfile is returned with schema
+    /// [`CURRENT_SCHEMA`], because its shape is the same; a `schema: 1`
+    /// lockfile keeps schema 1 until adoption.
     ///
     /// Errors:
     /// - File exists but does not parse as a lockfile.
@@ -283,7 +296,7 @@ impl Lockfile {
             Err(e) => return Err(e).with_context(|| format!("read {}", path.display())),
         };
 
-        let parsed: Self =
+        let mut parsed: Self =
             serde_json::from_str(&raw).with_context(|| format!("parse {}", path.display()))?;
 
         if parsed.schema > CURRENT_SCHEMA {
@@ -302,6 +315,9 @@ impl Lockfile {
                 parsed.schema,
                 CURRENT_SCHEMA
             );
+        }
+        if parsed.schema == 2 {
+            parsed.schema = CURRENT_SCHEMA;
         }
         Ok(parsed)
     }
@@ -380,6 +396,17 @@ impl Lockfile {
     /// Remove all MCP entries matching `name` (across all clients).
     pub fn remove_mcps_by_name(&mut self, name: &str) {
         self.mcps.retain(|existing| existing.name != name);
+    }
+
+    /// Update the excludes of the scope: the recorded names plus `added`,
+    /// minus `requested`. The names are sorted and without duplicates.
+    pub fn record_excludes(&mut self, added: &[String], requested: &[String]) {
+        let mut names: std::collections::BTreeSet<String> = self.excludes.iter().cloned().collect();
+        names.extend(added.iter().cloned());
+        for name in requested {
+            names.remove(name);
+        }
+        self.excludes = names.into_iter().collect();
     }
 
     /// Persist to `<project_root>/.upskill-lock.json`. Pretty-printed JSON
@@ -475,10 +502,57 @@ pub fn items_from_report(
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::generate::Client;
     use crate::pipeline::InstalledItem;
     use std::path::PathBuf;
+
+    fn names(list: &[&str]) -> Vec<String> {
+        list.iter().map(|n| (*n).to_string()).collect()
+    }
+
+    #[test]
+    fn record_excludes_accumulates_sorts_and_deduplicates() {
+        let mut lock = Lockfile::new();
+        lock.record_excludes(&names(&["b", "a", "b"]), &[]);
+        assert_eq!(lock.excludes, names(&["a", "b"]));
+        lock.record_excludes(&names(&["c"]), &[]);
+        assert_eq!(lock.excludes, names(&["a", "b", "c"]));
+    }
+
+    #[test]
+    fn record_excludes_removes_the_requested_names() {
+        let mut lock = Lockfile::new();
+        lock.record_excludes(&names(&["a", "b"]), &[]);
+        lock.record_excludes(&names(&["c"]), &names(&["a"]));
+        assert_eq!(lock.excludes, names(&["b", "c"]));
+        lock.record_excludes(&[], &names(&["b", "c"]));
+        assert!(lock.excludes.is_empty());
+    }
+
+    #[test]
+    fn a_lockfile_without_excludes_keeps_its_bytes() {
+        for raw in [
+            "{\n  \"schema\": 1,\n  \"items\": [],\n  \"bundles\": []\n}\n",
+            "{\n  \"schema\": 3,\n  \"items\": [],\n  \"bundles\": []\n}\n",
+        ] {
+            let tmp = tempfile::tempdir().unwrap();
+            std::fs::write(tmp.path().join(LOCKFILE_NAME), raw).unwrap();
+            let lock = Lockfile::load(tmp.path()).unwrap();
+            lock.save(tmp.path()).unwrap();
+            let saved = std::fs::read_to_string(tmp.path().join(LOCKFILE_NAME)).unwrap();
+            assert_eq!(saved, raw);
+            assert!(!saved.contains("\"excludes\""));
+        }
+    }
+
+    #[test]
+    fn record_excludes_drops_a_name_that_is_both_added_and_requested() {
+        let mut lock = Lockfile::new();
+        lock.record_excludes(&names(&["a"]), &names(&["a"]));
+        assert!(lock.excludes.is_empty());
+    }
 
     #[test]
     fn bundle_kinds_default_to_empty_and_are_omitted_when_empty() {
@@ -544,8 +618,8 @@ mod tests {
     #[test]
     fn new_lockfile_has_current_schema() {
         let lock = Lockfile::new();
-        assert_eq!(lock.schema, 2);
-        assert_eq!(CURRENT_SCHEMA, 2);
+        assert_eq!(lock.schema, 3);
+        assert_eq!(CURRENT_SCHEMA, 3);
         assert!(lock.items.is_empty());
         assert!(lock.bundles.is_empty());
     }
@@ -565,7 +639,7 @@ mod tests {
     }
 
     #[test]
-    fn load_accepts_schema_2_with_files_and_pending() {
+    fn load_accepts_schema_3_with_files_and_pending() {
         let tmp = tempfile::tempdir().unwrap();
         let owned = |client: &str, path: &str| OwnedFile {
             client: client.to_string(),
@@ -583,7 +657,7 @@ mod tests {
         lock.save(tmp.path()).expect("save");
 
         let raw = std::fs::read_to_string(tmp.path().join(LOCKFILE_NAME)).unwrap();
-        assert!(raw.contains("\"schema\": 2"));
+        assert!(raw.contains("\"schema\": 3"));
         let loaded = Lockfile::load(tmp.path()).expect("load");
         assert_eq!(loaded, lock);
         assert_eq!(loaded.items[0].files.len(), 2);
@@ -607,15 +681,34 @@ mod tests {
     }
 
     #[test]
-    fn load_rejects_schema_3() {
+    fn load_rejects_schema_4() {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(
             tmp.path().join(LOCKFILE_NAME),
-            r#"{"schema": 3, "items": [], "bundles": []}"#,
+            r#"{"schema": 4, "items": [], "bundles": []}"#,
         )
         .unwrap();
         let err = Lockfile::load(tmp.path()).expect_err("must reject");
-        assert!(err.to_string().contains("schema 3"));
+        assert!(err.to_string().contains("schema 4"));
+    }
+
+    #[test]
+    fn schema_2_lockfile_is_saved_as_schema_3_with_its_content() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join(LOCKFILE_NAME),
+            r#"{"schema": 2, "items": [], "bundles": [], "excludes": ["x"]}"#,
+        )
+        .unwrap();
+        let lock = Lockfile::load(tmp.path()).expect("load");
+        assert_eq!(lock.schema, 3);
+        assert!(!lock.needs_adoption());
+        lock.save(tmp.path()).expect("save");
+        let reloaded = Lockfile::load(tmp.path()).expect("reload");
+        assert_eq!(reloaded, lock);
+        let raw = std::fs::read_to_string(tmp.path().join(LOCKFILE_NAME)).unwrap();
+        assert!(raw.contains("\"schema\": 3"));
+        assert!(raw.contains("\"x\""));
     }
 
     #[test]
@@ -743,6 +836,9 @@ mod tests {
             adopted: None,
             conflicts: Vec::new(),
             kept_modified: Vec::new(),
+            removed_excluded: Vec::new(),
+            kept_excluded: Vec::new(),
+            excluded: Vec::new(),
             forced: Vec::new(),
             changed: Vec::new(),
             items: vec![

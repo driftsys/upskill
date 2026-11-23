@@ -366,6 +366,7 @@ fn run_add(args: AddArgs) -> i32 {
         kinds,
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
         keep_unwithheld_edits: false,
+        keep_recorded_excludes: false,
         scope: at.scope,
     };
 
@@ -375,11 +376,13 @@ fn run_add(args: AddArgs) -> i32 {
     match install_with_lockfile(&parsed, &at.root, items, plugin_scope, &options) {
         Ok(report) => {
             print_install_report(&report, source);
+            print_excluded(&report);
             print_adoption_notice(report.adopted.as_deref());
             print_selection_skipped(&report);
             print_plugin_results(&report);
             print_mcp_results(&report);
             print_kept_modified(&report.kept_modified);
+            print_kept_excluded(&report.kept_excluded);
             print_forced(&report.forced);
             if report.conflicts.is_empty() {
                 EXIT_SUCCESS
@@ -389,6 +392,10 @@ fn run_add(args: AddArgs) -> i32 {
             }
         }
         Err(err) => {
+            if let Some(unknown) = err.downcast_ref::<upskill::pipeline::UnknownExclude>() {
+                print_error(unknown);
+                return EXIT_USAGE;
+            }
             print_adoption_after_error(&err);
             print_error_chain(&err);
             eprintln!();
@@ -421,6 +428,21 @@ fn print_conflicts(conflicts: &[upskill::pipeline::FileConflict]) {
 fn print_kept_modified(paths: &[PathBuf]) {
     for path in paths {
         eprintln!("kept modified file: {}", path.display());
+    }
+}
+
+/// One line per modified file of an excluded item that `add` kept instead
+/// of removing. Printed to stderr, so `-q/--quiet` does not hide it.
+fn print_kept_excluded(items: &[upskill::pipeline::KeptItem]) {
+    for item in items {
+        for path in &item.modified {
+            eprintln!(
+                "kept — excluded {} {}: {} was modified",
+                item.kind,
+                item.name,
+                path.display()
+            );
+        }
     }
 }
 
@@ -662,6 +684,40 @@ fn print_install_report(report: &InstallReport, source: &str) {
             style::name(&name),
             clients.join(", ")
         );
+    }
+    for (kind, name) in &report.removed_excluded {
+        println!(
+            "{} {} {}",
+            style::error_label("removed — excluded"),
+            style::dim(kind_label_of(*kind)),
+            style::name(name)
+        );
+    }
+}
+
+/// One stderr line for each item that an exclude kept out of the run.
+fn print_excluded(report: &InstallReport) {
+    print_excluded_items(&report.excluded);
+}
+
+fn print_excluded_items(excluded: &[(ItemKind, String)]) {
+    if style::is_quiet() {
+        return;
+    }
+    for (kind, name) in excluded {
+        eprintln!(
+            "excluded {} {}",
+            style::dim(kind_label_of(*kind)),
+            style::name(name)
+        );
+    }
+}
+
+fn kind_label_of(kind: ItemKind) -> &'static str {
+    match kind {
+        ItemKind::Rule => "rule",
+        ItemKind::Skill => "skill",
+        ItemKind::Agent => "agent",
     }
 }
 
@@ -1134,6 +1190,7 @@ fn run_update(args: UpdateArgs) -> i32 {
     );
     match result {
         Ok(report) => {
+            print_excluded_items(&report.excluded);
             // The plugin results of the run, with any outcome: the plugin step
             // of each applied source and the plugin repair (issue #229).
             print_plugin_result_list(&report.plugin_results);
@@ -2383,7 +2440,10 @@ fn print_list_report(scoped: &[ScopedList]) {
     if style::is_quiet() {
         return;
     }
-    if scoped.iter().all(|s| s.report.is_empty()) {
+    if scoped
+        .iter()
+        .all(|s| s.report.is_empty() && s.report.excludes.is_empty())
+    {
         println!("No items installed.");
         println!();
         println!("  Get started: upskill add owner/repo");
@@ -2403,12 +2463,20 @@ fn print_list_report(scoped: &[ScopedList]) {
         let report = &entry.report;
         if report.is_empty() {
             println!("  No items installed.");
+            print_list_excludes(&report.excludes);
             continue;
         }
         print_list_section("rules", &report.rules);
         print_list_section("skills", &report.skills);
         print_list_section("agents", &report.agents);
         print_list_bundles(&report.bundles);
+        print_list_excludes(&report.excludes);
+    }
+}
+
+fn print_list_excludes(excludes: &[String]) {
+    if !excludes.is_empty() {
+        println!("  excluded: {}", excludes.join(", "));
     }
 }
 

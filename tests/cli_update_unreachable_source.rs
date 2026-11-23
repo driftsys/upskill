@@ -468,7 +468,7 @@ fn a_schema_1_adoption_with_a_skipped_source_records_its_files_only() {
 
     assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
     assert!(stderr(&out).contains(OTHER_REMOTE), "{}", stderr(&out));
-    assert_eq!(lock(&e)["schema"], 2);
+    assert_eq!(lock(&e)["schema"], 3);
     let alpha = fs::read_to_string(skill_file(&e, "alpha")).unwrap();
     assert!(alpha.contains("Alpha two."), "{alpha}");
     assert_eq!(fs::read(skill_file(&e, "beta")).unwrap(), beta_before);

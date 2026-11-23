@@ -1246,7 +1246,7 @@ fn update_that_adopts_a_schema_1_lockfile_deletes_the_files_of_an_orphan() {
     assert!(!dest.parent().unwrap().exists());
     let lock = fs::read_to_string(tmp.path().join(".upskill-lock.json")).unwrap();
     assert!(!lock.contains("\"name\": \"res\""), "{lock}");
-    assert!(lock.contains("\"schema\": 2"), "{lock}");
+    assert!(lock.contains("\"schema\": 3"), "{lock}");
 }
 
 #[test]

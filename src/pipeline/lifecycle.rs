@@ -22,7 +22,7 @@ use super::owned::{FileState, adopt_schema1, adopt_schema1_in_memory, classify};
 use super::prepared::prepare_install;
 use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, BothScopesItem, DoctorReport, DoctorScopes,
-    EarlierLayoutFile, FetchFailed, InterruptedItem, ItemKind, ListReport, ListedBundle,
+    EarlierLayoutFile, FetchFailed, InterruptedItem, ItemKind, KeptItem, ListReport, ListedBundle,
     ListedItem, MissingOutput, MissingPlugin, MissingRuleEntry, ModifiedFile, OrphanEntry,
     OrphanReason, OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport,
     RemovedItem, ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure, SkippedPlugin,
@@ -75,7 +75,7 @@ use super::{
 /// (`drop_global_opencode_rules`).
 pub fn remove(at: &ScopeRoot, filter: RemoveFilter, force: bool) -> Result<RemoveReport> {
     let target = at.root.as_path();
-    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    let lock = crate::lockfile::Lockfile::load(target)?;
     check_lockfile_records(target, &lock)?;
 
     let mut to_remove: Vec<crate::lockfile::LockedItem> = match &filter {
@@ -129,11 +129,72 @@ pub fn remove(at: &ScopeRoot, filter: RemoveFilter, force: bool) -> Result<Remov
         }
     }
 
+    remove_items(at, lock, filter, &to_remove, force)
+}
+
+/// Remove exactly the items `keys`, without the co-location expansion of
+/// [`remove`]. `add --exclude` uses it so that a member of the same group
+/// that the command does not exclude stays installed. Bundle records stay
+/// (issue #570).
+///
+/// An item with a modified recorded file is not removed: its files and its
+/// lockfile entry stay, and it is returned in the second value with its
+/// modified files, so that no file stays on disk without an owner.
+pub(crate) fn remove_exact(
+    at: &ScopeRoot,
+    keys: &[(ItemKind, String)],
+) -> Result<(RemoveReport, Vec<KeptItem>)> {
+    let target = at.root.as_path();
+    let lock = crate::lockfile::Lockfile::load(target)?;
+    check_lockfile_records(target, &lock)?;
+    let mut to_remove = Vec::new();
+    let mut kept = Vec::new();
+    for item in lock
+        .items
+        .iter()
+        .filter(|i| keys.iter().any(|(k, n)| *k == i.kind && n == &i.name))
+    {
+        let plan = plan_removal(target, item, false)?;
+        if plan.kept.is_empty() {
+            to_remove.push(item.clone());
+        } else {
+            kept.push(KeptItem {
+                kind: item.kind,
+                name: item.name.clone(),
+                modified: plan.kept,
+            });
+        }
+    }
+    if to_remove.is_empty() {
+        return Ok((RemoveReport::default(), kept));
+    }
+    // An empty name list selects no bundle, so the bundle records, their
+    // plugin entries and the opencode plugin URIs stay.
+    let report = remove_items(
+        at,
+        lock,
+        RemoveFilter::ByNames(Vec::new()),
+        &to_remove,
+        false,
+    )?;
+    Ok((report, kept))
+}
+
+/// The part of `remove` that runs once the items are selected: check, adopt
+/// a `schema: 1` lockfile, then plan and delete.
+fn remove_items(
+    at: &ScopeRoot,
+    mut lock: crate::lockfile::Lockfile,
+    filter: RemoveFilter,
+    to_remove: &[crate::lockfile::LockedItem],
+    force: bool,
+) -> Result<RemoveReport> {
+    let target = at.root.as_path();
     let keys: Vec<(ItemKind, String)> =
         to_remove.iter().map(|i| (i.kind, i.name.clone())).collect();
 
     // Before the adoption and before any deletion, whatever `force` is.
-    check_removal_outside_sources(target, &lock, &to_remove)?;
+    check_removal_outside_sources(target, &lock, to_remove)?;
 
     // The adoption is saved before any file is deleted. Every later error
     // carries the adopted paths, so that `main.rs` can still print the adoption notice.
@@ -419,7 +480,6 @@ fn remove_selected(
         .retain(|p| !bundles_to_remove.contains(&p.bundle));
     lock.bundles
         .retain(|b| !bundles_to_remove.contains(&b.name));
-
     lock.save(target)?;
     drop_global_opencode_rules(at.scope, target, &opencode_rules);
     Ok(report)
@@ -1379,11 +1439,11 @@ pub fn update(
             } else {
                 Vec::new()
             };
-            let options = AddOptions {
+            let mut options = AddOptions {
                 force: true,
                 overwrite,
                 aliases,
-                excludes: vec![],
+                excludes: Vec::new(),
                 kinds,
                 bundles: if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
                     Vec::new()
@@ -1395,6 +1455,7 @@ pub fn update(
                 },
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
+                keep_recorded_excludes: true,
                 scope: at.scope,
             };
             // Scope the reinstall to exactly the items this source already
@@ -1430,6 +1491,16 @@ pub fn update(
                         .collect()
                 };
 
+            // The recorded excludes apply to what the source pulls in, not to
+            // an installed item: every installed item of the source is kept,
+            // also a bundle member, which the item filter leaves out
+            // (issue #570).
+            let installed_names: Vec<String> = source_entries
+                .iter()
+                .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
+                .collect();
+            options.excludes = super::effective_excludes(&lock.excludes, &[], &installed_names);
+
             // A source that cannot be fetched (a [`FetchFailed`] in the
             // error chain, also for a dependency source) is skipped: it is
             // not written, and the other sources are applied. Every other
@@ -1459,6 +1530,11 @@ pub fn update(
                 }
                 Err(err) => return Err(err),
             };
+            for item in prepared.excluded() {
+                if !report.excluded.contains(item) {
+                    report.excluded.push(item.clone());
+                }
+            }
             // Every entry outside the recorded kinds is kept unchanged.
             let source_entries: Vec<_> = source_entries
                 .into_iter()
@@ -2140,6 +2216,7 @@ pub fn list(target: &Path) -> Result<ListReport> {
         });
     }
     report.bundles.sort_by(|a, b| a.name.cmp(&b.name));
+    report.excludes = lock.excludes.clone();
     Ok(report)
 }
 

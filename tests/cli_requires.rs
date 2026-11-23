@@ -833,12 +833,13 @@ fn bundle_file_add_keeps_required_by() {
     );
 }
 
-/// #504 review: an excluded dependency is still required by its requirer.
+/// Issue #570: an excluded dependency gets no `required_by` link, so the
+/// requirer that the run evaluates loses its link to it.
 #[test]
-fn add_with_an_excluded_dependency_keeps_required_by() {
-    assert_eq!(
-        required_by_after_a_second_add(&["add", "./reg-a", "code-review", "--exclude", "sarif"]),
-        vec!["agent:code-review".to_string()]
+fn add_with_an_excluded_dependency_drops_its_required_by() {
+    assert!(
+        required_by_after_a_second_add(&["add", "./reg-a", "code-review", "--exclude", "sarif"])
+            .is_empty()
     );
 }
 
@@ -984,10 +985,12 @@ fn add_evaluates_a_transitive_cross_source_requirer() {
     assert!(required_by(&lock, "skill", "y").is_empty(), "{lock}");
 }
 
-/// #504 review: the `requires` of a dependency that `--exclude` leaves out
-/// are still evaluated.
+/// Issue #570: the resolver does not visit a dependency that `--exclude`
+/// leaves out, so its `requires` are not evaluated. `x` comes from another
+/// source than `reg-a`, so the `add` does not remove it, and the link that
+/// the installed `x` recorded on `y` stays and is not dangling.
 #[test]
-fn add_evaluates_the_requires_of_an_excluded_dependency() {
+fn add_does_not_evaluate_the_requires_of_an_excluded_dependency() {
     let (tmp, home) = chain_where_x_stops_requiring_y();
     common::upskill_cmd(&home)
         .current_dir(tmp.path())
@@ -995,5 +998,18 @@ fn add_evaluates_the_requires_of_an_excluded_dependency() {
         .assert()
         .success();
     let lock = read_lock(tmp.path());
-    assert!(required_by(&lock, "skill", "y").is_empty(), "{lock}");
+    assert!(
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["kind"] == "skill" && i["name"] == "x"),
+        "{lock}"
+    );
+    assert!(tmp.path().join(".claude/skills/x/SKILL.md").exists());
+    assert_eq!(
+        required_by(&lock, "skill", "y"),
+        vec!["skill:x".to_string()],
+        "{lock}"
+    );
 }

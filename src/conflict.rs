@@ -99,6 +99,7 @@ mod tests {
             bundles: vec![],
             plugins: vec![],
             mcps: vec![],
+            excludes: vec![],
         }
     }
 

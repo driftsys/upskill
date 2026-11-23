@@ -129,6 +129,10 @@ pub struct AddOptions {
     /// [`InstallReport::kept_modified`], and its lockfile entry is unchanged
     /// except its commit and its `required_by`.
     pub keep_unwithheld_edits: bool,
+    /// Set by `update`. When true, the run never removes a name from the
+    /// excludes recorded for the scope. Only the positional names of `add`
+    /// remove names from the record.
+    pub keep_recorded_excludes: bool,
     /// The scope of the install. It selects the output paths: the global
     /// scope writes Copilot content under `~/.copilot`. The default is the
     /// project scope.
@@ -149,6 +153,22 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
     out.extend(bundle.items.skills.iter().cloned());
     out.extend(bundle.items.agents.iter().cloned());
     out
+}
+
+/// The excludes of a run: the recorded names that `named` does not name,
+/// plus the `--exclude` names of the command (`own`).
+pub(crate) fn effective_excludes(
+    recorded: &[String],
+    own: &[String],
+    named: &[String],
+) -> Vec<String> {
+    let mut names: std::collections::BTreeSet<String> = recorded
+        .iter()
+        .filter(|name| !named.contains(name))
+        .cloned()
+        .collect();
+    names.extend(own.iter().cloned());
+    names.into_iter().collect()
 }
 
 /// Install + write lockfile. Consumer-facing entry point:
@@ -219,7 +239,22 @@ pub fn install_with_lockfile(
             },
         )?;
     }
+    // `add` also applies the excludes recorded for the scope (issue #570).
+    // An item named on the command line is not excluded unless the same
+    // command also excludes it.
+    let recorded = crate::lockfile::Lockfile::load(target)?.excludes;
+    let own_excludes = options.excludes.clone();
+    let mut effective = options.clone();
+    effective.excludes = effective_excludes(&recorded, &options.excludes, items);
+    let options = &effective;
     let prepared = prepared::prepare_install(source, target, items, options)?;
+    // A name of the command's own `--exclude` that matches nothing is most
+    // likely a typo. The recorded names are not checked: an item can leave
+    // its source. Nothing is written before this point.
+    let unknown = prepared.unknown_excludes(&own_excludes)?;
+    if !unknown.is_empty() {
+        return Err(UnknownExclude { names: unknown }.into());
+    }
     // A git subfolder or repository root that is one item directory
     // installs nothing (#577). `prepare_install` writes nothing, so the
     // refusal still comes before any write. `update` does not run this check.
@@ -259,5 +294,62 @@ pub fn install_with_lockfile(
         prepared.source_items(),
         output::RecordedUse::AddReads,
     )?;
-    prepared.commit(target, plugin_scope)
+    let mut report = prepared.commit(target, plugin_scope)?;
+    // An item of this source that the command excludes and that is already
+    // installed is removed, as `remove` removes it, but without the other
+    // members of its group (issue #570).
+    let lock = crate::lockfile::Lockfile::load(target)?;
+    let excluded_installed: Vec<(ItemKind, String)> = lock
+        .items
+        .iter()
+        .filter(|i| same_source_key(&i.source) == label)
+        .filter(|i| options.kinds.is_empty() || options.kinds.contains(&i.kind))
+        .filter(|i| {
+            let in_source = i.source_name.as_ref().unwrap_or(&i.name);
+            own_excludes.contains(in_source) && !items.contains(in_source)
+        })
+        .map(|i| (i.kind, i.name.clone()))
+        .collect();
+    if !excluded_installed.is_empty() {
+        let at = crate::scope::ScopeRoot {
+            scope: options.scope,
+            root: target.to_path_buf(),
+        };
+        // An item with a modified file is kept, files and lockfile entry,
+        // and reported in `kept_excluded`.
+        let (removal, kept) = lifecycle::remove_exact(&at, &excluded_installed)?;
+        let removed_items: Vec<(ItemKind, String)> = removal
+            .items
+            .iter()
+            .map(|item| (item.kind, item.name.clone()))
+            .collect();
+        // The other items must not keep a `required_by` link to an item
+        // that this run removed.
+        let gone: std::collections::BTreeSet<String> = removed_items
+            .iter()
+            .map(|(kind, name)| format!("{kind}:{name}"))
+            .collect();
+        let mut lock = crate::lockfile::Lockfile::load(target)?;
+        let mut changed = false;
+        for item in &mut lock.items {
+            let before = item.required_by.len();
+            item.required_by.retain(|r| !gone.contains(r));
+            changed |= item.required_by.len() != before;
+        }
+        if changed {
+            lock.save(target)?;
+        }
+        report.removed_excluded = removed_items;
+        report.kept_excluded = kept;
+    }
+    let removed = report.removed_excluded.clone();
+    let kept: Vec<(ItemKind, String)> = report
+        .kept_excluded
+        .iter()
+        .map(|item| (item.kind, item.name.clone()))
+        .collect();
+    report
+        .excluded
+        .retain(|item| !removed.contains(item) && !kept.contains(item));
+    Ok(report)
 }
