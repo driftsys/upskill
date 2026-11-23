@@ -49,9 +49,8 @@ How a later `add` changes the set:
 
 1. The lockfile has an optional top-level `excludes` array of item names. The
    array is sorted and without duplicates, it has no source key, it is omitted
-   when empty, the schema number does not change, and a lockfile without
-   excludes keeps its bytes. One lockfile is one install scope, so the set is
-   per scope.
+   when empty, and a lockfile without excludes keeps its bytes. One lockfile is
+   one install scope, so the set is per scope.
 2. `add` and `update` compute their excludes as the recorded names, minus the
    names installed by name, plus the `--exclude` names of the command. `add`
    passes the item names of its command line as the names installed by name;
@@ -88,8 +87,21 @@ How a later `add` changes the set:
    that has at least one exclude and omits the key when the list is empty.
 8. `remove` records no exclude and prunes none. `doctor` has no check for
    excludes.
+9. The lockfile schema number is 3. `load` reads `schema` 1, 2 and 3, and every
+   save writes `schema: 3`; a `schema: 2` file has the same shape and is written
+   back as `schema: 3` without other change. The reason: upskill v0.9.2 and
+   earlier versions do not reject unknown lockfile fields, so when such a
+   version rewrites a shared project lockfile it drops `excludes`, and the next
+   `update` installs the excluded items again. These versions refuse a `schema`
+   greater than 2 with an error that tells the user to upgrade upskill. Schema 3
+   changes this silent data loss into that error.
 
 ## Alternatives considered
+
+Keep `schema: 2` for a lockfile with `excludes`. This was the first decision,
+because the field is optional and older versions parse the file. It was dropped:
+an older version that saves the file drops the field without an error, so the
+excludes are lost for every user of a shared project lockfile.
 
 A top-level record per source, `{ source, names }`, with `source` the canonical
 label of the `add`. It was built first and dropped, because the label did not
@@ -123,6 +135,8 @@ records (`orphan_excludes`). The per-scope set needs neither.
   repository, as every other lockfile entry does.
 - `required_by` links that earlier lockfiles already hold wrongly are not
   repaired.
+- An upskill version that predates schema 3 cannot read a lockfile that a
+  current version saved, also one without excludes; the user must upgrade.
 - The ways to undo an exclude are `add <source> <name>` and editing the
   lockfile.
 

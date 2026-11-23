@@ -147,7 +147,7 @@ pub(super) fn adopt_schema1_in_memory(
     paths.sort();
     paths.dedup();
 
-    lock.schema = 2;
+    lock.schema = crate::lockfile::CURRENT_SCHEMA;
     Ok(Some(paths))
 }
 
@@ -440,7 +440,7 @@ mod tests {
         let paths = adopt_schema1(target, &mut lock).unwrap().unwrap();
 
         let reloaded = Lockfile::load(target).unwrap();
-        assert_eq!(reloaded.schema, 2);
+        assert_eq!(reloaded.schema, 3);
         let all: Vec<&OwnedFile> = reloaded.items.iter().flat_map(|i| &i.files).collect();
         assert_eq!(all.len(), 3);
         let expect = [
@@ -474,7 +474,7 @@ mod tests {
         let paths = adopt_schema1(tmp.path(), &mut lock).unwrap();
         assert_eq!(paths, Some(vec![]));
         let reloaded = Lockfile::load(tmp.path()).unwrap();
-        assert_eq!(reloaded.schema, 2);
+        assert_eq!(reloaded.schema, 3);
         assert!(reloaded.items[0].files.is_empty());
     }
 

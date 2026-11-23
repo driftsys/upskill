@@ -39,7 +39,7 @@ fn lock_path(root: &Path) -> PathBuf {
 fn edit_entry(root: &Path, edit: impl FnOnce(&mut serde_json::Value)) {
     let mut lock: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(lock_path(root)).unwrap()).unwrap();
-    assert_eq!(lock["schema"], 2, "{lock}");
+    assert_eq!(lock["schema"], 3, "{lock}");
     let entry = lock["items"]
         .as_array_mut()
         .unwrap()

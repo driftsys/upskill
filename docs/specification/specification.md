@@ -844,8 +844,8 @@ the check above refuses it.
   recorded path that `remove` would never delete (outside the client roots,
   fewer than three components, or with a `..` component) is skipped without a
   report. For an item with an empty or missing `files` record (a `schema: 1`
-  lockfile, or a `schema: 2` item with an empty list), `doctor` checks each
-  per-client entry file instead.
+  lockfile, or a `schema: 2` or `schema: 3` item with an empty list), `doctor`
+  checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 
@@ -1097,13 +1097,17 @@ does not change the bundle source schema.
 
 `.upskill-lock.json` records what was installed, from where, at what resolved
 git ref, with what content hashes. Same schema in both locations. A new lockfile
-is written with `schema: 2`; a `schema: 1` lockfile is still read. Each item
-entry may carry `files` and `pending` lists of records with `client`, `path` and
-`sha256` fields. `add` and `update` fill `files` with every file they write for
-the item and delete the recorded files that a reinstall no longer produces and
-that are unchanged, unless another item installed by the same command writes
-that path; a modified recorded file is kept and stays in `files`, unless
-`--force` deletes it (§2.1, §2.2). `remove` deletes only recorded files (§2.3).
+is written with `schema: 3`; a `schema: 1` or `schema: 2` lockfile is still
+read. A `schema: 2` lockfile has the same shape as `schema: 3` and is written
+back as `schema: 3` without other change. The number changed with the top-level
+`excludes` list: an upskill version that reads at most `schema: 2` refuses the
+file instead of rewriting it without that list. Each item entry may carry
+`files` and `pending` lists of records with `client`, `path` and `sha256`
+fields. `add` and `update` fill `files` with every file they write for the item
+and delete the recorded files that a reinstall no longer produces and that are
+unchanged, unless another item installed by the same command writes that path; a
+modified recorded file is kept and stays in `files`, unless `--force` deletes it
+(§2.1, §2.2). `remove` deletes only recorded files (§2.3).
 
 An `add` or `update` runs in this order. (1) It checks every destination and
 decides which items are written; nothing is changed yet. (2) For each item that
@@ -1151,7 +1155,7 @@ an `update` whose first source resolves to no items while the lockfile records
 items from it) adopt a `schema: 1` lockfile: they keep the old bytes as
 `.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
 replaced), record each existing file at the items' output paths with its current
-hash, save `schema: 2`, and print the adopted paths to stderr.
+hash, save `schema: 3`, and print the adopted paths to stderr.
 
 Two possible locations:
 
@@ -1166,7 +1170,7 @@ across-repo continuity for global scope.
 
 ```json
 {
-  "schema": 2,
+  "schema": 3,
   "items": [
     {
       "kind": "skill",

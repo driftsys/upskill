@@ -153,8 +153,8 @@ Before `add`, the script reads `.upskill-lock.json` and notes whether
 `.upskill-lock.json.v1` exists. After the removal it writes the saved bytes
 back, or deletes the lockfile when it did not exist, and deletes
 `.upskill-lock.json.v1` when it did not exist. The reason: `add` adopts a
-`schema: 1` lockfile to `schema: 2` and writes the copy `.upskill-lock.json.v1`
-unless that copy exists, and an installed upskill that predates `schema: 2`
+`schema: 1` lockfile to `schema: 3` and writes the copy `.upskill-lock.json.v1`
+unless that copy exists, and an installed upskill that predates `schema: 3`
 cannot read the adopted file. The script does not restore in two cases. When the
 removal fails, the lockfile then stays as the run changed it, and the warning
 says so. When the script could not read the lockfile before the cell, it prints

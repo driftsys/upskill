@@ -1060,10 +1060,10 @@ scope. For each scope it reports thirteen independent buckets:
   (`upskill add
   <source>`). For an item with a non-empty `files` record, every
   recorded path that does not exist; for an item with an empty or missing record
-  (a `schema: 1` lockfile, or a `schema: 2` item with an empty `files` list),
-  each per-client entry file that does not exist. A recorded path that `remove`
-  would never delete (outside the client roots, fewer than three components, or
-  with a `..` component) is skipped without a report, in this bucket and in the
+  (a `schema: 1` lockfile, or a later item with an empty `files` list), each
+  per-client entry file that does not exist. A recorded path that `remove` would
+  never delete (outside the client roots, fewer than three components, or with a
+  `..` component) is skipped without a report, in this bucket and in the
   modified and unreadable buckets.
 - **Modified files** — recorded files whose content, compared as it is and again
   with every CRLF replaced by LF, differs from the recorded SHA-256, or that are
@@ -1467,7 +1467,9 @@ does not change the bundle source schema.
 | Global  | `$HOME/.upskill-lock.json` | No         | Cross-repo continuity for global installs. |
 
 The lockfile carries a top-level `schema` field for forward compatibility. A new
-lockfile is written with `schema: 2`. Each item entry may carry `files` and
+lockfile is written with `schema: 3`. A `schema: 2` lockfile is read and written
+back as `schema: 3`, so an upskill version older than the `excludes` list
+refuses it instead of dropping that list. Each item entry may carry `files` and
 `pending` lists. `add` and `update` record in `files` every file they write for
 the item, with its client, its path and the SHA-256 of its bytes. An item of a
 git source also carries `commit`, the commit of the source at the last `add` or
@@ -1538,7 +1540,7 @@ adopts it before it changes any file: it keeps a copy of the old lockfile as
 `.upskill-lock.json.v1` (when that file already exists, from an earlier
 adoption, it is kept unchanged and not replaced), records each file that exists
 at the output paths of every installed item with its current hash, saves the
-lockfile as `schema: 2`, and prints the adopted paths to stderr. Adoption cannot
+lockfile as `schema: 3`, and prints the adopted paths to stderr. Adoption cannot
 tell an edited file from one an earlier version wrote. It records two kinds of
 files as unchanged: generated files that were edited before the upgrade, and
 files that were added inside an item directory. The command that adopts them, or
