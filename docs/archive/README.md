@@ -996,6 +996,23 @@ superseded by the
 [re-steer design](specs/2026-11-11-customization-resteer-design.md) of
 2026-11-11. Its relative links are not updated for this location.
 
+The following observation was kept in `docs/wip/README.md` until 2026-11-23 and
+is retained here unchanged, except for its links.
+
+### OpenCode explicit-path observation
+
+The draft reports that explicit OpenCode instruction paths avoid the glob's
+cache/token behavior in the user's experience. This remains user-reported and
+unqualified; Q5's failed positives do not compare cache behavior. The
+[2026-10-24 user decision](specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24)
+now selects explicit paths, subject to Q5 retry PASS, and lists the amendment
+from AD-0040's plugin-only wording to delivery independent of team `AGENTS.md`.
+Criterion 7 remains: compare native and hook using identical rule bytes and
+tasks, cached and uncached tokens, one client at a time. No performance
+advantage or production route is qualified by this retained context
+([Q5 packet](https://github.com/driftsys/upskill/blob/6ec187f5422d72e9329c4c7f9cb706468e2ebb6b/docs/technotes/gate6-opencode-current-routes.md),
+[AD-0040](../adr/0040-separate-customization-delivery-from-discovery.md)).
+
 ## Customization adapter model and delivery roadmap
 
 Source path: `docs/wip/specs/2026-10-14-customization-adapter-roadmap.md`. The
@@ -1113,13 +1130,14 @@ later slice and remains in WIP.
 Issue [#536](https://github.com/driftsys/upskill/issues/536). The 36 documents
 below were moved from `docs/wip/specs/` and `docs/wip/plans/` to the same file
 names under `docs/archive/specs/` and `docs/archive/plans/`. Their bodies are
-unchanged, except that every path to another moved document, in a link or in
-plain text, follows the move, and the formatter wrapped the changed lines again.
-Links from the ADRs, topics and technotes were updated in the same way; the
-evidence JSON files under `docs/technotes/evidence/` keep the old paths. Each
-entry was checked against the merged pull requests and the code at commit
-`4c07051`. Status lines inside the documents ("Approved", "pending
-implementation") are historical.
+unchanged, except that every path of the form `wip/specs/<name>` or
+`wip/plans/<name>` to another moved document, in a link or in plain text,
+follows the move, and the formatter wrapped the changed lines again. Links from
+the ADRs, topics and technotes were updated in the same way; the evidence JSON
+files under `docs/technotes/evidence/` keep the old paths. Each entry was
+checked against the merged pull requests and the code at commit `4c07051`.
+Status lines inside the documents ("Approved", "pending implementation") are
+historical.
 
 The triage also ends two statements of earlier entries. The entries "Captured
 Codex instruction boundary" and "Source-backed Codex instruction lifecycle" say

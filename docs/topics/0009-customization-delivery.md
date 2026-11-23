@@ -16,8 +16,8 @@ the
 [support levels](https://github.com/driftsys/upskill/blob/main/docs/book/support-levels.md)
 and AD-0042: Claude Code and Copilot CLI are supported, OpenCode is
 experimental, and Codex is unsupported and has no generated output. The sections
-marked "Replaced" below are history. The sections without that mark state design
-intent under
+marked "Replaced" or "Withdrawn" below are history. The sections without that
+mark state design intent under
 [AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md)
 and
 [AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md),
@@ -455,6 +455,11 @@ native registration state; no successful file operation proves deactivation
 ([CD-07](#acceptance-and-evidence-gates), [handoff][D-spec]).
 
 ### Amendment inventory
+
+> **Note of 2026-11-23.** The table below is the state of 2026-10-25. The
+> proposal and the implementation handoff are archived since then, the links to
+> them point to the archive, and the roadmap no longer records an order between
+> skills and rules.
 
 This inventory reconciles every record named by the proposal. Shipped output is
 kept distinct from intended route changes; no path table below is a declaration
