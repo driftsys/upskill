@@ -102,7 +102,7 @@ src/
 │                        from the cache after an applying `update`
 ├── ancillary.rs         CLAUDE.md / opencode.json / .vscode/settings.json
 │                        first-time hand-shake files
-└── lockfile.rs          .upskill-lock.json (`schema: 2`; reads `schema: 1`)
+└── lockfile.rs          .upskill-lock.json (`schema: 3`; reads `schema: 1` and `2`)
 ```
 
 Outside `src/`, `plugins/` holds the sources of the session-notice hook plugins
@@ -149,10 +149,10 @@ Core docs (published at <https://driftsys.github.io/upskill/>):
 ### Install layout
 
 Per-item generated output, copy only (no symlinks). One lockfile shape
-(`.upskill-lock.json`, written as `schema: 2`; `schema: 1` is still read) in two
-possible locations: `<cwd>/` (project scope, committed) or `$HOME/` (global
-scope, not committed). Per-client output paths and ancillary files (`CLAUDE.md`,
-`.vscode/settings.json`, `opencode.json`) are specified in
+(`.upskill-lock.json`, written as `schema: 3`; `schema: 1` and `schema: 2` are
+still read) in two possible locations: `<cwd>/` (project scope, committed) or
+`$HOME/` (global scope, not committed). Per-client output paths and ancillary
+files (`CLAUDE.md`, `.vscode/settings.json`, `opencode.json`) are specified in
 [ADR-0003](docs/adr/0003-generation-pipeline.md) and
 [format-spec §7](docs/specification/format-spec.md); the global Copilot paths
 are in [specification §3.1](docs/specification/specification.md).
@@ -268,8 +268,8 @@ the way you would for any manual `git clone`.
     `cli_conflict`, `cli_doctor`, `cli_doctor_orphan`,
     `cli_doctor_source_lookup`, `cli_exit_codes`, `cli_fmt`, `cli_global_scope`,
     `cli_install`, `cli_interrupted`, `cli_legacy_source_labels`, `cli_lint`,
-    `cli_list`, `cli_mangen`, `cli_mcp`, `cli_misc`, `cli_new`,
-    `cli_opencode_plugins`, `cli_ownership`, `cli_pack`, `cli_quiet`,
+    `cli_list`, `cli_lockfile_schema`, `cli_mangen`, `cli_mcp`, `cli_misc`,
+    `cli_new`, `cli_opencode_plugins`, `cli_ownership`, `cli_pack`, `cli_quiet`,
     `cli_recorded_path_guard`, `cli_relaxed_naming`, `cli_remove`,
     `cli_repeatable`, `cli_requires`, `cli_resources`, `cli_scope`,
     `cli_search`, `cli_smoke_source`, `cli_stdio_discipline`,

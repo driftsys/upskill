@@ -82,7 +82,7 @@ fn add_records_written_files_with_hashes() {
         .success();
 
     let lock = lockfile(tmp.path());
-    assert_eq!(lock["schema"], 2);
+    assert_eq!(lock["schema"], 3);
     let files = item(&lock, "create-api-endpoint")["files"]
         .as_array()
         .unwrap()
@@ -190,7 +190,7 @@ fn first_change_adopts_a_schema_1_lockfile() {
         .success();
 
     let lock = lockfile(tmp.path());
-    assert_eq!(lock["schema"], 2);
+    assert_eq!(lock["schema"], 3);
     assert_eq!(
         file_paths(item(&lock, "api-conventions")),
         vec![".claude/rules/api-conventions.md".to_string()]

@@ -1,6 +1,6 @@
 //! ATDD tests for `pipeline::install_with_lockfile`.
 //!
-//! Validates that a successful install writes a `schema: 2` lockfile
+//! Validates that a successful install writes a `schema: 3` lockfile
 //! (`.upskill-lock.json`) at the consumer-project root with one entry
 //! per `(kind, name)` carrying the source label, optional git ref, and
 //! SSOT content hash.

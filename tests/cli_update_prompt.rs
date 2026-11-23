@@ -371,7 +371,7 @@ fn adoption_notice_comes_before_the_first_block_and_stays_after_quit() {
     let block_offset: usize = out.lines().take(block).map(|l| l.len() + 1).sum();
     assert!(notice < block_offset, "{result}");
     assert!(tmp.path().join(".upskill-lock.json.v1").is_file());
-    assert_eq!(lockfile(tmp.path())["schema"], 2);
+    assert_eq!(lockfile(tmp.path())["schema"], 3);
 }
 
 /// The paths named in the item and hand-shake lines of `block`, and the
@@ -605,7 +605,7 @@ fn a_run_that_only_adopts_does_not_print_nothing_to_do() {
     assert!(stderr(&result).contains("note: adopted"), "{result}");
     assert!(!stdout(&result).contains("nothing to do"), "{result}");
     assert!(!stderr(&result).contains("Apply"), "{result}");
-    assert_eq!(lockfile(tmp.path())["schema"], 2);
+    assert_eq!(lockfile(tmp.path())["schema"], 3);
 }
 
 #[test]

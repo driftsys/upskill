@@ -225,7 +225,7 @@ fn project_add_keeps_the_github_paths() {
 }
 
 /// A global install as a released version left it: files at the `.github`
-/// paths, recorded in a `schema: 2` lockfile.
+/// paths, recorded in a `schema: 3` lockfile.
 fn released_global_install(e: &Env) {
     let out = run(
         e,
@@ -286,7 +286,7 @@ fn global_update_moves_a_released_install_without_force() {
 fn global_update_moves_a_schema_1_install() {
     let e = env();
     released_global_install(&e);
-    // Rewrite the lockfile to `schema: 1`: no `schema` marker of 2, no `files`.
+    // Rewrite the lockfile to `schema: 1`: no `schema` marker of 3, no `files`.
     let lock_path = e.home.join(".upskill-lock.json");
     let mut json: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(&lock_path).unwrap()).unwrap();
