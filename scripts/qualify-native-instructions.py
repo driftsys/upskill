@@ -49,7 +49,7 @@ def invoke(command, cwd, timeout, env):
     if state != 'success' and any(term in lower for term in ('not logged in', 'authentication', 'unauthorized', 'login required', 'please log in')):
         state = 'authentication_failure'
     # The result holds the raw stdout and stderr of the client, a hash of them
-    # and a diagnostic category. The smoke code prints only the cell result.
+    # and a diagnostic category. The smoke code never prints the raw output.
     reason = next((label for label, terms in {'permission_denied': ('operation not permitted', 'permission denied'), 'network_failure': ('connection refused', 'failed to connect', 'network', 'dns'), 'authentication_failure': ('not logged in', 'authentication', 'unauthorized', 'login required'), 'configuration_error': ('invalid', 'unknown option', 'unexpected argument')}.items() if any(term in lower for term in terms)), None)
     return {'state': state, 'stdout': result.stdout, 'stderr': result.stderr, 'sha256': digest, 'exit_code': result.returncode, 'diagnostic_category': reason}
 
