@@ -251,7 +251,7 @@ pub fn install_with_lockfile(
     // A name of the command's own `--exclude` that matches nothing is most
     // likely a typo. The recorded names are not checked: an item can leave
     // its source. Nothing is written before this point.
-    let unknown = prepared.unknown_excludes(&own_excludes);
+    let unknown = prepared.unknown_excludes(&own_excludes)?;
     if !unknown.is_empty() {
         return Err(UnknownExclude { names: unknown }.into());
     }

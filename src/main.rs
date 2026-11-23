@@ -2104,15 +2104,19 @@ fn print_doctor_report(report: &DoctorReport) {
         );
         for o in &report.orphan_entries {
             let reason = match o.reason {
-                OrphanReason::LocalPathGone => "local path gone",
-                OrphanReason::ItemMissingInSource => "item not in source",
+                OrphanReason::LocalPathGone => "local path gone".to_string(),
+                OrphanReason::ItemMissingInSource => "item not in source".to_string(),
+                OrphanReason::SourceUnreadable => format!(
+                    "source not readable: {}",
+                    o.error.as_deref().unwrap_or("unknown error")
+                ),
             };
             println!(
                 "  {} {} {} — {}",
                 style::dim(kind_label(o.kind)),
                 style::name(&o.name),
                 style::dim(&format!("({})", o.source)),
-                style::dim(reason),
+                style::dim(&reason),
             );
         }
     }

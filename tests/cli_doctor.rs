@@ -1052,3 +1052,161 @@ fn doctor_is_clean_with_a_valid_excludes_record() {
         .assert()
         .success();
 }
+
+/// Issue #605: an item removed from a source with kind directories is
+/// reported as missing in the source, not as clean or as "local path gone".
+#[test]
+fn doctor_reports_an_item_removed_from_a_source_with_kind_directories() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_skill(&source.join("skills/one"), "one");
+    write_skill(&source.join("skills/two"), "two");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    fs::remove_dir_all(source.join("skills/two")).unwrap();
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(1), "doctor must fail: {v}");
+    let orphans = v["orphan_entries"].as_array().unwrap();
+    assert_eq!(orphans.len(), 1, "{v}");
+    assert_eq!(orphans[0]["name"], "two");
+    assert_eq!(orphans[0]["reason"], "item-missing-in-source");
+    assert!(
+        orphans[0].get("error").is_none(),
+        "only source-unreadable has error: {v}"
+    );
+}
+
+/// Issue #605: an item installed under an alias from a source with kind
+/// directories is found by its source folder.
+#[test]
+fn doctor_is_clean_for_an_aliased_item_from_a_source_with_kind_directories() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_skill(&source.join("skills/one"), "one");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap(), "one", "--as", "renamed"])
+        .assert()
+        .success();
+
+    let (code, v) = doctor_json(&target, &home);
+    assert_eq!(code, Some(0), "doctor must be clean: {v}");
+}
+
+/// Issue #605: a source directory that exists but cannot be read is reported
+/// with its own reason and the read error, not as "item missing in source".
+/// Every item of the source is reported this way.
+#[cfg(unix)]
+#[test]
+fn doctor_reports_an_unreadable_source_with_the_read_error() {
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Restores the mode of the source on drop, also when the test panics.
+    struct Restore<'a>(&'a Path);
+    impl Drop for Restore<'_> {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_skill(&source.join("skills/one"), "one");
+    write_skill(&source.join("skills/two"), "two");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    fs::set_permissions(&source, fs::Permissions::from_mode(0o000)).unwrap();
+    let _restore = Restore(&source);
+    if fs::read_dir(&source).is_ok() {
+        // Running as root: the permission has no effect.
+        return;
+    }
+    let (code, v) = doctor_json(&target, &home);
+    let text = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["doctor", "--project"])
+        .output()
+        .unwrap();
+
+    assert_eq!(code, Some(1), "doctor must fail: {v}");
+    let orphans = v["orphan_entries"].as_array().unwrap();
+    assert_eq!(orphans.len(), 2, "{v}");
+    let expected_source = format!("local:{}", source.display());
+    let mut names = Vec::new();
+    for o in orphans {
+        assert_eq!(o["reason"], "source-unreadable", "{v}");
+        assert_eq!(o["kind"], "skill", "{v}");
+        assert_eq!(o["source"], expected_source.as_str(), "{v}");
+        let error = o["error"]
+            .as_str()
+            .unwrap_or_else(|| panic!("no error: {v}"));
+        assert!(error.contains("read_dir"), "{v}");
+        names.push(o["name"].as_str().unwrap().to_owned());
+    }
+    names.sort();
+    assert_eq!(names, ["one", "two"]);
+    let stdout = String::from_utf8(text.stdout).unwrap();
+    let error = orphans[0]["error"].as_str().unwrap();
+    assert!(
+        stdout.contains(&format!("source not readable: {error}")),
+        "{stdout}"
+    );
+}
+
+/// Issue #607: a kind directory under the source that cannot be read is
+/// reported as `source-unreadable` with a read error that names it, not as
+/// "item missing in source".
+#[cfg(unix)]
+#[test]
+fn doctor_reports_an_unreadable_kind_directory_with_the_read_error() {
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Restores the mode of the directory on drop, also when the test panics.
+    struct Restore<'a>(&'a Path);
+    impl Drop for Restore<'_> {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
+        }
+    }
+
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("reg");
+    write_skill(&source.join("skills/one"), "one");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(target.join(".git")).unwrap();
+    install(&target, &source, &home);
+
+    let kind_dir = source.join("skills");
+    fs::set_permissions(&kind_dir, fs::Permissions::from_mode(0o000)).unwrap();
+    let _restore = Restore(&kind_dir);
+    if fs::read_dir(&kind_dir).is_ok() {
+        eprintln!("skipped: running as root, the permission has no effect");
+        return;
+    }
+    let (code, v) = doctor_json(&target, &home);
+
+    assert_eq!(code, Some(1), "doctor must fail: {v}");
+    let orphans = v["orphan_entries"].as_array().unwrap();
+    assert_eq!(orphans.len(), 1, "{v}");
+    assert_eq!(orphans[0]["name"], "one", "{v}");
+    assert_eq!(orphans[0]["reason"], "source-unreadable", "{v}");
+    let error = orphans[0]["error"]
+        .as_str()
+        .unwrap_or_else(|| panic!("no error: {v}"));
+    assert!(error.contains(&kind_dir.display().to_string()), "{v}");
+}

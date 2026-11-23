@@ -131,7 +131,7 @@ pub(super) fn prepare_install(
     let local_source = fetched.root;
     let tmp_guard = fetched.guard;
     let commit = fetched.commit;
-    let scanned_items = scan_source_items(&local_source);
+    let scanned_items = scan_source_items(&local_source)?;
 
     // -- Validate bare --as with multi-item source --
     if options.aliases.iter().any(|(from, _)| from.is_empty()) {
@@ -490,16 +490,17 @@ impl PreparedInstall {
 
     /// The names of `own` that match no item of the entry source and no
     /// item that the resolver skipped. Such a name is most likely a typo.
-    pub fn unknown_excludes(&self, own: &[String]) -> Vec<String> {
-        let known: BTreeSet<String> = scan_source_items(&self.local_source)
+    pub fn unknown_excludes(&self, own: &[String]) -> Result<Vec<String>> {
+        let known: BTreeSet<String> = scan_source_items(&self.local_source)?
             .into_iter()
             .map(|(_, name)| name)
             .chain(self.report.excluded.iter().map(|(_, name)| name.clone()))
             .collect();
-        own.iter()
+        Ok(own
+            .iter()
             .filter(|name| !known.contains(*name))
             .cloned()
-            .collect()
+            .collect())
     }
 
     /// The bundle `name` as the fetched entry source declares it now: a

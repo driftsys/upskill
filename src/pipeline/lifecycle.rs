@@ -569,8 +569,9 @@ fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> 
 ///   item directory hashes to a value that does not match the lockfile.
 ///   `upskill update` (or `--dry-run`) fixes it.
 /// - **orphan entries** — the lockfile points at a `local:` source that
-///   is gone, or at an item that no longer exists in its source. The
-///   user has to `upskill remove` to clear it.
+///   is gone, at a source directory whose items cannot be listed, or at
+///   an item that no longer exists in its source. The user has to
+///   `upskill remove` to clear it.
 /// - **orphaned dependencies** — items pulled in only as a dependency of
 ///   items that are no longer installed. Does not affect `is_clean`.
 /// - **missing plugins** — plugins recorded as installed that the client
@@ -613,8 +614,11 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
     let mut report = DoctorReport::default();
 
     // Items found by discovery, per source root (see the `local:` check).
-    let mut source_items: std::collections::HashMap<PathBuf, Vec<super::output::SourceItem>> =
-        std::collections::HashMap::new();
+    // A scan that fails keeps its error message.
+    let mut source_items: std::collections::HashMap<
+        PathBuf,
+        std::result::Result<Vec<super::output::SourceItem>, String>,
+    > = std::collections::HashMap::new();
     for entry in &lock.items {
         let kind = entry.kind;
         if !entry.pending.is_empty() {
@@ -731,6 +735,7 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     name: entry.name.clone(),
                     source: entry.source.clone(),
                     reason: OrphanReason::LocalPathGone,
+                    error: None,
                 });
                 continue;
             }
@@ -761,14 +766,28 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     let mut found = Vec::new();
                     let none = crate::bundle::ResolvedItems::default();
                     let names = super::plan::PlanNames::default();
-                    let _ = super::install::collect_source_items(
+                    super::install::collect_source_items(
                         &ssot_root,
                         Some(&none),
                         &names,
                         &mut found,
-                    );
-                    found
+                    )
+                    .map(|()| found)
+                    .map_err(|e| format!("{e:#}"))
                 });
+                let found = match found {
+                    Ok(found) => found,
+                    Err(error) => {
+                        report.orphan_entries.push(OrphanEntry {
+                            kind,
+                            name: entry.name.clone(),
+                            source: entry.source.clone(),
+                            reason: OrphanReason::SourceUnreadable,
+                            error: Some(error.clone()),
+                        });
+                        continue;
+                    }
+                };
                 let candidates: Vec<_> = found
                     .iter()
                     .filter(|i| i.kind == kind && i.dir.file_name().is_some_and(|n| n == folder))
@@ -788,18 +807,10 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                     name: entry.name.clone(),
                     source: entry.source.clone(),
                     reason: OrphanReason::ItemMissingInSource,
+                    error: None,
                 });
                 continue;
             };
-            if !item_dir.is_dir() {
-                report.orphan_entries.push(OrphanEntry {
-                    kind,
-                    name: entry.name.clone(),
-                    source: entry.source.clone(),
-                    reason: OrphanReason::ItemMissingInSource,
-                });
-                continue;
-            }
             let current = hash_item_dir(&item_dir);
             if current != entry.hash {
                 report.stale_hashes.push(StaleHash {
