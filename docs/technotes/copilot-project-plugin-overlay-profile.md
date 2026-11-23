@@ -165,6 +165,10 @@ stop as unsupported rather than replacing it with prompt prose.
 
 ## First offline planning layer
 
+This section describes code that issue
+[#540](https://github.com/driftsys/upskill/issues/540) removed; the command
+below no longer runs.
+
 Task [#448](https://github.com/driftsys/upskill/issues/448) adds a pure planning
 mode to the existing qualification script:
 
@@ -213,6 +217,9 @@ execution allowance. Before native admission, validate the actual client's
 minimum, check live account usage/reset times, leave the agreed reserve, and
 account for response overshoot. A CLI session cap alone cannot protect the
 account reserve; unknown or insufficient headroom blocks execution.
+
+The APIs and the classifiers that this passage names are code that issue
+[#540](https://github.com/driftsys/upskill/issues/540) removed.
 
 The pure APIs are
 `plan_copilot_overlay_edit(baseline, current, plugin_key,

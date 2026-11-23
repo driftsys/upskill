@@ -1,5 +1,9 @@
 # M1 Gate 6 native instruction discovery qualification
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed the native
+probe mode and the offline tests that this note describes; the commands in this
+note no longer run.
+
 Architecture limit (2026-10-19): these canonical instruction-file probes are
 background discovery experiments. They do not qualify the independent
 Codex/OpenCode plugin rule route required by the
