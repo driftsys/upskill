@@ -1014,6 +1014,45 @@ fn doctor_is_clean_for_two_sources_with_kind_directories() {
     assert_eq!(code, Some(0), "doctor must be clean: {v}");
 }
 
+#[test]
+fn doctor_is_clean_with_a_valid_excludes_record() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let reg = tmp.path().join("reg");
+    let target = tmp.path().join("target");
+    for (name, extra) in [("d", ""), ("r", "requires:\n  skills: [d]\n")] {
+        fs::create_dir_all(reg.join(name)).unwrap();
+        fs::write(
+            reg.join(name).join("SKILL.md"),
+            format!("---\nschema: 1\nname: {name}\ndescription: test skill {name}.\n{extra}---\n\n# {name}\n"),
+        )
+        .unwrap();
+    }
+    fs::create_dir_all(target.join(".git")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args([
+            "add",
+            reg.to_str().unwrap(),
+            "r",
+            "--exclude",
+            "d",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let lock = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
+    assert!(lock.contains("\"excludes\""), "{lock}");
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["doctor", "--project"])
+        .assert()
+        .success();
+}
+
 /// Issue #605: an item removed from a source with kind directories is
 /// reported as missing in the source, not as clean or as "local path gone".
 #[test]

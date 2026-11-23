@@ -38,6 +38,9 @@ pub(super) struct PreparedInstall {
     /// local path.
     commit: Option<String>,
     options: AddOptions,
+    /// The item names given to this run, before any alias. Empty for a
+    /// whole-source or bundle-file install.
+    requested: Vec<String>,
     /// The plan, after `plan::merge_duplicates`.
     report: InstallReport,
     /// Holds the clone guards of the cross-source fetches.
@@ -187,7 +190,14 @@ pub(super) fn prepare_install(
     // `resolved_bundles` carries each bundle's own source for the bundle
     // lockfile recording and plugin/MCP install.
     let bundle_resolution = if options.bundles.is_empty() {
-        resolve_bundle_request(&label, &local_source, git_ref, commit.as_deref(), items)?
+        resolve_bundle_request(
+            &label,
+            &local_source,
+            git_ref,
+            commit.as_deref(),
+            items,
+            &options.excludes,
+        )?
     } else {
         for name in &options.bundles {
             if discovery::find_bundle_by_name(&local_source, name).is_none() {
@@ -200,6 +210,7 @@ pub(super) fn prepare_install(
             git_ref,
             commit.as_deref(),
             &options.bundles,
+            &options.excludes,
         )?;
         if !items.is_empty() {
             closure.merge(resolve_requires_closure(
@@ -208,6 +219,7 @@ pub(super) fn prepare_install(
                 git_ref,
                 commit.as_deref(),
                 &requested,
+                &options.excludes,
             )?)?;
         }
         Some((closure, bundles))
@@ -225,6 +237,7 @@ pub(super) fn prepare_install(
                     git_ref,
                     commit.as_deref(),
                     &requested,
+                    &options.excludes,
                 )?),
                 Vec::new(),
             )
@@ -438,11 +451,28 @@ pub(super) fn prepare_install(
     let mut options = options.clone();
     options.kinds.sort();
     options.kinds.dedup();
+    let mut excluded: BTreeSet<(ItemKind, String)> = closure
+        .as_ref()
+        .map(|c| c.skipped.clone())
+        .unwrap_or_default();
+    // A whole-source install takes every item of the source; the items
+    // with an excluded name are the ones it does not take.
+    if items.is_empty() {
+        excluded.extend(
+            scanned_items
+                .iter()
+                .filter(|(_, n)| options.excludes.contains(n))
+                .filter(|(kind, _)| options.kinds.is_empty() || options.kinds.contains(kind))
+                .map(|(kind, name)| (*kind, name.clone())),
+        );
+    }
+    report.excluded = excluded.into_iter().collect();
     Ok(PreparedInstall {
         label,
         git_ref: git_ref.map(str::to_string),
         commit,
         options,
+        requested: items.to_vec(),
         report,
         closure,
         resolved_bundles,
@@ -453,6 +483,26 @@ pub(super) fn prepare_install(
 }
 
 impl PreparedInstall {
+    /// The items that an exclude kept out of this run, each once.
+    pub fn excluded(&self) -> &[(ItemKind, String)] {
+        &self.report.excluded
+    }
+
+    /// The names of `own` that match no item of the entry source and no
+    /// item that the resolver skipped. Such a name is most likely a typo.
+    pub fn unknown_excludes(&self, own: &[String]) -> Result<Vec<String>> {
+        let known: BTreeSet<String> = scan_source_items(&self.local_source)?
+            .into_iter()
+            .map(|(_, name)| name)
+            .chain(self.report.excluded.iter().map(|(_, name)| name.clone()))
+            .collect();
+        Ok(own
+            .iter()
+            .filter(|name| !known.contains(*name))
+            .cloned()
+            .collect())
+    }
+
     /// The bundle `name` as the fetched entry source declares it now: a
     /// bundle that this install resolved (always the case for a bundle-file
     /// source), else the bundle file of that name in a directory source.
@@ -567,8 +617,8 @@ impl PreparedInstall {
     /// directory source with recorded bundles evaluates the merged bundle and
     /// direct-item closure, including bundle members even without direct items.
     /// The bundle closure contributes no item-level `required_by` edges.
-    /// `required_by` maps each dependency reached by the item closure, also an
-    /// excluded one, to its requirers. A kind-restricted install refreshes only
+    /// `required_by` maps each dependency reached by the item closure to its
+    /// requirers; an excluded dependency is not reached and has no entry. A kind-restricted install refreshes only
     /// planned entries, including entries from other sources.
     fn requires_provenance(&self) -> RequiresProvenance {
         // Translate `requires` provenance through any applied `--as` aliases so
@@ -779,6 +829,7 @@ impl PreparedInstall {
             git_ref,
             commit: _,
             options,
+            requested,
             mut report,
             closure: _closure,
             resolved_bundles,
@@ -883,6 +934,20 @@ impl PreparedInstall {
             }
             lock.upsert(item);
         }
+        // A requested name that this run also excludes stays in the record.
+        // `update` never removes a name from the record, also when the item
+        // is still installed and its name is in the item filter: only the
+        // positional names of `add` do.
+        let named: Vec<String> = if options.keep_recorded_excludes {
+            Vec::new()
+        } else {
+            requested
+                .iter()
+                .filter(|name| !options.excludes.contains(name))
+                .cloned()
+                .collect()
+        };
+        lock.record_excludes(&options.excludes, &named);
         if resolved_bundles.is_empty() {
             // Same-source bundle install (no cross-source provenance): every bundle
             // came from the entry source.

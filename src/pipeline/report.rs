@@ -86,6 +86,18 @@ pub struct InstallReport {
     /// destinations of the items that were not written because nothing is
     /// withheld from them; their lockfile entries are unchanged.
     pub kept_modified: Vec<PathBuf>,
+    /// Items that were already installed from the source and that the
+    /// command's `--exclude` names. `add` removed them (issue #570).
+    pub removed_excluded: Vec<(ItemKind, String)>,
+    /// Installed items of the source that the command's `--exclude` names
+    /// and that `add` did not remove because a recorded file was modified.
+    /// Their files and lockfile entries stay (issue #570).
+    pub kept_excluded: Vec<KeptItem>,
+    /// Items that an exclude kept out of this run, each once: dependencies
+    /// and bundle members that the resolver skipped, and items of the
+    /// source that a whole-source install did not take. An item in
+    /// `removed_excluded` or `kept_excluded` is not listed here.
+    pub excluded: Vec<(ItemKind, String)>,
 }
 
 /// What a commit would do to one item.
@@ -150,6 +162,25 @@ impl std::fmt::Display for FetchFailed {
 }
 
 impl std::error::Error for FetchFailed {}
+
+/// `add` refused names of `--exclude` that match no item. `main.rs` maps it
+/// to the usage exit code.
+#[derive(Debug, Clone)]
+pub struct UnknownExclude {
+    pub names: Vec<String>,
+}
+
+impl std::fmt::Display for UnknownExclude {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "--exclude matches no item of the source (check for a typo): {}",
+            self.names.join(", ")
+        )
+    }
+}
+
+impl std::error::Error for UnknownExclude {}
 
 /// Error context attached, as the outermost layer, when `update` fails after
 /// it skipped sources (for either [`SkipCause`]), so that `main.rs` can print
@@ -252,6 +283,15 @@ pub struct RemoveReport {
     /// Paths recorded when this command adopted a `schema: 1` lockfile;
     /// `None` when no adoption happened.
     pub adopted: Option<Vec<String>>,
+}
+
+/// An installed item that a removal kept because of its modified files.
+#[derive(Debug, Clone, Serialize)]
+pub struct KeptItem {
+    pub kind: ItemKind,
+    pub name: String,
+    /// The modified recorded files (paths relative to the target), sorted.
+    pub modified: Vec<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -614,7 +654,7 @@ pub enum UpdateStatus {
 impl UpdateStatus {
     /// True for a status that counts as a change of the item in the
     /// summaries of `update`: [`UpdateStatus::Updated`],
-    /// [`UpdateStatus::CompletedInterrupted`] and [`UpdateStatus::Removed`].
+    /// [`UpdateStatus::CompletedInterrupted`], and [`UpdateStatus::Removed`].
     pub fn is_change(&self) -> bool {
         match self {
             UpdateStatus::Updated { .. }
@@ -639,6 +679,9 @@ pub struct UpdatedItem {
 #[derive(Debug, Default, Clone)]
 pub struct UpdateReport {
     pub items: Vec<UpdatedItem>,
+    /// Items that an exclude kept out of the run, each once, over all
+    /// sources. Also set by a dry run.
+    pub excluded: Vec<(ItemKind, String)>,
     /// Paths recorded when `update` adopted a `schema: 1` lockfile, sorted
     /// and without duplicates; `None` when no adoption happened.
     pub adopted: Option<Vec<String>>,
@@ -821,6 +864,10 @@ pub struct ListReport {
     pub skills: Vec<ListedItem>,
     pub agents: Vec<ListedItem>,
     pub bundles: Vec<ListedBundle>,
+    /// The `--exclude` names that the lockfile records, sorted. Omitted
+    /// from the JSON output when empty.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub excludes: Vec<String>,
 }
 
 impl ListReport {

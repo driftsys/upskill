@@ -652,12 +652,39 @@ restricted `add` or `update` leaves `required_by` unchanged on entries it does
 not plan, also in other sources. Requirers outside the kind restriction keep
 their edges on planned entries as well, because they are not evaluated. Within
 the entries being refreshed, an evaluated requirer is removed and added back
-where it still requires the item (also an item that `--exclude` leaves out).
-Every other requirer is kept, also when it is not installed. The result does not
-depend on the order of the sources or of two `add` commands. Current limitation
-(#570): the lockfile does not record the `--exclude` of an earlier `add`, so
-`update` plans an item that the earlier `add` excluded: it can install that
-item, replace the same item from another source, or fail.
+where it still requires the item; an excluded dependency gets no link (see
+below). Every other requirer is kept, also when it is not installed. The result
+does not depend on the order of the sources or of two `add` commands. Each
+lockfile records one set of excluded item names, for its install scope. `add`
+and `update` skip every item of the set, also an excluded bundle member and an
+excluded `requires:` dependency from another source, before they link a
+`required_by` entry to it; an excluded dependency does not pull its own
+`requires:` items, and a whole-source `add` skips excluded items too. An `add`
+records its `--exclude` names in the set. The excludes of an `add` are the
+recorded names, minus the item names that it installs by name, plus its own
+`--exclude` names; an `update` uses the same rule, with the item names that are
+installed by name in place of the item names of the command line, so an exclude
+never removes an item that was installed by name. For this rule, `update` counts
+every item that the lockfile records for the source as installed by name, also a
+bundle member. An `update` never removes a name from the set. An item name given
+on the command line of an `add` is removed from the set, unless the same `add`
+also excludes it, so `add <source> <name>` installs an item that an earlier
+`add` excluded. An `add` without item names and without `--exclude` keeps the
+set and keeps the recorded items out. When `add <source> --exclude <name>` names
+an item that is installed from the same source, and the same `add` does not also
+name the item, `add` removes that item only, within the kinds that `--kind`
+selects: its files and its lock entry, no other item of a co-located group, no
+bundle record and no plugin entry. It also deletes each `required_by` link that
+names the item, and prints `removed — excluded <kind> <name>` on stdout. When a
+recorded file of the item was modified, `add` removes nothing of the item: its
+files and its lock entry stay, the exclude is recorded, and stderr gets
+`kept — excluded <kind> <name>: <path> was modified` for each modified file. An
+`--exclude` name that matches no item of the entry source and no item that the
+resolver skipped is a usage error (exit code 2) that writes nothing, so the
+lockfile is unchanged. `add` and `update` print `excluded <kind> <name>` on
+stderr, once for each item that an exclude kept out of the run; `--quiet` hides
+the line, and `update` prints it with `--dry-run` too. `doctor` reports nothing
+about excludes.
 
 A destination that exists and is not a regular file (for example a directory or
 a symbolic link) fails the command before any file of that source is written.
@@ -979,13 +1006,16 @@ present, are surfaced as a separate section.
 
 Without a scope flag, `list` reports both scopes: the project scope (the current
 directory, in or outside a git repository), then the global scope (`$HOME`).
-When at least one reported scope has items, each scope is a block that starts
-with `<scope> (<root>)`, and a scope without items shows `No items installed.`
-in its block. When every reported scope is empty, there is no block header: the
-output is `No items installed.` followed by two hint lines. `--global` or
-`--project` limits the report to that scope. When the current directory is the
-home directory, only the global scope is reported, and `--project` is refused
-with exit code 2 and a message that asks for `--global`. When neither `HOME` nor
+When at least one reported scope has items or excluded item names, each scope is
+a block that starts with `<scope> (<root>)`, and a scope without items shows
+`No items installed.` in its block. When every reported scope has no items and
+no excluded item names, there is no block header: the output is
+`No items installed.` followed by two hint lines. A scope with excluded item
+names ends its block with `excluded: <name>, <name>`, also when it has no items.
+A scope without excluded names prints no such line. `--global` or `--project`
+limits the report to that scope. When the current directory is the home
+directory, only the global scope is reported, and `--project` is refused with
+exit code 2 and a message that asks for `--global`. When neither `HOME` nor
 `USERPROFILE` is set, only the project scope is reported and stderr gets
 `note: the global scope is not shown: HOME is not set`.
 
@@ -1003,7 +1033,8 @@ Pass `--json` for a stable machine-readable document:
       "rules":   [{ "kind": "rule",  "name": "...", "source": "...", "git_ref": null }],
       "skills":  [{ "kind": "skill", "name": "...", "source": "...", "git_ref": null }],
       "agents":  [{ "kind": "agent", "name": "...", "source": "...", "git_ref": null }],
-      "bundles": [{ "name": "...", "source": "...", "git_ref": null, "items": [] }]
+      "bundles": [{ "name": "...", "source": "...", "git_ref": null, "items": [] }],
+      "excludes": ["..."]
     }
   ]
 }
@@ -1011,7 +1042,8 @@ Pass `--json` for a stable machine-readable document:
 
 `scopes` has one element for each reported scope, in the order project, global,
 also when `--global` or `--project` selects one scope. `scope` is `"project"` or
-`"global"`.
+`"global"`. `excludes` is the sorted array of the excluded item names of the
+scope; it is omitted when empty.
 
 `kind` is one of `"rule"`, `"skill"`, `"agent"`. `git_ref` is the pinned
 ref/tag/branch when the source is a git URL, otherwise `null`. `source` matches

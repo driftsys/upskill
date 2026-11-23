@@ -63,6 +63,10 @@ pub struct Lockfile {
     pub plugins: Vec<LockedPlugin>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcps: Vec<LockedMcp>,
+    /// Item names that `add --exclude` left out of this scope. Sorted,
+    /// without duplicates, and omitted from the file when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub excludes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -263,6 +267,7 @@ impl Lockfile {
             bundles: Vec::new(),
             plugins: Vec::new(),
             mcps: Vec::new(),
+            excludes: Vec::new(),
         }
     }
 
@@ -382,6 +387,17 @@ impl Lockfile {
         self.mcps.retain(|existing| existing.name != name);
     }
 
+    /// Update the excludes of the scope: the recorded names plus `added`,
+    /// minus `requested`. The names are sorted and without duplicates.
+    pub fn record_excludes(&mut self, added: &[String], requested: &[String]) {
+        let mut names: std::collections::BTreeSet<String> = self.excludes.iter().cloned().collect();
+        names.extend(added.iter().cloned());
+        for name in requested {
+            names.remove(name);
+        }
+        self.excludes = names.into_iter().collect();
+    }
+
     /// Persist to `<project_root>/.upskill-lock.json`. Pretty-printed JSON
     /// with a trailing newline so editors don't fight us.
     pub fn save(&self, project_root: &Path) -> Result<()> {
@@ -475,10 +491,57 @@ pub fn items_from_report(
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::generate::Client;
     use crate::pipeline::InstalledItem;
     use std::path::PathBuf;
+
+    fn names(list: &[&str]) -> Vec<String> {
+        list.iter().map(|n| (*n).to_string()).collect()
+    }
+
+    #[test]
+    fn record_excludes_accumulates_sorts_and_deduplicates() {
+        let mut lock = Lockfile::new();
+        lock.record_excludes(&names(&["b", "a", "b"]), &[]);
+        assert_eq!(lock.excludes, names(&["a", "b"]));
+        lock.record_excludes(&names(&["c"]), &[]);
+        assert_eq!(lock.excludes, names(&["a", "b", "c"]));
+    }
+
+    #[test]
+    fn record_excludes_removes_the_requested_names() {
+        let mut lock = Lockfile::new();
+        lock.record_excludes(&names(&["a", "b"]), &[]);
+        lock.record_excludes(&names(&["c"]), &names(&["a"]));
+        assert_eq!(lock.excludes, names(&["b", "c"]));
+        lock.record_excludes(&[], &names(&["b", "c"]));
+        assert!(lock.excludes.is_empty());
+    }
+
+    #[test]
+    fn a_lockfile_without_excludes_keeps_its_bytes() {
+        for raw in [
+            "{\n  \"schema\": 1,\n  \"items\": [],\n  \"bundles\": []\n}\n",
+            "{\n  \"schema\": 2,\n  \"items\": [],\n  \"bundles\": []\n}\n",
+        ] {
+            let tmp = tempfile::tempdir().unwrap();
+            std::fs::write(tmp.path().join(LOCKFILE_NAME), raw).unwrap();
+            let lock = Lockfile::load(tmp.path()).unwrap();
+            lock.save(tmp.path()).unwrap();
+            let saved = std::fs::read_to_string(tmp.path().join(LOCKFILE_NAME)).unwrap();
+            assert_eq!(saved, raw);
+            assert!(!saved.contains("\"excludes\""));
+        }
+    }
+
+    #[test]
+    fn record_excludes_drops_a_name_that_is_both_added_and_requested() {
+        let mut lock = Lockfile::new();
+        lock.record_excludes(&names(&["a"]), &names(&["a"]));
+        assert!(lock.excludes.is_empty());
+    }
 
     #[test]
     fn bundle_kinds_default_to_empty_and_are_omitted_when_empty() {
@@ -743,6 +806,9 @@ mod tests {
             adopted: None,
             conflicts: Vec::new(),
             kept_modified: Vec::new(),
+            removed_excluded: Vec::new(),
+            kept_excluded: Vec::new(),
+            excluded: Vec::new(),
             forced: Vec::new(),
             changed: Vec::new(),
             items: vec![
