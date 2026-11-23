@@ -997,7 +997,7 @@ superseded by the
 2026-11-11. Its relative links are not updated for this location.
 
 The following observation was kept in `docs/wip/README.md` until 2026-11-23 and
-is retained here unchanged, except for its links.
+is retained here unchanged.
 
 ### OpenCode explicit-path observation
 

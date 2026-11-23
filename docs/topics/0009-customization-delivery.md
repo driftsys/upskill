@@ -16,8 +16,9 @@ the
 [support levels](https://github.com/driftsys/upskill/blob/main/docs/book/support-levels.md)
 and AD-0042: Claude Code and Copilot CLI are supported, OpenCode is
 experimental, and Codex is unsupported and has no generated output. The sections
-marked "Replaced" or "Withdrawn" below are history. The sections without that
-mark state design intent under
+and paragraphs marked "Replaced" or "Withdrawn" below are history, and so is the
+adoption process of the section "Slice-1 evidence and adoption". The sections
+without that mark state design intent under
 [AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md)
 and
 [AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md),
