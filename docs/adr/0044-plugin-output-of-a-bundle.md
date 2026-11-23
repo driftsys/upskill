@@ -120,7 +120,7 @@ still race with another cache save.
 - Introduce a separate plugin source schema: the bundle already supplies the
   metadata, content and dependencies.
 
-## Amendment: update keeps an orphaned dependency of a bundle source (2026-11-23)
+## Amendment: update keeps an orphaned dependency of a directory source with recorded bundles (2026-11-23)
 
 Decision 7 says that, for a directory source with recorded bundles, `update`
 passes the recorded bundle names and the directly installed item names. The item
