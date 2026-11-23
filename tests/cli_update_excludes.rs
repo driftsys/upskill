@@ -796,7 +796,6 @@ fn a_bundle_source_treats_an_exclude_and_remove_alike_for_a_dependency_outside_t
         assert_eq!(result.1, serde_json::json!(["skill:d"]), "{label}");
         assert_eq!(result.2, ["e"], "{label}");
     }
-    eprintln!("exclude: {exclude:?}\nremove: {remove:?}");
     assert_eq!(
         exclude.0, remove.0,
         "e kept differs: {exclude:?} {remove:?}"
@@ -1075,8 +1074,7 @@ fn remove_keeps_the_recorded_excludes() {
 }
 
 #[test]
-fn update_of_a_bundle_source_keeps_the_present_result_for_a_dependency_with_an_installed_requirer()
-{
+fn update_removes_a_dependency_that_its_installed_requirer_no_longer_requires_in_a_bundle_source() {
     let env = Env::new();
     let reg = env.registry("reg");
     write_skill(&reg, "e", "", "dependency");
@@ -1090,13 +1088,9 @@ fn update_of_a_bundle_source_keeps_the_present_result_for_a_dependency_with_an_i
     // `m` stays installed, and the source no longer says that it requires `e`.
     write_skill(&reg, "m", "", "second");
     let out = stdout_of(&env.run(&["update", "--yes"]));
-    let lock = env.lock();
-    eprintln!(
-        "observed: installed={} out={out} lock={lock}",
-        env.installed("e")
-    );
-    // Observed result: see the assertions below. The filter change of #613
-    // must not alter it, because `m` is still installed.
+    // `update` removes `e` because its installed requirer `m` no longer
+    // requires it in the source. The filter change of #613 does not alter
+    // this, because `m` is still installed.
     assert_eq!(
         (env.installed("e"), out.contains("no longer in source")),
         (false, true)

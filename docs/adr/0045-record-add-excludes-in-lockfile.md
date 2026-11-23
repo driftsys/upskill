@@ -135,7 +135,8 @@ records (`orphan_excludes`). The per-scope set needs neither.
 - The project lockfile is committed, so an exclude applies to every user of the
   repository, as every other lockfile entry does.
 - `required_by` links that earlier lockfiles already hold wrongly are not
-  repaired.
+  repaired. This holds also for links that an earlier exclude removal deleted
+  (see the amendment).
 - An upskill version that predates schema 3 cannot read a lockfile that a
   current version saved, also one without excludes; the user must upgrade.
 - The ways to undo an exclude are `add <source> <name>` and editing the
@@ -174,3 +175,6 @@ Known limit: the lockfile cannot tell an item installed by name before it was
 required (`add e`, then `add d`) from a pure dependency. After the exclude of
 `d`, or after `remove d`, `e` has `required_by: ["skill:d"]` and `doctor`
 reports it as an orphaned dependency; the user decides what to do.
+
+A lockfile from which an earlier `add --exclude` already deleted links is not
+repaired: the deleted links do not return.

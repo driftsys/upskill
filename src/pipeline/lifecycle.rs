@@ -1277,7 +1277,9 @@ fn repair_missing_plugins(
 /// reinstall covers the selected entries, the entries that a selected item
 /// requires (from this source or from another one). For a directory source
 /// with recorded bundles, it reinstalls the members of those bundles and the
-/// directly installed items of that source, and no other source items. It
+/// directly installed items of that source, and the dependencies of that
+/// source whose requirers are all absent from the lockfile (orphaned
+/// dependencies, #613); it reinstalls no other source item. It
 /// applies a kind restriction only when every recorded bundle of the source
 /// has recorded kinds, using their union. With one unrestricted bundle of the
 /// source, no restriction applies. Every entry of that source whose kind is

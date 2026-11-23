@@ -1,6 +1,7 @@
 # AD-0044 — Plugin output of a bundle
 
-Status: **accepted**. Date: 2026-11-19. Resolves
+Status: **accepted**; decision 7 amended on 2026-11-23 (see the end of this
+record). Date: 2026-11-19. Resolves
 [#563](https://github.com/driftsys/upskill/issues/563).
 
 ## Context
@@ -56,17 +57,16 @@ bundle; it does not replace the bundle or change its schema.
    Under a kind restriction, `update` skips both the plugin and MCP steps.
 7. For a directory source with recorded bundles, `update` passes the recorded
    bundle names separately from the directly installed item names of that
-   source, and also the dependencies of that source that no installed item
-   requires (amendment of AD-0045, #613). Bundle names resolve only as bundles,
-   including cross-source `requires`. Direct items resolve their item `requires`
-   closure, which is merged with the bundle closure. Before this decision,
-   `update` after `add <dir> <bundle>` installed every item of the source. Every
-   lockfile entry of that source whose kind is outside the restriction is left
-   untouched and reported as up to date, regardless of bundle membership or
-   `required_by`, unless its source is skipped. It then shares the source's
-   skipped status, also when the source is skipped later because it requires an
-   item of a skipped source. `add <source> <item>` updates it. A recorded bundle
-   that is no longer in its source causes
+   source. Bundle names resolve only as bundles, including cross-source
+   `requires`. Direct items resolve their item `requires` closure, which is
+   merged with the bundle closure. Before this decision, `update` after
+   `add <dir> <bundle>` installed every item of the source. Every lockfile entry
+   of that source whose kind is outside the restriction is left untouched and
+   reported as up to date, regardless of bundle membership or `required_by`,
+   unless its source is skipped. It then shares the source's skipped status,
+   also when the source is skipped later because it requires an item of a
+   skipped source. `add <source> <item>` updates it. A recorded bundle that is
+   no longer in its source causes
    `bundle '<name>' is no longer in source <label>` before any write, even if an
    item has the same name.
 8. `pack` resolves the entry bundle in the current directory. A `requires` entry
@@ -119,3 +119,16 @@ still race with another cache save.
   bundle: rejected because it needs two plans for one source.
 - Introduce a separate plugin source schema: the bundle already supplies the
   metadata, content and dependencies.
+
+## Amendment: update keeps an orphaned dependency of a bundle source (2026-11-23)
+
+Decision 7 says that, for a directory source with recorded bundles, `update`
+passes the recorded bundle names and the directly installed item names. The item
+filter also passes each dependency of that source whose `required_by` is not
+empty and names no requirer that the lockfile records (the `doctor` condition
+for an orphaned dependency). Without this, `update` removed such a dependency as
+`no longer in source` after an exclude removal that kept the `required_by`
+links. A dependency that still has an installed requirer keeps the earlier
+behaviour. See the amendment of
+[AD-0045](0045-record-add-excludes-in-lockfile.md) and
+[#613](https://github.com/driftsys/upskill/issues/613).
