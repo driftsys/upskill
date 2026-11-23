@@ -32,7 +32,7 @@ never expands `${VAR}` — values pass through verbatim, so it holds no secret.
 tests.
 
 **Spec:**
-[docs/wip/specs/2026-06-03-mcp-support-design.md](../specs/2026-06-03-mcp-support-design.md)
+[docs/archive/specs/2026-06-03-mcp-support-design.md](../specs/2026-06-03-mcp-support-design.md)
 
 **Out of scope (v2):** `requires.mcps` skill dependency edge, generated
 skill-body preflight, the install agent for bare binaries. This plan is v1

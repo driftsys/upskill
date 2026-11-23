@@ -5,7 +5,7 @@ user's native-first always-on rules and skills-before-rules implementation order
 decided on 2026-10-24. This step-7 reconciliation records that direction for
 user adoption review; implementation and complete native qualification remain
 pending. Other package and release-scope amendments below remain proposals
-([decision](../wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24),
+([decision](../archive/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24),
 [evidence and adoption](../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)).
 
 [AD-0042](0042-resteer-customization-delivery.md) replaces the activation and
@@ -39,7 +39,7 @@ selected route satisfies the consumer/isolation contract. Explicit OpenCode
 instruction paths are a selected candidate, pending Q5 PASS. Missing runtime
 capabilities or failed positives block qualification without weakening the
 four-client release scope
-([native-first decision](../wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24),
+([native-first decision](../archive/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24),
 [Q5 retry](../technotes/gate6-opencode-explicit-paths-retry.md)).
 
 Delivery, discovery, activation and ownership are separate contracts. Classify
@@ -133,7 +133,7 @@ client's own file inventory; Codex's hook exception requires ordinary
 per-machine installation and trust. Q1, Q3, Q6 and Q9 support this direction's
 evidence, onboarding and debuggability reasons without qualifying complete
 adapters
-([user decision](../wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24),
+([user decision](../archive/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24),
 [retained dispositions](../topics/0009-customization-delivery.md#slice-1-evidence-and-adoption-2026-10-25)).
 
 In a Claude+Copilot project, generate one unscoped `.claude/rules` file per
@@ -163,8 +163,8 @@ Codex has bounded Q8 PASS; OpenCode waits for Q5 skill/resource PASS. Q10/Q11,
 user adoption of package defaults and per-client preservation contracts remain
 entry gates. All-client release qualification and schema-2 activation remain
 blocked until their own evidence passes
-([handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md#slice-order-and-required-amendment),
-[roadmap](../roadmap.md#implementation-dependencies)).
+([handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md#slice-order-and-required-amendment),
+[roadmap](../roadmap.md)).
 
 OpenCode Q5 is deferred after failed positives at 2.1.4. Explicit paths remain
 unqualified, not disproven. Step 8 bridge/glob removal waits for Q5
@@ -172,12 +172,12 @@ explicit-path PASS and its own code PR; existing entries are not deleted. The
 required future `doctor` reports are not current command behavior. Hooks read an
 install-time static rule index and never invoke the upskill binary at runtime
 ([Q5 retry](../technotes/gate6-opencode-explicit-paths-retry.md),
-[step 8](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md#slice-1-qualification-of-the-gating-routes)).
+[step 8](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md#slice-1-qualification-of-the-gating-routes)).
 
 ## Proposed amendments (2026-10-23)
 
 The
-[customization delivery proposal](../wip/specs/2026-10-23-customization-delivery-proposal.md)
+[customization delivery proposal](../archive/specs/2026-10-23-customization-delivery-proposal.md)
 proposes the following additional changes. They are proposals under review, not
 adopted changes; the accepted direction above stands until each is approved.
 
@@ -200,7 +200,7 @@ adopted changes; the accepted direction above stands until each is approved.
 Decision required: the user adopts or rejects each of these four amendments at
 the step-7 PR review. No Q result adopts them. The first three numbered items
 retain their original identities; authorable bundles are listed separately
-([proposal amendment inventory](../wip/specs/2026-10-23-customization-delivery-proposal.md#records-superseded-or-amended-if-this-proposal-is-adopted)).
+([proposal amendment inventory](../archive/specs/2026-10-23-customization-delivery-proposal.md#records-superseded-or-amended-if-this-proposal-is-adopted)).
 
 The proposal keeps independent-of-team-guidance rules, reader classification,
 one planner delivery per item/client and preserved manual configuration. Only

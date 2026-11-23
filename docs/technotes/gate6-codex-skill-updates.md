@@ -1,7 +1,7 @@
 # Gate 6 Codex plugin skill update visibility
 
 Task [#395](https://github.com/driftsys/upskill/issues/395), Q8 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains three passing native turns on Codex CLI 0.164.0, macOS arm64,
 2026-10-24. A namespaced installed skill expands from a native cache and reads
 its supporting resource. Editing the managed resource and package version is
@@ -111,9 +111,9 @@ completion/pins, correlated identity, load-path evidence and recording source
 visibility either way. They never invoke a client or qualify native execution.
 
 The affected proposal rows are
-[Storage](../wip/specs/2026-10-23-customization-delivery-proposal.md#storage)
+[Storage](../archive/specs/2026-10-23-customization-delivery-proposal.md#storage)
 and
-[skills](../wip/specs/2026-10-23-customization-delivery-proposal.md#skills-and-resources).
+[skills](../archive/specs/2026-10-23-customization-delivery-proposal.md#skills-and-resources).
 This bounded current-pin cache-copy update loop is observed. Durable adoption
 waits for step 7. Linux, IDE/hosted surfaces, arbitrary user delivery,
 unrelated-project isolation and integrated ownership/recovery remain

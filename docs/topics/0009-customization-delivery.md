@@ -8,21 +8,25 @@ policy, the skills-before-rules implementation order and the one-copy
 Claude/Copilot rule policy. The statements below that keep these parts binding
 are history. The reader analysis and the trial results stay as research.
 
-Status: intended architecture and acceptance contract, reconciled on 2026-10-19
-and extended with shared-catalog evaluation requirements on 2026-10-20. The
-2026-10-24 native-first rules decision and implementation-order amendment are
-reconciled with retained slice-1 evidence on 2026-10-25 for user adoption review
-under
-[AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md).
-This contract does not describe newly implemented adapters or qualify a client.
-The [roadmap](https://github.com/driftsys/upskill/blob/main/docs/roadmap.md)
-owns release order;
+Status: **design intent and history; no implemented behaviour** (revised
+2026-11-23). This topic describes no implemented adapter and qualifies no
+client. The implemented behaviour is in the
+[specification](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md),
+the
+[support levels](https://github.com/driftsys/upskill/blob/main/docs/book/support-levels.md)
+and AD-0042: Claude Code and Copilot CLI are supported, OpenCode is
+experimental, and Codex is unsupported and has no generated output. The sections
+and paragraphs marked "Replaced" or "Withdrawn" below are history, and so is the
+adoption process of the section "Slice-1 evidence and adoption". The sections
+without that mark state design intent under
 [AD-0040](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md)
-resolves conflicts with earlier experimental instruction plans. A proposal dated
-2026-10-23 suggests managed per-client packages for skills and subagents, and
-places subagents in the MVP; its amendments are listed in
-[AD-0040's proposed amendments](https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#proposed-amendments-2026-10-23)
-and are not adopted here.
+and
+[AD-0041](https://github.com/driftsys/upskill/blob/main/docs/adr/0041-separate-client-representations-as-design-baseline.md),
+which stay accepted, or record trial results, which stay as research. The
+adoption review that this topic was written for (reconciled on 2026-10-19,
+extended on 2026-10-20 and 2026-10-25) ended with AD-0042. The
+[roadmap](https://github.com/driftsys/upskill/blob/main/docs/roadmap.md) owns
+the delivery order.
 
 ## Architecture and authority
 
@@ -31,6 +35,11 @@ to a runtime. Activation loads instructions, invokes a skill or agent, starts a
 server, registers a tool or executes a hook. These are separate outcomes.
 Ownership authorizes upskill changes; it does not authorize an incidental
 reader.
+
+> **Replaced on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** The next paragraph
+> only: no hook route for rules was implemented, and Codex has no generated
+> output. The paragraph is retained as history.
 
 Always-on rules use native loading where available and a qualified trusted hook
 where no native route exists. Codex and OpenCode delivery must be independent of
@@ -102,6 +111,12 @@ and this release scope with per-client support levels and a delivery order by
 capability.
 
 ## Shared content root evaluation
+
+> **Replaced on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** This section is
+> retained as history and describes no implemented behaviour. No shared content
+> root was adopted: each client receives its own generated copy, and the gates
+> named here do not apply.
 
 Evaluate `.agents/{rules,skills,agents}` with client-specific adapters under
 [#349](https://github.com/driftsys/upskill/issues/349). This is a candidate
@@ -239,6 +254,13 @@ That decision replaces them with an ownership record in the lockfile and
 repeatable operations.
 
 ## Per-client delivery matrix
+
+> **Replaced on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** This section is
+> retained as history and describes no implemented behaviour. The routes in the
+> tables below were not implemented as written. A rule for Claude Code and
+> Copilot is written to both client paths, and upskill generates no Codex
+> output. The status letters and the client versions are those of October 2026.
 
 The paths here distinguish current output from intended routes. They are not new
 path guarantees. Project/user roots, package locations and compatibility
@@ -435,6 +457,11 @@ native registration state; no successful file operation proves deactivation
 
 ### Amendment inventory
 
+> **Note of 2026-11-23.** The table below is the state of 2026-10-25. The
+> proposal and the implementation handoff are archived since then, the links to
+> them point to the archive, and the roadmap no longer records an order between
+> skills and rules.
+
 This inventory reconciles every record named by the proposal. Shipped output is
 kept distinct from intended route changes; no path table below is a declaration
 that code has changed ([proposal inventory][D-inventory]).
@@ -451,17 +478,23 @@ that code has changed ([proposal inventory][D-inventory]).
 | [ADR-0012](https://github.com/driftsys/upskill/blob/main/docs/adr/0012-consumer-client-filtering.md) and VS Code ancillary output                                                                                                                                                                                               | Preserve current selection/defaults and write. CLI reader consent does not qualify VS Code. Its profile/write disposition is deferred, not silently removed                                                                          |
 | [2026-10-14 route mapping](https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-10-14-customization-adapter-roadmap.md#initial-route-mapping) and [adapter evidence](https://github.com/driftsys/upskill/blob/main/docs/technotes/customization-adapter-evidence.md)                                           | Reconcile the mechanism labels and add a dated native-evidence supplement; preserve historical research and later-client scope                                                                                                       |
 | [ADR-0014](https://github.com/driftsys/upskill/blob/main/docs/adr/0014-versioned-agent-model-mappings.md)                                                                                                                                                                                                                       | No change: accepted client-specific offline mappings remain; no new runtime resolver or committed test model identifier                                                                                                              |
-| [Storage candidates registration](https://github.com/driftsys/upskill/blob/main/docs/wip/README.md#retained-context-not-active-proposals)                                                                                                                                                                                       | Retained local comparison context only. User-reported OpenCode cache performance is unqualified; a byte copy of the draft is archived as an unapproved comparison                                                                    |
+| [Storage candidates registration](https://github.com/driftsys/upskill/blob/main/docs/archive/README.md#customization-storage-and-delivery-candidates)                                                                                                                                                                           | Retained local comparison context only. User-reported OpenCode cache performance is unqualified; a byte copy of the draft is archived as an unapproved comparison                                                                    |
 | [#379](https://github.com/driftsys/upskill/issues/379)                                                                                                                                                                                                                                                                          | Resume-only attribution merged in #411. Re-scope to K1 debt on user adoption; do not close it as a zero-duplicate PASS or silently change current labels before review                                                               |
 | Proposal/implementation WIP and technote backlinks                                                                                                                                                                                                                                                                              | Keep active while the following direction choices and later implementation remain unresolved. Backlinks still name a live proposal; archive/repoint only when that proposal is fully adopted, preserving packet bytes                |
 
 ### Decisions and entry controls still required
 
+> **Replaced on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** This section is
+> retained as history and describes no implemented behaviour. None of the
+> decisions and controls below is pending. AD-0042 replaced them with per-client
+> support levels.
+
 AD-0041 settles the organizing baseline and removal selection policy only. The
 user separately accepts or rejects each remaining direction change below; until
 then, its existing scope remains in force
 ([AD-0040 proposed amendments][D-pending],
-[roadmap](https://github.com/driftsys/upskill/blob/main/docs/roadmap.md#mvp--next-release)):
+[roadmap](https://github.com/driftsys/upskill/blob/main/docs/roadmap.md)):
 
 - Decision required: make self-contained per-client skill/subagent packages the
   default instead of the shared-root-first experiment. Q6/Q8 establish bounded
@@ -507,6 +540,12 @@ still requires identical bytes/tasks and cached/uncached token counts, one
 client at a time ([user decision][D-decision], [Q5 retry][D-Q5-retry]).
 
 ## Acceptance and evidence gates
+
+> **Replaced on 2026-11-11 by
+> [AD-0042](../adr/0042-resteer-customization-delivery.md).** This section is
+> retained as history and describes no implemented behaviour. CD-01 to CD-11
+> gate no release and no implementation. The smoke test and the support levels
+> replace them.
 
 | ID    | Required executable example and evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -559,9 +598,9 @@ for the adapter inventory, never assertions that other clients cannot read them.
 [D-native]: https://github.com/driftsys/upskill/blob/main/docs/technotes/m1-gate6-native-qualification.md
 [D-AD]: https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md
 [D-pending]: https://github.com/driftsys/upskill/blob/main/docs/adr/0040-separate-customization-delivery-from-discovery.md#proposed-amendments-2026-10-23
-[D-spec]: https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-23-customization-delivery-implementation-spec.md
-[D-inventory]: https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-23-customization-delivery-proposal.md#records-superseded-or-amended-if-this-proposal-is-adopted
-[D-decision]: https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24
+[D-spec]: https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-10-23-customization-delivery-implementation-spec.md
+[D-inventory]: https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-10-23-customization-delivery-proposal.md#records-superseded-or-amended-if-this-proposal-is-adopted
+[D-decision]: https://github.com/driftsys/upskill/blob/main/docs/archive/specs/2026-10-23-customization-delivery-proposal.md#user-decision-2026-10-24
 [D-Q1]: https://github.com/driftsys/upskill/blob/main/docs/technotes/gate6-copilot-claude-rules-reader.md
 [D-Q1-summary]: https://github.com/driftsys/upskill/blob/main/docs/technotes/evidence/2026-10-24-copilot-claude-rules-reader/summary.json
 [D-Q2]: https://github.com/driftsys/upskill/blob/main/docs/technotes/gate6-copilot-claude-agents-reader.md

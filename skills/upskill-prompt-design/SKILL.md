@@ -64,15 +64,15 @@ or write separate items limited to one client with `audience`.
 down-shift via inline directives for less capable ones. Writing to the lowest
 common denominator and up-shifting produces blander skills.
 
-Client capability matrix (v0.1.0):
+Client capability matrix:
 
-| Capability                         | Claude                      | Copilot        | opencode            |
-| ---------------------------------- | --------------------------- | -------------- | ------------------- |
-| Native subagents                   | ✓                           | ✗              | ✓ (different shape) |
-| Skills with progressive disclosure | ✓                           | ✓              | ✓                   |
-| AGENTS.md native                   | ✓ (via `@AGENTS.md` stub)   | ✓              | ✓                   |
-| Path-scoped instructions           | ✓ (`paths:` in frontmatter) | ✓ (`applyTo:`) | partial             |
-| MCP servers                        | ✓                           | ✓              | ✓                   |
+| Capability                         | Claude                      | Copilot         | opencode                     |
+| ---------------------------------- | --------------------------- | --------------- | ---------------------------- |
+| Native subagents                   | ✓                           | ✓ (`.agent.md`) | ✓ (different shape)          |
+| Skills with progressive disclosure | ✓                           | ✓               | ✓                            |
+| AGENTS.md native                   | ✓ (via `@AGENTS.md` stub)   | ✓               | ✓                            |
+| Path-scoped instructions           | ✓ (`paths:` in frontmatter) | ✓ (`applyTo:`)  | ✗ (`scope.paths` is dropped) |
+| MCP servers                        | ✓                           | ✓               | ✓                            |
 
 ### Classification
 

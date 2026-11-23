@@ -13,8 +13,8 @@ as delivered on `main`: delivery steps 0 to 8 are merged. The user guide
 and the
 [specification](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md)
 describe the behaviour in detail. Release v0.9.0 (tagged on 2026-11-16) holds
-this work up to `update --notice`; `update --notice --repeat` is not in a
-release yet.
+this work up to `update --notice`; release v0.9.1 added
+`update --notice --repeat`.
 
 ## Context
 

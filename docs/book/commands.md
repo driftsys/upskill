@@ -1418,17 +1418,18 @@ divergent name.
 
 ### `upskill lint [paths...]`
 
-Validate SSOT files against the [format spec](format-spec.md). Six rules ship
+Validate SSOT files against the [format spec](format-spec.md). Seven rules ship
 out of the box:
 
-| Rule ID            | Severity | Source           |
-| ------------------ | -------- | ---------------- |
-| `frontmatter`      | error    | format-spec §3   |
-| `name-matches-dir` | error    | format-spec §2.1 |
-| `body-h1`          | warning  | format-spec §5.1 |
-| `fence-lang`       | warning  | format-spec §5.2 |
-| `body-format`      | warning  | format-spec §3.8 |
-| `directive`        | error    | format-spec §6.3 |
+| Rule ID            | Severity | Source                                          |
+| ------------------ | -------- | ----------------------------------------------- |
+| `frontmatter`      | error    | format-spec §3                                  |
+| `name-matches-dir` | error    | format-spec §2.1                                |
+| `body-h1`          | warning  | format-spec §5.1                                |
+| `fence-lang`       | warning  | format-spec §5.2                                |
+| `body-format`      | warning  | format-spec §3.8                                |
+| `directive`        | error    | format-spec §6.3                                |
+| `name-collision`   | error    | a bundle and an item of one source share a name |
 
 ```bash
 upskill lint                # lint everything in the working tree

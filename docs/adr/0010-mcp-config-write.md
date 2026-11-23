@@ -358,7 +358,7 @@ are unaffected. Old lockfiles without an `mcps` array load fine (serde
 - Dependency coupling model (v2 prerequisite):
   [ADR-0009](0009-coupling-tiers-and-dependencies.md).
 - Design spec (background, rationale, alternatives):
-  [`docs/wip/specs/2026-06-03-mcp-support-design.md`](../wip/specs/2026-06-03-mcp-support-design.md).
+  [`docs/archive/specs/2026-06-03-mcp-support-design.md`](../archive/specs/2026-06-03-mcp-support-design.md).
 - Authoritative format spec:
   [`docs/format-spec.md`](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md)
   §3.7 — `mcps:` sub-shape.

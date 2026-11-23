@@ -1,7 +1,7 @@
 # Gate 6 Copilot reader of restricted Claude agents
 
 Task [#383](https://github.com/driftsys/upskill/issues/383), Q2 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 records catalog discovery and a real delegated child on 2026-10-24. These are
 bounded project observations, not a general safe exception-route claim.
 Production remains schema 1.
@@ -62,7 +62,7 @@ catalog entry or response text alone is not counted as delegation.
 
 The affected row is the
 [proposal Subagents section's Claude native-file
-exception](../wip/specs/2026-10-23-customization-delivery-proposal.md#subagents).
+exception](../archive/specs/2026-10-23-customization-delivery-proposal.md#subagents).
 Copilot is a demonstrated reader of this restricted Claude-format file, so
 placing it under `.claude/agents` does not isolate it from Copilot. The native
 event selected `Read` and the only observed child invocation was `view`. The

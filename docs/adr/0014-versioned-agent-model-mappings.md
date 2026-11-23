@@ -89,6 +89,6 @@ strict enforcement require a separate explicit policy decision.
 
 ## References
 
-- [Agent customization roadmap](../wip/specs/2026-10-11-agent-customization-roadmap.md)
+- [Agent customization roadmap](../archive/specs/2026-10-11-agent-customization-roadmap.md)
 - [GitHub Copilot CLI command reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference)
 - [GitHub Copilot CLI programmatic reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-programmatic-reference)

@@ -1,7 +1,7 @@
 # Gate 6 Claude unscoped rule hook controls
 
 Task [#390](https://github.com/driftsys/upskill/issues/390), Q4 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains passing project-scope activation controls on Claude Code 2.1.308, macOS
 arm64, 2026-10-24. One package-owned unscoped rule is observed on fresh startup
 and after native compaction. Resume retains a callback and exact response, but
@@ -130,7 +130,7 @@ per active boundary, stable session identity, correct pin and native compaction
 completion. Offline tests do not invoke Claude or any model.
 
 Under the
-[adopted rules direction](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules),
+[adopted rules direction](../archive/specs/2026-10-23-customization-delivery-proposal.md#rules),
 the packet supplies bounded startup, absence and compaction results for the
 retained hook fallback. Resume provides callback and response evidence only
 ([summary](evidence/2026-10-24-claude-rule-hooks/summary.json)). Durable

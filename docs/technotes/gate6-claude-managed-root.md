@@ -1,7 +1,7 @@
 # Gate 6 Claude managed-root controls
 
 Task [#384](https://github.com/driftsys/upskill/issues/384), Q6 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains project- and user-scope marketplace controls on 2026-10-24. After normal
 isolated login renewal, all six fresh invocations passed. Q6 records source edit
 visibility before and after native update at both scopes. The two earlier
@@ -132,9 +132,9 @@ reconstruction.
 ## Consequence for the proposal
 
 The affected rows are the proposal's
-[Storage and activation](../wip/specs/2026-10-23-customization-delivery-proposal.md#storage-and-activation)
+[Storage and activation](../archive/specs/2026-10-23-customization-delivery-proposal.md#storage-and-activation)
 and
-[Packaging changes identity](../wip/specs/2026-10-23-customization-delivery-proposal.md#packaging-changes-identity)
+[Packaging changes identity](../archive/specs/2026-10-23-customization-delivery-proposal.md#packaging-changes-identity)
 sections. Local marketplace registration and namespaced catalog identity are
 observed at both scopes, with successful namespaced calls and edited-source
 visibility in fresh sessions before and after native update. Empty settings

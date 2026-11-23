@@ -69,12 +69,12 @@ and reject compaction or malformed history. Tests make no native call
 ## Consequence
 
 This completes the requested resume-only observation for the proposal's
-[Codex always-on rules row](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules).
+[Codex always-on rules row](../archive/specs/2026-10-23-customization-delivery-proposal.md#rules).
 The [earlier combined resume/compaction FAIL](gate6-codex-rule-lifecycle.md) and
 [HTTP 401 failed positive](gate6-codex-resume-only.md) remain retained
 unchanged. The user owns step 7 adoption and the proposed #379 severity
 amendment under the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md).
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md).
 This packet changes no durable record or production route. It adds no evidence
 about OpenCode, whose Q5 retry remains deferred
 ([summary](evidence/2026-10-25-codex-resume-attribution/summary.json)).

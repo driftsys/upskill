@@ -49,5 +49,5 @@ or an account/provider change to avoid the limit
 Earlier failures retain their original receipts. Q5 and the future OpenCode glob
 removal stay gated on a successful explicit-path control. No production route,
 schema-1 state or durable direction record changes
-([handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+([handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 [summary](evidence/2026-10-25-opencode-explicit-paths-retry/summary.json)).

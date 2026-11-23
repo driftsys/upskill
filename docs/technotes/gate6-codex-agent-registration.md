@@ -1,7 +1,7 @@
 # Gate 6 Codex package-owned agent registration
 
 Task [#393](https://github.com/driftsys/upskill/issues/393), Q7 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains bounded native results on Codex CLI 0.164.0, macOS arm64, 2026-10-24. An
 explicitly registered package-owned TOML agent runs as a real child and inherits
 the parent's read-only execution boundary. The identical TOML inside an
@@ -140,7 +140,7 @@ and hashes bind the selected receipts and private sources. Public role/schema
 assessments omit test model identifiers and unrelated catalog content.
 
 The affected proposal row is
-[Subagents, Codex](../wip/specs/2026-10-23-customization-delivery-proposal.md#subagents).
+[Subagents, Codex](../archive/specs/2026-10-23-customization-delivery-proposal.md#subagents).
 Explicit package-owned registration and inherited denial are observed on this
 trusted-project pin; automatic plugin-contained TOML discovery is not observed.
 No durable adoption is made before step 7. The initial preservation failure and

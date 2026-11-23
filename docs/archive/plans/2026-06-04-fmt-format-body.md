@@ -24,7 +24,7 @@ unaffected.
 `anyhow`, `serde_yaml_ng`; integration tests with `assert_cmd` + `tempfile`.
 
 **Reference spec:**
-[docs/wip/specs/2026-06-04-fmt-format-body-design.md](../specs/2026-06-04-fmt-format-body-design.md)
+[docs/archive/specs/2026-06-04-fmt-format-body-design.md](../specs/2026-06-04-fmt-format-body-design.md)
 
 ---
 
@@ -904,7 +904,7 @@ in the ADR).
 - fmt ATDD: `upskill fmt` formats a dirty body end-to-end
 - lint unit + ATDD: `body-format` warning, clean body has none, `--strict` fails
 
-Spec: docs/wip/specs/2026-06-04-fmt-format-body-design.md
+Spec: docs/archive/specs/2026-06-04-fmt-format-body-design.md
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 BODY

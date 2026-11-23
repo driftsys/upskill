@@ -11,7 +11,7 @@ architecture.
 | [Tool specification](specification/specification.md) | CLI behavior and compatibility links to concern contracts.              |
 | [ADRs](adr/README.md)                                | Decisions and rationale; only Accepted decisions are binding.           |
 | [Technotes](technotes/README.md)                     | Informative research and validation evidence.                           |
-| [WIP](wip/README.md)                                 | Active or unreconciled designs and plans.                               |
+| [WIP](wip/README.md)                                 | Designs and plans of planned or active work.                            |
 | [Archive](archive/README.md)                         | Completed or superseded working documents and provenance.               |
 
 Requirements and architecture share a concern document but remain separate
@@ -24,9 +24,9 @@ published chapter URLs and historical specification anchors remain available.
 
 See [Contributing](../CONTRIBUTING.md#documentation-lifecycle) for maintenance
 and verification. Current planning remains in the [Upskill roadmap](roadmap.md),
-with Claude Code and Copilot first, post-MVP cleanup, and additional
-customization management afterward. Planned scope remains separate from
-implemented contracts.
+with the released MVP for Claude Code and Copilot CLI, then stabilization and
+the plugin MVP, the Codex adapter, and additional customization management
+afterward. Planned scope remains separate from implemented contracts.
 
 The [compatibility inventory](compatibility.json) preserves historical section
 anchors and schema file hashes from the consolidation baseline. Documentation

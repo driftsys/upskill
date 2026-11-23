@@ -24,7 +24,7 @@ provenance in the lockfile.
 (the `ignore` glob matcher is hand-rolled to protect the ~3 MB binary target).
 
 **Reference spec:**
-[docs/wip/specs/2026-06-03-coupling-redesign-design.md](../specs/2026-06-03-coupling-redesign-design.md)
+[docs/archive/specs/2026-06-03-coupling-redesign-design.md](../specs/2026-06-03-coupling-redesign-design.md)
 
 **Out of scope (Slice 2, separate plan):** cross-source `requires` resolution
 (`{ name, source }` fetched via `fetch_ssot`), cross-source cycle/conflict keyed
@@ -1657,7 +1657,7 @@ tooling clean.
 ```bash
 git push -u origin feat/coupling-redesign
 gh pr create --base main --title "feat: coupling redesign slice 1 — optional naming, ignore, same-source requires" \
-  --body "Implements ADR-0009 (amends ADR-0006): three-tier coupling model. Slice 1 = same-source. Adds optional/relaxed item naming (layout-independent identity), \`ignore\` copy-scope, same-source \`requires\` auto-install with \`required_by\` provenance, co-location grouping + unit removal, and a \`doctor\` orphaned-dependency flag. Cross-source resolution is Slice 2 (separate plan). See docs/wip/specs/2026-06-03-coupling-redesign-design.md.
+  --body "Implements ADR-0009 (amends ADR-0006): three-tier coupling model. Slice 1 = same-source. Adds optional/relaxed item naming (layout-independent identity), \`ignore\` copy-scope, same-source \`requires\` auto-install with \`required_by\` provenance, co-location grouping + unit removal, and a \`doctor\` orphaned-dependency flag. Cross-source resolution is Slice 2 (separate plan). See docs/archive/specs/2026-06-03-coupling-redesign-design.md.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 ```

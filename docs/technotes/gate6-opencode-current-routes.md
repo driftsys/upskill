@@ -1,7 +1,7 @@
 # Gate 6 current OpenCode routes: failed execution positives
 
 Task [#391](https://github.com/driftsys/upskill/issues/391), Q5 of the
-[implementation handoff](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md),
+[implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains two failed native positives on OpenCode 2.1.4, macOS arm64, 2026-10-24.
 The provider rejects the requested private backend with HTTP 400 and
 `model_not_supported`. Context-hook, resume and skill/resource model controls
@@ -99,8 +99,8 @@ resource evidence and recording the local install verb either way. They never
 invoke a client and cannot qualify execution.
 
 The affected proposal rows are
-[OpenCode rules](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules),
-[skills](../wip/specs/2026-10-23-customization-delivery-proposal.md#skills-and-resources)
+[OpenCode rules](../archive/specs/2026-10-23-customization-delivery-proposal.md#rules),
+[skills](../archive/specs/2026-10-23-customization-delivery-proposal.md#skills-and-resources)
 and the current-pin evidence assessment. Q5 stays open until a successful pinned
 positive permits the component controls. No older 2.0.32 execution result is
 promoted to 2.1.4 support. Durable adoption waits for step 7.
@@ -119,6 +119,6 @@ simulate guide presence without creating guide files
 These are offline regressions. They do not change either retained failed
 positive, run a candidate control or qualify OpenCode 2.1.4. The current
 explicit-path retry remains pending under the
-[adopted delivery direction](../wip/specs/2026-10-23-customization-delivery-proposal.md#rules)
+[adopted delivery direction](../archive/specs/2026-10-23-customization-delivery-proposal.md#rules)
 and
-[slice-1 order](../wip/specs/2026-10-23-customization-delivery-implementation-spec.md).
+[slice-1 order](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md).
