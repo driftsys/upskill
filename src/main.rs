@@ -382,6 +382,7 @@ fn run_add(args: AddArgs) -> i32 {
             print_plugin_results(&report);
             print_mcp_results(&report);
             print_kept_modified(&report.kept_modified);
+            print_kept_excluded(&report.kept_excluded);
             print_forced(&report.forced);
             if report.conflicts.is_empty() {
                 EXIT_SUCCESS
@@ -427,6 +428,21 @@ fn print_conflicts(conflicts: &[upskill::pipeline::FileConflict]) {
 fn print_kept_modified(paths: &[PathBuf]) {
     for path in paths {
         eprintln!("kept modified file: {}", path.display());
+    }
+}
+
+/// One line per modified file of an excluded item that `add` kept instead
+/// of removing. Printed to stderr, so `-q/--quiet` does not hide it.
+fn print_kept_excluded(items: &[upskill::pipeline::KeptItem]) {
+    for item in items {
+        for path in &item.modified {
+            eprintln!(
+                "kept — excluded {} {}: {} was modified",
+                item.kind,
+                item.name,
+                path.display()
+            );
+        }
     }
 }
 

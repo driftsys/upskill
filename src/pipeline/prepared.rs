@@ -616,8 +616,8 @@ impl PreparedInstall {
     /// directory source with recorded bundles evaluates the merged bundle and
     /// direct-item closure, including bundle members even without direct items.
     /// The bundle closure contributes no item-level `required_by` edges.
-    /// `required_by` maps each dependency reached by the item closure, also an
-    /// excluded one, to its requirers. A kind-restricted install refreshes only
+    /// `required_by` maps each dependency reached by the item closure to its
+    /// requirers; an excluded dependency is not reached and has no entry. A kind-restricted install refreshes only
     /// planned entries, including entries from other sources.
     fn requires_provenance(&self) -> RequiresProvenance {
         // Translate `requires` provenance through any applied `--as` aliases so

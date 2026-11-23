@@ -155,6 +155,22 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
     out
 }
 
+/// The excludes of a run: the recorded names that `named` does not name,
+/// plus the `--exclude` names of the command (`own`).
+pub(crate) fn effective_excludes(
+    recorded: &[String],
+    own: &[String],
+    named: &[String],
+) -> Vec<String> {
+    let mut names: std::collections::BTreeSet<String> = recorded
+        .iter()
+        .filter(|name| !named.contains(name))
+        .cloned()
+        .collect();
+    names.extend(own.iter().cloned());
+    names.into_iter().collect()
+}
+
 /// Install + write lockfile. Consumer-facing entry point:
 /// `prepared::prepare_install` followed by
 /// `prepared::PreparedInstall::commit`.
@@ -201,22 +217,6 @@ fn bundle_item_names(bundle: &crate::model::Bundle) -> Vec<String> {
 /// `git_ref` recorded per item is taken from the source variant when one
 /// is pinned (Github/Git `git_ref`); local-path sources record `None`.
 /// `source` label is the [`InstallSource`] `Display` form.
-/// The excludes of a run: the recorded names that `named` does not name,
-/// plus the `--exclude` names of the command (`own`).
-pub(crate) fn effective_excludes(
-    recorded: &[String],
-    own: &[String],
-    named: &[String],
-) -> Vec<String> {
-    let mut names: std::collections::BTreeSet<String> = recorded
-        .iter()
-        .filter(|name| !named.contains(name))
-        .cloned()
-        .collect();
-    names.extend(own.iter().cloned());
-    names.into_iter().collect()
-}
-
 pub fn install_with_lockfile(
     source: &InstallSource,
     target: &Path,
@@ -303,6 +303,7 @@ pub fn install_with_lockfile(
         .items
         .iter()
         .filter(|i| same_source_key(&i.source) == label)
+        .filter(|i| options.kinds.is_empty() || options.kinds.contains(&i.kind))
         .filter(|i| {
             let in_source = i.source_name.as_ref().unwrap_or(&i.name);
             own_excludes.contains(in_source) && !items.contains(in_source)
@@ -314,10 +315,17 @@ pub fn install_with_lockfile(
             scope: options.scope,
             root: target.to_path_buf(),
         };
-        lifecycle::remove_exact(&at, &excluded_installed)?;
+        // An item with a modified file is kept, files and lockfile entry,
+        // and reported in `kept_excluded`.
+        let (removal, kept) = lifecycle::remove_exact(&at, &excluded_installed)?;
+        let removed_items: Vec<(ItemKind, String)> = removal
+            .items
+            .iter()
+            .map(|item| (item.kind, item.name.clone()))
+            .collect();
         // The other items must not keep a `required_by` link to an item
         // that this run removed.
-        let gone: std::collections::BTreeSet<String> = excluded_installed
+        let gone: std::collections::BTreeSet<String> = removed_items
             .iter()
             .map(|(kind, name)| format!("{kind}:{name}"))
             .collect();
@@ -331,9 +339,17 @@ pub fn install_with_lockfile(
         if changed {
             lock.save(target)?;
         }
-        report.removed_excluded = excluded_installed;
+        report.removed_excluded = removed_items;
+        report.kept_excluded = kept;
     }
     let removed = report.removed_excluded.clone();
-    report.excluded.retain(|item| !removed.contains(item));
+    let kept: Vec<(ItemKind, String)> = report
+        .kept_excluded
+        .iter()
+        .map(|item| (item.kind, item.name.clone()))
+        .collect();
+    report
+        .excluded
+        .retain(|item| !removed.contains(item) && !kept.contains(item));
     Ok(report)
 }

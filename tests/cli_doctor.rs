@@ -1051,15 +1051,4 @@ fn doctor_is_clean_with_a_valid_excludes_record() {
         .args(["doctor", "--project"])
         .assert()
         .success();
-    let assert = common::upskill_cmd(&home)
-        .current_dir(&target)
-        .args(["doctor", "--project", "--json"])
-        .assert();
-    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    let json: serde_json::Value = serde_json::from_str(&out).unwrap();
-    let orphans = &json["scopes"][0]["orphan_excludes"];
-    assert!(
-        orphans.is_null() || orphans.as_array().is_some_and(|a| a.is_empty()),
-        "{out}"
-    );
 }

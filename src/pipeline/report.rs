@@ -89,10 +89,14 @@ pub struct InstallReport {
     /// Items that were already installed from the source and that the
     /// command's `--exclude` names. `add` removed them (issue #570).
     pub removed_excluded: Vec<(ItemKind, String)>,
+    /// Installed items of the source that the command's `--exclude` names
+    /// and that `add` did not remove because a recorded file was modified.
+    /// Their files and lockfile entries stay (issue #570).
+    pub kept_excluded: Vec<KeptItem>,
     /// Items that an exclude kept out of this run, each once: dependencies
     /// and bundle members that the resolver skipped, and items of the
     /// source that a whole-source install did not take. An item in
-    /// `removed_excluded` is not listed here.
+    /// `removed_excluded` or `kept_excluded` is not listed here.
     pub excluded: Vec<(ItemKind, String)>,
 }
 
@@ -279,6 +283,15 @@ pub struct RemoveReport {
     /// Paths recorded when this command adopted a `schema: 1` lockfile;
     /// `None` when no adoption happened.
     pub adopted: Option<Vec<String>>,
+}
+
+/// An installed item that a removal kept because of its modified files.
+#[derive(Debug, Clone, Serialize)]
+pub struct KeptItem {
+    pub kind: ItemKind,
+    pub name: String,
+    /// The modified recorded files (paths relative to the target), sorted.
+    pub modified: Vec<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -844,7 +857,9 @@ pub struct ListReport {
     pub skills: Vec<ListedItem>,
     pub agents: Vec<ListedItem>,
     pub bundles: Vec<ListedBundle>,
-    /// The `--exclude` names that the lockfile records, sorted.
+    /// The `--exclude` names that the lockfile records, sorted. Omitted
+    /// from the JSON output when empty.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub excludes: Vec<String>,
 }
 

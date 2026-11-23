@@ -523,7 +523,8 @@ impl Resolver {
         let (kind, name) = node.clone();
 
         // An excluded dependency is left out before any lookup, so it is not
-        // fetched, not checked for conflicts and gets no `required_by` link.
+        // checked for conflicts and gets no `required_by` link. The caller
+        // skips an excluded dependency of another source before the fetch.
         // A directly-requested item (no requirer) is never checked here.
         if requirer.is_some() && self.excludes.contains(&name) {
             self.skipped.insert(node);
@@ -579,6 +580,11 @@ impl Resolver {
                 let dep = (dep_kind, r.name().to_string());
                 match r.source() {
                     None => self.visit(label, dep, Some(&node))?,
+                    // An excluded dependency from another source is
+                    // skipped before its source is fetched.
+                    Some(_) if self.excludes.contains(&dep.1) => {
+                        self.skipped.insert(dep);
+                    }
                     Some(src_dsl) => {
                         let dep_label = self.ensure_source(src_dsl)?;
                         self.visit(&dep_label, dep, Some(&node))?;

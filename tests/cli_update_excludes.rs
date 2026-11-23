@@ -1,5 +1,5 @@
-//! Issue #570: `update` applies the `--exclude` names that the last `add` of a
-//! source recorded in the lockfile. All commands use the project scope in a
+//! Issue #570: `add` and `update` apply the `--exclude` names that the
+//! lockfile records for its install scope. All commands use the project scope in a
 //! tempdir with a fake `$HOME`.
 
 mod common;
@@ -687,4 +687,121 @@ fn update_prints_the_items_that_an_exclude_keeps_out() {
     assert!(stderr.contains("excluded skill d"), "{stderr}");
     let stderr = stderr_of(&env.run(&["update", "--yes", "--quiet"]));
     assert!(!stderr.contains("excluded"), "{stderr}");
+}
+
+#[test]
+fn add_keeps_an_excluded_item_with_a_modified_file() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "b", "", "first");
+    env.run(&["add", s(&reg), "b"]);
+    let file = env.consumer().join(".claude/skills/b/SKILL.md");
+    fs::write(&file, "local edit\n").unwrap();
+
+    let out = env.run(&["add", s(&reg), "--exclude", "b"]);
+    let stdout = stdout_of(&out);
+    let stderr = stderr_of(&out);
+    assert!(!stdout.contains("removed — excluded"), "{stdout}");
+    assert!(stderr.contains("kept"), "{stderr}");
+    assert_eq!(fs::read_to_string(&file).unwrap(), "local edit\n");
+    assert!(has_lock_item(&env.lock(), "b"), "{}", env.lock());
+    assert_eq!(excluded_names(&env.lock()), ["b"]);
+}
+
+#[test]
+fn add_with_a_kind_removes_only_the_excluded_item_of_that_kind() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "foo", "", "skill");
+    let dir = reg.join("foo-rule");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("RULE.md"),
+        "---\nschema: 1\nname: foo\ndescription: rule foo.\n---\n\n# foo\n",
+    )
+    .unwrap();
+    env.run(&["add", s(&reg)]);
+    let rule = env.consumer().join(".claude/rules/foo.md");
+    assert!(env.installed("foo") && rule.exists());
+
+    let stdout = stdout_of(&env.run(&["add", s(&reg), "--kind", "skill", "--exclude", "foo"]));
+    assert!(!env.installed("foo"));
+    assert!(rule.exists(), "the rule of the same name stays");
+    assert!(!stdout.contains("removed — excluded rule foo"), "{stdout}");
+    let lock = env.lock();
+    assert!(
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["name"] == "foo" && i["kind"] == "rule"),
+        "{lock}"
+    );
+}
+
+#[test]
+fn an_excluded_dependency_of_another_source_is_not_fetched() {
+    let env = Env::new();
+    let (reg, dep) = cross_source_setup(&env);
+    fs::remove_dir_all(&dep).unwrap();
+    env.run(&["add", s(&reg), "r", "--exclude", "d"]);
+    assert!(env.installed("r") && !env.installed("d"));
+}
+
+#[test]
+fn update_keeps_a_bundle_member_installed_by_name_that_another_add_excludes() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "d", "", "first");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "d"]);
+    env.run(&["add", s(&reg), "b"]);
+    env.run(&["add", s(&reg), "d"]);
+    let other = env.registry("other");
+    write_skill(
+        &other,
+        "o",
+        &format!(
+            "requires:\n  skills: [{{ name: d, source: {} }}]\n",
+            s(&reg)
+        ),
+        "other",
+    );
+    env.run(&["add", s(&other), "o", "--exclude", "d"]);
+    assert_eq!(excluded_names(&env.lock()), ["d"]);
+    assert!(env.installed("d"));
+
+    write_skill(&reg, "a", "", "second");
+    env.run(&["update", "--yes"]);
+    assert!(env.installed("d"));
+    assert!(has_lock_item(&env.lock(), "d"), "{}", env.lock());
+}
+
+#[test]
+fn add_removes_an_aliased_excluded_item_by_its_source_name() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "b", "", "first");
+    env.run(&["add", s(&reg), "b", "--as", "bb"]);
+    assert!(env.installed("bb"));
+    let stdout = stdout_of(&env.run(&["add", s(&reg), "--exclude", "b"]));
+    assert!(!env.installed("bb"));
+    assert!(!has_lock_item(&env.lock(), "bb"), "{}", env.lock());
+    assert!(stdout.contains("removed — excluded skill bb"), "{stdout}");
+}
+
+#[test]
+fn remove_keeps_the_recorded_excludes() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "d", "", "dependency");
+    write_skill(&reg, "r", "requires:\n  skills: [d]\n", "first");
+    env.run(&["add", s(&reg), "r", "--exclude", "d"]);
+    common::upskill_cmd(&env.tmp.path().join("home"))
+        .current_dir(env.consumer())
+        .args(["remove", "r", "--project"])
+        .assert()
+        .success();
+    assert!(!has_lock_item(&env.lock(), "r"), "{}", env.lock());
+    assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
 }
