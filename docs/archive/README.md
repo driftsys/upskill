@@ -1218,7 +1218,9 @@ These points are not fixed by the triage and have no issue yet:
 - ADR-0009 and ADR-0006 have the status "Proposed", and the
   [ADR index](../adr/README.md) repeats it, although the code implements both.
 - No durable record describes the error for an item that is already installed
-  from another source, or the `--as` and `--exclude` flags of `add`.
+  from another source, or the `--as` flag of `add`. For the `--exclude` flag,
+  [ADR-0045](../adr/0045-record-add-excludes-in-lockfile.md) (merged on
+  2026-11-23, after the triage) is the durable record.
 - `upskill search --kind` and `upskill index` do not cover bundles. No
   integration test covers the registry index.
 

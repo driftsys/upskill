@@ -1,7 +1,7 @@
 # Upskill roadmap
 
 Updated: **2026-11-23**. Status: **planned delivery scope**. The MVP is released
-(0.9.0 to 0.9.2). The stages after it are listed in delivery order and are not
+(0.9.0 to 0.9.3). The stages after it are listed in delivery order and are not
 implemented unless a stage says so. Release numbers and dates of these stages
 will be assigned separately.
 
@@ -79,8 +79,10 @@ After 0.9.0:
   Plugin output stays experimental until the smoke test of stage 2 passes.
 - 0.9.1 and 0.9.2 fixed the OpenCode plugin check and OpenCode global installs.
   OpenCode stays experimental: no smoke run has passed.
-- Fixes to `doctor`, to the discovery of unreadable directories and to the
-  notice lock are merged and are not in a release yet.
+- 0.9.3 (2026-11-23) fixed `doctor`, the discovery of unreadable directories and
+  the notice lock. It also records the excludes of `add` in the lockfile, which
+  is now written as `schema: 3`
+  ([ADR-0045](https://github.com/driftsys/upskill/blob/main/docs/adr/0045-record-add-excludes-in-lockfile.md)).
 
 ## Stage 1 — Stabilize the shipped features
 
