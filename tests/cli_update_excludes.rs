@@ -702,7 +702,8 @@ fn add_keeps_an_excluded_item_with_a_modified_file() {
     let stdout = stdout_of(&out);
     let stderr = stderr_of(&out);
     assert!(!stdout.contains("removed — excluded"), "{stdout}");
-    assert!(stderr.contains("kept"), "{stderr}");
+    let expected = "kept — excluded skill b: .claude/skills/b/SKILL.md was modified";
+    assert!(stderr.lines().any(|line| line == expected), "{stderr}");
     assert_eq!(fs::read_to_string(&file).unwrap(), "local edit\n");
     assert!(has_lock_item(&env.lock(), "b"), "{}", env.lock());
     assert_eq!(excluded_names(&env.lock()), ["b"]);
@@ -775,6 +776,70 @@ fn update_keeps_a_bundle_member_installed_by_name_that_another_add_excludes() {
     env.run(&["update", "--yes"]);
     assert!(env.installed("d"));
     assert!(has_lock_item(&env.lock(), "d"), "{}", env.lock());
+}
+
+#[test]
+fn update_keeps_an_aliased_bundle_member_that_another_add_excludes() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "d", "", "first");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "d"]);
+    env.run(&["add", s(&reg), "b", "--as", "d=dd"]);
+    assert!(env.installed("dd"));
+    let other = env.registry("other");
+    write_skill(
+        &other,
+        "o",
+        &format!(
+            "requires:\n  skills: [{{ name: d, source: {} }}]\n",
+            s(&reg)
+        ),
+        "other",
+    );
+    env.run(&["add", s(&other), "o", "--exclude", "d"]);
+    assert_eq!(excluded_names(&env.lock()), ["d"]);
+    assert!(env.installed("dd"));
+
+    write_skill(&reg, "a", "", "second");
+    env.run(&["update", "--yes"]);
+    assert!(env.installed("dd"));
+    assert!(has_lock_item(&env.lock(), "dd"), "{}", env.lock());
+}
+
+#[test]
+fn add_keeps_the_required_by_link_to_an_excluded_item_with_a_modified_file() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "d", "", "dependency");
+    write_skill(&reg, "e", "requires:\n  skills: [d]\n", "first");
+    write_skill(&reg, "x", "", "unrelated");
+    env.run(&["add", s(&reg), "e"]);
+    assert!(!required_by_is_empty(lock_item(&env.lock(), "d")));
+    let file = env.consumer().join(".claude/skills/e/SKILL.md");
+    fs::write(&file, "local edit\n").unwrap();
+
+    env.run(&["add", s(&reg), "x", "--exclude", "e"]);
+
+    let lock = env.lock();
+    assert_eq!(fs::read_to_string(&file).unwrap(), "local edit\n");
+    assert!(has_lock_item(&lock, "e"), "{lock}");
+    assert!(!required_by_is_empty(lock_item(&lock, "d")), "{lock}");
+}
+
+#[test]
+fn add_that_names_and_excludes_an_installed_item_keeps_it_installed() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "d", "", "first");
+    env.run(&["add", s(&reg), "d"]);
+    assert!(env.installed("d"));
+
+    env.run(&["add", s(&reg), "d", "--exclude", "d"]);
+
+    assert!(env.installed("d"));
+    assert!(has_lock_item(&env.lock(), "d"), "{}", env.lock());
+    assert_eq!(excluded_names(&env.lock()), ["d"]);
 }
 
 #[test]

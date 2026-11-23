@@ -84,7 +84,8 @@ How a later `add` changes the set:
    item, once; an item that the same run removes is reported only as removed,
    not also as excluded; `--quiet` hides the line, and `update` prints it with
    `--dry-run`. `list` prints `excluded: <names>` for each scope, also for a
-   scope with no items, and `list --json` has an `excludes` key for each scope.
+   scope with no items, and `list --json` has an `excludes` key for each scope
+   that has at least one exclude and omits the key when the list is empty.
 8. `remove` records no exclude and prunes none. `doctor` has no check for
    excludes.
 
