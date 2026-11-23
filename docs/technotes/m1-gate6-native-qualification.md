@@ -3,11 +3,11 @@
 Issue [#540](https://github.com/driftsys/upskill/issues/540) removed the native
 probe mode: the probe commands of this note (`--run --evidence` and the others
 that it gives) no longer run. The command
-`python3 -m unittest discover -s
-scripts/tests` still runs, but
-`scripts/tests/test_qualify_native_instructions.py` now holds only
-`ProcessCleanupTests`; the marker, staging and OpenCode regression tests that
-this note describes were removed.
+`python3 -m unittest discover -s scripts/tests` still runs, but
+`scripts/tests/test_qualify_native_instructions.py` now tests only the process
+handling, the environment isolation and the command-line refusals of the smoke
+script; the marker, staging and OpenCode regression tests that this note
+describes were removed.
 
 Architecture limit (2026-10-19): these canonical instruction-file probes are
 background discovery experiments. They do not qualify the independent

@@ -249,9 +249,9 @@ Thirteen evidence folders remain in `docs/technotes/evidence/`:
   `2026-10-21-gate6-shared-skill`.
 - Evidence that a note links by a relative path:
   `2026-10-25-cross-client-package-isolation` (from
-  `gate6-cross-client-package-isolation.md`),
-  `2026-10-30-q11b-registration-isolation` (from
-  `copilot-project-plugin-overlay-profile.md`,
+  `gate6-cross-client-package-isolation.md` and
+  `gate6-plugin-profile-inventory.md`), `2026-10-30-q11b-registration-isolation`
+  (from `copilot-project-plugin-overlay-profile.md`,
   `customization-delivery-policy-comparison.md` and
   `gate6-project-registration-isolation.md`) and `2026-10-30-q11b-native-name`
   (from `gate6-copilot-native-calibration.md`).

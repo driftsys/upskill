@@ -29,12 +29,13 @@ class IsolatedGitEnvironmentTests(unittest.TestCase):
             'GIT_CONFIG_VALUE_0': '/unrelated/config-worktree',
             'GIT_UPSKILL_SENTINEL_X': 'synthetic-git-value',
         }
-        kept = {'PATH': '/synthetic/bin', 'HOME': '/synthetic/home', 'UPSKILL_TEST_ORDINARY': 'x'}
+        kept = {'PATH': '/synthetic/bin', 'HOME': '/synthetic/home', 'UPSKILL_TEST_ORDINARY': 'x',
+                'GITHUB_TOKEN': 'dummy-token', 'UPSKILL_SENTINEL_KEEP': 'keep'}
         with mock.patch.dict(os.environ, {**sentinels, **kept}, clear=True):
             env = q.isolated_git_environment()
         self.assertEqual([key for key in env if key.startswith('GIT_')], [])
         for key, value in kept.items():
-            self.assertEqual(env[key], value)
+            self.assertEqual(env.get(key), value)
 
 
 class InvokeStateTests(unittest.TestCase):
@@ -44,6 +45,10 @@ class InvokeStateTests(unittest.TestCase):
 
     def test_a_login_message_with_a_failing_exit_is_an_authentication_failure(self):
         result = self.run_child("import sys; print('Not logged in', file=sys.stderr); sys.exit(1)")
+        self.assertEqual(result['state'], 'authentication_failure')
+
+    def test_a_login_message_on_standard_output_only_is_an_authentication_failure(self):
+        result = self.run_child("import sys; print('Not logged in'); sys.exit(1)")
         self.assertEqual(result['state'], 'authentication_failure')
 
     def test_a_failing_exit_without_a_login_message_is_a_failure(self):
@@ -63,7 +68,7 @@ class InvokeStateTests(unittest.TestCase):
 
 class CommandLineTests(unittest.TestCase):
     # test_smoke_native.py pins the refusal of the smoke-only flags without
-    # --smoke; the three refusals below are pinned only here.
+    # --smoke; the refusals below are pinned only here.
     def run_script(self, *flags):
         done = subprocess.run([sys.executable, '-I', SCRIPT, *flags], capture_output=True, text=True)
         self.assertEqual(done.returncode, 2, done.stderr)
@@ -73,7 +78,11 @@ class CommandLineTests(unittest.TestCase):
         self.assertIn('--smoke is required', self.run_script())
 
     def test_a_client_that_is_not_a_smoke_client_is_refused(self):
-        self.assertIn('invalid choice', self.run_script('--smoke', '--upskill', 'x', '--clients', 'codex'))
+        for client in ('codex', 'opencode'):
+            self.assertIn('invalid choice', self.run_script('--smoke', '--upskill', 'x', '--clients', client))
+
+    def test_smoke_without_the_upskill_flag_is_refused(self):
+        self.assertIn('--upskill is required with --smoke', self.run_script('--smoke'))
 
     def test_run_with_a_missing_upskill_file_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:

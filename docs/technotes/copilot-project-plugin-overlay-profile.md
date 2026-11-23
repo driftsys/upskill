@@ -151,8 +151,10 @@ source or reader changes during the masked/unmasked/remasked trio.
    retry. If the remaining allowance is insufficient, do not start a partial
    paid sequence.
 
-The next paragraph names the qualification runner, which issue
-[#540](https://github.com/driftsys/upskill/issues/540) removed.
+The next paragraph refers to the qualification runner, which was
+`scripts/qualify-plugin-rules.py`. Issue
+[#540](https://github.com/driftsys/upskill/issues/540) removed it;
+`scripts/qualify-native-instructions.py` remains as the smoke script.
 
 The capture runner does not yet implement this profile. Before any execution,
 add failing offline examples for local-map conflicts, drift, event correlation,
