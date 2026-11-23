@@ -55,9 +55,10 @@ How a later `add` changes the set:
 2. `add` and `update` compute their excludes as the recorded names, minus the
    names installed by name, plus the `--exclude` names of the command. `add`
    passes the item names of its command line as the names installed by name;
-   `update` passes its item filter (the installed names), so an exclude never
-   removes an item that was installed by name. `update` never removes a name
-   from the recorded set; only a positional name of `add` does.
+   `update` passes the in-source names of every item that the lockfile records
+   for the source, also a bundle member, so an exclude never removes an
+   installed item. `update` never removes a name from the recorded set; only a
+   positional name of `add` does.
 3. The resolvers skip an excluded dependency or bundle member before they link a
    `required_by` entry to it, and they do not pull its own `requires:` items. A
    whole-source `add` skips excluded items too. This holds in the bundle,
@@ -67,11 +68,14 @@ How a later `add` changes the set:
    `--exclude` names, minus the item names that it was given and does not also
    exclude. An `add` without item names and without `--exclude` keeps the set.
    `add <source> <name>` installs `<name>` and removes it from the set.
-5. `add <source> --exclude d` removes an installed item `d` of the same source:
+5. `add <source> --exclude d` removes an installed item `d` of the same source,
+   unless the same `add` also names `d`, within the kinds that `--kind` selects:
    that item only, with no member of a co-located group, no bundle record and no
    plugin entry. It deletes each `required_by` link that names `d` and prints
-   `removed — excluded <kind> <name>` on stdout. `update` has no such removal
-   and no `removed — excluded` status.
+   `removed — excluded <kind> <name>` on stdout. An item with a modified
+   recorded file is not removed: its files and lock entry stay and stderr gets
+   `kept — excluded <kind> <name>: <path> was modified`. `update` has no such
+   removal and no `removed — excluded` status.
 6. An `--exclude` name of an `add` that matches no item of the entry source and
    no item that the resolver skipped is a usage error (exit code 2), and the
    lockfile is unchanged. The recorded names are not checked, because an item
@@ -122,5 +126,6 @@ records (`orphan_excludes`). The per-scope set needs neither.
   lockfile.
 
 Satisfies: #570. Code: `src/lockfile.rs`, `src/pipeline/prepared.rs`,
+`src/pipeline/install.rs`, `src/pipeline/bundle_plan.rs`,
 `src/pipeline/lifecycle.rs`, `src/pipeline/mod.rs`, `src/pipeline/report.rs`,
 `src/main.rs`. Tests: `tests/cli_update_excludes.rs`.

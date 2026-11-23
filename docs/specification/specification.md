@@ -509,7 +509,7 @@ only items of the selected kinds in the closure; a kind-restricted `add` or
 other sources. Requirers outside the kind restriction keep their edges on
 planned entries as well, because they are not evaluated. Within the entries
 being refreshed, an evaluated requirer is removed and added back where it still
-requires the item (also an item that `--exclude` leaves out). Every other
+requires the item; an excluded dependency gets no link (see below). Every other
 requirer is kept, also when it is not installed. The result does not depend on
 the order of the sources or of two `add` commands. Each lockfile records one set
 of excluded item names, for its install scope (§4). `add` and `update` skip
@@ -521,21 +521,27 @@ names in the set. The excludes of an `add` are the recorded names, minus the
 item names that it installs by name, plus its own `--exclude` names; an `update`
 uses the same rule, with the item names that are installed by name in place of
 the item names of the command line, so an exclude never removes an item that was
-installed by name. An `update` never removes a name from the set. An item name
-given on the command line of an `add` is removed from the set, unless the same
-`add` also excludes it, so `add <source> <name>` installs an item that an
-earlier `add` excluded. An `add` without item names and without `--exclude`
-keeps the set and keeps the recorded items out. When
-`add <source> --exclude <name>` names an item that is installed from the same
-source, `add` removes that item only: its files and its lock entry, no other
-item of a co-located group, no bundle record and no plugin entry. It also
-deletes each `required_by` link that names the item, and prints
-`removed — excluded <kind> <name>` on stdout. An `--exclude` name that matches
-no item of the entry source and no item that the resolver skipped is a usage
-error (exit code 2) that writes nothing, so the lockfile is unchanged. `add` and
-`update` print `excluded <kind> <name>` on stderr, once for each item that an
-exclude kept out of the run; `--quiet` hides the line, and `update` prints it
-with `--dry-run` too. `doctor` reports nothing about excludes.
+installed by name. For this rule, `update` counts every item that the lockfile
+records for the source as installed by name, also a bundle member. An `update`
+never removes a name from the set. An item name given on the command line of an
+`add` is removed from the set, unless the same `add` also excludes it, so
+`add <source> <name>` installs an item that an earlier `add` excluded. An `add`
+without item names and without `--exclude` keeps the set and keeps the recorded
+items out. When `add <source> --exclude <name>` names an item that is installed
+from the same source, and the same `add` does not also name the item, `add`
+removes that item only, within the kinds that `--kind` selects: its files and
+its lock entry, no other item of a co-located group, no bundle record and no
+plugin entry. It also deletes each `required_by` link that names the item, and
+prints `removed — excluded <kind> <name>` on stdout. When a recorded file of the
+item was modified, `add` removes nothing of the item: its files and its lock
+entry stay, the exclude is recorded, and stderr gets
+`kept — excluded <kind> <name>: <path> was modified` for each modified file. An
+`--exclude` name that matches no item of the entry source and no item that the
+resolver skipped is a usage error (exit code 2) that writes nothing, so the
+lockfile is unchanged. `add` and `update` print `excluded <kind> <name>` on
+stderr, once for each item that an exclude kept out of the run; `--quiet` hides
+the line, and `update` prints it with `--dry-run` too. `doctor` reports nothing
+about excludes.
 
 `update --check` reports, for each selected scope, the sources that have a newer
 version. It changes no file, does not fetch and conflicts with `--dry-run`,
