@@ -2,8 +2,14 @@
 
 ## [0.9.3] (2026-11-23)
 
+### Documentation
+
+- correct older opencode and doctor statements ([#595]) ([#597]) ([e987f01])
+
 ### Bug Fixes
 
+- **lockfile:** write schema 3 so older upskill refuses a lockfile with excludes
+  ([#621]) ([917074f])
 - **update:** apply the excludes of earlier add commands ([#570]) ([#608])
   ([f7cc92b])
 - **bundle:** skip an unreadable subdirectory in the bundle search ([#611])
@@ -30,11 +36,12 @@
 - **opencode:** register globally installed rules in the global opencode config
   ([#581]) ([#590]) ([1ae7cfb])
 
-### Documentation
-
-- correct older opencode and doctor statements ([#595]) ([#597]) ([e987f01])
-
 [0.9.3]: https://github.com/driftsys/upskill/compare/v0.9.2...v0.9.3
+[e987f01]: https://github.com/driftsys/upskill/commit/e987f01
+[#595]: https://github.com/driftsys/upskill/issues/595
+[#597]: https://github.com/driftsys/upskill/issues/597
+[917074f]: https://github.com/driftsys/upskill/commit/917074f
+[#621]: https://github.com/driftsys/upskill/issues/621
 [f7cc92b]: https://github.com/driftsys/upskill/commit/f7cc92b
 [#570]: https://github.com/driftsys/upskill/issues/570
 [#608]: https://github.com/driftsys/upskill/issues/608
@@ -76,9 +83,6 @@
 [#348]: https://github.com/driftsys/upskill/issues/348
 [1ae7cfb]: https://github.com/driftsys/upskill/commit/1ae7cfb
 [#581]: https://github.com/driftsys/upskill/issues/581
-[e987f01]: https://github.com/driftsys/upskill/commit/e987f01
-[#595]: https://github.com/driftsys/upskill/issues/595
-[#597]: https://github.com/driftsys/upskill/issues/597
 
 ## [0.9.2] (2026-11-21)
 
