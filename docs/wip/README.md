@@ -12,6 +12,10 @@ and their implementation plans in `plans/`.
   stage 2 of the [roadmap](../roadmap.md#stage-2--finish-plugin-distribution).
   The design session of that stage completes or replaces it.
 
+- [Plugin MVP design](specs/2026-11-24-plugin-mvp-design.md). Draft for
+  approval, task [#623](https://github.com/driftsys/upskill/issues/623). It
+  replaces the hook item kind draft when it is approved.
+
 No other document is active. The triage of 2026-11-23
 ([#536](https://github.com/driftsys/upskill/issues/536)) moved the 36 other
 documents to the [archive](../archive/README.md#triage-of-2026-11-23), each with
