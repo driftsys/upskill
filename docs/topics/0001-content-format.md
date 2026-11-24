@@ -1041,7 +1041,7 @@ original relative order):
 | Rule   | `schema`, `name`, `description`, `audience`, `license`, `scope`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                                    |
 | Skill  | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
 | Agent  | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
-| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `metadata`, `extras`                                                                        |
+| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `lsps`, `metadata`, `extras`                                                                |
 
 **Comment preservation.** Canonicalisation:
 

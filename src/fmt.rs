@@ -50,6 +50,7 @@ const BUNDLE_KEY_ORDER: &[&str] = &[
     "requires",
     "plugins",
     "mcps",
+    "lsps",
     "metadata",
 ];
 
@@ -984,6 +985,36 @@ mod tests {
         let after = fs::read_to_string(&item).unwrap();
         // scope must survive the round-trip.
         assert!(after.contains("src/**/*.ts"), "scope.paths lost:\n{after}");
+    }
+
+    #[test]
+    fn reorder_bundle_lsps_after_mcps_before_metadata() {
+        let input = concat!(
+            "schema: 1\n",
+            "name: test\n",
+            "description: d.\n",
+            "items: {}\n",
+            "lsps:\n",
+            "  ra:\n",
+            "    command: rust-analyzer\n",
+            "    extensions:\n",
+            "      .rs: rust\n",
+            "metadata:\n",
+            "  version: 0.1.0\n",
+            "mcps:\n",
+            "  drawio:\n",
+            "    remote:\n",
+            "      type: http\n",
+            "      url: https://example.com/mcp\n",
+        );
+        let out = reorder_yaml_keys(input, BUNDLE_KEY_ORDER);
+        let mcps = out.find("mcps:").unwrap();
+        let lsps = out.find("lsps:").unwrap();
+        let metadata = out.find("metadata:").unwrap();
+        assert!(
+            mcps < lsps && lsps < metadata,
+            "bundle key order must be mcps < lsps < metadata:\n{out}"
+        );
     }
 
     #[test]
