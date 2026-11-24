@@ -890,9 +890,12 @@ behaviour:
   commands when both are present. No line is printed with `--quiet` or any
   `--kind` restriction. A whole-source install without a resolved bundle ignores
   command directories without a line. A positional name that matches only a
-  command item, or a source that is a command item directory, fails with exit
-  code 1 before any write and names `upskill pack`. `--kind` still accepts only
-  `rule`, `skill` and `agent`; excluding only a command name is an unknown
+  command item, when the source is a directory, fails with exit code 1 before
+  any write and names `upskill pack`. A source that is a `*.bundle.yaml` file
+  does not check positional names, and a name that matches both a bundle and a
+  command item resolves as the bundle. A source that is a command item directory
+  also fails with exit code 1 and names `upskill pack`. `--kind` still accepts
+  only `rule`, `skill` and `agent`; excluding only a command name is an unknown
   exclude (exit code 2). Unresolved installable names error out before any
   write. The source of a bundle file is the registry root found upward from it:
   the first directory, starting at the directory of the bundle file, that holds

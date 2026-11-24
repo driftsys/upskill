@@ -1004,7 +1004,9 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
-`upskill doctor` does not check LSP servers.
+They report their count in the same stderr skip line as command items, unless
+`--quiet` or a kind restriction applies. `upskill doctor` does not check LSP
+servers.
 
 #### Item `requires` resolution
 

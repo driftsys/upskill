@@ -400,8 +400,8 @@ pub(super) fn scan_source_items(source: &Path) -> Result<Vec<(ItemKind, String)>
 
 /// Walk up from `bundle_path`'s parent until a directory is found that
 /// looks like an SSOT root — a directory whose direct children include
-/// at least one item directory (containing `RULE.md`, `SKILL.md`, or
-/// `AGENT.md`) or another bundle file. Falls back to the bundle's
+/// at least one item directory (containing `RULE.md`, `SKILL.md`, `AGENT.md`,
+/// or `COMMAND.md`) or another bundle file. Falls back to the bundle's
 /// parent directory if no such ancestor exists, so a flat layout
 /// (bundle and items in the same dir) still works. The walk fails, instead
 /// of continuing, when a directory on it holds a kind directory that cannot

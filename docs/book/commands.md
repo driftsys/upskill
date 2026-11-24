@@ -317,11 +317,14 @@ LSP servers declared in `lsps` are also skipped. Their count appears in the same
 line as `<n> LSP server(s)`, after the command count when both are present. No
 skip line is printed with `--quiet` or any `--kind` restriction. A whole-source
 install without a resolved bundle ignores command directories without a skip
-line. `add <source> <name>` with a command item name, or a source that is a
-command item directory, fails with exit code 1 and names `upskill pack`. When
-several positional names include a command item, the error occurs before any
-write. `--kind command` and an `--exclude` that names only a command item remain
-usage errors (exit code 2).
+line. When the source is a directory, `add <source> <name>` with a command item
+name fails with exit code 1 and names `upskill pack`; a source that is a
+`*.bundle.yaml` file does not check positional names, and a name that matches
+both a bundle and a command item resolves as the bundle. A source that is a
+command item directory also fails with exit code 1 and names `upskill pack`.
+When several positional names include a command item, the error occurs before
+any write. `--kind command` and an `--exclude` that names only a command item
+remain usage errors (exit code 2).
 
 ### `upskill update [name...]`
 

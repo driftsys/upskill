@@ -103,6 +103,30 @@ fn assert_no_lsp_files(f: &Fixture) {
     }
 }
 
+/// Asserts that no file or directory below `.claude/` has one of `names` or
+/// is a `COMMAND.md`, and that the lockfile does not contain any of `names`.
+fn assert_not_installed(f: &Fixture, names: &[&str]) {
+    let claude = f.consumer.join(".claude");
+    if claude.exists() {
+        for path in paths_below(&claude) {
+            let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
+            let stem = file_name.trim_end_matches(".md");
+            assert!(
+                file_name != "COMMAND.md" && !names.contains(&stem),
+                "unexpected installed path: {}",
+                path.display()
+            );
+        }
+    }
+    let lock = f.consumer.join(".upskill-lock.json");
+    if lock.exists() {
+        let content = fs::read_to_string(lock).unwrap();
+        for name in names {
+            assert!(!content.contains(name), "lockfile contains `{name}`");
+        }
+    }
+}
+
 #[test]
 fn add_of_a_bundle_skips_its_command_items_and_reports_the_count() {
     let f = Fixture::new();
@@ -211,6 +235,7 @@ fn add_of_a_whole_source_ignores_command_directories() {
         .success()
         .stderr(predicate::str::contains("command item").not());
     assert!(f.consumer.join(".claude/skills/alpha/SKILL.md").is_file());
+    assert_not_installed(&f, &["release-notes", "standup"]);
 }
 
 #[test]
@@ -223,6 +248,7 @@ fn update_reports_the_skipped_command_items_of_a_recorded_bundle() {
             .assert()
             .success()
             .stderr(predicate::str::contains(LINE));
+        assert_not_installed(&f, &["release-notes", "standup"]);
     }
 }
 
@@ -285,6 +311,7 @@ fn update_reports_skipped_lsp_servers_and_commands() {
             .stderr(predicate::str::contains(
                 "skipped 2 command item(s), 1 LSP server(s): only `upskill pack` writes them",
             ));
+        assert_not_installed(&f, &["release-notes", "standup", "rust-analyzer"]);
     }
     assert_no_lsp_files(&f);
 }

@@ -134,7 +134,9 @@ in #634.
   declares into the plugin. Both clients load LSP servers from a plugin
   (`.lsp.json` in Claude Code, `lsp.json` in Copilot CLI). Implemented in #634
   for `pack`, using the bundle key `lsps`. `add` and `update` do not configure
-  LSP servers.
+  LSP servers or record them in the lockfile. They report their count in the
+  same stderr skip line as command items, unless `--quiet` or a kind restriction
+  applies.
 - **Catalog generation.** Write the marketplace manifests
   (`.claude-plugin/marketplace.json`, `.github/plugin/marketplace.json`) from
   the bundles of a registry, so they match the packed plugins.

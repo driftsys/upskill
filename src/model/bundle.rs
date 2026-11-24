@@ -428,13 +428,18 @@ mod tests {
 
     #[test]
     fn pack_only_items_sorts_and_deduplicates_lsp_servers_by_kind_and_name() {
-        let mut bundle = lsp_bundle("command: rust-analyzer\n    extensions: { .rs: rust }");
-        bundle.items.commands = vec!["rust-analyzer".into()];
+        let mut first = lsp_bundle("command: rust-analyzer\n    extensions: { .rs: rust }");
+        let entry = first.lsps["rust-analyzer"].clone();
+        first.lsps = BTreeMap::from([("z-server".to_string(), entry.clone())]);
+        first.items.commands = vec!["rust-analyzer".into()];
+        let mut second = first.clone();
+        second.lsps = BTreeMap::from([("a-server".to_string(), entry)]);
         assert_eq!(
-            pack_only_items(&[bundle.clone(), bundle]),
+            pack_only_items(&[first, second]),
             vec![
                 (PackOnlyKind::Command, "rust-analyzer".into()),
-                (PackOnlyKind::LspServer, "rust-analyzer".into())
+                (PackOnlyKind::LspServer, "a-server".into()),
+                (PackOnlyKind::LspServer, "z-server".into())
             ]
         );
         assert_eq!(
