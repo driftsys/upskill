@@ -442,6 +442,27 @@ fn lint_flags_a_command_name_that_differs_from_its_directory() {
 }
 
 #[test]
+fn lint_flags_a_command_name_mismatch_from_a_bare_relative_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("foo/COMMAND.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    for arg in ["COMMAND.md", "."] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path().join("foo"))
+            .args(["lint", "--strict", arg])
+            .assert()
+            .code(1)
+            .stdout(predicates::str::contains(
+                "command `name: bar` must equal directory `foo`",
+            ));
+    }
+}
+
+#[test]
 fn lint_flags_a_command_and_a_skill_in_one_directory() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
@@ -461,6 +482,14 @@ fn lint_flags_a_command_and_a_skill_in_one_directory() {
         .stdout(predicates::str::contains(
             "a COMMAND.md and a SKILL.md cannot share the directory `both`",
         ));
+    // The finding is an error: it fails the run without `--strict` too.
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "."])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("error"))
+        .stdout(predicates::str::contains("[command-with-skill]"));
 }
 
 #[test]

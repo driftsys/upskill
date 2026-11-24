@@ -1055,11 +1055,8 @@ original relative order):
 | Rule    | `schema`, `name`, `description`, `audience`, `license`, `scope`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                                    |
 | Skill   | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
 | Agent   | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
-| Command | See the command key order below.                                                                                                                                                |
+| Command | `schema`, `name`, `description`, `argument-hint`, `license`, `metadata`, `ignore`                                                                                               |
 | Bundle  | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `lsps`, `metadata`, `extras`                                                                      |
-
-Command key order: `schema`, `name`, `description`, `argument-hint`, `license`,
-`metadata`, `ignore`.
 
 **Comment preservation.** Canonicalisation:
 

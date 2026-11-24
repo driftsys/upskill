@@ -236,6 +236,28 @@ fn assert_skill_command_colocation_refused(first: &str, second: &str, refused: &
 }
 
 #[test]
+fn new_refuses_a_directory_whose_command_declares_another_name() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join("foo")).unwrap();
+    fs::write(
+        tmp.path().join("foo/COMMAND.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", "rule", "foo"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(
+            "existing command entrypoint declares `name: bar` \u{2014} a command must have the name of its directory `foo`",
+        ));
+    assert!(!tmp.path().join("foo/RULE.md").exists());
+}
+
+#[test]
 fn new_rejects_an_unknown_kind_and_lists_four_kinds() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");

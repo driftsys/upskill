@@ -18,7 +18,7 @@
 //! | `body-format`     | warning  | §3.8 (dprint canonical body) |
 //! | `directive`       | error    | §6.3 (any imbalance, unknown client, nesting) |
 //! | `command-with-skill` | error | §2.1 |
-//! | `name-collision`  | error    | cross-file (bundle vs item name) |
+//! | `name-collision`  | error    | cross-file (bundle vs item name; command items excluded) |
 //!
 //! Discovery: a path argument is either a file (lint that file) or a
 //! directory (walk for `<root>/<name>/{RULE,SKILL,AGENT,COMMAND}.md` per
@@ -290,7 +290,13 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
 
     if let FileKind::Command = kind {
         if let Some(parent) = file.parent().filter(|dir| dir.join("SKILL.md").is_file()) {
-            let dir = parent.file_name().unwrap_or_default().to_string_lossy();
+            let dir = item_dir_name(file).unwrap_or_else(|| {
+                parent
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned()
+            });
             out.push(Finding {
                 rule_id: "command-with-skill",
                 severity: Severity::Error,
@@ -375,6 +381,14 @@ fn parse_kind(raw: &str, kind: FileKind) -> Result<(Option<String>, &str)> {
     }
 }
 
+/// Name of the directory that holds an entrypoint file. The path is made
+/// absolute first, because the parent of a bare relative path such as
+/// `COMMAND.md` has no file name.
+fn item_dir_name(file: &Path) -> Option<String> {
+    let abs = std::fs::canonicalize(file).ok()?;
+    abs.parent()?.file_name()?.to_str().map(str::to_owned)
+}
+
 /// Identity-name validation (§2.1, ADR-0006).
 ///
 /// - Bundle: when `name` is present, the filename stem MUST equal it.
@@ -413,11 +427,7 @@ fn check_name_matches_dir(file: &Path, name: Option<&str>, kind: FileKind, out: 
             let Some(name) = name else {
                 return;
             };
-            let Some(dir) = file
-                .parent()
-                .and_then(|p| p.file_name())
-                .and_then(|n| n.to_str())
-            else {
+            let Some(dir) = item_dir_name(file) else {
                 return;
             };
             if dir != name {

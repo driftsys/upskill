@@ -268,10 +268,16 @@ fn fmt_orders_command_keys_canonically() {
         .assert()
         .success();
     let after = fs::read_to_string(&path).unwrap();
-    let lines: Vec<_> = after.lines().skip(1).take(4).collect();
-    for (line, key) in lines
-        .iter()
-        .zip(["schema:", "name:", "description:", "argument-hint:"])
+    let lines: Vec<_> = after.lines().collect();
+    assert_eq!(lines.len(), 8, "{after}");
+    assert_eq!(lines[0], "---", "{after}");
+    assert_eq!(lines[5], "---", "{after}");
+    assert!(after.ends_with("Write the notes.\n"), "{after}");
+    for (line, key) in
+        lines
+            .iter()
+            .skip(1)
+            .zip(["schema:", "name:", "description:", "argument-hint:"])
     {
         assert!(line.starts_with(key), "{after}");
     }
