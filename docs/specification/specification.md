@@ -948,11 +948,13 @@ not cause a conflict.
 `pack` also writes the
 [`lsps` map](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#lsps-map)
 of the bundle closure. Each entry requires a non-empty `command` and a non-empty
-`extensions` map from dot-prefixed file extensions to non-empty language
-identifiers; `args` and `env` are optional. Claude Code uses `.lsp.json` at the
-plugin root, with one top-level key per server and `extensionToLanguage` for the
-extensions map. Copilot CLI uses `lsp.json` at the plugin root, with the servers
-below `lspServers` and `fileExtensions` for the same map. Both formats contain
+`extensions` map from file extensions (a dot followed by at least one character)
+to non-empty language identifiers; `args` and `env` are optional. The bundle
+parser checks these rules, so `add`, `update` and `lint` also refuse a bundle
+with an invalid entry. Claude Code uses `.lsp.json` at the plugin root, with one
+top-level key per server and `extensionToLanguage` for the extensions map.
+Copilot CLI uses `lsp.json` at the plugin root, with the servers below
+`lspServers` and `fileExtensions` for the same map. Both formats contain
 `command`, `args` and `env`; empty `args` and `env` are omitted. An output
 without LSP servers has no LSP file. Equal declarations of one name produce one
 entry. Different `command`, `args`, `env` or `extensions` values fail with exit

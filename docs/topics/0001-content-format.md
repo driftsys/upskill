@@ -965,11 +965,12 @@ lsps:
 | `env`        | map of strings | no       | Environment variables passed through unchanged.   |
 | `extensions` | map of strings | YES      | Non-empty map from file extension to language.    |
 
-Each extension key MUST start with a dot. Each language identifier MUST contain
-non-whitespace text. Unknown fields in an LSP entry are rejected, including a
-misspelled `extension` key. This is stricter than the MCP descriptors, which
-accept unknown fields. An absent `lsps` map defaults to empty and is omitted
-when the bundle is serialized.
+Each extension key MUST start with a dot and have at least one character after
+the dot. Each language identifier MUST contain non-whitespace text. Unknown
+fields in an LSP entry are rejected, including a misspelled `extension` key.
+This is stricter than the MCP descriptors, which accept unknown fields. An
+absent `lsps` map defaults to empty and is omitted when the bundle is
+serialized.
 
 `pack` writes `.lsp.json` at the Claude Code plugin root, with one top-level key
 per server and `extensionToLanguage` for the extensions map. It writes
@@ -1385,7 +1386,8 @@ Current version: **1**.
 
 - MINOR additions (new optional fields, new optional top-level blocks) MAY occur
   within the same schema version. Implementations MUST ignore unknown fields
-  they don't support.
+  they don't support. The one exception is an entry of the bundle `lsps` map,
+  which rejects unknown fields (see the `lsps` map in §3.7).
 - BREAKING changes (removed fields, renamed fields, changed semantics of
   existing fields, new required fields) MUST increment the schema version.
 - Each published schema version MUST have a stable reference document with a

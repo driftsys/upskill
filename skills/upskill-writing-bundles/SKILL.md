@@ -189,10 +189,12 @@ to `"installed"`.
 ## LSP Server Declarations
 
 The optional `lsps` map declares servers for `upskill pack`. Each server
-requires `command` and a non-empty `extensions` map from dot-prefixed file
-extensions to language identifiers. Commands and language identifiers must
-contain non-whitespace text. `args` (a list of strings) and `env` (a map of
-strings) are optional. Unknown fields in an LSP entry are errors.
+requires `command` and a non-empty `extensions` map from file extensions (a dot
+followed by at least one character) to language identifiers. Commands and
+language identifiers must contain non-whitespace text. `args` (a list of
+strings) and `env` (a map of strings) are optional. Unknown fields in an LSP
+entry are errors, unlike in an `mcps` entry. The bundle parser applies these
+rules, so `add`, `update` and `lint` also refuse an invalid entry.
 
 Claude Code output uses `.lsp.json`, one top-level key per server, and
 `extensionToLanguage` for the extensions map. Copilot CLI output uses

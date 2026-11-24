@@ -951,4 +951,32 @@ mod tests {
             assert_eq!(value, expected);
         }
     }
+
+    #[test]
+    fn lsp_json_writes_one_key_for_each_server() {
+        let bundle: Bundle = serde_yaml_ng::from_str(
+            "schema: 1\nname: two\ndescription: d\nitems: {}\nlsps:\n  a:\n    command: x\n    extensions: { .a: l }\n  b:\n    command: y\n    extensions: { .b: m }\n",
+        )
+        .unwrap();
+        let servers = |client| {
+            let bytes = lsp_json(std::slice::from_ref(&bundle), client)
+                .unwrap()
+                .unwrap();
+            serde_json::from_slice::<serde_json::Value>(&bytes).unwrap()
+        };
+        assert_eq!(
+            servers(PackClient::Claude),
+            serde_json::json!({
+                "a": { "command": "x", "extensionToLanguage": { ".a": "l" } },
+                "b": { "command": "y", "extensionToLanguage": { ".b": "m" } },
+            })
+        );
+        assert_eq!(
+            servers(PackClient::Copilot),
+            serde_json::json!({ "lspServers": {
+                "a": { "command": "x", "fileExtensions": { ".a": "l" } },
+                "b": { "command": "y", "fileExtensions": { ".b": "m" } },
+            } })
+        );
+    }
 }
