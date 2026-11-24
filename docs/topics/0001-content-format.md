@@ -1056,7 +1056,7 @@ original relative order):
 | Skill   | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
 | Agent   | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
 | Command | `schema`, `name`, `description`, `argument-hint`, `license`, `metadata`, `ignore`                                                                                               |
-| Bundle  | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `lsps`, `metadata`, `extras`                                                                      |
+| Bundle  | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `lsps`, `metadata`, `extras`                                                                |
 
 **Comment preservation.** Canonicalisation:
 
