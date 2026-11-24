@@ -6,6 +6,9 @@ Status: **accepted**. Date: 2026-11-24. Resolves
 [the plugin MVP design](../wip/specs/2026-11-24-plugin-mvp-design.md); the
 evidence is [technote T4](../technotes/t4-copilot-plugin-component-trials.md).
 
+Stories: [#631](https://github.com/driftsys/upskill/issues/631) to
+[#637](https://github.com/driftsys/upskill/issues/637).
+
 This record decides planned work. No decision below is implemented when the
 record is accepted.
 
@@ -108,6 +111,18 @@ implemented.
     command in Copilot CLI needs an interactive run, because prompt mode does
     not process slash commands.
 
+## Relation to AD-0040 and AD-0041
+
+[AD-0040](0040-separate-customization-delivery-from-discovery.md) keeps general
+hooks in a later scope, and
+[AD-0041](0041-separate-client-representations-as-design-baseline.md) does not
+authorize general hook authoring or new hook management. This record brings hook
+authoring into scope for one target only: the plugin output of `pack`, where the
+plugin owns its hook file and the client installs and removes it. upskill writes
+no hook into a settings file of a project or of a user, and it manages no
+installed hook. Hooks outside a plugin stay in the later scope of AD-0040 (stage
+5 of the roadmap).
+
 ## Amendments to AD-0044
 
 - Decision 1: `pack` also builds hooks, commands, MCP servers and LSP servers,
@@ -116,6 +131,8 @@ implemented.
   command item.
 - Decision 5: the hook file also holds the hooks of the hook items. A client
   output without rules has a hook file when the closure has hook items.
+- Decision 8: `pack` resolves each named bundle, or with `--all` every bundle,
+  in the current directory.
 - Alternatives, "Deliver rules through a session hook": no longer deferred. It
   is rejected by Decision 2 of this record.
 - Alternatives, "Ship an init script": Copilot CLI 1.0.112 sets

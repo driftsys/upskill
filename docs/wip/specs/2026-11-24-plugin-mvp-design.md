@@ -450,6 +450,8 @@ upskill pack --all       --source <src> --out <dir> [--catalog <root>]
   command item.
 - Decision 5: the hook file also holds the hooks of the hook items. An output
   without rules has a hook file when the closure has hook items.
+- Decision 8: `pack` resolves each named bundle, or with `--all` every bundle,
+  in the current directory.
 - Alternatives: "Deliver rules through a session hook" stays rejected, now with
   the reason of section "Rule delivery".
 - Alternatives, "Ship an init script": Copilot CLI 1.0.112 sets

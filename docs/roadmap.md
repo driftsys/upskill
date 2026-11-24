@@ -121,10 +121,10 @@ item below is implemented yet.
 - **Init command.** The `init` command of a packed plugin copies into the git
   repository the content that a plugin cannot load, today the rules of the
   bundle, with `upskill add --kind rule --project`. `pack` already writes it
-  (ADR-0044). The plugin MVP defines which content `init` copies and qualifies
-  it in the smoke test. `init` never writes `AGENTS.md`: the user owns it, and
-  upskill only creates a `CLAUDE.md` that holds `@AGENTS.md` when no `CLAUDE.md`
-  exists.
+  (ADR-0044). In the plugin MVP, `init` copies only rules (ADR-0046), and the
+  smoke test qualifies it. `init` never writes `AGENTS.md`: the user owns it,
+  and upskill only creates a `CLAUDE.md` that holds `@AGENTS.md` when no
+  `CLAUDE.md` exists.
 - **MCP servers in the plugin.** `pack` writes the MCP servers that a bundle
   declares into the plugin, so the client installs and removes them with the
   plugin. Today `upskill add` configures them, but `pack` output does not hold
