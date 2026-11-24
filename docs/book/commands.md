@@ -1452,8 +1452,10 @@ register the plugin, write a marketplace manifest, or publish it. The bundle
 schema adds the optional `lsps` map without changing its version. Copy the
 outputs into a marketplace repository and install through the client. Plugin
 output is experimental until a smoke test with a hosted git marketplace passes
-in both clients (the local-marketplace smoke test of 2026-11-19 passed);
-`doctor` gains no row.
+in both clients. The local-marketplace smoke test of 2026-11-19 covered the
+earlier `commands/init.md` layout; the current layout, with `init` as a skill
+that only the user calls, is not yet smoke-tested (the hosted smoke test of #637
+covers it). `doctor` gains no row.
 
 No rule file is included. Init is a user-only skill at `skills/init/SKILL.md`,
 rendered by the command renderer. It instructs the model to run

@@ -28,11 +28,11 @@ pub struct BundleFile {
     pub mode: Option<u32>,
 }
 
-/// A command declaration and the source root of its resolved bundle.
+/// A command declaration with the command read from its bundle's source.
 pub struct BundleCommand {
     pub name: String,
     pub bundle: String,
-    pub root: PathBuf,
+    pub source: CommandSource,
 }
 
 /// A resource relative to the command directory.
@@ -154,21 +154,21 @@ pub fn plan_bundle_output(
             }
         }
     }
-    let commands = bundles
-        .iter()
-        .flat_map(|resolved| {
-            resolved
-                .bundle
-                .items
-                .commands
-                .iter()
-                .map(|name| BundleCommand {
-                    name: name.clone(),
-                    bundle: resolved.bundle.name.clone(),
-                    root: closure.source_roots[&resolved.source_label].clone(),
-                })
-        })
-        .collect();
+    // Read each command now: a fetched source is deleted when `closure` drops.
+    let mut commands = Vec::new();
+    for resolved in &bundles {
+        for name in &resolved.bundle.items.commands {
+            let root = &closure.source_roots[&resolved.source_label];
+            let source = read_command(root, name).with_context(|| {
+                format!("command `{name}` of bundle `{}`", resolved.bundle.name)
+            })?;
+            commands.push(BundleCommand {
+                name: name.clone(),
+                bundle: resolved.bundle.name.clone(),
+                source,
+            });
+        }
+    }
     Ok(BundleOutput {
         bundles: bundles
             .into_iter()

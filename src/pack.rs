@@ -11,7 +11,7 @@ use crate::model::bundle::{
     ClaudePluginDescriptor, CopilotPluginDescriptor, LspEntry, McpTransport,
 };
 use crate::model::{Bundle, Command};
-use crate::pipeline::{CommandResource, plan_bundle_output, read_command};
+use crate::pipeline::{CommandResource, plan_bundle_output};
 
 /// A client whose plugin directory can be built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -171,7 +171,9 @@ fn check_command_names(bundles: &[Bundle]) -> Result<()> {
     let mut commands = BTreeMap::new();
     for bundle in bundles {
         for name in &bundle.items.commands {
-            if let Some(first) = commands.insert(name, &bundle.name) {
+            if let Some(first) = commands.insert(name, &bundle.name)
+                && first != &bundle.name
+            {
                 bail!(
                     "command `{name}` is named by both bundles `{first}` and `{}`",
                     bundle.name
@@ -360,12 +362,7 @@ pub fn build(
         });
     }
     for declared in &output.commands {
-        let source = read_command(&declared.root, &declared.name).with_context(|| {
-            format!(
-                "command `{}` of bundle `{}`",
-                declared.name, declared.bundle
-            )
-        })?;
+        let source = &declared.source;
         files.extend(command_files(
             &source.command,
             &source.body,

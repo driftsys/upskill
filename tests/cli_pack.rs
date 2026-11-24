@@ -753,6 +753,7 @@ fn pack_renders_init_as_a_user_only_skill() {
 #[test]
 fn pack_refuses_a_command_and_a_skill_with_one_name_in_the_closure() {
     let f = Fixture::new();
+    write_command(&f, "beta", "", "Write notes.");
     write_bundle(
         &f,
         "clash",
@@ -924,4 +925,98 @@ fn pack_processes_client_directives_in_a_command_body() {
         assert!(!text.contains(absent));
         assert!(!text.contains("@client"));
     }
+}
+
+#[test]
+fn pack_accepts_a_command_listed_twice_in_one_bundle() {
+    let f = Fixture::new();
+    write_command(&f, "release-notes", "", "Write notes.");
+    write_bundle(
+        &f,
+        "twice",
+        "items:\n  commands: [release-notes, release-notes]",
+    );
+    f.command("twice").assert().success();
+    assert!(
+        f.out
+            .join("twice-claude/skills/release-notes/SKILL.md")
+            .is_file()
+    );
+}
+
+fn git(home: &Path, dir: &Path, args: &[&str]) {
+    let mut cmd = std::process::Command::new("git");
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    let output = cmd
+        .current_dir(dir)
+        .env("HOME", home)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", home.join("empty-gitconfig"))
+        .env("GIT_AUTHOR_NAME", "Test")
+        .env("GIT_AUTHOR_EMAIL", "test@example.com")
+        .env("GIT_COMMITTER_NAME", "Test")
+        .env("GIT_COMMITTER_EMAIL", "test@example.com")
+        .args(args)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "git {args:?}: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn pack_reads_a_command_of_a_bundle_from_a_git_source() {
+    let f = Fixture::new();
+    let upstream = f._tmp.path().join("upstream");
+    fs::create_dir_all(upstream.join("items/release-notes")).unwrap();
+    fs::write(
+        upstream.join("items/release-notes/COMMAND.md"),
+        "---\nname: release-notes\ndescription: Test command\n---\n\nWrite notes.\n",
+    )
+    .unwrap();
+    fs::write(
+        upstream.join("base.bundle.yaml"),
+        "schema: 1\nname: base\ndescription: Test bundle\nitems:\n  commands: [release-notes]\n",
+    )
+    .unwrap();
+    git(&f.home, &upstream, &["init", "-q", "--initial-branch=main"]);
+    git(&f.home, &upstream, &["add", "."]);
+    git(&f.home, &upstream, &["commit", "-q", "-m", "init"]);
+    let remote = "https://example.invalid/team/base";
+    write_bundle(
+        &f,
+        "entry",
+        &format!("requires: [{{name: base, source: \"{remote}\"}}]\nitems: {{}}"),
+    );
+    let mut cmd = f.command("entry");
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    cmd.env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", f.home.join("empty-gitconfig"))
+        .env("GIT_CONFIG_COUNT", "2")
+        .env(
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", upstream.display()),
+        )
+        .env("GIT_CONFIG_VALUE_0", format!("{remote}.git"))
+        .env("GIT_CONFIG_KEY_1", "protocol.file.allow")
+        .env("GIT_CONFIG_VALUE_1", "always")
+        .env("GIT_ALLOW_PROTOCOL", "file")
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .assert()
+        .success();
+    assert!(
+        f.out
+            .join("entry-claude/skills/release-notes/SKILL.md")
+            .is_file()
+    );
 }
