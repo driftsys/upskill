@@ -464,13 +464,33 @@ fn pack_of_a_bundle_with_mcp_servers_and_no_rules_writes_mcp_json_only() {
     let text = fs::read_to_string(&bundle).unwrap();
     fs::write(
         bundle,
-        format!("{text}mcps:\n  server:\n    local: {{ command: server-command }}\n"),
+        format!(
+            "{text}mcps:\n  server:\n    local:\n      command: node\n      args: [server.js]\n      env: {{ MODE: fast }}\n  hosted:\n    remote:\n      type: sse\n      url: https://example.com/sse\n      headers: {{ Authorization: \"Bearer ${{TOKEN}}\" }}\n"
+        ),
     )
     .unwrap();
     f.command_for_clients("norules").assert().success();
     for client in ["claude", "copilot"] {
         let target = f.out.join(format!("norules-{client}"));
-        assert!(target.join(".mcp.json").is_file());
+        let doc: serde_json::Value =
+            serde_json::from_slice(&fs::read(target.join(".mcp.json")).unwrap()).unwrap();
+        assert_eq!(
+            doc,
+            serde_json::json!({
+                "mcpServers": {
+                    "hosted": {
+                        "type": "sse",
+                        "url": "https://example.com/sse",
+                        "headers": { "Authorization": "Bearer ${TOKEN}" }
+                    },
+                    "server": {
+                        "command": "node",
+                        "args": ["server.js"],
+                        "env": { "MODE": "fast" }
+                    }
+                }
+            })
+        );
         assert!(!target.join("commands/init.md").exists());
         assert!(!target.join("hooks/hooks.json").exists());
         assert!(!target.join("hooks.json").exists());
@@ -513,11 +533,15 @@ fn pack_accepts_one_server_name_with_equal_content_in_the_closure() {
                 &fs::read(f.out.join(format!("demo-{client}/.mcp.json"))).unwrap(),
             )
             .unwrap();
-            let servers = doc["mcpServers"].as_object().unwrap();
-            assert_eq!(servers.len(), 2);
-            assert!(servers.contains_key("base-server"));
-            assert!(servers.contains_key("srv"));
-            assert!(servers["base-server"].get("requires-env").is_none());
+            assert_eq!(
+                doc,
+                serde_json::json!({
+                    "mcpServers": {
+                        "base-server": { "command": "base-command" },
+                        "srv": { "type": "http", "url": "https://example.com/mcp" }
+                    }
+                })
+            );
         }
     }
 }

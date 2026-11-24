@@ -108,9 +108,9 @@ record,
 [ADR-0046](https://github.com/driftsys/upskill/blob/main/docs/adr/0046-plugin-mvp-components.md),
 covers all items below and amends
 [ADR-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-plugin-output-of-a-bundle.md),
-which limits the plugin content to skills, resources and agents, and whose
-`init` command lists the MCP servers of the bundle without installing them. No
-item below is implemented yet.
+which limited the plugin content to skills, resources and agents, and whose
+`init` command listed the MCP servers of the bundle without installing them.
+Only the item "MCP servers in the plugin" is implemented (#633).
 
 - **Hook item kind (`HOOK.md`).** One file in an item directory holds all hook
   events of that directory, one `## <event>` section for each event. An event
@@ -127,8 +127,8 @@ item below is implemented yet.
   `CLAUDE.md` exists.
 - **MCP servers in the plugin.** `pack` writes the MCP servers that a bundle
   declares into the plugin, so the client installs and removes them with the
-  plugin. Today `upskill add` configures them, but `pack` output does not hold
-  them.
+  plugin. Implemented in #633: `pack` writes them to `.mcp.json` at the plugin
+  root, and `init` no longer lists them.
 - **LSP servers in the plugin.** `pack` writes the LSP servers that a bundle
   declares into the plugin. Both clients load LSP servers from a plugin
   (`.lsp.json` in Claude Code, `lsp.json` in Copilot CLI).
