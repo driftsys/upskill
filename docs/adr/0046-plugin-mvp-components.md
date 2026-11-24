@@ -9,8 +9,8 @@ evidence is [technote T4](../technotes/t4-copilot-plugin-component-trials.md).
 Stories: [#631](https://github.com/driftsys/upskill/issues/631) to
 [#637](https://github.com/driftsys/upskill/issues/637).
 
-This record decides planned work. No decision below is implemented when the
-record is accepted.
+This record decides planned work. When it is accepted, no change that it decides
+is implemented. Decision 12 keeps what `pack` writes today.
 
 ## Context
 
@@ -127,8 +127,9 @@ installed hook. Hooks outside a plugin stay in the later scope of AD-0040 (stage
 
 - Decision 1: `pack` also builds hooks, commands, MCP servers and LSP servers,
   accepts several bundles, and writes below `--catalog` as well as `--out`.
-- Decision 4: `init` no longer lists MCP servers, and `pack` renders it as a
-  command item.
+- Decision 4: `init` no longer lists MCP servers. `pack` renders it as a command
+  item, so its output path changes from `commands/init.md` to
+  `skills/init/SKILL.md`.
 - Decision 5: the hook file also holds the hooks of the hook items. A client
   output without rules has a hook file when the closure has hook items.
 - Decision 8: `pack` resolves each named bundle, or with `--all` every bundle,

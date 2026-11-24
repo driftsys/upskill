@@ -446,8 +446,9 @@ upskill pack --all       --source <src> --out <dir> [--catalog <root>]
 
 - Decision 1: `pack` also builds hooks, commands, MCP servers and LSP servers,
   accepts several bundles, and writes below `--catalog` as well as `--out`.
-- Decision 4: `init` no longer lists MCP servers, and it is rendered as a
-  command item.
+- Decision 4: `init` no longer lists MCP servers. `pack` renders it as a command
+  item, so its output path changes from `commands/init.md` to
+  `skills/init/SKILL.md`.
 - Decision 5: the hook file also holds the hooks of the hook items. An output
   without rules has a hook file when the closure has hook items.
 - Decision 8: `pack` resolves each named bundle, or with `--all` every bundle,
