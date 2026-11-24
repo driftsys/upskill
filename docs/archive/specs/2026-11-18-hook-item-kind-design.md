@@ -3,8 +3,9 @@
 Date: 2026-11-18. Status: **replaced on 2026-11-24** by
 [AD-0046](../../adr/0046-plugin-mvp-components.md) and the
 [plugin MVP design](../../wip/specs/2026-11-24-plugin-mvp-design.md), which keep
-the convention of sections 1 to 4 and change the event set, the matcher and the
-open points. This document was a draft; it does not describe released behaviour.
+the convention of sections 1 to 4 and the ten event names. They decide which
+events accept context text, the form of `matcher` and the open points. This
+document was a draft; it does not describe released behaviour.
 
 Related records:
 [bundle plugin output design](2026-11-18-bundle-plugin-output-design.md),

@@ -3,7 +3,9 @@
 Status: **accepted**. Date: 2026-11-19. Resolves
 [#563](https://github.com/driftsys/upskill/issues/563). Amended by
 [AD-0046](0046-plugin-mvp-components.md), which decides planned changes to
-Decisions 1, 4 and 5; the text below describes the released behaviour.
+Decisions 1, 4, 5 and 8 and to two entries of "Alternatives considered" (rule
+delivery through a session hook, and the init script); the text below describes
+the released behaviour.
 
 ## Context
 

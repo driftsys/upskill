@@ -1103,7 +1103,10 @@ Source paths: `docs/wip/specs/2026-11-18-bundle-plugin-output-design.md` and
 [spec](specs/2026-11-18-bundle-plugin-output-design.md) and
 [plan](plans/2026-11-19-upskill-pack.md) are retained unchanged, except that one
 relative link was changed to follow the moved files: the plan's link to the hook
-item kind design now points into `docs/wip/specs/`.
+item kind design. It pointed into `docs/wip/specs/` until 2026-11-24 and now
+points to the archived draft (see "Hook item kind draft" below). Step 7 of the
+plan still says that the hook item kind spec stays in `docs/wip/`; that was true
+when the plan was written.
 
 Delivered by pull request [#569](https://github.com/driftsys/upskill/pull/569),
 squash commit `553590a`, on 2026-11-19, for story
@@ -1131,7 +1134,9 @@ slice; [AD-0046](../adr/0046-plugin-mvp-components.md) replaced it on 2026-11-24
 Task [#623](https://github.com/driftsys/upskill/issues/623). The
 [hook item kind draft](specs/2026-11-18-hook-item-kind-design.md) of 2026-11-18
 was never approved for implementation. The design session of 2026-11-24 replaced
-it. Nothing of it is implemented.
+it. Nothing of it is implemented. The draft is retained unchanged, except for
+its status line, which names its successors, and one relative link that follows
+the move.
 
 Durable successor: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions 3
 to 7. The [plugin MVP design](../wip/specs/2026-11-24-plugin-mvp-design.md)
