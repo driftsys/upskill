@@ -945,7 +945,8 @@ closure declare one server name with different written content, `pack` fails
 with exit code 1 before writing output. A difference only in `requires-env` does
 not cause a conflict.
 
-`pack` also writes the [`lsps` map](../topics/0001-content-format.md#lsps-map)
+`pack` also writes the
+[`lsps` map](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#lsps-map)
 of the bundle closure. Each entry requires a non-empty `command` and a non-empty
 `extensions` map from dot-prefixed file extensions to non-empty language
 identifiers; `args` and `env` are optional. Claude Code uses `.lsp.json` at the

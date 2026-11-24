@@ -260,10 +260,10 @@ invoke its init command in each project to install only rules through
 for separate setup. The plugin holds the MCP servers of the bundle closure in
 `.mcp.json` and its LSP servers in `.lsp.json` for Claude Code or `lsp.json` for
 Copilot CLI. Declare LSP servers in the bundle's
-[`lsps` map](../topics/0001-content-format.md#lsps-map). The plugin does not
-install the server binary. `upskill add` and `upskill update` do not configure
-LSP servers. Run `upskill update` in the project to update those rules; the
-client marketplace manages plugin content.
+[`lsps` map](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#lsps-map).
+The plugin does not install the server binary. `upskill add` and
+`upskill update` do not configure LSP servers. Run `upskill update` in the
+project to update those rules; the client marketplace manages plugin content.
 
 Plugin output is experimental until a smoke test with a hosted git marketplace
 passes in both clients (the local-marketplace smoke test of 2026-11-19 passed).
