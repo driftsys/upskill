@@ -1,5 +1,9 @@
 # Gate 6 Codex plugin skill update visibility
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed
+`scripts/qualify-plugin-rules.py` and its tests, which this note names; the
+commands in this note no longer run.
+
 Task [#395](https://github.com/driftsys/upskill/issues/395), Q8 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains three passing native turns on Codex CLI 0.164.0, macOS arm64,

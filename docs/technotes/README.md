@@ -247,9 +247,12 @@ Thirteen evidence folders remain in `docs/technotes/evidence/`:
   `2026-10-24-copilot-claude-agents-reader`, `2026-10-24-claude-rule-hooks`,
   `2026-10-24-codex-rule-lifecycle`, `2026-10-25-codex-resume-attribution` and
   `2026-10-21-gate6-shared-skill`.
-- Packets that tests in `scripts/tests` read by path:
-  `2026-10-24-codex-rule-lifecycle`, `2026-10-24-copilot-claude-rules-reader`,
-  `2026-10-24-copilot-claude-agents-reader`, `2026-10-24-claude-rule-hooks`,
-  `2026-10-25-cross-client-package-isolation`,
-  `2026-10-30-q11b-registration-isolation` and `2026-10-30-q11b-native-name`.
+- Evidence that a note links by a relative path:
+  `2026-10-25-cross-client-package-isolation` (from
+  `gate6-cross-client-package-isolation.md` and
+  `gate6-plugin-profile-inventory.md`), `2026-10-30-q11b-registration-isolation`
+  (from `copilot-project-plugin-overlay-profile.md`,
+  `customization-delivery-policy-comparison.md` and
+  `gate6-project-registration-isolation.md`) and `2026-10-30-q11b-native-name`
+  (from `gate6-copilot-native-calibration.md`).
 - The CodeQL baseline: `2026-11-04-codeql-rust-extraction`.

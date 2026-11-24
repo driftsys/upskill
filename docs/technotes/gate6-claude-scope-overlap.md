@@ -1,5 +1,9 @@
 # Gate 6 Claude package scope overlap
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed
+`scripts/qualify-plugin-rules.py` and its tests, which this note names; the
+commands in this note no longer run.
+
 Task [#409](https://github.com/driftsys/upskill/issues/409), Q10 of the
 [delivery handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains a successful user-first retry on 2026-10-25. Claude Code 2.1.308 showed

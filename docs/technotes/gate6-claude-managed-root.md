@@ -1,5 +1,9 @@
 # Gate 6 Claude managed-root controls
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed
+`scripts/qualify-plugin-rules.py` and its tests, which this note names; the
+commands in this note no longer run.
+
 Task [#384](https://github.com/driftsys/upskill/issues/384), Q6 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains project- and user-scope marketplace controls on 2026-10-24. After normal

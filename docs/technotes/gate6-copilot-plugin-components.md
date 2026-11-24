@@ -1,5 +1,9 @@
 # Gate 6 Copilot plugin components: failed rules and bounded delegation
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed the native
+probe mode of `scripts/qualify-native-instructions.py` and its tests, which this
+note names; the commands in this note no longer run.
+
 Task [#388](https://github.com/driftsys/upskill/issues/388), Q3 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains Copilot CLI 1.0.103 controls on macOS arm64, 2026-10-24. Native

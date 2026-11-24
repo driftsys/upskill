@@ -151,6 +151,11 @@ source or reader changes during the masked/unmasked/remasked trio.
    retry. If the remaining allowance is insufficient, do not start a partial
    paid sequence.
 
+The next paragraph refers to the qualification runner, which was
+`scripts/qualify-plugin-rules.py`. Issue
+[#540](https://github.com/driftsys/upskill/issues/540) removed it;
+`scripts/qualify-native-instructions.py` remains as the smoke script.
+
 The capture runner does not yet implement this profile. Before any execution,
 add failing offline examples for local-map conflicts, drift, event correlation,
 phase ordering, the reversal and preservation. Extend the existing qualification
@@ -164,6 +169,10 @@ profiles. If the pinned client cannot enforce the required read/tool boundary,
 stop as unsupported rather than replacing it with prompt prose.
 
 ## First offline planning layer
+
+This section describes code that issue
+[#540](https://github.com/driftsys/upskill/issues/540) removed; the command
+below no longer runs.
 
 Task [#448](https://github.com/driftsys/upskill/issues/448) adds a pure planning
 mode to the existing qualification script:
@@ -214,6 +223,9 @@ minimum, check live account usage/reset times, leave the agreed reserve, and
 account for response overshoot. A CLI session cap alone cannot protect the
 account reserve; unknown or insufficient headroom blocks execution.
 
+The next two paragraphs name APIs, files and classifiers that issue
+[#540](https://github.com/driftsys/upskill/issues/540) removed.
+
 The pure APIs are
 `plan_copilot_overlay_edit(baseline, current, plugin_key,
 action, mode) -> bytes`,
@@ -225,13 +237,14 @@ managed-policy checks, persistent attempt accounting and native-effect recovery
 remain separate unimplemented boundaries. Passing these guards never admits a
 paid native process or substitutes for the required native replay.
 
-The [implementation](../../scripts/qualify-plugin-rules.py) and
-[offline acceptance tests](../../scripts/tests/test_copilot_overlay_planning.py)
-are the executable references for this layer. The archived
-[spec](../archive/specs/2026-10-31-copilot-overlay-offline-guards.md) and
-[plan](../archive/plans/2026-10-31-copilot-overlay-offline-guards.md) retain its
-working scope and execution ceremony. Existing Q11/Q11b classifiers are
-unchanged.
+The implementation, `scripts/qualify-plugin-rules.py`, and the offline
+acceptance tests, `scripts/tests/test_copilot_overlay_planning.py`, were the
+executable references for this layer. Issue
+[#540](https://github.com/driftsys/upskill/issues/540) removed both files. The
+archived [spec](../archive/specs/2026-10-31-copilot-overlay-offline-guards.md)
+and [plan](../archive/plans/2026-10-31-copilot-overlay-offline-guards.md) retain
+its working scope and execution ceremony. Issue #540 also removed the Q11/Q11b
+classifiers.
 
 The
 [offline validation record](https://github.com/driftsys/upskill/blob/archive/lifecycle-2026-11/docs/technotes/evidence/2026-10-31-copilot-overlay-offline-planning/validation.json)
