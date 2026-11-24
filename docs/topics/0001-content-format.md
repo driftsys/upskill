@@ -199,10 +199,10 @@ Bundles are flat YAML manifest files, not directories:
 ### 2.3 Client-specific bodies
 
 There are no per-client body files. Each item has one body: the body of its
-canonical entrypoint (`SKILL.md`, `RULE.md` or `AGENT.md`). A file such as
-`SKILL.claude.md` or `RULE.copilot.md` has no special meaning; it is an ordinary
-supporting resource and is copied with the item's other resources (§2.4) for
-every client.
+canonical entrypoint (`SKILL.md`, `RULE.md`, `AGENT.md` or `COMMAND.md`). A file
+such as `SKILL.claude.md` or `RULE.copilot.md` has no special meaning; it is an
+ordinary supporting resource and is copied with the item's other resources
+(§2.4) for every client.
 
 Authors express client differences in one of two ways:
 

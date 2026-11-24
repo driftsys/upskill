@@ -14,6 +14,8 @@ use std::path::{Path, PathBuf};
 use super::ItemKind;
 use crate::parse::frontmatter;
 
+const ENTRYPOINTS: [&str; 4] = ["RULE.md", "SKILL.md", "AGENT.md", "COMMAND.md"];
+
 /// Effective identity name for an item (§2.1). Skills always take the
 /// folder name (Agent Skills standard mandates name == dir); rules/agents
 /// take their frontmatter name when present, else the folder name.
@@ -50,11 +52,9 @@ pub(super) fn probe_effective_name(entry_path: &Path, kind: ItemKind, folder: &s
 }
 
 /// Returns true when the directory contains at least one SSOT entrypoint
-/// file (`RULE.md`, `SKILL.md`, or `AGENT.md`).
+/// file (`RULE.md`, `SKILL.md`, `AGENT.md`, or `COMMAND.md`).
 pub(super) fn is_item_dir(path: &Path) -> bool {
-    path.join("RULE.md").is_file()
-        || path.join("SKILL.md").is_file()
-        || path.join("AGENT.md").is_file()
+    ENTRYPOINTS.iter().any(|entry| path.join(entry).is_file())
 }
 
 /// Refuse an `add` source directory that is itself an item directory (issues
@@ -94,16 +94,26 @@ pub(super) fn refuse_item_dir_source(
         return Ok(());
     }
     let source = normalize_lexically(source);
+    let shown = match &source_kind {
+        ItemDirSource::Local { .. } => source.display().to_string(),
+        ItemDirSource::Git(git) => git.typed.clone(),
+    };
+    if source.join("COMMAND.md").is_file()
+        && !["RULE.md", "SKILL.md", "AGENT.md"]
+            .iter()
+            .any(|entry| source.join(entry).is_file())
+    {
+        anyhow::bail!(
+            "source {shown} is a command item directory (it holds COMMAND.md); \
+             `upskill add` does not install command items. Use `upskill pack` to build a plugin that holds it"
+        );
+    }
     let (entry, kind) = if source.join("SKILL.md").is_file() {
         ("SKILL.md", ItemKind::Skill)
     } else if source.join("RULE.md").is_file() {
         ("RULE.md", ItemKind::Rule)
     } else {
         ("AGENT.md", ItemKind::Agent)
-    };
-    let shown = match &source_kind {
-        ItemDirSource::Local { .. } => source.display().to_string(),
-        ItemDirSource::Git(git) => git.typed.clone(),
     };
     if let ItemDirSource::Git(git) = &source_kind {
         if git.subfolder.is_empty() {
@@ -541,10 +551,18 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
     Ok(out)
 }
 
+/// The first item directory named `name` that holds a `COMMAND.md`.
+pub(super) fn find_command_dir(root: &Path, name: &str) -> Result<Option<PathBuf>> {
+    Ok(iter_item_dirs(root)?
+        .into_iter()
+        .find(|(folder, dir)| folder == name && dir.join("COMMAND.md").is_file())
+        .map(|(_, dir)| dir))
+}
+
 /// Relative paths (from `dir`) of every file under an item directory that
-/// is not an entrypoint (`SKILL.md`/`RULE.md`/`AGENT.md`). A file such as
-/// `SKILL.claude.md` is an ordinary resource (format-spec §2.3). Recursive;
-/// sub-directory structure is preserved in the returned relative paths.
+/// is not an entrypoint (`SKILL.md`/`RULE.md`/`AGENT.md`/`COMMAND.md`). A file
+/// such as `SKILL.claude.md` is an ordinary resource (format-spec §2.3).
+/// Recursive; sub-directory structure is preserved in the returned relative paths.
 /// Sorted for deterministic output.
 pub(super) fn iter_item_resources(dir: &Path) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = walk_files(dir)
@@ -596,14 +614,55 @@ fn walk_files_into(dir: &Path, out: &mut Vec<PathBuf>) {
 }
 
 /// True when `fname` is one of the entrypoint file names
-/// (`SKILL.md`, `RULE.md`, `AGENT.md`).
+/// (`SKILL.md`, `RULE.md`, `AGENT.md`, `COMMAND.md`).
 fn is_entrypoint(fname: &str) -> bool {
-    matches!(fname, "SKILL.md" | "RULE.md" | "AGENT.md")
+    ENTRYPOINTS.contains(&fname)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn find_command_dir_finds_flat_and_category_layouts() {
+        let tmp = tempfile::tempdir().unwrap();
+        for rel in ["flat", "category/nested"] {
+            let dir = tmp.path().join(rel);
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(dir.join("COMMAND.md"), "Command").unwrap();
+            let name = dir.file_name().unwrap().to_str().unwrap();
+            assert_eq!(find_command_dir(tmp.path(), name).unwrap(), Some(dir));
+        }
+        let skill = tmp.path().join("skill");
+        fs::create_dir_all(&skill).unwrap();
+        fs::write(skill.join("SKILL.md"), "Skill").unwrap();
+        assert_eq!(find_command_dir(tmp.path(), "skill").unwrap(), None);
+        assert_eq!(find_command_dir(tmp.path(), "missing").unwrap(), None);
+    }
+
+    #[test]
+    fn is_item_dir_is_true_for_a_command_only_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(!is_item_dir(tmp.path()));
+        fs::write(tmp.path().join("COMMAND.md"), "Command").unwrap();
+        assert!(is_item_dir(tmp.path()));
+    }
+
+    #[test]
+    fn iter_item_resources_excludes_command_md() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("nested")).unwrap();
+        for name in ["COMMAND.md", "RULE.md", "template.md", "nested/COMMAND.md"] {
+            fs::write(tmp.path().join(name), "Content").unwrap();
+        }
+        assert_eq!(
+            iter_item_resources(tmp.path()),
+            vec![
+                PathBuf::from("nested/COMMAND.md"),
+                PathBuf::from("template.md")
+            ]
+        );
+    }
 
     #[test]
     fn find_bundle_by_name_finds_nested_bundle_file() {

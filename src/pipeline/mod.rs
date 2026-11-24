@@ -294,7 +294,9 @@ pub fn install_with_lockfile(
         prepared.source_items(),
         output::RecordedUse::AddReads,
     )?;
+    let pack_only_skipped = prepared.pack_only_skipped();
     let mut report = prepared.commit(target, plugin_scope)?;
+    report.pack_only_skipped = pack_only_skipped;
     // An item of this source that the command excludes and that is already
     // installed is removed, as `remove` removes it, but without the other
     // members of its group (issue #570).

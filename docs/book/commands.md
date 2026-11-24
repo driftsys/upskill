@@ -305,6 +305,24 @@ Configured and warn-skipped servers are recorded in the lockfile; remove one
 with [`upskill remove-mcp`](#upskill-remove-mcp-name). If an MCP server needs an
 environment variable that is unset, `add` warns so you can export it.
 
+**Bundle command items.** `add` does not install entries of `items.commands`. It
+counts each command name once across the resolved bundles and prints one line to
+stderr, for example:
+
+```text
+skipped 2 command item(s): only `upskill pack` writes them
+```
+
+LSP servers declared in `lsps` are also skipped. Their count appears in the same
+line as `<n> LSP server(s)`, after the command count when both are present. No
+skip line is printed with `--quiet` or any `--kind` restriction. A whole-source
+install without a resolved bundle ignores command directories without a skip
+line. `add <source> <name>` with a command item name, or a source that is a
+command item directory, fails with exit code 1 and names `upskill pack`. When
+several positional names include a command item, the error occurs before any
+write. `--kind command` and an `--exclude` that names only a command item remain
+usage errors (exit code 2).
+
 ### `upskill update [name...]`
 
 Pull latest sources and regenerate changed items.
@@ -624,6 +642,11 @@ Each block is exact for the files on disk, but because nothing is applied, a
 later block does not include the effect of applying an earlier source. With a
 `schema: 1` lockfile, the previews are computed from an adoption held in memory,
 and nothing is written.
+
+`update` reports command items and LSP servers of every bundle it prepares in
+the same skip line as `add`, each name counted once per kind across the run. It
+reports them also for sources that are not applied and with `--dry-run`. No skip
+line is printed with `--quiet` or for a source under a kind restriction.
 
 The plugin and MCP steps of a bundle source run when the source is applied
 without a kind restriction. `update` skips both steps for a source under a kind
@@ -1370,6 +1393,8 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
+They report their count in the same stderr skip line as command items, unless
+`--quiet` or a kind restriction applies.
 
 All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force`

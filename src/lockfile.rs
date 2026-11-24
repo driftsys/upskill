@@ -853,6 +853,7 @@ mod tests {
             removed_excluded: Vec::new(),
             kept_excluded: Vec::new(),
             excluded: Vec::new(),
+            pack_only_skipped: Vec::new(),
             forced: Vec::new(),
             changed: Vec::new(),
             items: vec![

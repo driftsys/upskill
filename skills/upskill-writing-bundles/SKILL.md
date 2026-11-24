@@ -45,6 +45,8 @@ items: # required — may be empty {} for meta-bundles
     - rule-one
   agents:
     - agent-one
+  commands: # optional — add and update do not install them
+    - release-notes
 
 requires: # optional — dependencies on other bundles
   - name: other-bundle
@@ -211,6 +213,8 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
+They report their count in the same stderr skip line as command items, unless
+`--quiet` or a kind restriction applies.
 
 ## The `requires` Dependency Graph
 
@@ -253,7 +257,8 @@ Common findings:
    registry
 2. **Create the file** — `skills/<name>.bundle.yaml`
 3. **Fill required fields** — `schema: 1`, `name`, `description`, `items`
-4. **Add items** — list skill/rule/agent names that exist in the registry
+4. **Add items** — list skill/rule/agent/command names that exist in the
+   registry
 5. **Add plugins** (if any) — declare per-client plugin dependencies
 6. **Add requires** (if any) — declare bundle dependencies
 7. **Lint** — `upskill lint <dir> --strict`

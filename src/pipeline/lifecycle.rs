@@ -1536,6 +1536,11 @@ pub fn update(
                     report.excluded.push(item.clone());
                 }
             }
+            for item in prepared.pack_only_skipped() {
+                if !report.pack_only_skipped.contains(&item) {
+                    report.pack_only_skipped.push(item);
+                }
+            }
             // Every entry outside the recorded kinds is kept unchanged.
             let source_entries: Vec<_> = source_entries
                 .into_iter()
