@@ -98,3 +98,39 @@ fn with_plugins_declares_client_native_plugins() {
 
     assert!(sp.opencode.is_none());
 }
+
+#[test]
+fn bundle_parser_rejects_invalid_lsps_in_load_and_discover() {
+    for (entry, message) in [
+        (
+            "command: ''\n    extensions: { .rs: rust }",
+            "lsp `ra`: command must not be empty",
+        ),
+        (
+            "command: rust-analyzer\n    extensions: {}",
+            "lsp `ra`: extensions must not be empty",
+        ),
+        (
+            "command: rust-analyzer\n    extensions: { rs: rust }",
+            "lsp `ra`: extension `rs` must start with a dot",
+        ),
+        (
+            "command: rust-analyzer\n    extensions: { .rs: '' }",
+            "lsp `ra`: the language of extension `.rs` must not be empty",
+        ),
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("invalid.bundle.yaml");
+        std::fs::write(
+            &path,
+            format!(
+                "schema: 1\nname: invalid\ndescription: d\nitems: {{}}\nlsps:\n  ra:\n    {entry}\n"
+            ),
+        )
+        .unwrap();
+        let error = upskill::parse::bundle::load(&path).unwrap_err();
+        assert_eq!(error.to_string(), format!("{}: {message}", path.display()));
+        let error = discover(tmp.path()).unwrap_err();
+        assert!(format!("{error:#}").contains(message));
+    }
+}

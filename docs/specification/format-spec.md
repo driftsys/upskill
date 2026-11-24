@@ -88,6 +88,10 @@ reference rather than this compatibility page.
 
 - [`mcps` map](../topics/0001-content-format.md#mcps-map)
 
+<a id="lsps-map"></a>
+
+- [`lsps` map](../topics/0001-content-format.md#lsps-map)
+
 <a id="item-requires-resolution"></a>
 
 - [Item `requires` resolution](../topics/0001-content-format.md#item-requires-resolution)

@@ -1328,6 +1328,7 @@ upskill pack my-bundle --source owner/repo@v1 --out dist
 | Skills and resources                       | `skills/<name>/SKILL.md` and resources | `skills/<name>/SKILL.md` and resources |
 | Agents                                     | `agents/<name>.md`                     | `agents/<name>.agent.md`               |
 | MCP servers, when declared                 | `.mcp.json`                            | `.mcp.json`                            |
+| LSP servers, when declared                 | `.lsp.json`                            | `lsp.json`                             |
 | Init, when rules target this client        | `commands/init.md`                     | `commands/init.md`                     |
 | Notice hook, when rules target this client | `hooks/hooks.json`                     | `hooks.json`                           |
 
@@ -1347,6 +1348,25 @@ under one name in several bundles produce one entry. If two bundles of the
 closure declare one server name with different written content, `pack` fails
 with exit code 1 before writing output. A difference only in `requires-env` does
 not cause a conflict.
+
+`pack` also writes the [`lsps` map](../topics/0001-content-format.md#lsps-map)
+of the bundle closure. Each entry requires a non-empty `command` and a non-empty
+`extensions` map from dot-prefixed file extensions to non-empty language
+identifiers; `args` and `env` are optional. Claude Code uses `.lsp.json` at the
+plugin root, with one top-level key per server and `extensionToLanguage` for the
+extensions map. Copilot CLI uses `lsp.json` at the plugin root, with the servers
+below `lspServers` and `fileExtensions` for the same map. Both formats contain
+`command`, `args` and `env`; empty `args` and `env` are omitted. An output
+without LSP servers has no LSP file. Equal declarations of one name produce one
+entry. Different `command`, `args`, `env` or `extensions` values fail with exit
+code 1 before writing output:
+
+```text
+LSP server `<name>` is declared with different content by the bundles `<first>` and `<second>`
+```
+
+The plugin does not install the server binary. `upskill add` and
+`upskill update` do not configure LSP servers or record them in the lockfile.
 
 All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force`
@@ -1373,10 +1393,11 @@ digits and `- _ .`.
 
 `pack` reads no lockfile and writes only below `--out`. It does not install or
 register the plugin, write a marketplace manifest, or publish it. The bundle
-schema is unchanged. Copy the outputs into a marketplace repository and install
-through the client. Plugin output is experimental until a smoke test with a
-hosted git marketplace passes in both clients (the local-marketplace smoke test
-of 2026-11-19 passed); `doctor` gains no row.
+schema adds the optional `lsps` map without changing its version. Copy the
+outputs into a marketplace repository and install through the client. Plugin
+output is experimental until a smoke test with a hosted git marketplace passes
+in both clients (the local-marketplace smoke test of 2026-11-19 passed);
+`doctor` gains no row.
 
 No rule file is included. Init instructs the model to run
 `upskill add <source> <bundle> --kind rule --project --claude`, or the same

@@ -49,6 +49,9 @@ pub fn load(path: &Path) -> Result<Bundle> {
     bundle
         .validate_mcps()
         .map_err(|e| anyhow::anyhow!("{}: {e}", path.display()))?;
+    bundle
+        .validate_lsps()
+        .map_err(|e| anyhow::anyhow!("{}: {e}", path.display()))?;
 
     Ok(bundle)
 }
@@ -111,6 +114,9 @@ fn load_if_bundle(path: &Path) -> Result<Option<Bundle>> {
 
     bundle
         .validate_mcps()
+        .map_err(|e| anyhow::anyhow!("{}: {e}", path.display()))?;
+    bundle
+        .validate_lsps()
         .map_err(|e| anyhow::anyhow!("{}: {e}", path.display()))?;
 
     Ok(Some(bundle))

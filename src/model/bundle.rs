@@ -43,6 +43,10 @@ pub struct Bundle {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub mcps: BTreeMap<String, McpEntry>,
 
+    /// LSP servers written into client plugins by `pack`.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub lsps: BTreeMap<String, LspEntry>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Metadata>,
 
@@ -296,6 +300,45 @@ impl Bundle {
     }
 }
 
+/// One entry in the bundle `lsps:` map.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LspEntry {
+    pub command: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub args: Vec<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub env: BTreeMap<String, String>,
+    pub extensions: BTreeMap<String, String>,
+}
+
+impl Bundle {
+    /// Validate the `lsps:` map and return the first invalid entry.
+    pub fn validate_lsps(&self) -> Result<(), String> {
+        for (name, entry) in &self.lsps {
+            if entry.command.trim().is_empty() {
+                return Err(format!("lsp `{name}`: command must not be empty"));
+            }
+            if entry.extensions.is_empty() {
+                return Err(format!("lsp `{name}`: extensions must not be empty"));
+            }
+            for (extension, language) in &entry.extensions {
+                if !extension.starts_with('.') {
+                    return Err(format!(
+                        "lsp `{name}`: extension `{extension}` must start with a dot"
+                    ));
+                }
+                if language.trim().is_empty() {
+                    return Err(format!(
+                        "lsp `{name}`: the language of extension `{extension}` must not be empty"
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Local (stdio) MCP server descriptor.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct McpLocal {
@@ -307,4 +350,84 @@ pub struct McpLocal {
     /// Environment variables. Values pass through verbatim (use `${VAR}`).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub env: BTreeMap<String, String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lsp_bundle(entry: &str) -> Bundle {
+        serde_yaml_ng::from_str(&format!(
+            "schema: 1\nname: lsp-demo\ndescription: d\nitems: {{}}\nlsps:\n  rust-analyzer:\n    {entry}\n"
+        )).unwrap()
+    }
+
+    #[test]
+    fn bundle_parses_lsps() {
+        let bundle =
+            lsp_bundle("command: rust-analyzer\n    args: []\n    extensions: { .rs: rust }");
+        assert_eq!(bundle.lsps.len(), 1);
+        let entry = &bundle.lsps["rust-analyzer"];
+        assert_eq!(entry.command, "rust-analyzer");
+        assert!(entry.args.is_empty());
+        assert!(entry.env.is_empty());
+        assert_eq!(
+            entry.extensions,
+            BTreeMap::from([(".rs".into(), "rust".into())])
+        );
+        assert_eq!(bundle.validate_lsps(), Ok(()));
+        let serialized = serde_yaml_ng::to_value(&bundle).unwrap();
+        assert!(serialized["lsps"]["rust-analyzer"].get("args").is_none());
+        assert!(serialized["lsps"]["rust-analyzer"].get("env").is_none());
+    }
+
+    #[test]
+    fn bundle_without_lsps_serializes_without_the_key() {
+        let bundle: Bundle =
+            serde_yaml_ng::from_str("schema: 1\nname: old\ndescription: d\nitems: {}\n").unwrap();
+        assert!(bundle.lsps.is_empty());
+        let serialized = serde_yaml_ng::to_value(&bundle).unwrap();
+        assert!(serialized.get("lsps").is_none());
+    }
+
+    #[test]
+    fn validate_lsps_reports_each_invalid_entry() {
+        for (entry, expected) in [
+            (
+                "command: ''\n    extensions: { .rs: rust }",
+                "lsp `rust-analyzer`: command must not be empty",
+            ),
+            (
+                "command: '  '\n    extensions: { .rs: rust }",
+                "lsp `rust-analyzer`: command must not be empty",
+            ),
+            (
+                "command: rust-analyzer\n    extensions: {}",
+                "lsp `rust-analyzer`: extensions must not be empty",
+            ),
+            (
+                "command: rust-analyzer\n    extensions: { rs: rust }",
+                "lsp `rust-analyzer`: extension `rs` must start with a dot",
+            ),
+            (
+                "command: rust-analyzer\n    extensions: { .rs: '' }",
+                "lsp `rust-analyzer`: the language of extension `.rs` must not be empty",
+            ),
+            (
+                "command: rust-analyzer\n    extensions: { .rs: '  ' }",
+                "lsp `rust-analyzer`: the language of extension `.rs` must not be empty",
+            ),
+        ] {
+            assert_eq!(lsp_bundle(entry).validate_lsps(), Err(expected.into()));
+        }
+    }
+
+    #[test]
+    fn lsp_entry_refuses_an_unknown_key() {
+        let error = serde_yaml_ng::from_str::<LspEntry>(
+            "command: rust-analyzer\nextensions: { .rs: rust }\nextension: { .rs: rust }\n",
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("unknown field `extension`"));
+    }
 }

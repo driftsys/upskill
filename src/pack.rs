@@ -8,7 +8,9 @@ use serde::Serialize;
 
 use crate::generate::Client;
 use crate::model::Bundle;
-use crate::model::bundle::{ClaudePluginDescriptor, CopilotPluginDescriptor, McpTransport};
+use crate::model::bundle::{
+    ClaudePluginDescriptor, CopilotPluginDescriptor, LspEntry, McpTransport,
+};
 use crate::pipeline::plan_bundle_output;
 
 /// A client whose plugin directory can be built.
@@ -117,6 +119,54 @@ fn mcp_json(bundles: &[Bundle]) -> Result<Option<Vec<u8>>> {
     Ok(Some(bytes))
 }
 
+/// Build the LSP configuration of a plugin, joining equal declarations.
+fn lsp_json(bundles: &[Bundle], client: PackClient) -> Result<Option<Vec<u8>>> {
+    let mut servers: BTreeMap<&str, (&str, &LspEntry)> = BTreeMap::new();
+    for bundle in bundles {
+        for (name, entry) in &bundle.lsps {
+            if let Some((first, previous)) = servers.get(name.as_str()) {
+                anyhow::ensure!(
+                    *previous == entry,
+                    "LSP server `{name}` is declared with different content by the bundles `{first}` and `{}`",
+                    bundle.name
+                );
+            } else {
+                servers.insert(name, (&bundle.name, entry));
+            }
+        }
+    }
+    if servers.is_empty() {
+        return Ok(None);
+    }
+    let extension_key = match client {
+        PackClient::Claude => "extensionToLanguage",
+        PackClient::Copilot => "fileExtensions",
+    };
+    let servers: BTreeMap<_, _> = servers
+        .into_iter()
+        .map(|(name, (_, entry))| {
+            let mut value = serde_json::json!({
+                "command": entry.command,
+                extension_key: entry.extensions,
+            });
+            if !entry.args.is_empty() {
+                value["args"] = serde_json::json!(entry.args);
+            }
+            if !entry.env.is_empty() {
+                value["env"] = serde_json::json!(entry.env);
+            }
+            (name, value)
+        })
+        .collect();
+    let value = match client {
+        PackClient::Claude => serde_json::json!(servers),
+        PackClient::Copilot => serde_json::json!({ "lspServers": servers }),
+    };
+    let mut bytes = serde_json::to_vec_pretty(&value)?;
+    bytes.push(b'\n');
+    Ok(Some(bytes))
+}
+
 fn init_text(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient) -> String {
     let flag = match client {
         PackClient::Claude => "--claude",
@@ -217,6 +267,16 @@ pub fn build(
     if let Some(bytes) = mcp_json(&output.bundles)? {
         files.push(PackFile {
             rel: ".mcp.json".into(),
+            bytes,
+            mode: None,
+        });
+    }
+    if let Some(bytes) = lsp_json(&output.bundles, client)? {
+        files.push(PackFile {
+            rel: match client {
+                PackClient::Claude => ".lsp.json".into(),
+                PackClient::Copilot => "lsp.json".into(),
+            },
             bytes,
             mode: None,
         });
@@ -786,5 +846,109 @@ mod tests {
             manifest(&bundle).unwrap(),
             b"{\n  \"name\": \"demo\",\n  \"description\": \"Demo bundle\"\n}\n"
         );
+    }
+
+    fn lsp_bundle(name: &str, entry: &str) -> Bundle {
+        serde_yaml_ng::from_str(&format!(
+            "schema: 1\nname: {name}\ndescription: d\nitems: {{}}\nlsps:\n  ra:\n    {entry}\n"
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn lsp_json_is_none_without_servers() {
+        for client in [PackClient::Claude, PackClient::Copilot] {
+            assert!(lsp_json(&[], client).unwrap().is_none());
+            assert!(lsp_json(&[demo()], client).unwrap().is_none());
+        }
+    }
+
+    #[test]
+    fn lsp_json_writes_the_format_of_each_client() {
+        let bundle = lsp_bundle(
+            "a",
+            "command: rust-analyzer\n    args: [--stdio]\n    env: { RA_LOG: info }\n    extensions: { .rs: rust }",
+        );
+        for (client, expected) in [
+            (
+                PackClient::Claude,
+                r#"{
+  "ra": {
+    "args": [
+      "--stdio"
+    ],
+    "command": "rust-analyzer",
+    "env": {
+      "RA_LOG": "info"
+    },
+    "extensionToLanguage": {
+      ".rs": "rust"
+    }
+  }
+}
+"#,
+            ),
+            (
+                PackClient::Copilot,
+                r#"{
+  "lspServers": {
+    "ra": {
+      "args": [
+        "--stdio"
+      ],
+      "command": "rust-analyzer",
+      "env": {
+        "RA_LOG": "info"
+      },
+      "fileExtensions": {
+        ".rs": "rust"
+      }
+    }
+  }
+}
+"#,
+            ),
+        ] {
+            let bytes = lsp_json(std::slice::from_ref(&bundle), client)
+                .unwrap()
+                .unwrap();
+            assert_eq!(String::from_utf8(bytes).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn lsp_json_refuses_one_name_with_different_content() {
+        let first = "command: rust-analyzer\n    extensions: { .rs: rust }";
+        for second in [
+            "command: other-command\n    extensions: { .rs: rust }",
+            "command: rust-analyzer\n    args: [--stdio]\n    extensions: { .rs: rust }",
+            "command: rust-analyzer\n    env: { RA_LOG: info }\n    extensions: { .rs: rust }",
+            "command: rust-analyzer\n    extensions: { .rs: other }",
+        ] {
+            for client in [PackClient::Claude, PackClient::Copilot] {
+                let error = lsp_json(&[lsp_bundle("a", first), lsp_bundle("b", second)], client)
+                    .unwrap_err();
+                assert_eq!(
+                    error.to_string(),
+                    "LSP server `ra` is declared with different content by the bundles `a` and `b`"
+                );
+            }
+        }
+        for (client, expected) in [
+            (
+                PackClient::Claude,
+                serde_json::json!({ "ra": { "command": "rust-analyzer", "extensionToLanguage": { ".rs": "rust" } } }),
+            ),
+            (
+                PackClient::Copilot,
+                serde_json::json!({ "lspServers": { "ra": { "command": "rust-analyzer", "fileExtensions": { ".rs": "rust" } } } }),
+            ),
+        ] {
+            let bytes = lsp_json(&[lsp_bundle("a", first), lsp_bundle("b", first)], client)
+                .unwrap()
+                .unwrap();
+            let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(value, expected);
+        }
     }
 }

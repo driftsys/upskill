@@ -1,0 +1,10 @@
+{
+  "lspServers": {
+    "base-lsp": {
+      "command": "base-lsp-command",
+      "fileExtensions": {
+        ".base": "base"
+      }
+    }
+  }
+}
