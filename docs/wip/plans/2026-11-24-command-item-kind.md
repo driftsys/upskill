@@ -324,7 +324,36 @@ Each decision is marked "plan decision" where a task uses it.
   `just verify` and `just sanity`, and commits with
   `feat(lint): add the command item kind to lint, fmt and new (#632)`.
 
-### Task 2: `add` and `update` skip command items
+### Task 2: `add` and `update` skip command items and LSP servers
+
+> **Addendum of 2026-11-25 (orchestrator decision).** Story #634 (branch
+> `feat/pack-lsp-servers`, merged before this task starts) added the bundle key
+> `lsps` (`Bundle::lsps: BTreeMap<String, LspEntry>`) and moved its last
+> criterion here: `add` and `update` report the LSP servers that they skip in
+> the same stderr line. The orchestrator rebases this branch on `main` before
+> this task starts. Apply these changes to the text of this task:
+>
+> - `PackOnlyKind` has two values, `Command` and `LspServer`.
+>   `ALL = [Command, LspServer]`. `LspServer.label()` returns `"LSP server(s)"`.
+> - Replace `BundleItems::pack_only` with
+>   `impl Bundle { pub fn pack_only(&self, kind: PackOnlyKind) -> Vec<&str> }`:
+>   `Command` gives `items.commands`, `LspServer` gives the keys of `lsps`.
+>   `pack_only_items` uses it.
+> - The named-item error and `find_command_dir` concern `Command` only. An LSP
+>   server name is not an item name: `add <source> <lsp-name>` keeps the
+>   behaviour of today for an unknown name.
+> - Add to `tests/cli_pack_only_items.rs`:
+>   `add_reports_skipped_lsp_servers_in_the_same_line`: a bundle with two
+>   command items and one LSP server; stderr contains, exactly,
+>   ``skipped 2 command item(s), 1 LSP server(s): only `upskill pack` writes them``;
+>   no `.lsp.json` or `lsp.json` exists below the project or the fake home. And
+>   `add_reports_only_lsp_servers_when_the_bundle_has_no_command`: stderr
+>   contains ``skipped 1 LSP server(s): only `upskill pack` writes them``.
+> - Docs: the sentences of #634 that say `add` and `update` do not configure LSP
+>   servers (in `docs/book/commands.md`, `docs/specification/specification.md`,
+>   `docs/book/recipes.md`, `skills/upskill-cli/SKILL.md`,
+>   `skills/upskill-writing-bundles/SKILL.md`) also say that they report them in
+>   the skip line.
 
 **Files:**
 
