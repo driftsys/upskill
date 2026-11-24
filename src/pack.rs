@@ -82,6 +82,10 @@ fn manifest(bundle: &Bundle) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+/// Build the `.mcp.json` of a plugin from the MCP servers of `bundles`, or
+/// `None` when no bundle declares a server. Two declarations of one name
+/// conflict when their written JSON objects differ, so a difference only in
+/// `requires-env`, which is not written, is not a conflict.
 fn mcp_json(bundles: &[Bundle]) -> Result<Option<Vec<u8>>> {
     let mut servers: BTreeMap<&str, (&str, serde_json::Value)> = BTreeMap::new();
     for bundle in bundles {
@@ -681,6 +685,81 @@ mod tests {
             init_text("demo", "driftsys/demo@v1", &[], PackClient::Claude),
             expected
         );
+    }
+
+    fn bundle(name: &str, mcps: &str) -> Bundle {
+        serde_yaml_ng::from_str(&format!(
+            "schema: 1\nname: {name}\ndescription: d\nitems: {{}}\nmcps:\n{mcps}"
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn init_of_a_closure_with_mcp_servers_and_no_plugin_has_no_list() {
+        let text = init_text(
+            "a",
+            "driftsys/demo@v1",
+            &[bundle("a", "  s:\n    local: { command: c }\n")],
+            PackClient::Claude,
+        );
+        assert!(!text.contains("The command does not install"));
+    }
+
+    #[test]
+    fn mcp_json_refuses_each_kind_of_different_content() {
+        let cases = [
+            (
+                "  s:\n    local: { command: c, args: [x] }\n",
+                "  s:\n    local: { command: c, args: [y] }\n",
+            ),
+            (
+                "  s:\n    local: { command: c, env: { K: x } }\n",
+                "  s:\n    local: { command: c, env: { K: y } }\n",
+            ),
+            (
+                "  s:\n    remote: { type: http, url: https://a.example }\n",
+                "  s:\n    remote: { type: http, url: https://b.example }\n",
+            ),
+            (
+                "  s:\n    remote: { type: http, url: https://a.example }\n",
+                "  s:\n    remote: { type: sse, url: https://a.example }\n",
+            ),
+            (
+                "  s:\n    remote: { type: http, url: https://a.example, headers: { H: x } }\n",
+                "  s:\n    remote: { type: http, url: https://a.example, headers: { H: y } }\n",
+            ),
+            (
+                "  s:\n    local: { command: c }\n",
+                "  s:\n    remote: { type: http, url: https://a.example }\n",
+            ),
+        ];
+        for (first, second) in cases {
+            let error = mcp_json(&[bundle("a", first), bundle("b", second)]).unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                "MCP server `s` is declared with different content by the bundles `a` and `b`"
+            );
+        }
+    }
+
+    #[test]
+    fn mcp_json_is_none_without_servers_and_joins_equal_declarations() {
+        assert!(mcp_json(&[demo_without_mcps()]).unwrap().is_none());
+        let server =
+            "  s:\n    remote: { type: http, url: https://a.example, headers: { H: x } }\n";
+        let bytes = mcp_json(&[bundle("a", server), bundle("b", server)])
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            String::from_utf8(bytes).unwrap(),
+            "{\n  \"mcpServers\": {\n    \"s\": {\n      \"headers\": {\n        \"H\": \"x\"\n      },\n      \"type\": \"http\",\n      \"url\": \"https://a.example\"\n    }\n  }\n}\n"
+        );
+    }
+
+    fn demo_without_mcps() -> Bundle {
+        let mut bundle = demo();
+        bundle.mcps.clear();
+        bundle
     }
 
     #[test]

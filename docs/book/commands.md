@@ -1340,12 +1340,13 @@ LICENSE file is written, so `claude plugin validate` reports both as missing.
 `.mcp.json` at the root of each client directory. A local server contains
 `command`, `args` and `env`; a remote server contains `type`, `url` and
 `headers`. Empty `args`, `env` and `headers` are omitted. `requires-env` is not
-written. An output without MCP servers has no `.mcp.json`. The client adds and
-removes the servers with the plugin. Equal server objects declared under one
-name in several bundles produce one entry. If two bundles of the closure declare
-one server name with different written content, `pack` fails with exit code 1
-before writing output. A difference only in `requires-env` does not cause a
-conflict.
+written. An output without MCP servers has no `.mcp.json`. The client loads the
+servers from the plugin. No trial has confirmed that a client removes them when
+a plugin from a hosted marketplace is uninstalled. Equal server objects declared
+under one name in several bundles produce one entry. If two bundles of the
+closure declare one server name with different written content, `pack` fails
+with exit code 1 before writing output. A difference only in `requires-env` does
+not cause a conflict.
 
 All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force`

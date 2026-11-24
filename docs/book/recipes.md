@@ -257,7 +257,7 @@ there are deleted.
 Install with the client's marketplace command. When the output includes rules,
 invoke its init command in each project to install only rules through
 `add --kind rule --project` for that client. Init reports third-party plugins
-for separate setup. The plugin holds the MCP servers of the bundle in
+for separate setup. The plugin holds the MCP servers of the bundle closure in
 `.mcp.json`. Run `upskill update` in the project to update those rules; the
 client marketplace manages plugin content.
 

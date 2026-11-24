@@ -453,8 +453,12 @@ fn pack_writes_mcp_json_with_the_servers_of_the_closure_for_both_clients() {
 #[test]
 fn pack_of_a_bundle_without_mcp_servers_writes_no_mcp_json() {
     let f = Fixture::new();
-    f.command("norules").assert().success();
-    assert!(!f.out.join("norules-claude/.mcp.json").exists());
+    f.command_for_clients("norules").assert().success();
+    for client in ["claude", "copilot"] {
+        let target = f.out.join(format!("norules-{client}"));
+        assert!(target.is_dir());
+        assert!(!target.join(".mcp.json").exists());
+    }
 }
 
 #[test]

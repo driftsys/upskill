@@ -1153,10 +1153,10 @@ seven stories of the
 is not archived: the other six stories (#631, #632, #634 to #637) are not
 implemented.
 
-Implementation commits on branch `feat/pack-mcp-servers`: `6789c02` (feature)
-and `2804df1` (tests and document corrections). Completion evidence:
-`just verify` and `just sanity` passed on `2804df1`. These are branch commits,
-not a claim of a PR merge.
+Implementation: pull request
+[#639](https://github.com/driftsys/upskill/pull/639). Completion evidence:
+`just verify` and `just sanity` passed on its branch before the pull request was
+opened.
 
 Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions
 2, 9 and 11; [specification §2.8](../specification/specification.md); the
