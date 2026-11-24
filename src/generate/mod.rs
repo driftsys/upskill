@@ -2,7 +2,7 @@
 //!
 //! Pure rendering. No filesystem writes — those land in Phase 3.
 
-use crate::model::{Agent, Rule, Skill};
+use crate::model::{Agent, Command, Rule, Skill};
 use anyhow::{Context, Result};
 use serde_yaml_ng::{Mapping, Value};
 
@@ -61,6 +61,18 @@ pub fn render_skill(skill: &Skill, name: &str, body: &str, client: Client) -> Re
     };
     let combined = assemble(&frontmatter, &processed_body);
     format::format_markdown(&combined)
+}
+
+/// Render a command as a skill that only the user can invoke.
+/// Process client directives and format the complete Markdown output.
+pub fn render_command(command: &Command, body: &str, client: Client) -> Result<String> {
+    let frontmatter = match client {
+        Client::Claude => claude::command_frontmatter(command)?,
+        Client::Copilot => copilot::command_frontmatter(command)?,
+        Client::OpenCode => anyhow::bail!("command items have no opencode output"),
+    };
+    let processed_body = directives::process(body, client)?;
+    format::format_markdown(&assemble(&frontmatter, &processed_body))
 }
 
 /// Render a rule to its client-specific markdown string.
@@ -184,6 +196,55 @@ mod tests {
     use crate::model::Agent;
     use crate::model::common::SchemaVersion;
     use std::collections::BTreeMap;
+
+    fn command() -> crate::model::Command {
+        serde_yaml_ng::from_str("name: release-notes\ndescription: Write notes\nargument-hint: '[version]'\nlicense: MIT\nmetadata: {version: '1'}\nignore: [draft.md]\n").unwrap()
+    }
+
+    #[test]
+    fn render_command_writes_the_claude_keys_in_order() {
+        let out = render_command(&command(), "Write $ARGUMENTS.\n", Client::Claude).unwrap();
+        let (yaml, body) = crate::parse::frontmatter::split(&out).unwrap();
+        let map: Mapping = serde_yaml_ng::from_str(yaml).unwrap();
+        assert_eq!(
+            map.keys().map(|k| k.as_str().unwrap()).collect::<Vec<_>>(),
+            [
+                "name",
+                "description",
+                "argument-hint",
+                "disable-model-invocation"
+            ]
+        );
+        assert_eq!(map["argument-hint"].as_str(), Some("[version]"));
+        assert_eq!(map["disable-model-invocation"].as_bool(), Some(true));
+        assert!(body.contains("$ARGUMENTS"));
+        let mut command = command();
+        command.argument_hint = None;
+        let out = render_command(&command, "Write notes.\n", Client::Claude).unwrap();
+        assert!(!out.contains("argument-hint:"));
+    }
+
+    #[test]
+    fn render_command_omits_argument_hint_for_copilot() {
+        let out = render_command(&command(), "Write $ARGUMENTS.\n", Client::Copilot).unwrap();
+        let (yaml, _) = crate::parse::frontmatter::split(&out).unwrap();
+        let map: Mapping = serde_yaml_ng::from_str(yaml).unwrap();
+        assert_eq!(
+            map.keys().map(|k| k.as_str().unwrap()).collect::<Vec<_>>(),
+            ["name", "description", "disable-model-invocation"]
+        );
+        assert_eq!(map["disable-model-invocation"].as_bool(), Some(true));
+    }
+
+    #[test]
+    fn render_command_has_no_opencode_output() {
+        assert_eq!(
+            render_command(&command(), "Write notes.\n", Client::OpenCode)
+                .unwrap_err()
+                .to_string(),
+            "command items have no opencode output"
+        );
+    }
 
     #[test]
     fn render_rule_uses_passed_name_not_frontmatter() {

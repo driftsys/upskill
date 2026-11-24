@@ -407,19 +407,22 @@ client directory changes. Plugin output remains experimental until a smoke test
 with a hosted git marketplace passes in both clients (the local-marketplace
 smoke test of 2026-11-19 passed).
 
-The plugin carries skills, agents, MCP servers (`.mcp.json`) and LSP servers
-(`.lsp.json` for Claude Code, `lsp.json` for Copilot CLI) of the bundle closure.
-The bundle's `lsps` map declares LSP servers. The plugin does not install the
-server binary; `add` and `update` do not configure LSP servers. They report
-their count in the same stderr skip line as command items, unless `--quiet` or a
-kind restriction applies. Its init command, when rules target the client, runs
-`add --kind rule --project` for that client. `add
---kind` is repeatable for
-`rule`, `skill` and `agent`; it skips plugin and MCP steps. Bundle lockfile
-entries record the selected `kinds`. `update` uses their union only when every
-recorded bundle of the source has recorded kinds; one unrestricted bundle leaves
-that source unrestricted. Every entry of that source whose kind is outside the
-restriction stays unchanged; reinstall it explicitly to update it.
+The plugin carries skills, agents, command items as user-only skills, MCP
+servers (`.mcp.json`) and LSP servers (`.lsp.json` for Claude Code, `lsp.json`
+for Copilot CLI) of the bundle closure. The bundle's `lsps` map declares LSP
+servers. The plugin does not install the server binary; `add` and `update` do
+not configure LSP servers. They report their count in the same stderr skip line
+as command items, unless `--quiet` or a kind restriction applies. `add` and
+`update` also skip command items and print their count in that line. The user
+calls a command as `/<plugin>:<name>`. Init is written at
+`skills/init/SKILL.md`; call it as `/<plugin>:init` in an interactive session.
+When rules target the client, it runs `add --kind rule --project` for that
+client. `add --kind` is repeatable for `rule`, `skill` and `agent`; it skips
+plugin and MCP steps. Bundle lockfile entries record the selected `kinds`.
+`update` uses their union only when every recorded bundle of the source has
+recorded kinds; one unrestricted bundle leaves that source unrestricted. Every
+entry of that source whose kind is outside the restriction stays unchanged;
+reinstall it explicitly to update it.
 
 The embedded notice hook calls `update --notice`. Runs sharing a cache use
 `notice.lock`: a lock younger than 60 seconds makes another run exit silently. A

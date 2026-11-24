@@ -7,11 +7,11 @@ use anyhow::{Context, Result, bail};
 use serde::Serialize;
 
 use crate::generate::Client;
-use crate::model::Bundle;
 use crate::model::bundle::{
     ClaudePluginDescriptor, CopilotPluginDescriptor, LspEntry, McpTransport,
 };
-use crate::pipeline::plan_bundle_output;
+use crate::model::{Bundle, Command};
+use crate::pipeline::{CommandResource, plan_bundle_output, read_command};
 
 /// A client whose plugin directory can be built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -167,13 +167,90 @@ fn lsp_json(bundles: &[Bundle], client: PackClient) -> Result<Option<Vec<u8>>> {
     Ok(Some(bytes))
 }
 
-fn init_text(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient) -> String {
+fn check_command_names(bundles: &[Bundle]) -> Result<()> {
+    let mut commands = BTreeMap::new();
+    for bundle in bundles {
+        for name in &bundle.items.commands {
+            if let Some(first) = commands.insert(name, &bundle.name) {
+                bail!(
+                    "command `{name}` is named by both bundles `{first}` and `{}`",
+                    bundle.name
+                );
+            }
+        }
+    }
+    for bundle in bundles {
+        for name in &bundle.items.skills {
+            if commands.contains_key(name) {
+                bail!(
+                    "command `{name}` and skill `{name}` have one name in the bundle closure; both would be written to skills/{name}/SKILL.md"
+                );
+            }
+        }
+    }
+    if bundles.iter().any(|bundle| !bundle.items.rules.is_empty()) {
+        for (kind, has_init) in [
+            (
+                "command",
+                commands.keys().any(|name| name.as_str() == "init"),
+            ),
+            (
+                "skill",
+                bundles
+                    .iter()
+                    .any(|bundle| bundle.items.skills.iter().any(|name| name == "init")),
+            ),
+        ] {
+            if has_init {
+                bail!(
+                    "{kind} `init` cannot be packed with rules: `pack` writes the init command to skills/init/SKILL.md"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Paths `skills/<name>/SKILL.md` and `skills/<name>/<rel>`.
+fn command_files(
+    command: &Command,
+    body: &str,
+    resources: &[CommandResource],
+    client: Client,
+) -> Result<Vec<PackFile>> {
+    let dir = Path::new("skills").join(&command.name);
+    let mut files = vec![PackFile {
+        rel: dir.join("SKILL.md"),
+        bytes: crate::generate::render_command(command, body, client)?.into_bytes(),
+        mode: None,
+    }];
+    files.extend(resources.iter().map(|resource| PackFile {
+        rel: dir.join(&resource.rel),
+        bytes: resource.bytes.clone(),
+        mode: resource.mode,
+    }));
+    Ok(files)
+}
+
+fn init_command(bundle: &str) -> Command {
+    Command {
+        schema: Default::default(),
+        name: "init".to_string(),
+        description: format!("Install the rules of the {bundle} bundle into this repository"),
+        argument_hint: None,
+        license: None,
+        metadata: None,
+        ignore: vec![],
+    }
+}
+
+fn init_body(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient) -> String {
     let flag = match client {
         PackClient::Claude => "--claude",
         PackClient::Copilot => "--copilot",
     };
     let mut text = format!(
-        "---\ndescription: Install the rules of the {bundle} bundle into this repository\n---\n\nRun this command in the root directory of the repository. Then report its\noutput to the user.\n\n```text\nupskill add {source} {bundle} --kind rule --project {flag}\n```\n\nIf the command fails, report the error text. Do not run another command in its\nplace.\n"
+        "Run this command in the root directory of the repository. Then report its\noutput to the user.\n\n```text\nupskill add {source} {bundle} --kind rule --project {flag}\n```\n\nIf the command fails, report the error text. Do not run another command in its\nplace.\n"
     );
     let mut plugins = BTreeMap::new();
     for bundle in bundles {
@@ -246,6 +323,7 @@ pub fn build(
         ),
     };
     let output = plan_bundle_output(registry_root, bundle, generator)?;
+    check_command_names(&output.bundles)?;
     let entry = output
         .bundles
         .last()
@@ -281,12 +359,27 @@ pub fn build(
             mode: None,
         });
     }
+    for declared in &output.commands {
+        let source = read_command(&declared.root, &declared.name).with_context(|| {
+            format!(
+                "command `{}` of bundle `{}`",
+                declared.name, declared.bundle
+            )
+        })?;
+        files.extend(command_files(
+            &source.command,
+            &source.body,
+            &source.resources,
+            generator,
+        )?);
+    }
     if !output.rules.is_empty() {
-        files.push(PackFile {
-            rel: "commands/init.md".into(),
-            bytes: init_text(bundle, source, &output.bundles, client).into_bytes(),
-            mode: None,
-        });
+        files.extend(command_files(
+            &init_command(bundle),
+            &init_body(bundle, source, &output.bundles, client),
+            &[],
+            generator,
+        )?);
         files.push(PackFile {
             rel: hook_path.into(),
             bytes: hook.as_bytes().to_vec(),
@@ -448,6 +541,19 @@ mod tests {
             anyhow::bail!("injected rename failure at {index}");
         }
         Ok(())
+    }
+
+    fn rendered_init(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient) -> String {
+        let generator = match client {
+            PackClient::Claude => Client::Claude,
+            PackClient::Copilot => Client::Copilot,
+        };
+        crate::generate::render_command(
+            &init_command(bundle),
+            &init_body(bundle, source, bundles, client),
+            generator,
+        )
+        .unwrap()
     }
 
     /// The first client had no directory before the run: the rollback moves
@@ -679,7 +785,7 @@ mod tests {
             "../tests/fixtures/pack/registry/base.bundle.yaml"
         ))
         .unwrap();
-        let text = init_text(
+        let text = rendered_init(
             "demo",
             "driftsys/demo@v1",
             &[base, demo()],
@@ -688,7 +794,7 @@ mod tests {
         assert!(text.contains("- plugin `tool`: <https://example.com/tool>\n"));
         assert_eq!(
             text,
-            include_str!("../tests/fixtures/pack/expected/demo-claude/commands/init.md")
+            include_str!("../tests/fixtures/pack/expected/demo-claude/skills/init/SKILL.md")
         );
     }
 
@@ -702,7 +808,7 @@ mod tests {
             (PackClient::Claude, "claude"),
             (PackClient::Copilot, "copilot"),
         ] {
-            let text = init_text("demo", "driftsys/demo@v1", &[base.clone(), demo()], client);
+            let text = rendered_init("demo", "driftsys/demo@v1", &[base.clone(), demo()], client);
             assert!(text.contains("- plugin `base-tool`\n"));
             assert!(!text.contains("MCP server"));
             assert!(text.contains(&format!(
@@ -719,9 +825,9 @@ mod tests {
             assert!(!text.contains("vscode-only"));
             assert!(!text.contains("opencode-only"));
             let expected = if client == PackClient::Claude {
-                include_str!("../tests/fixtures/pack/expected/demo-claude/commands/init.md")
+                include_str!("../tests/fixtures/pack/expected/demo-claude/skills/init/SKILL.md")
             } else {
-                include_str!("../tests/fixtures/pack/expected/demo-copilot/commands/init.md")
+                include_str!("../tests/fixtures/pack/expected/demo-copilot/skills/init/SKILL.md")
             };
             assert_eq!(text, expected);
         }
@@ -737,12 +843,13 @@ mod tests {
 
     #[test]
     fn init_without_list_ends_after_failure_instruction() {
-        let expected = include_str!("../tests/fixtures/pack/expected/demo-claude/commands/init.md")
-            .split("\nThe command does not install")
-            .next()
-            .unwrap();
+        let expected =
+            include_str!("../tests/fixtures/pack/expected/demo-claude/skills/init/SKILL.md")
+                .split("\nThe command does not install")
+                .next()
+                .unwrap();
         assert_eq!(
-            init_text("demo", "driftsys/demo@v1", &[], PackClient::Claude),
+            rendered_init("demo", "driftsys/demo@v1", &[], PackClient::Claude),
             expected
         );
     }
@@ -756,7 +863,7 @@ mod tests {
 
     #[test]
     fn init_of_a_closure_with_mcp_servers_and_no_plugin_has_no_list() {
-        let text = init_text(
+        let text = rendered_init(
             "a",
             "driftsys/demo@v1",
             &[bundle("a", "  s:\n    local: { command: c }\n")],

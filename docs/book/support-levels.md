@@ -206,3 +206,7 @@ It used a local marketplace directory; a hosted git marketplace, other platforms
 and a plugin update through the client were not tested. `doctor` gains no row
 for plugin output; the item support levels above do not qualify
 marketplace-installed plugins.
+
+Command items are rendered only by `pack`, as user-only skills. They share the
+experimental status of plugin output and have no row in the support table or in
+`doctor`.

@@ -3,10 +3,15 @@
 use std::collections::BTreeSet;
 use std::path::{Component, Path, PathBuf};
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
+
+use super::discovery::{find_command_dir, iter_item_resources};
+use super::ignore::filter_ignored;
+use crate::model::Command;
+use crate::parse::frontmatter;
 
 use super::ItemKind;
-use super::install::{install_from_local_path_selective, resolve_bundle_closure};
+use super::install::{install_from_local_path_selective, resolve_bundle_closure, source_mode};
 use super::plan::PlanNames;
 use crate::generate::Client;
 use crate::scope::Scope;
@@ -23,11 +28,69 @@ pub struct BundleFile {
     pub mode: Option<u32>,
 }
 
+/// A command declaration and the source root of its resolved bundle.
+pub struct BundleCommand {
+    pub name: String,
+    pub bundle: String,
+    pub root: PathBuf,
+}
+
+/// A resource relative to the command directory.
+pub struct CommandResource {
+    pub rel: PathBuf,
+    pub bytes: Vec<u8>,
+    pub mode: Option<u32>,
+}
+
+/// The parsed command, its body and the resources that its ignore list keeps.
+pub struct CommandSource {
+    pub command: Command,
+    pub body: String,
+    pub resources: Vec<CommandResource>,
+}
+
+/// Read a named command without writing consumer state or generated files.
+pub fn read_command(root: &Path, name: &str) -> Result<CommandSource> {
+    let dir = find_command_dir(root, name)?.with_context(|| {
+        format!(
+            "no directory `{name}` with a COMMAND.md in {}",
+            root.display()
+        )
+    })?;
+    let path = dir.join("COMMAND.md");
+    let raw = std::fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?;
+    let (command, body) =
+        frontmatter::parse::<Command>(&raw).with_context(|| format!("parse {}", path.display()))?;
+    if command.name != name {
+        bail!(
+            "{}: `name: {}` must equal the directory name `{name}`",
+            path.display(),
+            command.name
+        );
+    }
+    let mut resources = Vec::new();
+    for rel in filter_ignored(iter_item_resources(&dir), &command.ignore) {
+        let from = dir.join(&rel);
+        resources.push(CommandResource {
+            rel,
+            bytes: std::fs::read(&from).with_context(|| format!("read {}", from.display()))?,
+            mode: source_mode(&from)?,
+        });
+    }
+    Ok(CommandSource {
+        command,
+        body: body.to_string(),
+        resources,
+    })
+}
+
 pub struct BundleOutput {
     /// The closure, dependencies before dependents; the last is the entry.
     pub bundles: Vec<crate::model::Bundle>,
-    /// Skill and agent files for the client. No rule file.
+    /// Skill and agent files for the client. No rule or command file.
     pub files: Vec<BundleFile>,
+    /// Commands in closure order, then in each bundle list order.
+    pub commands: Vec<BundleCommand>,
     /// Names of the rules that generate output for the client, sorted.
     pub rules: Vec<String>,
 }
@@ -91,12 +154,28 @@ pub fn plan_bundle_output(
             }
         }
     }
+    let commands = bundles
+        .iter()
+        .flat_map(|resolved| {
+            resolved
+                .bundle
+                .items
+                .commands
+                .iter()
+                .map(|name| BundleCommand {
+                    name: name.clone(),
+                    bundle: resolved.bundle.name.clone(),
+                    root: closure.source_roots[&resolved.source_label].clone(),
+                })
+        })
+        .collect();
     Ok(BundleOutput {
         bundles: bundles
             .into_iter()
             .map(|resolved| resolved.bundle)
             .collect(),
         files,
+        commands,
         rules: rules.into_iter().collect(),
     })
 }

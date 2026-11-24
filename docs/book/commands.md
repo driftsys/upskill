@@ -1347,20 +1347,45 @@ result lines.
 upskill pack my-bundle --source owner/repo@v1 --out dist
 ```
 
-| Content                                    | Claude Code output                     | GitHub Copilot CLI output              |
-| ------------------------------------------ | -------------------------------------- | -------------------------------------- |
-| Directory                                  | `<out>/<bundle>-claude/`               | `<out>/<bundle>-copilot/`              |
-| Manifest                                   | `.claude-plugin/plugin.json`           | `plugin.json`                          |
-| Skills and resources                       | `skills/<name>/SKILL.md` and resources | `skills/<name>/SKILL.md` and resources |
-| Agents                                     | `agents/<name>.md`                     | `agents/<name>.agent.md`               |
-| MCP servers, when declared                 | `.mcp.json`                            | `.mcp.json`                            |
-| LSP servers, when declared                 | `.lsp.json`                            | `lsp.json`                             |
-| Init, when rules target this client        | `commands/init.md`                     | `commands/init.md`                     |
-| Notice hook, when rules target this client | `hooks/hooks.json`                     | `hooks.json`                           |
+| Content      | Claude Code output           | Copilot CLI output        |
+| ------------ | ---------------------------- | ------------------------- |
+| Directory    | `<out>/<bundle>-claude/`     | `<out>/<bundle>-copilot/` |
+| Manifest     | `.claude-plugin/plugin.json` | `plugin.json`             |
+| Skills       | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`  |
+| Commands     | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`  |
+| Agents       | `agents/<name>.md`           | `agents/<name>.agent.md`  |
+| MCP servers  | `.mcp.json`                  | `.mcp.json`               |
+| LSP servers  | `.lsp.json`                  | `lsp.json`                |
+| Init (rules) | `skills/init/SKILL.md`       | `skills/init/SKILL.md`    |
+| Hook (rules) | `hooks/hooks.json`           | `hooks.json`              |
+
+`pack` renders every command in `items.commands` from the bundle's `requires`
+closure as `skills/<name>/SKILL.md`, with its resources beside it. Claude Code
+frontmatter contains `name`, `description`, optional `argument-hint`, and
+`disable-model-invocation: true`, in that order. Copilot CLI frontmatter
+contains `name`, `description`, and `disable-model-invocation: true`; it omits
+`argument-hint`. Both outputs keep `$ARGUMENTS` in the body and process client
+directives. The user calls a command as `/<plugin>:<name>`.
+
+The following errors fail with exit code 1 before any output is written. Name
+checks cover the whole closure, regardless of the selected client:
+
+- Two bundles list one command name.
+- A command and a skill have one name in the closure; both would be written to
+  `skills/<name>/SKILL.md`.
+- A command named `init` is listed when any bundle in the closure lists rules.
+- A skill named `init` is listed when any bundle in the closure lists rules.
+- A listed command has no directory with a `COMMAND.md` in its source.
+- The `name` in a `COMMAND.md` differs from its directory name.
+
+Command reading errors identify the command and its bundle. Duplicate command
+errors identify both bundles. `pack` is the only command that renders
+`items.commands`.
 
 Skills and agents include the bundle's `requires` closure and use the existing
-client generators. The manifest takes `name`, `description`, optional `license`
-and optional `metadata.version` (as `version`) from the bundle. No README and no
+client generators. Skill and command resources are copied beside their
+`SKILL.md`. The manifest takes `name`, `description`, optional `license` and
+optional `metadata.version` (as `version`) from the bundle. No README and no
 LICENSE file is written, so `claude plugin validate` reports both as missing.
 
 `pack` writes the MCP servers of the bundle closure under `mcpServers` in
@@ -1430,7 +1455,8 @@ output is experimental until a smoke test with a hosted git marketplace passes
 in both clients (the local-marketplace smoke test of 2026-11-19 passed);
 `doctor` gains no row.
 
-No rule file is included. Init instructs the model to run
+No rule file is included. Init is a user-only skill at `skills/init/SKILL.md`,
+rendered by the command renderer. It instructs the model to run
 `upskill add <source> <bundle> --kind rule --project --claude`, or the same
 command with `--copilot`, in the repository root and report the result. On
 failure it reports the error and runs no substitute command. It lists declared
@@ -1441,12 +1467,15 @@ notice hook. The hook is copied unchanged from the corresponding upskill notice
 plugin and runs `upskill update --notice`; it is silent when the upskill binary
 is absent.
 
-Known limits: init and the hook need the upskill binary on the host; installing
-the same skills with both a plugin and `add` exposes duplicates; references by
-short skill name are not verified to resolve to `<plugin>:<skill>`. When both
-outputs are published together, check that Copilot does not also load the Claude
-directory. Codex, OpenCode, VS Code, general hook authoring, third-party plugin
-packaging, and duplicate detection are outside this command's scope.
+Known limits: the init skill has `disable-model-invocation: true` and cannot be
+started in Copilot CLI prompt mode (`-p`), which does not process slash commands
+(technote T4, trial 1). The user starts it in an interactive session. Init and
+the hook need the upskill binary on the host; installing the same skills with
+both a plugin and `add` exposes duplicates; references by short skill name are
+not verified to resolve to `<plugin>:<skill>`. When both outputs are published
+together, check that Copilot does not also load the Claude directory. Codex,
+OpenCode, VS Code, general hook authoring, third-party plugin packaging, and
+duplicate detection are outside this command's scope.
 
 ### `upskill new <kind> <name>`
 

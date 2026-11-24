@@ -60,7 +60,7 @@ invocable as a subagent or primary agent depending on the target client. Agents
 establish identity and role ("you are a security reviewer; when invoked, do X").
 
 **Command**: a procedure that the user calls by name. `upskill add` and
-`upskill update` do not install command items.
+`upskill update` do not install command items. Only `pack` renders a command.
 
 **Bundle**: a manifest file grouping items (and optionally other bundles) by
 reference for distribution. Bundles contain no content themselves.
@@ -1100,6 +1100,15 @@ Commands also accept the common fields `schema`, `license`, `metadata`, and
 `ignore`. Any other field is an error, including `audience`, `requires`,
 `allowed-tools`, and client-specific passthrough blocks. `$ARGUMENTS` in the
 body stands for the text that the user gives.
+
+Only `upskill pack` renders command items. For Claude Code, it writes
+`skills/<name>/SKILL.md` with frontmatter keys `name`, `description`, optional
+`argument-hint`, and `disable-model-invocation: true`, in that order. For
+Copilot CLI, it writes the same path with `name`, `description`, and
+`disable-model-invocation: true`, omitting `argument-hint`. Both outputs copy
+resources beside `SKILL.md`, honour `ignore`, and process client directives in
+the body. The user calls a command as `/<plugin>:<name>`. Commands have no
+opencode output.
 
 ---
 

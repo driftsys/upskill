@@ -45,7 +45,7 @@ items: # required — may be empty {} for meta-bundles
     - rule-one
   agents:
     - agent-one
-  commands: # optional — add and update do not install them
+  commands: # optional — only upskill pack renders them
     - release-notes
 
 requires: # optional — dependencies on other bundles

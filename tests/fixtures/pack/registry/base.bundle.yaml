@@ -3,6 +3,7 @@ name: base
 description: Base bundle
 items:
   skills: [beta]
+  commands: [release-notes]
   rules: [naming]
 plugins:
   base-tool:
