@@ -734,7 +734,7 @@ fn copilot_mcp_config_path() -> Option<std::path::PathBuf> {
 
 /// `mcpServers`-style server object for a local (stdio) descriptor:
 /// `{ command, args?, env? }`.
-fn mcp_servers_local_value(local: &McpLocal) -> Value {
+pub(crate) fn mcp_servers_local_value(local: &McpLocal) -> Value {
     let mut server = serde_json::Map::new();
     server.insert("command".into(), json!(local.command));
     if !local.args.is_empty() {
@@ -748,7 +748,7 @@ fn mcp_servers_local_value(local: &McpLocal) -> Value {
 
 /// `mcpServers`-style server object for a remote descriptor:
 /// `{ type, url, headers? }`.
-fn mcp_servers_remote_value(remote: &McpRemote) -> Value {
+pub(crate) fn mcp_servers_remote_value(remote: &McpRemote) -> Value {
     let mut server = serde_json::Map::new();
     server.insert("type".into(), json!(remote.transport_type));
     server.insert("url".into(), json!(remote.url));

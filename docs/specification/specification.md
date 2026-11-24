@@ -923,6 +923,7 @@ upskill pack my-bundle --source owner/repo@v1 --out dist
 | Manifest                                   | `.claude-plugin/plugin.json`           | `plugin.json`                          |
 | Skills and resources                       | `skills/<name>/SKILL.md` and resources | `skills/<name>/SKILL.md` and resources |
 | Agents                                     | `agents/<name>.md`                     | `agents/<name>.agent.md`               |
+| MCP servers, when declared                 | `.mcp.json`                            | `.mcp.json`                            |
 | Init, when rules target this client        | `commands/init.md`                     | `commands/init.md`                     |
 | Notice hook, when rules target this client | `hooks/hooks.json`                     | `hooks.json`                           |
 
@@ -930,6 +931,17 @@ Skills and agents include the bundle's `requires` closure and use the existing
 client generators. The manifest takes `name`, `description`, optional `license`
 and optional `metadata.version` (as `version`) from the bundle. No README and no
 LICENSE file is written, so `claude plugin validate` reports both as missing.
+
+`pack` writes the MCP servers of the bundle closure under `mcpServers` in
+`.mcp.json` at the root of each client directory. A local server contains
+`command`, `args` and `env`; a remote server contains `type`, `url` and
+`headers`. Empty `args`, `env` and `headers` are omitted. `requires-env` is not
+written. An output without MCP servers has no `.mcp.json`. The client adds and
+removes the servers with the plugin. Equal server objects declared under one
+name in several bundles produce one entry. If two bundles of the closure declare
+one server name with different written content, `pack` fails with exit code 1
+before writing output. A difference only in `requires-env` does not cause a
+conflict.
 
 All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force`
@@ -966,17 +978,17 @@ No rule file is included. Init instructs the model to run
 command with `--copilot`, in the repository root and report the result. On
 failure it reports the error and runs no substitute command. It lists declared
 plugins for that client (with its `install_url` or manual `instructions_url`
-when present, otherwise by name) and MCP servers from the closure for the user,
-without installing them. An output with no rules for its client has neither init
-nor the notice hook. The hook is copied unchanged from the corresponding upskill
-notice plugin and runs `upskill update --notice`; it is silent when the upskill
-binary is absent.
+when present, otherwise by name) from the closure for the user, without
+installing them. An output with no rules for its client has neither init nor the
+notice hook. The hook is copied unchanged from the corresponding upskill notice
+plugin and runs `upskill update --notice`; it is silent when the upskill binary
+is absent.
 
 Known limits: init and the hook need the upskill binary on the host; installing
 the same skills with both a plugin and `add` exposes duplicates; references by
 short skill name are not verified to resolve to `<plugin>:<skill>`. When both
 outputs are published together, check that Copilot does not also load the Claude
-directory. Codex, OpenCode, VS Code, general hook authoring, plugin and MCP
+directory. Codex, OpenCode, VS Code, general hook authoring, third-party plugin
 packaging, and duplicate detection are outside this command's scope.
 
 ## 3. Generation pipeline
