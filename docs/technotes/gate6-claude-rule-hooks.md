@@ -1,5 +1,9 @@
 # Gate 6 Claude unscoped rule hook controls
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed
+`scripts/qualify-plugin-rules.py` and its tests, which this note names; the
+commands in this note no longer run.
+
 Task [#390](https://github.com/driftsys/upskill/issues/390), Q4 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains passing project-scope activation controls on Claude Code 2.1.308, macOS

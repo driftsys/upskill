@@ -342,6 +342,20 @@ impl Lockfile {
             .retain(|existing| !(existing.kind == kind && existing.name == name));
     }
 
+    /// True when `entry` names requirers and none of them is installed in this
+    /// lockfile. `doctor` reports such an entry as an orphaned dependency
+    /// (#196). `update` also takes it in the item filter of a directory source with
+    /// recorded bundles, unless a recorded bundle of that source lists it (#613).
+    pub fn is_orphaned_dependency(&self, entry: &LockedItem) -> bool {
+        !entry.required_by.is_empty()
+            && entry.required_by.iter().all(|requirer| {
+                !self
+                    .items
+                    .iter()
+                    .any(|i| format!("{}:{}", i.kind, i.name) == *requirer)
+            })
+    }
+
     /// Names of the rules whose output was written for opencode, by
     /// [`LockedItem::is_opencode_rule`].
     pub fn opencode_rule_names(&self) -> std::collections::BTreeSet<String> {
@@ -1025,6 +1039,52 @@ mod tests {
         .unwrap();
         let lock = Lockfile::load(tmp.path()).expect("must parse");
         assert_eq!(lock.plugins[0].status, PluginInstallStatus::Installed);
+    }
+
+    #[test]
+    fn is_orphaned_dependency_compares_kind_and_name_of_the_requirers() {
+        let mut lock = Lockfile::new();
+        let mut e = item(ItemKind::Skill, "e");
+        e.required_by = vec!["skill:d".to_string()];
+        lock.items.push(e.clone());
+        // No requirer installed: orphaned.
+        assert!(lock.is_orphaned_dependency(&e));
+        // A rule named `d` is not the skill `d`.
+        lock.items.push(item(ItemKind::Rule, "d"));
+        assert!(lock.is_orphaned_dependency(&e));
+        // The skill `d` is installed: not orphaned.
+        lock.items.push(item(ItemKind::Skill, "d"));
+        assert!(!lock.is_orphaned_dependency(&e));
+    }
+
+    #[test]
+    fn is_orphaned_dependency_is_true_when_several_requirers_are_all_absent() {
+        let lock = Lockfile::new();
+        let mut e = item(ItemKind::Skill, "e");
+        e.required_by = vec!["skill:d1".to_string(), "skill:d2".to_string()];
+        assert!(lock.is_orphaned_dependency(&e));
+    }
+
+    #[test]
+    fn is_orphaned_dependency_is_false_when_the_installed_requirer_is_first_or_last() {
+        for requirers in [["skill:y", "skill:z"], ["skill:z", "skill:y"]] {
+            let mut lock = Lockfile::new();
+            lock.items.push(item(ItemKind::Skill, "y"));
+            let mut e = item(ItemKind::Skill, "e");
+            e.required_by = requirers.iter().map(|r| r.to_string()).collect();
+            assert!(!lock.is_orphaned_dependency(&e), "{requirers:?}");
+        }
+    }
+
+    #[test]
+    fn is_orphaned_dependency_is_false_with_one_installed_requirer_or_none_named() {
+        let mut lock = Lockfile::new();
+        lock.items.push(item(ItemKind::Skill, "y"));
+        let mut e = item(ItemKind::Skill, "e");
+        e.required_by = vec!["skill:d".to_string(), "skill:y".to_string()];
+        assert!(!lock.is_orphaned_dependency(&e));
+        e.required_by.clear();
+        assert!(!lock.is_orphaned_dependency(&e));
     }
 
     #[test]

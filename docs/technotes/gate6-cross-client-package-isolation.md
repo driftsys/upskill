@@ -1,5 +1,9 @@
 # Gate 6 cross-client package isolation: Claude activation observed
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed
+`scripts/qualify-plugin-rules.py` and its tests, which this note names; the
+commands in this note no longer run.
+
 Task [#410](https://github.com/driftsys/upskill/issues/410), Q11 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains a bounded isolation FAIL on macOS arm64, 2026-10-25: Claude 2.1.308

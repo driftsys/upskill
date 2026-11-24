@@ -1,5 +1,9 @@
 # Gate 6 Codex rule lifecycle: repeated native bodies
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed
+`scripts/qualify-plugin-rules.py`, its `--replay-codex-rule-lifecycle` option
+and its tests, which this note names; the commands in this note no longer run.
+
 Task [#379](https://github.com/driftsys/upskill/issues/379), Q9 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains a 2026-10-24 continuity experiment on Codex CLI 0.164.0, macOS arm64.

@@ -568,7 +568,7 @@ class SmokeRunTest(unittest.TestCase):
         self.assertEqual(q.smoke_response('claude', ' MARK \n'), 'MARK')
 
     def test_a_copilot_stream_with_tool_events_is_a_complete_run(self):
-        # Event shapes as recorded in test_replay_copilot_agent.py.
+        # Event shapes as recorded from Copilot CLI streams.
         events = [
             {'type': 'tool.execution_start', 'data': {'toolCallId': 'call-1', 'toolName': 'skill', 'arguments': {'skill': 's'}}},
             {'type': 'tool.execution_complete', 'data': {'toolCallId': 'call-1', 'success': True}},

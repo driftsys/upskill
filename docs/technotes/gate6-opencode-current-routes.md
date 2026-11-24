@@ -1,5 +1,9 @@
 # Gate 6 current OpenCode routes: failed execution positives
 
+Issue [#540](https://github.com/driftsys/upskill/issues/540) removed
+`scripts/qualify-plugin-rules.py` and its tests, which this note names; the
+commands in this note no longer run.
+
 Task [#391](https://github.com/driftsys/upskill/issues/391), Q5 of the
 [implementation handoff](../archive/specs/2026-10-23-customization-delivery-implementation-spec.md),
 retains two failed native positives on OpenCode 2.1.4, macOS arm64, 2026-10-24.

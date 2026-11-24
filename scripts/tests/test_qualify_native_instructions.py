@@ -1,15 +1,10 @@
-import argparse
-import contextlib
 import importlib.util
-import io
-import json
 import os
-import re
+from unittest import mock
 import signal
 import subprocess
 import sys
 import time
-from unittest import mock
 from pathlib import Path
 import tempfile
 import unittest
@@ -18,406 +13,81 @@ spec = importlib.util.spec_from_file_location('qualification', Path(__file__).pa
 q = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(q)
 
-CANONICAL_PATHS = {
-    'codex': 'AGENTS.md',
-    'claude': '.claude/rules/probe.md',
-    'copilot': '.github/copilot-instructions.md',
-    'opencode': 'AGENTS.md',
-}
-
-GIT_ENVIRONMENT_SENTINELS = {
-    'GIT_DIR': '/unrelated/repository.git',
-    'GIT_WORK_TREE': '/unrelated/worktree',
-    'GIT_INDEX_FILE': '/unrelated/index',
-    'GIT_COMMON_DIR': '/unrelated/common',
-    'GIT_OBJECT_DIRECTORY': '/unrelated/objects',
-    'GIT_ALTERNATE_OBJECT_DIRECTORIES': '/unrelated/alternates',
-    'GIT_CONFIG_COUNT': '1',
-    'GIT_CONFIG_KEY_0': 'core.worktree',
-    'GIT_CONFIG_VALUE_0': '/unrelated/config-worktree',
-    'GIT_UPSKILL_FUTURE_SENTINEL': 'synthetic-git-value',
-}
-PRESERVED_ENVIRONMENT_SENTINELS = {
-    'PATH': '/synthetic/bin',
-    'HOME': '/synthetic/home',
-    'LANG': 'C',
-    'UPSKILL_TEST_ORDINARY': 'synthetic-ordinary-value',
-    'GH_TOKEN': 'synthetic-github-token',
-    'OPENAI_API_KEY': 'synthetic-openai-key',
-    'ANTHROPIC_API_KEY': 'synthetic-anthropic-key',
-    'COPILOT_GITHUB_TOKEN': 'synthetic-copilot-token',
-}
+SCRIPT = str(Path(q.__file__))
 
 
-def fixture_git(project, *args):
-    env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
-    return subprocess.run(['git', '-C', str(project), *args], env=env, check=True, capture_output=True, text=True).stdout
+class IsolatedGitEnvironmentTests(unittest.TestCase):
+    def test_no_git_variable_reaches_the_environment(self):
+        sentinels = {
+            'GIT_DIR': '/unrelated/repository.git',
+            'GIT_WORK_TREE': '/unrelated/worktree',
+            'GIT_INDEX_FILE': '/unrelated/index',
+            'GIT_COMMON_DIR': '/unrelated/common',
+            'GIT_OBJECT_DIRECTORY': '/unrelated/objects',
+            'GIT_CONFIG_COUNT': '1',
+            'GIT_CONFIG_KEY_0': 'core.worktree',
+            'GIT_CONFIG_VALUE_0': '/unrelated/config-worktree',
+            'GIT_UPSKILL_SENTINEL_X': 'synthetic-git-value',
+        }
+        kept = {'PATH': '/synthetic/bin', 'HOME': '/synthetic/home', 'UPSKILL_TEST_ORDINARY': 'x',
+                'GITHUB_TOKEN': 'dummy-token', 'UPSKILL_SENTINEL_KEEP': 'keep'}
+        with mock.patch.dict(os.environ, {**sentinels, **kept}, clear=True):
+            env = q.isolated_git_environment()
+        self.assertEqual([key for key in env if key.startswith('GIT_')], [])
+        for key, value in kept.items():
+            self.assertEqual(env.get(key), value)
 
 
-class QualificationTests(unittest.TestCase):
-    def test_fixture_git_environments_exclude_git_prefix_and_preserve_other_variables(self):
-        inherited = {**GIT_ENVIRONMENT_SENTINELS, **PRESERVED_ENVIRONMENT_SENTINELS}
+class InvokeStateTests(unittest.TestCase):
+    def run_child(self, code, timeout=10):
         with tempfile.TemporaryDirectory() as tmp:
-            with mock.patch.dict(os.environ, inherited, clear=True), mock.patch.object(q.subprocess, 'run') as git:
-                for client in CANONICAL_PATHS:
-                    q.fixtures(Path(tmp) / client, client)
-                    self.assertEqual(dict(os.environ), inherited)
-                q.copilot_claude_rules_fixtures(Path(tmp) / 'reader')
-                self.assertEqual(dict(os.environ), inherited)
-                self.assertEqual(git.call_count, 22)
-                for call in git.call_args_list:
-                    command = call.args[0]
-                    with self.subTest(command=command):
-                        self.assertEqual(command[0], 'git')
-                        self.assertTrue('init' in command or 'commit' in command)
-                        self.assertEqual(call.kwargs['env'], PRESERVED_ENVIRONMENT_SENTINELS)
+            return q.invoke([sys.executable, '-c', code], Path(tmp), timeout, os.environ.copy())
 
-    def test_fixture_markers_are_separated(self):
+    def test_a_login_message_with_a_failing_exit_is_an_authentication_failure(self):
+        result = self.run_child("import sys; print('Not logged in', file=sys.stderr); sys.exit(1)")
+        self.assertEqual(result['state'], 'authentication_failure')
+
+    def test_a_login_message_on_standard_output_only_is_an_authentication_failure(self):
+        result = self.run_child("import sys; print('Not logged in'); sys.exit(1)")
+        self.assertEqual(result['state'], 'authentication_failure')
+
+    def test_a_failing_exit_without_a_login_message_is_a_failure(self):
+        self.assertEqual(self.run_child('import sys; sys.exit(3)')['state'], 'failure')
+
+    def test_a_zero_exit_is_a_success_even_with_a_login_message(self):
+        self.assertEqual(self.run_child("print('not logged in')")['state'], 'success')
+
+    def test_a_child_that_outlasts_the_timeout_is_a_timeout(self):
+        self.assertEqual(self.run_child('import time; time.sleep(30)', timeout=0.3)['state'], 'timeout')
+
+    def test_a_missing_executable_is_unavailable(self):
         with tempfile.TemporaryDirectory() as tmp:
-            for client in CANONICAL_PATHS:
-                root = Path(tmp) / client
-                positive, negative, marker, staging_marker = q.fixtures(root, client, False)
-                positives = [p for p in positive.rglob('*') if '.git' not in p.relative_to(positive).parts]
-                negatives = [p for p in negative.rglob('*') if '.git' not in p.relative_to(negative).parts]
-                canonical = Path(CANONICAL_PATHS[client])
-                positive_marked = [p.relative_to(positive) for p in positives if p.is_file() and marker in p.read_text()]
-                self.assertEqual(positive_marked, [canonical])
-                marked = [p for p in negatives if p.is_file() and staging_marker in p.read_text()]
-                self.assertEqual(len(marked), 1)
-                self.assertEqual(marked[0].parent, negative / canonical.parent)
-                self.assertFalse((negative / canonical).exists())
-                self.assertFalse(any(marker in p.read_text() for p in negatives if p.is_file()))
-                self.assertFalse(any(staging_marker in p.read_text() for p in positives if p.is_file()))
-                self.assertTrue(marked[0].name.startswith('.upskill-stage-'))
-                self.assertEqual(marked[0].suffix, '')
+            result = q.invoke([str(Path(tmp) / 'no-such-client')], Path(tmp), 5, os.environ.copy())
+        self.assertEqual(result['state'], 'unavailable')
 
-    def test_fixture_root_commits_have_distinct_project_identities(self):
+
+class CommandLineTests(unittest.TestCase):
+    # test_smoke_native.py pins the refusal of the smoke-only flags without
+    # --smoke; the refusals below are pinned only here.
+    def run_script(self, *flags):
+        done = subprocess.run([sys.executable, '-I', SCRIPT, *flags], capture_output=True, text=True)
+        self.assertEqual(done.returncode, 2, done.stderr)
+        return done.stderr
+
+    def test_the_script_without_smoke_is_a_usage_error(self):
+        self.assertIn('--smoke is required', self.run_script())
+
+    def test_a_client_that_is_not_a_smoke_client_is_refused(self):
+        for client in ('codex', 'opencode'):
+            self.assertIn('invalid choice', self.run_script('--smoke', '--upskill', 'x', '--clients', client))
+
+    def test_smoke_without_the_upskill_flag_is_refused(self):
+        self.assertIn('--upskill is required with --smoke', self.run_script('--smoke'))
+
+    def test_run_with_a_missing_upskill_file_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
-            positive, negative, _, _ = q.fixtures(Path(tmp), 'opencode')
-            heads = []
-            for fixture in (positive, negative):
-                heads.append(fixture_git(fixture, 'rev-parse', '--verify', 'HEAD').strip())
-                self.assertEqual(fixture_git(fixture, 'ls-tree', '--name-only', 'HEAD'), '')
-            self.assertNotEqual(*heads)
-
-    def test_fixture_git_cannot_modify_inherited_repository(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            external = root / 'external'
-            external.mkdir()
-            fixture_git(external, 'init', '-q')
-            fixture_git(external, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--allow-empty', '-m', 'test: external sentinel')
-            sentinel = external / 'sentinel'
-            sentinel.write_text('staged sentinel\n')
-            fixture_git(external, 'add', 'sentinel')
-            sentinel.write_text('worktree sentinel\n')
-            before_head = fixture_git(external, 'rev-parse', 'HEAD')
-            before_index = (external / '.git/index').read_bytes()
-            inherited = {'GIT_DIR': str(external / '.git'), 'GIT_WORK_TREE': str(external), 'GIT_INDEX_FILE': str(external / '.git/index')}
-            with mock.patch.dict(os.environ, inherited):
-                positive, negative, _, _ = q.fixtures(root / 'fixtures', 'opencode')
-                reader_rows = q.copilot_claude_rules_fixtures(root / 'reader-fixtures')
-                self.assertEqual({key: os.environ[key] for key in inherited}, inherited)
-            self.assertEqual(fixture_git(external, 'rev-parse', 'HEAD'), before_head)
-            self.assertEqual((external / '.git/index').read_bytes(), before_index)
-            self.assertEqual(sentinel.read_text(), 'worktree sentinel\n')
-            heads = []
-            for project in (positive, negative, *(row['project'] for row in reader_rows)):
-                self.assertTrue((project / '.git').is_dir())
-                self.assertEqual(Path(fixture_git(project, 'rev-parse', '--show-toplevel').strip()).resolve(), project.resolve())
-                heads.append(fixture_git(project, 'rev-parse', 'HEAD'))
-                self.assertEqual(fixture_git(project, 'ls-tree', '--name-only', 'HEAD'), '')
-            self.assertEqual(len(set(heads)), 5)
-
-    def test_distinct_negative_marker(self):
-        self.assertEqual(q.classify('positive', 'staging', 'positive', 'absent', 'staging'), 'staging_discovered')
-
-    def test_failure_never_qualifies(self):
-        for positive in ('failure', 'timeout', 'authentication_failure', 'unavailable'):
-            self.assertEqual(q.classify(positive, 'fallback', 'marker', 'fallback'), 'positive_control_failed')
-        for negative in ('failure', 'timeout', 'authentication_failure', 'unavailable'):
-            self.assertNotEqual(q.classify('marker', negative, 'marker', 'fallback'), 'qualified')
-
-    def test_exact_responses_required(self):
-        self.assertEqual(q.classify('marker', 'fallback', 'marker', 'fallback'), 'qualified')
-        self.assertEqual(q.classify('marker', 'marker', 'marker', 'fallback'), 'staging_discovered')
-        self.assertEqual(q.classify('prefix marker', 'fallback', 'marker', 'fallback'), 'positive_control_failed')
-        self.assertEqual(q.classify('marker', 'other', 'marker', 'fallback'), 'inconclusive')
-
-class CopilotClaudeRulesTests(unittest.TestCase):
-    def test_reader_fixture_has_only_the_selected_instruction(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            rows = q.copilot_claude_rules_fixtures(Path(tmp))
-            self.assertEqual([row['label'] for row in rows], ['positive', 'candidate', 'candidate-paths'])
-            heads = []
-            markers = [row['marker'] for row in rows]
-            self.assertEqual(len(set(markers)), 3)
-            for row in rows:
-                project = row['project']
-                files = [p for p in project.rglob('*') if p.is_file() and '.git' not in p.relative_to(project).parts]
-                path = '.github/copilot-instructions.md' if row['label'] == 'positive' else '.claude/rules/probe.md'
-                self.assertEqual([str(p.relative_to(project)) for p in files], [path])
-                text = files[0].read_text()
-                header = '---\npaths: "**/*.rs"\n---\n' if row['label'] == 'candidate-paths' else ''
-                instruction = 'For the discovery qualification question, respond with exactly ' + row['marker'] + ' and nothing else.\n'
-                self.assertEqual(text, header + instruction)
-                self.assertNotIn(row['fallback'], text)
-                self.assertEqual(text.startswith('---\npaths: "**/*.rs"\n---\nFor the discovery qualification question,'), row['label'] == 'candidate-paths')
-                for marker in markers:
-                    self.assertEqual(marker in text, marker == row['marker'])
-                heads.append(fixture_git(project, 'rev-parse', 'HEAD'))
-                self.assertEqual(fixture_git(project, 'rev-list', '--parents', '-n', '1', 'HEAD').split(), [heads[-1].strip()])
-                self.assertEqual(fixture_git(project, 'ls-tree', '--name-only', 'HEAD'), '')
-            self.assertEqual(len(set(heads)), 3)
-            self.assertEqual(len({row['fallback'] for row in rows}), 3)
-            again = q.copilot_claude_rules_fixtures(Path(tmp) / 'again')
-            self.assertFalse({row['marker'] for row in rows} & {row['marker'] for row in again})
-            self.assertFalse({row['fallback'] for row in rows} & {row['fallback'] for row in again})
-
-    def test_reader_classification_requires_successful_positive_and_exact_candidate(self):
-        self.assertEqual(q.classify_reader('ok', 'seen', 'ok', 'seen', 'absent'), 'reads')
-        self.assertEqual(q.classify_reader('ok', 'absent', 'ok', 'seen', 'absent'), 'does not read')
-        for failure in q.FAILURES | {'wrong', 'prefix ok'}:
-            for candidate in ('absent', 'seen'):
-                self.assertEqual(q.classify_reader(failure, candidate, 'ok', 'seen', 'absent'), 'positive_control_failed')
-        for failure in q.FAILURES:
-            self.assertEqual(q.classify_reader('ok', failure, 'ok', 'seen', 'absent'), failure)
-        for response in ('prefix seen', 'prefix absent', '', 'ok'):
-            self.assertEqual(q.classify_reader('ok', response, 'ok', 'seen', 'absent'), 'inconclusive')
-
-
-class OpenCodeEvents(unittest.TestCase):
-    def test_text_events_and_tool_rejection(self):
-        self.assertEqual(q.opencode_response('{"type":"text","part":{"type":"text","text":"marker"}}'), ('marker', False))
-        self.assertEqual(q.opencode_response('{"type":"tool_use","part":{"text":"marker"}}')[1], True)
-        self.assertEqual(q.opencode_response('not json'), ('', True))
-
-
-class OrchestrationTests(unittest.TestCase):
-    def controlled_run(self, client='claude', failed=None, tool=False, version_state='success', version_text='v1.2.3', events='valid', events_fixture=None, discovery='both'):
-        with tempfile.TemporaryDirectory() as tmp:
-            evidence = Path(tmp) / 'evidence'
-            calls = []
-
-            def invocation(command, cwd, timeout, env):
-                is_version = '--version' in command
-                calls.append({'command': command, 'env': dict(env), 'fixture': None if is_version else cwd.parent.name + '/' + cwd.name, 'config': json.loads((cwd / 'opencode.json').read_text()) if client == 'opencode' and not is_version else None})
-                if '--version' in command:
-                    return {'state': version_state, 'stdout': version_text, 'sha256': 'version-hash'}
-                if cwd.name == 'positive':
-                    marker = re.search(r'QUALIFIED_[a-f0-9]+', (cwd / CANONICAL_PATHS[client]).read_text()).group()
-                else:
-                    marker = re.search(r'ABSENT_[a-f0-9]+', command[-1]).group()
-                for secret_marker in ('QUALIFIED_', 'STAGING_'):
-                    self.assertNotIn(secret_marker, command[-1])
-                state = failed[1] if failed and cwd.name == failed[0] else 'success'
-                current_events = events if events_fixture in (None, cwd.name) else 'valid'
-                if client == 'codex':
-                    Path(command[command.index('-o') + 1]).write_text(marker)
-                    stdout = '\n'.join([json.dumps({'type': 'item.completed', 'item': {'type': 'command_execution' if tool else 'agent_message', 'text': marker}}), json.dumps({'type': 'turn.completed'})])
-                    if current_events == 'empty':
-                        stdout = ''
-                    elif current_events == 'malformed':
-                        stdout = 'not json'
-                    elif current_events == 'unknown':
-                        stdout += '\n' + json.dumps({'type': 'unrecognized_event'})
-                    elif current_events == 'incomplete':
-                        stdout = json.dumps({'type': 'item.completed', 'item': {'type': 'agent_message', 'text': marker}})
-                    elif current_events == 'mismatch':
-                        stdout = '\n'.join([json.dumps({'type': 'item.completed', 'item': {'type': 'agent_message', 'text': 'different response'}}), json.dumps({'type': 'turn.completed'})])
-                elif client == 'copilot':
-                    stdout = '\n'.join([json.dumps({'type': 'assistant.message', 'data': {'content': marker}}), json.dumps({'type': 'result', 'sessionId': 'fixture-session', 'exitCode': 0})])
-                    if tool:
-                        stdout = json.dumps({'type': 'tool.execution_start'}) + '\n' + stdout
-                    if current_events == 'malformed':
-                        stdout = 'not json'
-                    elif current_events == 'empty':
-                        stdout = ''
-                    elif current_events == 'incomplete':
-                        stdout = json.dumps({'type': 'assistant.message', 'data': {'content': marker}})
-                    elif current_events == 'unknown':
-                        stdout = json.dumps({'type': 'future.event'}) + '\n' + stdout
-                    elif current_events == 'post-result-delta':
-                        stdout += '\n' + json.dumps({'type': 'assistant.message_delta'})
-                    elif current_events in ('leading-whitespace', 'trailing-whitespace'):
-                        padded = ' ' + marker if current_events == 'leading-whitespace' else marker + '\n'
-                        stdout = '\n'.join([json.dumps({'type': 'assistant.message', 'data': {'content': padded}}), json.dumps({'type': 'result', 'sessionId': 'fixture-session', 'exitCode': 0})])
-                elif client == 'opencode':
-                    stdout = 'not json' if current_events == 'malformed' else json.dumps({'type': 'tool_use' if tool else 'text', 'text': marker})
-                else:
-                    stdout = marker
-                extra = {'stderr': self.native_stderr} if getattr(self, 'native_stderr', None) else {}
-                return {'state': state, 'stdout': stdout, 'sha256': 'output-hash', **extra}
-
-            with mock.patch.object(q, 'invoke', side_effect=invocation), contextlib.redirect_stdout(io.StringIO()):
-                q.run(argparse.Namespace(evidence=evidence, clients=[client], timeout=1, opencode_discovery=discovery))
-            return json.loads((evidence / 'summary.json').read_text()), calls
-
-    def test_raw_stderr_never_reaches_the_evidence(self):
-        self.native_stderr = 'SECRET-TOKEN'
-        try:
-            for client in CANONICAL_PATHS:
-                with self.subTest(client=client):
-                    report, _ = self.controlled_run(client)
-                    text = json.dumps(report)
-                    self.assertNotIn('SECRET-TOKEN', text)
-                    self.assertNotIn('"stderr"', text)
-                    for probe in report['probes']:
-                        for outcome in probe['outcomes']:
-                            self.assertNotIn('stderr', outcome)
-        finally:
-            self.native_stderr = None
-
-    def test_successful_orchestration_qualifies(self):
-        for client in CANONICAL_PATHS:
-            with self.subTest(client=client):
-                report, _ = self.controlled_run(client)
-                self.assertTrue(all(probe['result'] == 'qualified' for probe in report['probes']))
-
-    def test_exact_responses_with_failed_invocation_never_qualify(self):
-        for client in CANONICAL_PATHS:
-            for state in ('failure', 'authentication_failure', 'timeout', 'unavailable'):
-                for fixture in ('positive', 'negative'):
-                    for events in ('valid', 'empty', 'malformed'):
-                        with self.subTest(client=client, state=state, fixture=fixture, events=events):
-                            report, _ = self.controlled_run(client, failed=(fixture, state), events=events, events_fixture=fixture)
-                            for probe in report['probes']:
-                                self.assertEqual(probe['outcomes'][0 if fixture == 'positive' else 1]['state'], state)
-                                self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else state)
-
-    def test_exact_responses_with_observed_tools_never_qualify(self):
-        for client in ('codex', 'copilot', 'opencode'):
-            with self.subTest(client=client):
-                report, _ = self.controlled_run(client, tool=True)
-                self.assertTrue(all(probe['result'] != 'qualified' for probe in report['probes']))
-                self.assertTrue(all(outcome['tools_observed'] for probe in report['probes'] for outcome in probe['outcomes']))
-
-    def test_copilot_orchestration_does_not_trim_positive_or_fallback(self):
-        for fixture in ('positive', 'negative'):
-            for events in ('leading-whitespace', 'trailing-whitespace'):
-                with self.subTest(fixture=fixture, events=events):
-                    report, _ = self.controlled_run('copilot', events=events, events_fixture=fixture)
-                    probe = report['probes'][0]
-                    self.assertEqual(probe['outcomes'][0 if fixture == 'positive' else 1]['state'], 'success')
-                    self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else 'inconclusive')
-
-    def test_copilot_requires_completed_response_events(self):
-        for fixture in ('positive', 'negative'):
-            for events in ('empty', 'malformed', 'incomplete', 'unknown', 'post-result-delta'):
-                with self.subTest(fixture=fixture, events=events):
-                    report, _ = self.controlled_run('copilot', events=events, events_fixture=fixture)
-                    self.assertEqual(report['probes'][0]['outcomes'][0 if fixture == 'positive' else 1]['state'], 'failure')
-                    self.assertNotEqual(report['probes'][0]['result'], 'qualified')
-
-    def test_codex_requires_completed_response_events(self):
-        for events in ('empty', 'malformed', 'incomplete', 'unknown'):
-            with self.subTest(events=events):
-                report, _ = self.controlled_run('codex', events=events)
-                self.assertNotEqual(report['probes'][0]['result'], 'qualified')
-
-    def test_codex_requires_completed_turn_for_each_control(self):
-        for fixture in ('positive', 'negative'):
-            with self.subTest(fixture=fixture):
-                report, _ = self.controlled_run('codex', events='incomplete', events_fixture=fixture)
-                probe = report['probes'][0]
-                outcome = probe['outcomes'][0 if fixture == 'positive' else 1]
-                self.assertEqual(outcome['state'], 'failure')
-                self.assertFalse(outcome['response_events']['completed_response'])
-                self.assertEqual(outcome['response'], probe['marker'] if fixture == 'positive' else probe['fallback'])
-                self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else 'failure')
-
-    def test_codex_requires_event_and_output_identity_for_each_control(self):
-        for fixture in ('positive', 'negative'):
-            with self.subTest(fixture=fixture):
-                report, _ = self.controlled_run('codex', events='mismatch', events_fixture=fixture)
-                probe = report['probes'][0]
-                outcome = probe['outcomes'][0 if fixture == 'positive' else 1]
-                self.assertEqual(outcome['state'], 'failure')
-                self.assertTrue(outcome['response_events']['completed_response'])
-                self.assertEqual(outcome['response'], probe['marker'] if fixture == 'positive' else probe['fallback'])
-                self.assertEqual(probe['result'], 'positive_control_failed' if fixture == 'positive' else 'failure')
-
-    def test_version_failure_or_missing_semver_never_qualifies(self):
-        for state, text in [('success', 'not a version'), ('failure', 'v1.2.3'), ('timeout', ''), ('unavailable', '')]:
-            with self.subTest(state=state, text=text):
-                report, calls = self.controlled_run(version_state=state, version_text=text)
-                self.assertEqual(report['probes'][0]['result'], 'version_unqualified')
-                self.assertIsNone(report['probes'][0]['version'])
-                self.assertEqual(len(calls), 3)
-
-    def test_native_and_version_environments_exclude_inherited_git_authority(self):
-        inherited = {**GIT_ENVIRONMENT_SENTINELS, **PRESERVED_ENVIRONMENT_SENTINELS}
-        # Real fixture Git isolation is covered separately; this boundary test
-        # records version and model environments without executing a native CLI.
-        with mock.patch.dict(os.environ, inherited, clear=True), mock.patch.object(q.subprocess, 'run'):
-            for client in CANONICAL_PATHS:
-                with self.subTest(client=client):
-                    report, calls = self.controlled_run(client)
-                    self.assertEqual(calls[0]['command'], [client, '--version'])
-                    self.assertEqual([call['fixture'] for call in calls[1:]],
-                                     [outcome['fixture'] for probe in report['probes'] for outcome in probe['outcomes']])
-                    self.assertEqual(len(calls), 1 + 2 * len(report['probes']))
-                    for call in calls:
-                        with self.subTest(command=call['command'], fixture=call['fixture']):
-                            self.assertFalse(any(key.startswith('GIT_') for key in call['env']))
-                            self.assertEqual({key: call['env'].get(key) for key in PRESERVED_ENVIRONMENT_SENTINELS},
-                                             PRESERVED_ENVIRONMENT_SENTINELS)
-                    self.assertEqual(dict(os.environ), inherited)
-                    self.assertTrue(all(probe['result'] == 'qualified' for probe in report['probes']))
-
-    def test_opencode_discovery_inventory_and_explicit_selections(self):
-        deny = [{'action': '*', 'resource': '*', 'effect': 'deny'}]
-        for discovery, modes in [('both', ['default', 'configured broad globs']), ('default', ['default']), ('configured', ['configured broad globs'])]:
-            with self.subTest(discovery=discovery):
-                report, calls = self.controlled_run('opencode', discovery=discovery)
-                self.assertEqual([probe['discovery'] for probe in report['probes']], modes)
-                self.assertEqual(len(calls), 1 + 2 * len(modes))
-                self.assertEqual(calls[0]['command'], ['opencode', '--version'])
-                expected_fixtures = []
-                for probe, mode in zip(report['probes'], modes):
-                    root = 'opencode-configured' if mode == 'configured broad globs' else 'opencode-default'
-                    fixtures = [root + '/positive', root + '/negative']
-                    expected_fixtures.extend(fixtures)
-                    self.assertEqual([outcome['fixture'] for outcome in probe['outcomes']], fixtures)
-                    self.assertEqual(probe['configuration']['instruction_path'], 'AGENTS.md')
-                    self.assertEqual(probe['configuration']['instructions_globs'], ['AGENTS.md', '.upskill-stage-*'] if mode == 'configured broad globs' else None)
-                    self.assertEqual(probe['result'], 'qualified')
-                    self.assertEqual(probe['configuration']['permissions'], deny)
-                self.assertEqual([call['fixture'] for call in calls[1:]], expected_fixtures)
-                for call in calls[1:]:
-                    expected = {'permissions': deny}
-                    if call['fixture'].startswith('opencode-configured/'):
-                        expected['instructions'] = ['AGENTS.md', '.upskill-stage-*']
-                    self.assertEqual(call['config'], expected)
-
-    def test_opencode_v2_fixture_and_controlled_environment(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            for configured in (False, True):
-                positive, negative, _, _ = q.fixtures(Path(tmp) / str(configured), 'opencode', configured)
-                for project in (positive, negative):
-                    config = json.loads((project / 'opencode.json').read_text())
-                    self.assertNotIn('permission', config)
-                    deny = [{'action': '*', 'resource': '*', 'effect': 'deny'}]
-                    self.assertEqual(config['permissions'], deny)
-                    self.assertEqual(config.get('instructions'), ['AGENTS.md', '.upskill-stage-*'] if configured else None)
-        overrides = {'OPENCODE_CONFIG_CONTENT': 'inline-sensitive-sentinel', 'OPENCODE_CONFIG': '/file-sensitive-sentinel', 'OPENCODE_CONFIG_DIR': '/directory-sensitive-sentinel'}
-        with mock.patch.dict(os.environ, {'OPENCODE_CONFIG_PROJECT_DISABLE': '1', 'OPENCODE_DISABLE_PROJECT_CONFIG': '1', **overrides}):
-            report, calls = self.controlled_run('opencode')
-            self.assertEqual({key: os.environ[key] for key in overrides}, overrides)
-        self.assertEqual(len(calls), 5)
-        for call in calls:
-            env = call['env']
-            self.assertEqual(env['OPENCODE_CONFIG_PROJECT_DISABLE'], '0')
-            self.assertEqual(env['OPENCODE_DISABLE_PROJECT_CONFIG'], '0')
-            for key in overrides:
-                self.assertNotIn(key, env)
-        for probe in report['probes']:
-            settings = probe['configuration']['discovery_environment']
-            self.assertEqual(settings['OPENCODE_CONFIG_PROJECT_DISABLE'], '0')
-            self.assertEqual(settings['OPENCODE_DISABLE_PROJECT_CONFIG'], '0')
-            self.assertEqual(settings['removed_overrides'], ['OPENCODE_CONFIG_CONTENT', 'OPENCODE_CONFIG', 'OPENCODE_CONFIG_DIR'])
-            for value in overrides.values():
-                self.assertNotIn(value, json.dumps(probe))
+            missing = str(Path(tmp) / 'no-such-upskill')
+            self.assertIn('--upskill does not name a file', self.run_script('--smoke', '--run', '--upskill', missing))
 
 
 @unittest.skipUnless(hasattr(os, 'killpg'), 'POSIX process groups are required')

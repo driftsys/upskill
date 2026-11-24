@@ -1,11 +1,8 @@
 # AD-0044 — Plugin output of a bundle
 
-Status: **accepted**. Date: 2026-11-19. Resolves
-[#563](https://github.com/driftsys/upskill/issues/563). Amended by
-[AD-0046](0046-plugin-mvp-components.md), which decides planned changes to
-Decisions 1, 4, 5 and 8 and to two entries of "Alternatives considered" (rule
-delivery through a session hook, and the init script); the text below describes
-the released behaviour.
+Status: **accepted**; decision 7 amended on 2026-11-23 (see the end of this
+record). Date: 2026-11-19. Resolves
+[#563](https://github.com/driftsys/upskill/issues/563).
 
 ## Context
 
@@ -122,3 +119,18 @@ still race with another cache save.
   bundle: rejected because it needs two plans for one source.
 - Introduce a separate plugin source schema: the bundle already supplies the
   metadata, content and dependencies.
+
+## Amendment: update keeps an orphaned dependency of a directory source with recorded bundles (2026-11-23)
+
+Decision 7 says that, for a directory source with recorded bundles, `update`
+passes the recorded bundle names and the directly installed item names. The item
+filter also passes each dependency of that source whose `required_by` is not
+empty, names no requirer that the lockfile records (the `doctor` condition for
+an orphaned dependency), and is listed by no recorded bundle of the source. A
+member of a recorded bundle follows its bundle: when the bundle no longer lists
+it in the source, `update` removes it as `no longer in source`. Without this,
+`update` removed such a dependency as `no longer in source` after an exclude
+removal that kept the `required_by` links. A dependency that still has an
+installed requirer keeps the earlier behaviour. See the amendment of
+[AD-0045](0045-record-add-excludes-in-lockfile.md) and
+[#613](https://github.com/driftsys/upskill/issues/613).
