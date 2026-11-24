@@ -7,10 +7,15 @@ and their implementation plans in `plans/`.
 ## Active documents
 
 - [Plugin MVP design](specs/2026-11-24-plugin-mvp-design.md). Approved on
-  2026-11-24. Only story [#633](https://github.com/driftsys/upskill/issues/633)
-  (MCP servers in `pack` output) is implemented; its
-  [plan](../archive/README.md#mcp-servers-in-pack-output) is archived. It stays
-  here because the other six stories are planned work: stage 2 of the
+  2026-11-24. Story [#633](https://github.com/driftsys/upskill/issues/633) (MCP
+  servers in `pack` output) is implemented, and story
+  [#634](https://github.com/driftsys/upskill/issues/634) (LSP servers in `pack`
+  output) is implemented except the report of skipped LSP servers in `add` and
+  `update`, which moved to story
+  [#632](https://github.com/driftsys/upskill/issues/632). Their plans are
+  archived: [#633](../archive/README.md#mcp-servers-in-pack-output) and
+  [#634](../archive/README.md#lsp-servers-in-pack-output). It stays here because
+  the other stories are planned work: stage 2 of the
   [roadmap](../roadmap.md#stage-2--finish-plugin-distribution). Its decisions
   are in [AD-0046](../adr/0046-plugin-mvp-components.md). It replaced the hook
   item kind draft, which is in the

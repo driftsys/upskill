@@ -1162,6 +1162,32 @@ Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions
 [command guide](../book/commands.md#upskill-pack-bundle---source-source---out-dir);
 the [recipe](../book/recipes.md#publish-a-bundle-as-client-plugins).
 
+## LSP servers in `pack` output
+
+Source path: `docs/wip/plans/2026-11-24-pack-lsp-servers.md`. The raw
+[plan](plans/2026-11-24-pack-lsp-servers.md) is retained unchanged, except that
+its link to the plugin MVP design now points to `docs/wip/specs/`, and that its
+architecture paragraph and Task 2 record the move described below. It is the
+plan of story [#634](https://github.com/driftsys/upskill/issues/634), one of the
+seven stories of the
+[plugin MVP design](../wip/specs/2026-11-24-plugin-mvp-design.md). That design
+is not archived: the stories #631, #632 and #635 to #637 are not implemented.
+
+Task 2 of the plan, the stderr report of the LSP servers that `add` and `update`
+skip, is not delivered by this plan. It moved to story
+[#632](https://github.com/driftsys/upskill/issues/632), which adds the skip
+mechanism that the report needs. Story #634 therefore stays open for that part.
+
+Implementation: the pull request of branch `feat/pack-lsp-servers` (Task 1
+only). Completion evidence: the CI checks of that pull request.
+
+Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions
+10 and 11; [content format](../topics/0001-content-format.md#lsps-map);
+[format spec](../specification/format-spec.md);
+[specification §2.8](../specification/specification.md); the
+[command guide](../book/commands.md#upskill-pack-bundle---source-source---out-dir);
+the [recipe](../book/recipes.md#publish-a-bundle-as-client-plugins).
+
 ## Triage of 2026-11-23
 
 Issue [#536](https://github.com/driftsys/upskill/issues/536). The 36 documents

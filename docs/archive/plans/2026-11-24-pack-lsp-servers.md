@@ -14,15 +14,15 @@ client.
 **Architecture:** `src/model/bundle.rs` gets the field `Bundle::lsps` and the
 type `LspEntry`, with a validation function that the bundle parser and `lint`
 call next to `validate_mcps`. `src/pack.rs` builds one more `PackFile` from the
-closure, in the same way as `mcp_json`. Task 2 adds the report of skipped LSP
-servers in `add` and `update`; it uses the mechanism of story #632 and starts
-after #632 is merged.
+closure, in the same way as `mcp_json`. The report of skipped LSP servers in
+`add` and `update` is implemented in story #632 (see Task 2).
 
 **Tech stack:** Rust 2024, `serde`, `serde_json`, `serde_yaml_ng`, `anyhow`;
 integration tests with `assert_cmd` through `common::upskill_cmd`.
 
-**Spec:** [plugin MVP design](../specs/2026-11-24-plugin-mvp-design.md), section
-5; [AD-0046](../../adr/0046-plugin-mvp-components.md), Decisions 10 and 11.
+**Spec:** [plugin MVP design](../../wip/specs/2026-11-24-plugin-mvp-design.md),
+section 5; [AD-0046](../../adr/0046-plugin-mvp-components.md), Decisions 10
+and 11.
 
 ## Global constraints
 
@@ -234,36 +234,11 @@ integration tests with `assert_cmd` through `common::upskill_cmd`.
   `just verify` and `just sanity`, and commits with
   `feat(pack): add the bundle key lsps and write LSP servers into the plugin (#634)`.
 
-### Task 2: `add` and `update` report skipped LSP servers
+### Task 2: moved to story #632
 
-This task starts after story #632 is merged into `main` and this branch contains
-it. #632 adds the mechanism that counts the skipped command items of a bundle
-and the stderr line that `main.rs` prints. The orchestrator writes the exact
-interface into this task at that time.
-
-**Files:**
-
-- Modify: the module and the `main.rs` function that #632 adds for skipped items
-- Test: the `tests/cli_*.rs` file that #632 uses for the skip line
-- Modify: `docs/book/commands.md`, `docs/specification/specification.md`
-  (section on `add`)
-
-**Interfaces:**
-
-- Consumes: the skipped-items count and line of #632.
-- Produces: the same stderr line also counts the LSP servers of the installed
-  bundles. `add` and `update` write no LSP configuration and no lockfile record
-  for them.
-
-- [ ] **Step 1: Write the failing test**: `upskill add` of a bundle with one LSP
-      server succeeds, stderr holds the skip line with the count of LSP servers,
-      and no file named `.lsp.json` or `lsp.json` exists below the project or
-      the fake home.
-- [ ] **Step 2: Run it and confirm that it fails**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Update the two documents**
-- [ ] **Step 5: Run `cargo test`**
-
-  The implementer does not commit. The orchestrator runs `just fmt`,
-  `just verify` and `just sanity`, and commits with
-  `feat(add): report the LSP servers that add and update skip (#634)`.
+Decision of 2026-11-24: the report of skipped LSP servers in `add` and `update`
+needs the skip mechanism that story
+[#632](https://github.com/driftsys/upskill/issues/632) adds in its Task 2. It is
+implemented there, as one more value of the enum of skipped kinds, after this
+branch is merged. This branch delivers Task 1 only, and the pull request refers
+to #634 without closing it.
