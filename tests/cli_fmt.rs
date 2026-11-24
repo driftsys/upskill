@@ -347,3 +347,31 @@ fn fmt_refuses_a_command_with_an_unknown_field_or_a_client_block() {
         assert_eq!(fs::read_to_string(&path).unwrap(), raw);
     }
 }
+
+#[test]
+fn fmt_orders_hook_keys_canonically() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let path = tmp.path().join("guard/HOOK.md");
+    write(
+        &path,
+        "---\nevents:\n  session-start:\n  prompt-submit:\ndescription: Test hook\nname: guard\nschema: 1\n---\n\nText.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    let after = fs::read_to_string(&path).unwrap();
+    assert_eq!(
+        after,
+        "---\nschema: 1\nname: guard\ndescription: Test hook\nevents:\n  session-start:\n  prompt-submit:\n---\n\nText.\n"
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    assert_eq!(fs::read_to_string(&path).unwrap(), after);
+}

@@ -2705,6 +2705,7 @@ fn print_scaffold_report(report: &ScaffoldReport) {
         NewKind::Skill => "skill",
         NewKind::Agent => "agent",
         NewKind::Command => "command",
+        NewKind::Hook => "hook",
     };
     println!(
         "{} {kind_label} `{}` at {}",

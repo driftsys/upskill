@@ -18,10 +18,15 @@
 //! | `body-format`     | warning  | §3.8 (dprint canonical body) |
 //! | `directive`       | error    | §6.3 (any imbalance, unknown client, nesting) |
 //! | `command-with-skill` | error | §2.1 |
-//! | `name-collision`  | error    | cross-file (bundle vs item name; command items excluded) |
+//! | `hook-event`      | error    | §3.10              |
+//! | `hook-text`       | error    | §3.10              |
+//! | `hook-heading`    | error    | §3.10              |
+//! | `hook-run`        | error    | §3.10              |
+//! | `hook-name`       | error    | §3.10              |
+//! | `name-collision`  | error    | cross-file (bundle vs item name; command and hook items excluded) |
 //!
 //! Discovery: a path argument is either a file (lint that file) or a
-//! directory (walk for `<root>/<name>/{RULE,SKILL,AGENT,COMMAND}.md` per
+//! directory (walk for `<root>/<name>/{RULE,SKILL,AGENT,COMMAND,HOOK}.md` per
 //! format-spec §2.1, plus any `*.bundle.yaml`). With no paths, the
 //! current directory is used.
 
@@ -31,7 +36,7 @@ use std::path::{Path, PathBuf};
 
 use crate::generate::Client;
 use crate::generate::directives;
-use crate::model::{Agent, Command, Rule, Skill};
+use crate::model::{Agent, Command, Hook, Rule, Skill};
 use crate::parse::frontmatter;
 use crate::pipeline::normalize_lexically;
 
@@ -153,6 +158,7 @@ enum FileKind {
     Rule,
     Agent,
     Command,
+    Hook,
     Bundle,
 }
 
@@ -163,6 +169,7 @@ impl FileKind {
             "RULE.md" => Some(Self::Rule),
             "AGENT.md" => Some(Self::Agent),
             "COMMAND.md" => Some(Self::Command),
+            "HOOK.md" => Some(Self::Hook),
             n if n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) => Some(Self::Bundle),
             _ => None,
         }
@@ -175,8 +182,8 @@ impl FileKind {
 /// the `*.bundle.yaml` suffix. Shared with `crate::fmt`.
 ///
 /// When `root` is itself an item directory (directly contains
-/// `RULE.md`/`SKILL.md`/`AGENT.md`/`COMMAND.md`), those files are collected
-/// directly — fixing the silent false-pass described in issue #159.
+/// `RULE.md`/`SKILL.md`/`AGENT.md`/`COMMAND.md`/`HOOK.md`), those files are
+/// collected directly — fixing the silent false-pass described in issue #159.
 pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     if root.is_file() {
@@ -209,11 +216,11 @@ pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     Ok(out)
 }
 
-const ENTRYPOINTS: [&str; 4] = ["RULE.md", "SKILL.md", "AGENT.md", "COMMAND.md"];
+const ENTRYPOINTS: [&str; 5] = ["RULE.md", "SKILL.md", "AGENT.md", "COMMAND.md", "HOOK.md"];
 
-/// Collect entrypoint files (`RULE.md`, `SKILL.md`, `AGENT.md`, `COMMAND.md`) that
-/// exist directly inside `dir`. This handles the case where `dir` is
-/// itself an item directory rather than a registry root.
+/// Collect entrypoint files (`RULE.md`, `SKILL.md`, `AGENT.md`,
+/// `COMMAND.md`, `HOOK.md`) that exist directly inside `dir`. This also handles
+/// an item directory passed as the root.
 fn discover_self_entrypoints(dir: &Path, out: &mut Vec<PathBuf>) {
     for entrypoint in ENTRYPOINTS {
         let path = dir.join(entrypoint);
@@ -224,8 +231,8 @@ fn discover_self_entrypoints(dir: &Path, out: &mut Vec<PathBuf>) {
 }
 
 /// Walk one level deep under `root`, collecting every `RULE.md`,
-/// `SKILL.md`, `AGENT.md`, and `COMMAND.md` found in a subdirectory. Hidden
-/// directories are skipped. A single item directory may contribute
+/// `SKILL.md`, `AGENT.md`, `COMMAND.md`, and `HOOK.md` found in a subdirectory.
+/// Hidden directories are skipped. A single item directory may contribute
 /// more than one entrypoint when it holds multiple co-located kinds
 /// (format-spec §2.1).
 fn discover_items(root: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
@@ -321,6 +328,24 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
         }
     };
 
+    if let FileKind::Hook = kind {
+        let (hook, _) = frontmatter::parse::<Hook>(&raw)?;
+        let absolute =
+            fs::canonicalize(file).with_context(|| format!("resolve {}", file.display()))?;
+        let dir = absolute
+            .parent()
+            .context("hook entrypoint has no parent directory")?;
+        for problem in crate::parse::hook::check_hook(&hook, body, dir) {
+            out.push(Finding {
+                rule_id: problem.rule_id,
+                severity: Severity::Error,
+                path: file.to_path_buf(),
+                line: problem.line,
+                message: problem.message,
+            });
+        }
+    }
+
     check_body_h1(file, body, out);
     check_fence_lang(file, body, out);
     check_directives(file, body, out);
@@ -361,6 +386,10 @@ fn parse_kind(raw: &str, kind: FileKind) -> Result<(Option<String>, &str)> {
             let (item, body) = frontmatter::parse::<Command>(raw)?;
             Ok((Some(item.name), body))
         }
+        FileKind::Hook => {
+            let (item, body) = frontmatter::parse::<Hook>(raw)?;
+            Ok((item.name, body))
+        }
         FileKind::Bundle => {
             let bundle: crate::model::Bundle = serde_yaml_ng::from_str(raw)?;
             bundle
@@ -393,7 +422,7 @@ fn item_dir_name(file: &Path) -> Option<String> {
 ///   `name` is present it MUST equal the directory; when absent the
 ///   directory name is used and there is nothing to check.
 /// - Command: `name` is required and MUST equal the directory name.
-/// - Rule / Agent: identity is layout-independent — the frontmatter
+/// - Rule / Agent / Hook: identity is layout-independent — the frontmatter
 ///   `name` may diverge from the folder, so no check is performed.
 fn check_name_matches_dir(file: &Path, name: Option<&str>, kind: FileKind, out: &mut Vec<Finding>) {
     match kind {
@@ -444,7 +473,7 @@ fn check_name_matches_dir(file: &Path, name: Option<&str>, kind: FileKind, out: 
                 });
             }
         }
-        FileKind::Rule | FileKind::Agent => {}
+        FileKind::Rule | FileKind::Agent | FileKind::Hook => {}
     }
 }
 

@@ -21,8 +21,8 @@ upskill new skill code-review        # scaffold a new SSOT skill (in a registry)
 
 Consumer projects only ever contain **generated** per-client files. Source
 registries hold the canonical SSOT items (`RULE.md`, `SKILL.md`, `AGENT.md`,
-`COMMAND.md`, `*.bundle.yaml`). The same repo can play both roles; SSOT and
-generated outputs do not mix in the same tree.
+`COMMAND.md`, `HOOK.md`, `*.bundle.yaml`). The same repo can play both roles;
+SSOT and generated outputs do not mix in the same tree.
 
 ## Where to next
 

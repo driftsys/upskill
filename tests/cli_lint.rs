@@ -667,3 +667,203 @@ fn lint_flags_an_unknown_command_field_as_error() {
         .code(1)
         .stdout(predicates::str::contains("unknown field `audience`"));
 }
+
+fn lint_hook_case(
+    name: &str,
+    extra: &str,
+    events: &str,
+    body: &str,
+    script: bool,
+    expected: Option<(&str, &str)>,
+) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let dir = source.join(name);
+    write(
+        &dir.join("HOOK.md"),
+        &format!("---\nschema: 1\ndescription: Test hook\n{extra}events:\n{events}---\n\n{body}"),
+    );
+    if script {
+        write(&dir.join("check.sh"), "exit 0\n");
+    }
+    let assert = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict"])
+        .arg(&source)
+        .assert();
+    if let Some((rule, message)) = expected {
+        assert
+            .code(1)
+            .stdout(predicates::str::contains(rule))
+            .stdout(predicates::str::contains(message));
+    } else {
+        assert.success().stdout(predicates::str::contains("1 file"));
+    }
+}
+
+#[test]
+fn lint_accepts_a_hook_with_a_context_and_a_command_event() {
+    lint_hook_case(
+        "guard",
+        "",
+        "  session-start:\n  post-tool: { matcher: edit, run: check.sh }\n",
+        "## session-start\n\nRead the guide.\n\n## post-tool\n\nChecks the file.\n",
+        true,
+        None,
+    );
+}
+
+#[test]
+fn lint_accepts_a_hook_name_that_differs_from_its_directory() {
+    lint_hook_case(
+        "checks",
+        "name: edit-checks\n",
+        "  session-start:\n",
+        "Text.\n",
+        false,
+        None,
+    );
+}
+
+#[test]
+fn lint_flags_an_unknown_hook_event() {
+    lint_hook_case(
+        "guard",
+        "",
+        "  on-save:\n",
+        "Text.\n",
+        false,
+        Some(("[hook-event]", "unknown event `on-save`; expected one of:")),
+    );
+}
+
+#[test]
+fn lint_flags_a_context_hook_without_text() {
+    lint_hook_case(
+        "guard",
+        "",
+        "  session-start:\n  prompt-submit:\n",
+        "## session-start\n\nText.\n",
+        false,
+        Some(("[hook-text]", "context hook `prompt-submit` has no text")),
+    );
+}
+
+#[test]
+fn lint_flags_a_context_hook_on_an_event_without_context() {
+    lint_hook_case(
+        "guard",
+        "",
+        "  stop:\n",
+        "Text.\n",
+        false,
+        Some((
+            "[hook-event]",
+            "event `stop` has no `run`, and a context hook is valid only on",
+        )),
+    );
+}
+
+#[test]
+fn lint_flags_a_level_2_heading_that_is_not_an_event() {
+    lint_hook_case(
+        "guard",
+        "",
+        "  session-start:\n",
+        "## session-start\n\nA.\n\n## Details\n\nB.\n",
+        false,
+        Some(("[hook-heading]", "use a level-3 heading for content")),
+    );
+}
+
+#[test]
+fn lint_flags_a_run_file_that_does_not_exist() {
+    lint_hook_case(
+        "guard",
+        "",
+        "  post-tool: { run: missing.sh }\n",
+        "",
+        false,
+        Some(("[hook-run]", "names no file in the item directory")),
+    );
+}
+
+#[test]
+fn lint_flags_a_run_value_with_a_path() {
+    lint_hook_case(
+        "guard",
+        "",
+        "  post-tool: { run: ../check.sh }\n",
+        "",
+        false,
+        Some(("[hook-run]", "without a path or arguments")),
+    );
+}
+
+#[test]
+fn lint_flags_a_timeout_without_run() {
+    lint_hook_case(
+        "guard",
+        "",
+        "  session-start: { timeout: 5 }\n",
+        "Text.\n",
+        false,
+        Some(("[hook-event]", "sets `timeout` without `run`")),
+    );
+}
+
+#[test]
+fn lint_flags_a_matcher_on_prompt_submit() {
+    lint_hook_case(
+        "guard",
+        "",
+        "  prompt-submit: { matcher: edit }\n",
+        "Text.\n",
+        false,
+        Some((
+            "[hook-event]",
+            "event `prompt-submit` cannot have a `matcher`",
+        )),
+    );
+}
+
+#[test]
+fn lint_flags_a_hook_name_outside_the_name_rule() {
+    lint_hook_case(
+        "upper",
+        "name: Upper\n",
+        "  session-start:\n",
+        "Text.\n",
+        false,
+        Some((
+            "[hook-name]",
+            "hook name `Upper` must consist of lowercase letters",
+        )),
+    );
+}
+
+#[test]
+fn lint_flags_a_hook_named_context() {
+    lint_hook_case(
+        "context",
+        "",
+        "  session-start:\n",
+        "Text.\n",
+        false,
+        Some(("[hook-name]", "the hook name `context` is reserved")),
+    );
+}
+
+#[test]
+fn lint_flags_an_unknown_hook_field() {
+    lint_hook_case(
+        "guard",
+        "audience: [claude]\n",
+        "  session-start:\n",
+        "Text.\n",
+        false,
+        Some(("[frontmatter]", "unknown field `audience`")),
+    );
+}

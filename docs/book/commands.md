@@ -14,7 +14,7 @@ a source-registry repo).
 | `doctor`     | Consumer | Verify installation consistency.                            |
 | `search`     | Consumer | Look up skills via the public registry.                     |
 | `index`      | Consumer | Build or manage the local registry index cache.             |
-| `new`        | Author   | Scaffold a rule, skill, agent, or command.                  |
+| `new`        | Author   | Scaffold a rule, skill, agent, command, or hook.            |
 | `lint`       | Author   | Validate SSOT files against the format spec.                |
 | `pack`       | Author   | Build Claude Code and Copilot CLI plugin directories.       |
 | `fmt`        | Author   | Canonicalise YAML frontmatter and format the markdown body. |
@@ -1488,14 +1488,15 @@ duplicate detection are outside this command's scope.
 ### `upskill new <kind> <name>`
 
 Scaffold a new SSOT item directory. `<kind>` is one of `rule`, `skill`, `agent`,
-or `command`; `<name>` is both the item name and the directory name (lowercase
-letters, digits, hyphens; max 64 chars).
+`command`, or `hook`; `<name>` is both the item name and the directory name
+(lowercase letters, digits, hyphens; max 64 chars).
 
 ```bash
 upskill new rule  no-direct-database-access
 upskill new skill code-review
 upskill new agent security-reviewer
 upskill new command release-notes
+upskill new hook team-reminder
 ```
 
 Creates `<name>/<KIND>.md` **relative to the current directory** with the
@@ -1517,29 +1518,34 @@ upskill new rule  api-handler   # → api-handler/RULE.md (added alongside)
 ```
 
 This expresses one capability across multiple kinds (for example a skill paired
-with its enforcing rule). A command and a skill cannot share a directory.
-Co-location is also refused when an existing skill or command entrypoint's
-`name:` differs from `<name>`; rule and agent siblings MAY carry a different
-name.
+with its enforcing rule). A hook may share a directory with any kind. A command
+and a skill cannot share a directory. Co-location is also refused when an
+existing skill or command entrypoint's `name:` differs from `<name>`; rule,
+agent and hook siblings MAY carry a different name.
 
 `upskill new` is an author command — it refuses to run inside a consumer project
 (one with a `.upskill-lock.json`).
 
 ### `upskill lint [paths...]`
 
-Validate SSOT files against the [format spec](format-spec.md). Eight rules are
-available:
+Validate SSOT files against the [format spec](format-spec.md). Thirteen rules
+are available:
 
-| Rule ID              | Severity | Source                                                                      |
-| -------------------- | -------- | --------------------------------------------------------------------------- |
-| `frontmatter`        | error    | format-spec §3                                                              |
-| `name-matches-dir`   | error    | format-spec §2.1                                                            |
-| `body-h1`            | warning  | format-spec §5.1                                                            |
-| `fence-lang`         | warning  | format-spec §5.2                                                            |
-| `body-format`        | warning  | format-spec §3.8                                                            |
-| `directive`          | error    | format-spec §6.3                                                            |
-| `command-with-skill` | error    | format-spec §2.1                                                            |
-| `name-collision`     | error    | a bundle and an item of one source share a name; command items are excluded |
+| Rule ID              | Severity | Source                                      |
+| -------------------- | -------- | ------------------------------------------- |
+| `frontmatter`        | error    | format-spec §3                              |
+| `name-matches-dir`   | error    | format-spec §2.1                            |
+| `body-h1`            | warning  | format-spec §5.1                            |
+| `fence-lang`         | warning  | format-spec §5.2                            |
+| `body-format`        | warning  | format-spec §3.8                            |
+| `directive`          | error    | format-spec §6.3                            |
+| `command-with-skill` | error    | format-spec §2.1                            |
+| `hook-event`         | error    | format-spec §3.10                           |
+| `hook-text`          | error    | format-spec §3.10                           |
+| `hook-heading`       | error    | format-spec §3.10                           |
+| `hook-run`           | error    | format-spec §3.10                           |
+| `hook-name`          | error    | format-spec §3.10                           |
+| `name-collision`     | error    | Bundle/item conflict; no commands or hooks. |
 
 ```bash
 upskill lint                # lint everything in the working tree

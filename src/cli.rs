@@ -409,7 +409,7 @@ pub enum Commands {
         /// Files or directories to format. Empty = current directory.
         paths: Vec<PathBuf>,
     },
-    /// Scaffold a new rule, skill, agent, or command.
+    /// Scaffold a new rule, skill, agent, command, or hook.
     ///
     /// Writes the minimum frontmatter required plus kind-specific
     /// defaults (e.g. `mode: subagent` / `model: sonnet` for agents)
@@ -421,10 +421,11 @@ pub enum Commands {
             upskill new rule no-direct-database-access\n  \
             upskill new skill code-review\n  \
             upskill new agent security-reviewer\n  \
-            upskill new command release-notes"
+            upskill new command release-notes\n  \
+            upskill new hook team-reminder"
     )]
     New {
-        /// One of `rule`, `skill`, `agent`, `command`.
+        /// One of `rule`, `skill`, `agent`, `command`, `hook`.
         kind: String,
         /// Item name. Lowercase letters, digits, hyphens; max 64 chars.
         name: String,

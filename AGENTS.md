@@ -69,8 +69,9 @@ src/
 ├── lib.rs               Module declarations and re-exports
 │
 ├── model/               SSOT data model:
-│                        Rule, Skill, Agent, Command, Bundle + common
+│                        Rule, Skill, Agent, Command, Hook, Bundle + common
 ├── parse/               SSOT parsing: YAML frontmatter + bundle loader/discovery
+│                        + HOOK.md body sections
 ├── generate/            SSOT → per-client rendering:
 │                        Client enum + claude/copilot/opencode + directives + dprint
 │

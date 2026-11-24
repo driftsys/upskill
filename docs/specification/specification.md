@@ -22,12 +22,13 @@ pipeline.
 
 ### 1.1 Item kinds
 
-| Kind    | Purpose                                    | Entrypoint file |
-| ------- | ------------------------------------------ | --------------- |
-| Rule    | Always-on behavioural guidance.            | `RULE.md`       |
-| Skill   | On-demand procedural content.              | `SKILL.md`      |
-| Agent   | Persona definition with tool scope.        | `AGENT.md`      |
-| Command | A named procedure. Only `pack` renders it. | `COMMAND.md`    |
+| Kind    | Purpose                                                       | Entrypoint file |
+| ------- | ------------------------------------------------------------- | --------------- |
+| Rule    | Always-on behavioural guidance.                               | `RULE.md`       |
+| Skill   | On-demand procedural content.                                 | `SKILL.md`      |
+| Agent   | Persona definition with tool scope.                           | `AGENT.md`      |
+| Command | A named procedure. Only `pack` renders it.                    | `COMMAND.md`    |
+| Hook    | Text for the model's context, or a script, on a client event. | `HOOK.md`       |
 
 The on-disk contract is defined by the
 [portable format spec](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md).
@@ -47,8 +48,8 @@ of the `HOME` environment variable, or of `USERPROFILE` when `HOME` is not set.
 ### 1.3 Two roles
 
 - **Source registry** — repository where SSOT items are authored. Holds the
-  canonical `RULE.md` / `SKILL.md` / `AGENT.md` / `COMMAND.md` files and
-  `*.bundle.yaml` manifests. Author commands (`new`, `lint`, `fmt`, `pack`)
+  canonical `RULE.md` / `SKILL.md` / `AGENT.md` / `COMMAND.md` / `HOOK.md` files
+  and `*.bundle.yaml` manifests. Author commands (`new`, `lint`, `fmt`, `pack`)
   operate here.
 - **Consumer project** — repository where generated outputs are installed for
   use by AI clients. Holds only generated per-client files. Consumer commands
@@ -70,7 +71,7 @@ No overlap between verbs.
 | `doctor` | Consumer | Verify installation consistency.                      |
 | `search` | Consumer | Look up skills via the public registry.               |
 | `index`  | Consumer | Build or manage the local registry index cache.       |
-| `new`    | Author   | Scaffold a rule, skill, agent, or command.            |
+| `new`    | Author   | Scaffold a rule, skill, agent, command, or hook.      |
 | `lint`   | Author   | Validate SSOT files against the format spec.          |
 | `pack`   | Author   | Build Claude Code and Copilot CLI plugin directories. |
 | `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting).   |
@@ -871,7 +872,7 @@ the check above refuses it.
 Author commands. Run inside a source-registry working tree.
 
 - `new <kind> <name>` — scaffold a new SSOT item directory (`<kind>` is one of
-  `rule`, `skill`, `agent`, `command`).
+  `rule`, `skill`, `agent`, `command`, `hook`).
 - `lint [paths...] [--strict]` — validate SSOT files. `--strict` is the CI mode
   (warnings become errors).
 - `fmt [paths...]` — canonicalise YAML frontmatter only. Markdown body

@@ -206,6 +206,19 @@ metadata:
 ";
 
     #[test]
+    fn load_parses_items_hooks() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(
+            tmp.path(),
+            "demo.bundle.yaml",
+            "schema: 1\nname: demo\ndescription: Demo\nitems:\n  hooks: [guard]\n",
+        );
+        let bundle = load(&path).unwrap();
+        assert_eq!(bundle.items.hooks, ["guard"]);
+        assert!(!bundle.items.is_empty());
+    }
+
+    #[test]
     fn load_parses_items_commands() {
         let tmp = tempfile::tempdir().unwrap();
         let path = write_file(
