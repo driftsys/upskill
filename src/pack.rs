@@ -703,11 +703,16 @@ mod tests {
             PackClient::Claude,
         );
         assert!(!text.contains("The command does not install"));
+        assert!(!text.contains("MCP server"));
     }
 
     #[test]
     fn mcp_json_refuses_each_kind_of_different_content() {
         let cases = [
+            (
+                "  s:\n    local: { command: c }\n",
+                "  s:\n    local: { command: d }\n",
+            ),
             (
                 "  s:\n    local: { command: c, args: [x] }\n",
                 "  s:\n    local: { command: c, args: [y] }\n",
