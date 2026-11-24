@@ -6,15 +6,12 @@ and their implementation plans in `plans/`.
 
 ## Active documents
 
-- [Hook item kind: `HOOK.md` source convention](specs/2026-11-18-hook-item-kind-design.md).
-  Draft. The convention was agreed on 2026-11-18; the design is not approved for
-  implementation. It stays here because the hook item kind is planned work:
-  stage 2 of the [roadmap](../roadmap.md#stage-2--finish-plugin-distribution).
-  The design session of that stage completes or replaces it.
-
-- [Plugin MVP design](specs/2026-11-24-plugin-mvp-design.md). Draft for
-  approval, task [#623](https://github.com/driftsys/upskill/issues/623). It
-  replaces the hook item kind draft when it is approved.
+- [Plugin MVP design](specs/2026-11-24-plugin-mvp-design.md). Approved on
+  2026-11-24, not implemented. It stays here because it is planned work: stage 2
+  of the [roadmap](../roadmap.md#stage-2--finish-plugin-distribution). Its
+  decisions are in [AD-0046](../adr/0046-plugin-mvp-components.md). It replaced
+  the hook item kind draft, which is in the
+  [archive](../archive/README.md#hook-item-kind-draft).
 
 No other document is active. The triage of 2026-11-23
 ([#536](https://github.com/driftsys/upskill/issues/536)) moved the 36 other

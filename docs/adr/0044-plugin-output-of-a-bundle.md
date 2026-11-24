@@ -1,7 +1,9 @@
 # AD-0044 — Plugin output of a bundle
 
 Status: **accepted**. Date: 2026-11-19. Resolves
-[#563](https://github.com/driftsys/upskill/issues/563).
+[#563](https://github.com/driftsys/upskill/issues/563). Amended by
+[AD-0046](0046-plugin-mvp-components.md), which decides planned changes to
+Decisions 1, 4 and 5; the text below describes the released behaviour.
 
 ## Context
 

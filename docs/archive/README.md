@@ -1122,8 +1122,20 @@ Durable successors: [AD-0044](../adr/0044-plugin-output-of-a-bundle.md), the
 the [recipe](../book/recipes.md#publish-a-bundle-as-client-plugins),
 [support levels](../book/support-levels.md#bundle-plugin-output) and
 [specification](../specification/specification.md) §2. The
-[hook item kind design](../wip/specs/2026-11-18-hook-item-kind-design.md) is a
-later slice and remains in WIP.
+[hook item kind design](specs/2026-11-18-hook-item-kind-design.md) was a later
+slice; [AD-0046](../adr/0046-plugin-mvp-components.md) replaced it on 2026-11-24
+(see below).
+
+## Hook item kind draft
+
+Task [#623](https://github.com/driftsys/upskill/issues/623). The
+[hook item kind draft](specs/2026-11-18-hook-item-kind-design.md) of 2026-11-18
+was never approved for implementation. The design session of 2026-11-24 replaced
+it. Nothing of it is implemented.
+
+Durable successor: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions 3
+to 7. The [plugin MVP design](../wip/specs/2026-11-24-plugin-mvp-design.md)
+holds the detail and stays in WIP until the stories of stage 2 are delivered.
 
 ## Triage of 2026-11-23
 

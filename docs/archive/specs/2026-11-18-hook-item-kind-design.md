@@ -1,11 +1,13 @@
 # Hook item kind: `HOOK.md` source convention
 
-Date: 2026-11-18. Status: **draft; convention agreed with the user in
-discussion; not approved for implementation**. This document records the source
-convention for a later slice. It does not describe released behaviour.
+Date: 2026-11-18. Status: **replaced on 2026-11-24** by
+[AD-0046](../../adr/0046-plugin-mvp-components.md) and the
+[plugin MVP design](../../wip/specs/2026-11-24-plugin-mvp-design.md), which keep
+the convention of sections 1 to 4 and change the event set, the matcher and the
+open points. This document was a draft; it does not describe released behaviour.
 
 Related records:
-[bundle plugin output design](../../archive/specs/2026-11-18-bundle-plugin-output-design.md),
+[bundle plugin output design](2026-11-18-bundle-plugin-output-design.md),
 [format specification](../../topics/0001-content-format.md),
 [AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md),
 [AD-0041](../../adr/0041-separate-client-representations-as-design-baseline.md),

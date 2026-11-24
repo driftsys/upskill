@@ -32,9 +32,8 @@ open points of the
   the model, and the user can still call it with the slash command.
 - `user-invocable: false`: the skill stays in the skill list of the model, it is
   absent from the menu, and the slash command gives "Unknown command".
-- A file `commands/trialc2.md` is listed as a skill.
-  `/trialfix:trialc2 alpha
-  beta` replaced `$ARGUMENTS` with `alpha beta`. The
+- A file `commands/trialc2.md` is listed as a skill. The call
+  `/trialfix:trialc2 alpha beta` replaced `$ARGUMENTS` with `alpha beta`. The
   short form `/trialc2` gave "Unknown command"; the short form works for a file
   below `skills/`.
 

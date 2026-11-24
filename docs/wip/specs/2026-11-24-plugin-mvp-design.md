@@ -1,6 +1,8 @@
 # Plugin MVP design
 
-Date: 2026-11-24. Status: **draft for approval**. Task:
+Date: 2026-11-24. Status: **approved by the user on 2026-11-24; not
+implemented**. Decision record:
+[AD-0046](../../adr/0046-plugin-mvp-components.md). Task:
 [#623](https://github.com/driftsys/upskill/issues/623). Epic:
 [#291](https://github.com/driftsys/upskill/issues/291).
 
@@ -8,7 +10,7 @@ This document is the design of stage 2 of the
 [roadmap](../../roadmap.md#stage-2--finish-plugin-distribution). It does not
 describe released behaviour. The decision record that follows it amends
 [AD-0044](../../adr/0044-plugin-output-of-a-bundle.md). It replaces the
-[hook item kind draft](2026-11-18-hook-item-kind-design.md).
+[hook item kind draft](../../archive/specs/2026-11-18-hook-item-kind-design.md).
 
 Related records:
 [AD-0040](../../adr/0040-separate-customization-delivery-from-discovery.md),
@@ -133,13 +135,13 @@ Five trials on Copilot CLI 1.0.112 answered the points that the design depends
 on. Their record is
 [technote T4](../../technotes/t4-copilot-plugin-component-trials.md).
 
-| # | Question                                                            | Result                                                                                                                                                                       |
-| - | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 | Does the user call a plugin skill as a slash command?               | Yes, as `/<plugin>:<name>`, in the interactive client. `disable-model-invocation: true` stops the model from calling it. Prompt mode (`-p`) does not process slash commands. |
-| 2 | Which LSP file name does a legacy plugin load?                      | `lsp.json` at the plugin root, with the top-level key `lspServers`. `lsp-config/servers.json` does not load.                                                                 |
-| 3 | Do rules below `com.github.copilot/rules/` reach the model?         | No, with the legacy manifest and with the Agent Plugins 1.0 manifest.                                                                                                        |
-| 4 | Are the servers of a plugin `.mcp.json` added and removed with it?  | Yes, with a local marketplace.                                                                                                                                               |
-| 5 | Which hook events other than `sessionStart` add text for the model? | `userPromptSubmitted` and `postToolUse`. `subagentStart` adds it for the subagent only. `preToolUse` is not confirmed.                                                       |
+| # | Question                                                            | Result                                                                                                                                                                         |
+| - | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1 | Does the user call a plugin skill as a slash command?               | Yes, as `/<plugin>:<name>`, in the interactive client. `disable-model-invocation: true` stops the model from calling it. Prompt mode (`-p`) does not process slash commands.   |
+| 2 | Which LSP file name does a legacy plugin load?                      | `lsp.json` at the plugin root, with the top-level key `lspServers`. `lsp-config/servers.json` does not load.                                                                   |
+| 3 | Do rules below `com.github.copilot/rules/` reach the model?         | No, with the legacy manifest and with the Agent Plugins 1.0 manifest.                                                                                                          |
+| 4 | Are the servers of a plugin `.mcp.json` added and removed with it?  | Yes, when the plugin is removed. With a local marketplace, `plugin uninstall` only disables the plugin; removing the marketplace removes it. A hosted marketplace is untested. |
+| 5 | Which hook events other than `sessionStart` add text for the model? | `userPromptSubmitted` and `postToolUse`. `subagentStart` adds it for the subagent only. `preToolUse` is not confirmed.                                                         |
 
 ## Approaches
 
@@ -194,6 +196,17 @@ the selected approaches, which Claude proposed.
 - A separate `catalog` command. Rejected: the files can then differ from the
   packed plugins.
 
+### Closure of a plugin
+
+- **Selected: each plugin holds the hooks, commands and servers of the whole
+  `requires` closure**, as it holds the skills and agents today. Each plugin is
+  complete alone in both clients. A user who installs the plugins of a bundle
+  and of a bundle that it requires gets the context text and the servers of the
+  required bundle two times.
+- A plugin holds only the hooks and servers of its own bundle. Rejected: the
+  plugin is incomplete unless the user installs the other plugins, and no
+  evidence shows a plugin dependency field in Copilot CLI.
+
 ### Build location
 
 - **Selected: the packed plugins are committed in `driftsys/metapowers`, and its
@@ -206,9 +219,10 @@ the selected approaches, which Claude proposed.
 ### 1. Hook item kind
 
 The source convention is the one of the
-[hook item kind draft](2026-11-18-hook-item-kind-design.md), sections 1 to 4:
-one `HOOK.md` for each item directory, an `events` map in the frontmatter, one
-`## <event>` section for each event. The points below complete or change it.
+[hook item kind draft](../../archive/specs/2026-11-18-hook-item-kind-design.md),
+sections 1 to 4: one `HOOK.md` for each item directory, an `events` map in the
+frontmatter, one `## <event>` section for each event. The points below complete
+or change it.
 
 **Portable events.** Each name maps to one event of each client:
 
@@ -438,7 +452,6 @@ upskill pack --all       --source <src> --out <dir> [--catalog <root>]
   without rules has a hook file when the closure has hook items.
 - Alternatives: "Deliver rules through a session hook" stays rejected, now with
   the reason of section "Rule delivery".
-
 - Alternatives, "Ship an init script": Copilot CLI 1.0.112 sets
   `COPILOT_PLUGIN_ROOT` and `CLAUDE_PLUGIN_ROOT` for a plugin hook (technote
   T4). AD-0044 states that Copilot CLI did not expand the Claude plugin-root
@@ -464,14 +477,19 @@ upskill pack --all       --source <src> --out <dir> [--catalog <root>]
 
 ## Stories
 
-One story for each row, under #291, created after the decision record is
-accepted:
+One story for each row, under #291:
 
-1. Hook item kind in `lint`, `fmt`, `new` and `pack`.
-2. Command item kind in `lint`, `fmt`, `new` and `pack`, with `init` rendered
-   through it.
-3. MCP servers in `pack` output; `init` stops listing them.
-4. Bundle key `lsps:` and LSP servers in `pack` output.
-5. Several bundles, `--all` and `--catalog` in `pack`.
-6. Packed plugins and the CI check in `driftsys/metapowers`.
-7. Hosted-marketplace smoke test and the removal of the "experimental" status.
+1. [#631](https://github.com/driftsys/upskill/issues/631): hook item kind in
+   `lint`, `fmt`, `new` and `pack`.
+2. [#632](https://github.com/driftsys/upskill/issues/632): command item kind in
+   `lint`, `fmt`, `new` and `pack`, with `init` rendered through it.
+3. [#633](https://github.com/driftsys/upskill/issues/633): MCP servers in `pack`
+   output; `init` stops listing them.
+4. [#634](https://github.com/driftsys/upskill/issues/634): bundle key `lsps` and
+   LSP servers in `pack` output.
+5. [#635](https://github.com/driftsys/upskill/issues/635): several bundles,
+   `--all` and `--catalog` in `pack`.
+6. [#636](https://github.com/driftsys/upskill/issues/636): packed plugins and
+   the CI check in `driftsys/metapowers`.
+7. [#637](https://github.com/driftsys/upskill/issues/637): hosted-marketplace
+   smoke test and the removal of the "experimental" status.
