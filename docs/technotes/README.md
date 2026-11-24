@@ -94,6 +94,11 @@ snapshot; a stable name does not imply that external research remains current.
   untrusted folder; Copilot CLI 1.0.112 interactive terminal, plugin with the
   request (2026-11-18): the model reported the notice in 0 of 3 runs and nothing
   on the screen showed it; the cause is not separated.
+- [Trials of Copilot CLI plugin components](t4-copilot-plugin-component-trials.md):
+  T4, Copilot CLI 1.0.112, 2026-11-24; a plugin skill is a slash command, the
+  LSP file is `lsp.json`, rules in a plugin do not load, plugin MCP servers
+  load, and four hook events add context text (`subagentStart` for the subagent
+  only).
 - [Smoke test of `upskill pack` output with a marketplace install](t3-pack-marketplace-smoke.md):
   Claude Code 2.1.308 and Copilot CLI 1.0.112, 2026-11-19; every check passed.
 - [Copilot visibility of duplicate installs](t1-copilot-duplicate-visibility.md):

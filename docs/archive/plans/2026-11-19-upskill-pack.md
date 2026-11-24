@@ -25,8 +25,8 @@ lockfile records the restriction for `update`.
 [docs/wip/specs/2026-11-18-bundle-plugin-output-design.md](../specs/2026-11-18-bundle-plugin-output-design.md).
 Story: [driftsys/upskill#563](https://github.com/driftsys/upskill/issues/563).
 Context only:
-[hook item kind design](../../wip/specs/2026-11-18-hook-item-kind-design.md),
-AD-0040, AD-0041, AD-0042.
+[hook item kind design](../specs/2026-11-18-hook-item-kind-design.md), AD-0040,
+AD-0041, AD-0042.
 
 ## Global Constraints
 

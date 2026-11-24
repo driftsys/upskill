@@ -94,7 +94,7 @@ is fixed in that change or before it.
 - Triage the K2 debt filed against #283: fix the items that change behavior,
   close or merge the others.
 - Triage the working documents in `docs/wip/` (#536). Done on 2026-11-23: only
-  the hook item kind design stays there, and the
+  the hook item kind design stayed there, and the
   [archive](https://github.com/driftsys/upskill/blob/main/docs/archive/README.md#triage-of-2026-11-23)
   lists the other documents with three open points.
 - Delete the unused Python gate harness (#540).
@@ -103,29 +103,28 @@ is fixed in that change or before it.
 
 This stage is the plugin MVP and runs in parallel with stage 1. A plugin cannot
 hold an always-loaded rule file, so a bundle needs hooks and commands to be
-complete as a plugin. This stage starts with one design session and one decision
-record that covers all items below. The record amends
-[ADR-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-plugin-output-of-a-bundle.md)
-where an item changes it: ADR-0044 limits the plugin content to skills,
-resources and agents, and its `init` command lists the MCP servers of the bundle
-without installing them.
+complete as a plugin. This stage started with one design session. Its decision
+record,
+[ADR-0046](https://github.com/driftsys/upskill/blob/main/docs/adr/0046-plugin-mvp-components.md),
+covers all items below and amends
+[ADR-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-plugin-output-of-a-bundle.md),
+which limits the plugin content to skills, resources and agents, and whose
+`init` command lists the MCP servers of the bundle without installing them. No
+item below is implemented yet.
 
 - **Hook item kind (`HOOK.md`).** One file in an item directory holds all hook
-  events of that directory, one `## <event>` section for each event. The draft
-  is
-  [the hook item kind design](https://github.com/driftsys/upskill/blob/main/docs/wip/specs/2026-11-18-hook-item-kind-design.md).
-  The convention is agreed; the design is not approved for implementation. The
-  first target is `pack` output.
+  events of that directory, one `## <event>` section for each event. An event
+  either adds text to the model's context or runs a script. The target is `pack`
+  output.
 - **Command item kind (`COMMAND.md`).** A command that the user calls in the
-  client, rendered for each client. The design decides how a command relates to
-  a skill.
+  client. `pack` renders it in both clients as a skill that only the user calls.
 - **Init command.** The `init` command of a packed plugin copies into the git
   repository the content that a plugin cannot load, today the rules of the
   bundle, with `upskill add --kind rule --project`. `pack` already writes it
-  (ADR-0044). The plugin MVP defines which content `init` copies and qualifies
-  it in the smoke test. `init` never writes `AGENTS.md`: the user owns it, and
-  upskill only creates a `CLAUDE.md` that holds `@AGENTS.md` when no `CLAUDE.md`
-  exists.
+  (ADR-0044). In the plugin MVP, `init` copies only rules (ADR-0046), and the
+  smoke test qualifies it. `init` never writes `AGENTS.md`: the user owns it,
+  and upskill only creates a `CLAUDE.md` that holds `@AGENTS.md` when no
+  `CLAUDE.md` exists.
 - **MCP servers in the plugin.** `pack` writes the MCP servers that a bundle
   declares into the plugin, so the client installs and removes them with the
   plugin. Today `upskill add` configures them, but `pack` output does not hold
@@ -148,26 +147,19 @@ client.
 Entry file names are singular (`RULE.md`, `HOOK.md`, `COMMAND.md`). The keys of
 a bundle file are plural (`items.hooks`, `items.commands`).
 
-The design session also decides:
+ADR-0046 also decides these points:
 
-- How a context hook delivers its text in each client, and in which order the
-  hooks of several items of one plugin are merged.
-- Which content the `init` command copies into the repository besides rules, and
-  whether a session-start hook also delivers rule text.
-- Where packed plugins are built: committed in `driftsys/metapowers` or built by
-  its CI.
-- Which Copilot CLI manifest `pack` writes. The Agent Plugins 1.0 format has a
-  closed schema with fixed paths under `com.github.copilot/`. `pack` writes a
-  `plugin.json` at the plugin root today.
-- Whether the `com.github.copilot/rules/` directory of Agent Plugins 1.0 loads
-  rules natively in Copilot CLI. If a trial confirms it, Copilot CLI rules need
-  neither `init` nor a hook.
-- The file format of Copilot CLI plugin commands, which the documentation does
-  not describe.
+- `pack` writes the text of a context hook as a static file and merges the hooks
+  of one event in the order of the bundle closure.
+- The `init` command copies only rules. No hook delivers rule text.
+- The packed plugins are committed in `driftsys/metapowers`, and its CI checks
+  them against a new `pack` run.
+- `pack` keeps the Copilot CLI `plugin.json` at the plugin root.
+- Rules inside a Copilot CLI plugin do not reach the model (trial of 2026-11-24
+  on Copilot CLI 1.0.112), so Copilot CLI rules need `init`.
 
-The component evidence of 2026-11-23 comes partly from summarized documentation.
-The session checks it again against the documentation pages and an installed
-plugin before deciding.
+The evidence is in
+[technote T4](https://github.com/driftsys/upskill/blob/main/docs/technotes/t4-copilot-plugin-component-trials.md).
 
 ## Stage 3 — Refactor where the Codex adapter needs it
 
