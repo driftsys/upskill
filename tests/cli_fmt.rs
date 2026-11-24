@@ -251,3 +251,34 @@ fn fmt_reports_files_changed_count() {
         "expected change count: {out}"
     );
 }
+
+#[test]
+fn fmt_orders_command_keys_canonically() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let path = tmp.path().join("release-notes/COMMAND.md");
+    write(
+        &path,
+        "---\nargument-hint: \"[version]\"\ndescription: Write the notes\nname: release-notes\nschema: 1\n---\n\nWrite the notes.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    let after = fs::read_to_string(&path).unwrap();
+    let lines: Vec<_> = after.lines().skip(1).take(4).collect();
+    for (line, key) in lines
+        .iter()
+        .zip(["schema:", "name:", "description:", "argument-hint:"])
+    {
+        assert!(line.starts_with(key), "{after}");
+    }
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    assert_eq!(fs::read_to_string(&path).unwrap(), after);
+}

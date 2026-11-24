@@ -17,10 +17,11 @@
 //! | `fence-lang`      | warning  | §5.2               |
 //! | `body-format`     | warning  | §3.8 (dprint canonical body) |
 //! | `directive`       | error    | §6.3 (any imbalance, unknown client, nesting) |
+//! | `command-with-skill` | error | §2.1 |
 //! | `name-collision`  | error    | cross-file (bundle vs item name) |
 //!
 //! Discovery: a path argument is either a file (lint that file) or a
-//! directory (walk for `<root>/<name>/{RULE,SKILL,AGENT}.md` per
+//! directory (walk for `<root>/<name>/{RULE,SKILL,AGENT,COMMAND}.md` per
 //! format-spec §2.1, plus any `*.bundle.yaml`). With no paths, the
 //! current directory is used.
 
@@ -30,7 +31,7 @@ use std::path::{Path, PathBuf};
 
 use crate::generate::Client;
 use crate::generate::directives;
-use crate::model::{Agent, Rule, Skill};
+use crate::model::{Agent, Command, Rule, Skill};
 use crate::parse::frontmatter;
 
 /// Severity of a [`Finding`]. `--strict` promotes every `Warning` to
@@ -150,6 +151,7 @@ enum FileKind {
     Skill,
     Rule,
     Agent,
+    Command,
     Bundle,
 }
 
@@ -159,6 +161,7 @@ impl FileKind {
             "SKILL.md" => Some(Self::Skill),
             "RULE.md" => Some(Self::Rule),
             "AGENT.md" => Some(Self::Agent),
+            "COMMAND.md" => Some(Self::Command),
             n if n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) => Some(Self::Bundle),
             _ => None,
         }
@@ -171,7 +174,7 @@ impl FileKind {
 /// the `*.bundle.yaml` suffix. Shared with `crate::fmt`.
 ///
 /// When `root` is itself an item directory (directly contains
-/// `RULE.md`/`SKILL.md`/`AGENT.md`), those files are collected
+/// `RULE.md`/`SKILL.md`/`AGENT.md`/`COMMAND.md`), those files are collected
 /// directly — fixing the silent false-pass described in issue #159.
 pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
@@ -205,11 +208,13 @@ pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     Ok(out)
 }
 
-/// Collect entrypoint files (`RULE.md`, `SKILL.md`, `AGENT.md`) that
+const ENTRYPOINTS: [&str; 4] = ["RULE.md", "SKILL.md", "AGENT.md", "COMMAND.md"];
+
+/// Collect entrypoint files (`RULE.md`, `SKILL.md`, `AGENT.md`, `COMMAND.md`) that
 /// exist directly inside `dir`. This handles the case where `dir` is
 /// itself an item directory rather than a registry root.
 fn discover_self_entrypoints(dir: &Path, out: &mut Vec<PathBuf>) {
-    for entrypoint in ["RULE.md", "SKILL.md", "AGENT.md"] {
+    for entrypoint in ENTRYPOINTS {
         let path = dir.join(entrypoint);
         if path.is_file() {
             out.push(path);
@@ -218,7 +223,7 @@ fn discover_self_entrypoints(dir: &Path, out: &mut Vec<PathBuf>) {
 }
 
 /// Walk one level deep under `root`, collecting every `RULE.md`,
-/// `SKILL.md`, and `AGENT.md` found in a subdirectory. Hidden
+/// `SKILL.md`, `AGENT.md`, and `COMMAND.md` found in a subdirectory. Hidden
 /// directories are skipped. A single item directory may contribute
 /// more than one entrypoint when it holds multiple co-located kinds
 /// (format-spec §2.1).
@@ -238,7 +243,7 @@ fn discover_items(root: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
         {
             continue;
         }
-        for entrypoint in ["RULE.md", "SKILL.md", "AGENT.md"] {
+        for entrypoint in ENTRYPOINTS {
             let entry_path = path.join(entrypoint);
             if entry_path.is_file() {
                 out.push(entry_path);
@@ -282,6 +287,21 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
         .and_then(|n| n.to_str())
         .and_then(FileKind::from_filename)
         .ok_or_else(|| anyhow!("{}: unknown entrypoint filename", file.display()))?;
+
+    if let FileKind::Command = kind {
+        if let Some(parent) = file.parent().filter(|dir| dir.join("SKILL.md").is_file()) {
+            let dir = parent.file_name().unwrap_or_default().to_string_lossy();
+            out.push(Finding {
+                rule_id: "command-with-skill",
+                severity: Severity::Error,
+                path: file.to_path_buf(),
+                line: None,
+                message: format!(
+                    "a COMMAND.md and a SKILL.md cannot share the directory `{dir}`: both take its name"
+                ),
+            });
+        }
+    }
 
     let body = match parse_kind(&raw, kind) {
         Ok((parsed_name, body)) => {
@@ -338,6 +358,10 @@ fn parse_kind(raw: &str, kind: FileKind) -> Result<(Option<String>, &str)> {
             let (item, body) = frontmatter::parse::<Agent>(raw)?;
             Ok((item.name, body))
         }
+        FileKind::Command => {
+            let (item, body) = frontmatter::parse::<Command>(raw)?;
+            Ok((Some(item.name), body))
+        }
         FileKind::Bundle => {
             let bundle: crate::model::Bundle = serde_yaml_ng::from_str(raw)?;
             bundle
@@ -357,6 +381,7 @@ fn parse_kind(raw: &str, kind: FileKind) -> Result<(Option<String>, &str)> {
 /// - Skill: the Agent Skills standard mandates `name == dir`. When a
 ///   `name` is present it MUST equal the directory; when absent the
 ///   directory name is used and there is nothing to check.
+/// - Command: `name` is required and MUST equal the directory name.
 /// - Rule / Agent: identity is layout-independent — the frontmatter
 ///   `name` may diverge from the folder, so no check is performed.
 fn check_name_matches_dir(file: &Path, name: Option<&str>, kind: FileKind, out: &mut Vec<Finding>) {
@@ -384,7 +409,7 @@ fn check_name_matches_dir(file: &Path, name: Option<&str>, kind: FileKind, out: 
                 });
             }
         }
-        FileKind::Skill => {
+        FileKind::Skill | FileKind::Command => {
             let Some(name) = name else {
                 return;
             };
@@ -401,9 +426,14 @@ fn check_name_matches_dir(file: &Path, name: Option<&str>, kind: FileKind, out: 
                     severity: Severity::Error,
                     path: file.to_path_buf(),
                     line: None,
-                    message: format!(
-                        "skill `name: {name}` must equal directory `{dir}` (Agent Skills standard)"
-                    ),
+                    message: match kind {
+                        FileKind::Command => format!(
+                            "command `name: {name}` must equal directory `{dir}`"
+                        ),
+                        _ => format!(
+                            "skill `name: {name}` must equal directory `{dir}` (Agent Skills standard)"
+                        ),
+                    },
                 });
             }
         }

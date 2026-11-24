@@ -46,8 +46,8 @@ Why this shape:
   `requires:` and `items:` lists are visually adjacent to their targets.
 - **Matches `upskill new`.** Running `upskill new <kind> <name>` from inside
   `skills/` produces `skills/<name>/<KIND>.md` with no follow-up moves.
-- **Holds all three kinds.** Despite the directory name, `skills/` carries rules
-  and agents as well. Kind is determined by the entrypoint filename
+- **Holds all four kinds.** Despite the directory name, `skills/` carries rules,
+  agents, and commands as well. Kind is determined by the entrypoint filename
   ([format-spec §2.1](format-spec.md#21-item-directory-structure)), not by the
   parent directory.
 

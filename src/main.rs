@@ -2680,6 +2680,7 @@ fn print_scaffold_report(report: &ScaffoldReport) {
         NewKind::Rule => "rule",
         NewKind::Skill => "skill",
         NewKind::Agent => "agent",
+        NewKind::Command => "command",
     };
     println!(
         "{} {kind_label} `{}` at {}",

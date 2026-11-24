@@ -36,7 +36,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::lint::{discover, is_consumer_project};
-use crate::model::{Agent, Bundle, Rule, Skill};
+use crate::model::{Agent, Bundle, Command, Rule, Skill};
 use crate::parse::frontmatter;
 
 // ── Canonical key-order tables (mirror struct field declarations) ────
@@ -52,6 +52,16 @@ const BUNDLE_KEY_ORDER: &[&str] = &[
     "mcps",
     "lsps",
     "metadata",
+];
+
+const COMMAND_KEY_ORDER: &[&str] = &[
+    "schema",
+    "name",
+    "description",
+    "argument-hint",
+    "license",
+    "metadata",
+    "ignore",
 ];
 
 const SKILL_KEY_ORDER: &[&str] = &[
@@ -168,7 +178,7 @@ fn format_file(path: &Path) -> Result<bool> {
 /// Produce the canonical form of `raw` for the kind inferred from
 /// `path`'s filename. Pure function — no I/O, no mutation.
 ///
-/// Items (Skill/Rule/Agent) are frontmatter+body — body is preserved
+/// Items (Skill/Rule/Agent/Command) are frontmatter+body — body is preserved
 /// byte-for-byte. Bundles are pure YAML (§2.2, ADR-0007), so the file
 /// content is the canonical YAML verbatim, no `---` wrapping.
 fn canonicalise(raw: &str, path: &Path) -> Result<String> {
@@ -185,6 +195,7 @@ fn canonicalise(raw: &str, path: &Path) -> Result<String> {
         EntryKind::Skill => canonicalise_item::<Skill>(raw, path, SKILL_KEY_ORDER),
         EntryKind::Rule => canonicalise_item::<Rule>(raw, path, RULE_KEY_ORDER),
         EntryKind::Agent => canonicalise_item::<Agent>(raw, path, AGENT_KEY_ORDER),
+        EntryKind::Command => canonicalise_item::<Command>(raw, path, COMMAND_KEY_ORDER),
     }
 }
 
@@ -499,6 +510,7 @@ enum EntryKind {
     Skill,
     Rule,
     Agent,
+    Command,
     Bundle,
 }
 
@@ -507,6 +519,7 @@ fn file_kind(path: &Path) -> Option<EntryKind> {
         "SKILL.md" => Some(EntryKind::Skill),
         "RULE.md" => Some(EntryKind::Rule),
         "AGENT.md" => Some(EntryKind::Agent),
+        "COMMAND.md" => Some(EntryKind::Command),
         n if n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) => Some(EntryKind::Bundle),
         _ => None,
     }

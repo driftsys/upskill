@@ -8,11 +8,12 @@
 //!
 //! When `<cwd>/<name>/` already exists with a different kind's
 //! entrypoint, the command adds the requested kind as a co-located
-//! sibling (format-spec §2.1) provided every existing **skill**
-//! entrypoint's `name:` matches `<name>` (Agent Skills standard).
+//! sibling (format-spec §2.1) provided every existing **skill or command**
+//! entrypoint's explicit `name:` matches `<name>` (§2.1).
 //! Rule and agent co-locatees may carry a divergent `name:` and do
 //! not block co-location. The user keeps a single item directory
-//! expressing one capability across multiple kinds.
+//! expressing one capability across multiple kinds. A command and a skill
+//! cannot share a directory.
 //!
 //! Refuses if:
 //!
@@ -20,7 +21,7 @@
 //!   registry).
 //! - The target entrypoint file (`<name>/<KIND>.md`) already exists.
 //! - `<cwd>/<name>/` exists but is not an item directory (no
-//!   recognised entrypoints), or an existing **skill** entrypoint's
+//!   recognised entrypoints), or an existing **skill or command** entrypoint's
 //!   `name:` field does not match `<name>`.
 //! - `<name>` does not satisfy format-spec §2.1
 //!   (`[a-z0-9-]{1,64}`, no leading/trailing hyphen).
@@ -36,16 +37,18 @@ pub enum NewKind {
     Rule,
     Skill,
     Agent,
+    Command,
 }
 
 impl NewKind {
-    /// Parse the CLI value (`rule` / `skill` / `agent`).
+    /// Parse the CLI value (`rule` / `skill` / `agent` / `command`).
     pub fn parse(s: &str) -> Result<Self> {
         match s {
             "rule" => Ok(Self::Rule),
             "skill" => Ok(Self::Skill),
             "agent" => Ok(Self::Agent),
-            other => bail!("unknown kind `{other}` — expected one of: rule, skill, agent"),
+            "command" => Ok(Self::Command),
+            other => bail!("unknown kind `{other}` — expected one of: rule, skill, agent, command"),
         }
     }
 
@@ -54,6 +57,7 @@ impl NewKind {
             Self::Rule => "RULE.md",
             Self::Skill => "SKILL.md",
             Self::Agent => "AGENT.md",
+            Self::Command => "COMMAND.md",
         }
     }
 }
@@ -74,7 +78,7 @@ pub struct ScaffoldReport {
 /// Writes `<root>/<name>/<KIND>.md` (format-spec §2.1, ADR-0006). If
 /// `<root>/<name>/` already exists as a co-locatable item directory,
 /// the new entrypoint is added as a sibling provided no existing
-/// **skill** entrypoint has a `name:` that diverges from `<name>`.
+/// **skill or command** entrypoint has a `name:` that diverges from `<name>`.
 /// Rule and agent co-locatees may carry divergent names without
 /// blocking the operation. Refuses if the directory has no recognised
 /// entrypoints at all.
@@ -105,7 +109,7 @@ pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport
                 item_dir.display()
             );
         }
-        validate_existing_item_dir_for_coloc(&item_dir, name)?;
+        validate_existing_item_dir_for_coloc(&item_dir, name, kind)?;
     } else {
         std::fs::create_dir_all(&item_dir)
             .with_context(|| format!("create {}", item_dir.display()))?;
@@ -122,23 +126,36 @@ pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport
 }
 
 /// Every entrypoint filename paired with whether its kind requires
-/// `name == dir` (the Agent Skills standard constraint).
+/// `name == dir` (§2.1).
 ///
-/// Skill: MUST match the directory name (§2.1, Agent Skills standard).
+/// Skill / Command: MUST match the directory name (§2.1).
 /// Rule / Agent: MAY diverge — no check performed, mirroring
 /// `lint.rs::check_name_matches_dir`.
-const ENTRYPOINT_SKILL_MATCH: &[(&str, bool)] =
-    &[("RULE.md", false), ("SKILL.md", true), ("AGENT.md", false)];
+const ENTRYPOINT_SKILL_MATCH: &[(&str, bool)] = &[
+    ("RULE.md", false),
+    ("SKILL.md", true),
+    ("AGENT.md", false),
+    ("COMMAND.md", true),
+];
 
 /// Verify that `dir` is a co-locatable item directory for `name`: it
-/// contains at least one recognised entrypoint, and every skill
-/// entrypoint it does contain declares `name:` equal to `name`.
+/// contains at least one recognised entrypoint, and every skill or command
+/// entrypoint it contains has no explicit `name:` that differs from `name`.
 ///
 /// Rule and agent entrypoints are exempt from the name-equality check
 /// because format-spec §2.1 (Slice 1) allows rule/agent `name` to
 /// diverge from the folder. This mirrors the identity rule in
 /// `lint.rs::check_name_matches_dir`.
-fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str) -> Result<()> {
+fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str, kind: NewKind) -> Result<()> {
+    if (kind == NewKind::Command && dir.join("SKILL.md").is_file())
+        || (kind == NewKind::Skill && dir.join("COMMAND.md").is_file())
+    {
+        bail!(
+            "{}: a COMMAND.md and a SKILL.md cannot share one item directory: both take the directory name",
+            dir.display()
+        );
+    }
+
     let mut saw_entrypoint = false;
     for &(entrypoint, must_match_dir) in ENTRYPOINT_SKILL_MATCH {
         let path = dir.join(entrypoint);
@@ -152,9 +169,15 @@ fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str) -> Result<()> {
         }
         let raw =
             std::fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?;
-        // An absent `name:` falls back to the directory name (§2.1), so it
-        // can never conflict — only an explicit divergent name does.
+        // Only an explicit divergent name conflicts with co-location.
+        // Lint separately checks that a command declares its required name.
         if let Some(existing_name) = read_name_field(&raw, &path)?.filter(|n| n != name) {
+            if entrypoint == "COMMAND.md" {
+                bail!(
+                    "{}: existing command entrypoint declares `name: {existing_name}` — a command must have the name of its directory `{name}`",
+                    path.display()
+                );
+            }
             bail!(
                 "{}: existing skill entrypoint declares `name: {existing_name}` — a skill \
                  must share the directory's name `{name}` (format-spec §2.1, Agent Skills \
@@ -228,6 +251,17 @@ fn render(kind: NewKind, name: &str) -> String {
              ## Overview\n\
              \n\
              TODO write the skill body. Replace this scaffold before publishing.\n",
+        ),
+        NewKind::Command => format!(
+            "---\n\
+             schema: 1\n\
+             name: {name}\n\
+             description: TODO describe what this command does when the user calls it.\n\
+             ---\n\
+             \n\
+             ## Overview\n\
+             \n\
+             TODO write the command body. Replace this scaffold before publishing.\n",
         ),
         NewKind::Agent => format!(
             "---\n\

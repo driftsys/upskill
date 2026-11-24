@@ -68,7 +68,8 @@ src/
 ├── main.rs              CLI entry point, clap derive, command dispatch
 ├── lib.rs               Module declarations and re-exports
 │
-├── model/               SSOT data model: Rule, Skill, Agent, Bundle + common
+├── model/               SSOT data model:
+│                        Rule, Skill, Agent, Command, Bundle + common
 ├── parse/               SSOT parsing: YAML frontmatter + bundle loader/discovery
 ├── generate/            SSOT → per-client rendering:
 │                        Client enum + claude/copilot/opencode + directives + dprint

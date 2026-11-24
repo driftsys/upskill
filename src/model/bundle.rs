@@ -67,12 +67,17 @@ pub struct BundleItems {
     pub skills: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub agents: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub commands: Vec<String>,
 }
 
 impl BundleItems {
-    /// True when no rule, skill, or agent is named.
+    /// True when no rule, skill, agent, or command is named.
     pub fn is_empty(&self) -> bool {
-        self.rules.is_empty() && self.skills.is_empty() && self.agents.is_empty()
+        self.rules.is_empty()
+            && self.skills.is_empty()
+            && self.agents.is_empty()
+            && self.commands.is_empty()
     }
 }
 
