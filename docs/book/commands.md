@@ -591,7 +591,10 @@ keeps its commit when the source is not applied. In an applied source, the
 reinstall covers the named items and the items that a named item requires. For a
 directory source with recorded bundles, it reinstalls the members of those
 bundles and the items of that source installed directly, including their
-`requires` closure; it installs no unrelated item of the source. It applies a
+`requires` closure. It also reinstalls each dependency of that source that no
+installed item requires, which `doctor` reports as an orphaned dependency,
+unless a recorded bundle of the source lists it as a member: a bundle member
+follows its bundle. It installs no unrelated item of the source. It applies a
 kind restriction only when every recorded bundle of the source has recorded
 kinds, using their union. With one unrestricted bundle of the source, no kind
 restriction applies. Every lockfile entry of that source whose kind is outside
@@ -674,10 +677,12 @@ set and keeps the recorded items out. When `add <source> --exclude <name>` names
 an item that is installed from the same source, and the same `add` does not also
 name the item, `add` removes that item only, within the kinds that `--kind`
 selects: its files and its lock entry, no other item of a co-located group, no
-bundle record and no plugin entry. It also deletes each `required_by` link that
-names the item, and prints `removed — excluded <kind> <name>` on stdout. When a
-recorded file of the item was modified, `add` removes nothing of the item: its
-files and its lock entry stay, the exclude is recorded, and stderr gets
+bundle record and no plugin entry. It keeps each `required_by` link that names
+the item, as `remove` does, so `doctor` reports a dependency that no installed
+item requires as an orphaned dependency; it prints
+`removed — excluded <kind> <name>` on stdout. When a recorded file of the item
+was modified, `add` removes nothing of the item: its files and its lock entry
+stay, the exclude is recorded, and stderr gets
 `kept — excluded <kind> <name>: <path> was modified` for each modified file. An
 `--exclude` name that matches no item of the entry source and no item that the
 resolver skipped is a usage error (exit code 2) that writes nothing, so the

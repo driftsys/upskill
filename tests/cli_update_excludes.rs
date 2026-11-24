@@ -575,31 +575,241 @@ fn an_excluded_member_of_a_required_bundle_stays_out() {
     assert!(!has_lock_item(&env.lock(), "d"), "{}", env.lock());
 }
 
+/// Runs `doctor --project --json` and returns the names in
+/// `orphaned_dependencies`, sorted.
+fn orphaned_dependencies(env: &Env) -> Vec<String> {
+    let out = common::upskill_cmd(&env.tmp.path().join("home"))
+        .current_dir(env.consumer())
+        .args(["doctor", "--project", "--json"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    let document: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("invalid JSON: {e}\nstdout was:\n{stdout}"));
+    let mut names: Vec<String> = document["scopes"][0]["orphaned_dependencies"]
+        .as_array()
+        .unwrap_or_else(|| panic!("no orphaned_dependencies array: {document}"))
+        .iter()
+        .map(|d| d["name"].as_str().unwrap().to_string())
+        .collect();
+    names.sort();
+    names
+}
+
+fn required_by(env: &Env, name: &str) -> serde_json::Value {
+    lock_item(&env.lock(), name)["required_by"].clone()
+}
+
+fn remove_item(env: &Env, name: &str) {
+    common::upskill_cmd(&env.tmp.path().join("home"))
+        .current_dir(env.consumer())
+        .args(["remove", name, "--project"])
+        .assert()
+        .success();
+}
+
 #[test]
-fn add_that_removes_an_excluded_item_leaves_no_link_to_it() {
+fn add_that_removes_an_excluded_item_keeps_the_link_and_doctor_reports_the_orphan() {
     let env = Env::new();
     let reg = env.registry("reg");
     write_skill(&reg, "e", "", "dependency");
     write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
     write_skill(&reg, "x", "", "other");
     env.run(&["add", s(&reg), "d"]);
-    assert_eq!(
-        lock_item(&env.lock(), "e")["required_by"],
-        serde_json::json!(["skill:d"])
-    );
+    assert_eq!(required_by(&env, "e"), serde_json::json!(["skill:d"]));
 
     env.run(&["add", s(&reg), "x", "--exclude", "d"]);
 
     let lock = env.lock();
     assert!(!has_lock_item(&lock, "d"), "{lock}");
-    assert!(
-        lock["items"].as_array().unwrap().iter().all(|i| {
-            i.get("required_by")
-                .and_then(|r| r.as_array())
-                .is_none_or(|a| a.iter().all(|r| r != "skill:d"))
-        }),
-        "{lock}"
+    assert!(env.installed("e") && !env.installed("d"));
+    assert_eq!(required_by(&env, "e"), serde_json::json!(["skill:d"]));
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+
+    env.run(&["update", "--yes"]);
+    assert!(env.installed("e"), "{}", env.lock());
+    assert_eq!(required_by(&env, "e"), serde_json::json!(["skill:d"]));
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+}
+
+#[test]
+fn a_dependency_that_a_remaining_item_also_requires_is_no_orphan_after_an_exclude() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "y", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "x", "", "other");
+    env.run(&["add", s(&reg), "d", "y"]);
+    env.run(&["add", s(&reg), "x", "--exclude", "d"]);
+
+    assert!(!env.installed("d"));
+    assert_eq!(
+        required_by(&env, "e"),
+        serde_json::json!(["skill:d", "skill:y"])
     );
+    assert!(orphaned_dependencies(&env).is_empty());
+}
+
+#[test]
+fn an_exclude_reports_only_the_direct_dependency_of_the_removed_item() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "f", "", "dependency");
+    write_skill(&reg, "e", "requires:\n  skills: [f]\n", "dependency");
+    write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "x", "", "other");
+    env.run(&["add", s(&reg), "d"]);
+    env.run(&["add", s(&reg), "x", "--exclude", "d"]);
+
+    assert!(env.installed("e") && env.installed("f"));
+    assert_eq!(required_by(&env, "e"), serde_json::json!(["skill:d"]));
+    assert_eq!(required_by(&env, "f"), serde_json::json!(["skill:e"]));
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+}
+
+#[test]
+fn a_cross_source_dependency_keeps_its_link_after_an_exclude() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    let dep = env.registry("dep");
+    write_skill(&dep, "e", "", "dependency");
+    write_skill(
+        &reg,
+        "d",
+        &format!(
+            "requires:\n  skills: [{{ name: e, source: {} }}]\n",
+            s(&dep)
+        ),
+        "first",
+    );
+    write_skill(&reg, "x", "", "other");
+    env.run(&["add", s(&reg), "d"]);
+    assert_eq!(required_by(&env, "e"), serde_json::json!(["skill:d"]));
+
+    env.run(&["add", s(&reg), "x", "--exclude", "d"]);
+    assert!(!env.installed("d") && env.installed("e"));
+    assert_eq!(required_by(&env, "e"), serde_json::json!(["skill:d"]));
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+
+    env.run(&["update", "--yes"]);
+    assert!(env.installed("e"), "{}", env.lock());
+    assert_eq!(required_by(&env, "e"), serde_json::json!(["skill:d"]));
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+}
+
+#[test]
+fn an_exclude_and_remove_leave_the_same_state_for_an_item_installed_by_name_first() {
+    let setup = |env: &Env| {
+        let reg = env.registry("reg");
+        write_skill(&reg, "e", "", "dependency");
+        write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+        write_skill(&reg, "x", "", "other");
+        env.run(&["add", s(&reg), "e"]);
+        let after_e = required_by_is_empty(lock_item(&env.lock(), "e"));
+        assert!(after_e, "installed by name has no requirer");
+        env.run(&["add", s(&reg), "d"]);
+        assert_eq!(required_by(env, "e"), serde_json::json!(["skill:d"]));
+        reg
+    };
+
+    let excluded = Env::new();
+    let reg = setup(&excluded);
+    excluded.run(&["add", s(&reg), "x", "--exclude", "d"]);
+
+    let removed = Env::new();
+    setup(&removed);
+    remove_item(&removed, "d");
+
+    // The lockfile cannot tell `e` installed by name from a pure dependency,
+    // so both commands leave `e` reported as an orphaned dependency.
+    assert_eq!(
+        required_by(&excluded, "e"),
+        required_by(&removed, "e"),
+        "exclude: {} remove: {}",
+        excluded.lock(),
+        removed.lock()
+    );
+    assert_eq!(required_by(&excluded, "e"), serde_json::json!(["skill:d"]));
+    assert_eq!(orphaned_dependencies(&excluded), ["e"]);
+    assert_eq!(
+        orphaned_dependencies(&excluded),
+        orphaned_dependencies(&removed)
+    );
+}
+
+#[test]
+fn an_exclude_of_an_item_that_is_not_installed_leaves_the_links_unchanged() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "y", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "d", "", "never installed");
+    write_skill(&reg, "x", "", "other");
+    env.run(&["add", s(&reg), "y"]);
+    let before = required_by(&env, "e");
+
+    let stdout = stdout_of(&env.run(&["add", s(&reg), "x", "--exclude", "d"]));
+    assert!(!stdout.contains("removed — excluded"), "{stdout}");
+    assert_eq!(required_by(&env, "e"), before);
+    assert_eq!(before, serde_json::json!(["skill:y"]));
+}
+
+#[test]
+fn a_bundle_source_treats_an_exclude_and_remove_alike_for_a_dependency_outside_the_bundle() {
+    let run = |use_exclude: bool| -> (bool, serde_json::Value, Vec<String>, String) {
+        let env = Env::new();
+        let reg = env.registry("reg");
+        write_skill(&reg, "e", "", "dependency");
+        write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+        write_skill(&reg, "a", "", "first");
+        write_bundle(&reg, "b.bundle.yaml", &["a", "d"]);
+        // A bundle install does not pull the dependencies of its members, so
+        // `d` is installed first with its dependency `e`, then the bundle.
+        env.run(&["add", s(&reg), "d"]);
+        env.run(&["add", s(&reg), "b"]);
+        assert!(env.installed("d") && env.installed("e"), "{}", env.lock());
+        if use_exclude {
+            env.run(&["add", s(&reg), "b", "--exclude", "d"]);
+        } else {
+            remove_item(&env, "d");
+        }
+        write_skill(&reg, "a", "", "second");
+        write_skill(&reg, "e", "", "refreshed dependency");
+        let out = stdout_of(&env.run(&["update", "--yes"]));
+        // `update` reinstalls `e`, so the installed file holds the new text.
+        let installed_e =
+            fs::read_to_string(env.consumer().join(".claude/skills/e/SKILL.md")).unwrap();
+        assert!(
+            installed_e.contains("refreshed dependency"),
+            "{installed_e}"
+        );
+        let lock = env.lock();
+        let e_item = if has_lock_item(&lock, "e") {
+            lock_item(&lock, "e")["required_by"].clone()
+        } else {
+            serde_json::Value::Null
+        };
+        (env.installed("e"), e_item, orphaned_dependencies(&env), out)
+    };
+    let exclude = run(true);
+    let remove = run(false);
+    for (label, result) in [("exclude", &exclude), ("remove", &remove)] {
+        assert!(
+            !result.3.contains("no longer in source"),
+            "{label}: {}",
+            result.3
+        );
+        assert!(result.0, "{label}: e must stay installed");
+        assert_eq!(result.1, serde_json::json!(["skill:d"]), "{label}");
+        assert_eq!(result.2, ["e"], "{label}");
+    }
+    assert_eq!(
+        exclude.0, remove.0,
+        "e kept differs: {exclude:?} {remove:?}"
+    );
+    assert_eq!(exclude.1, remove.1, "{exclude:?} {remove:?}");
+    assert_eq!(exclude.2, remove.2, "{exclude:?} {remove:?}");
 }
 
 fn stderr_of(out: &Assert) -> String {
@@ -869,4 +1079,131 @@ fn remove_keeps_the_recorded_excludes() {
         .success();
     assert!(!has_lock_item(&env.lock(), "r"), "{}", env.lock());
     assert_eq!(excluded_names(&env.lock()), ["d"], "{}", env.lock());
+}
+
+#[test]
+fn update_removes_a_dependency_that_its_installed_requirer_no_longer_requires_in_a_bundle_source() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "m", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "a", "", "first");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "m"]);
+    env.run(&["add", s(&reg), "m"]);
+    env.run(&["add", s(&reg), "b"]);
+    assert_eq!(required_by(&env, "e"), serde_json::json!(["skill:m"]));
+
+    // `m` stays installed, and the source no longer says that it requires `e`.
+    write_skill(&reg, "m", "", "second");
+    let out = stdout_of(&env.run(&["update", "--yes"]));
+    // `update` removes `e` because its installed requirer `m` no longer
+    // requires it in the source. The filter change of #613 does not alter
+    // this, because `m` is still installed.
+    assert_eq!(
+        (env.installed("e"), out.contains("no longer in source")),
+        (false, true)
+    );
+}
+
+#[test]
+fn update_keeps_and_refreshes_a_chain_of_orphaned_dependencies_of_a_bundle_source() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "f", "", "dependency");
+    write_skill(&reg, "e", "requires:\n  skills: [f]\n", "dependency");
+    write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "a", "", "first");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "d"]);
+    env.run(&["add", s(&reg), "d"]);
+    env.run(&["add", s(&reg), "b"]);
+    env.run(&["add", s(&reg), "b", "--exclude", "d"]);
+    assert!(env.installed("e") && env.installed("f"));
+
+    write_skill(&reg, "f", "", "refreshed f");
+    write_skill(&reg, "e", "requires:\n  skills: [f]\n", "refreshed e");
+    let out = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(!out.contains("no longer in source"), "{out}");
+    assert!(env.installed("e") && env.installed("f"), "{out}");
+    let e = fs::read_to_string(env.consumer().join(".claude/skills/e/SKILL.md")).unwrap();
+    assert!(e.contains("refreshed e"), "{e}");
+    assert_eq!(required_by(&env, "e"), serde_json::json!(["skill:d"]));
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+    let f = fs::read_to_string(env.consumer().join(".claude/skills/f/SKILL.md")).unwrap();
+    assert!(f.contains("refreshed f"), "{f}");
+}
+
+#[test]
+fn update_removes_an_orphaned_dependency_that_a_recorded_bundle_no_longer_lists() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "a", "", "first");
+    write_skill(&reg, "x", "", "other");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "e"]);
+    env.run(&["add", s(&reg), "d"]);
+    env.run(&["add", s(&reg), "b"]);
+    env.run(&["add", s(&reg), "x", "--exclude", "d"]);
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+
+    // The bundle no longer lists `e`: a bundle member follows its bundle.
+    write_bundle(&reg, "b.bundle.yaml", &["a"]);
+    let out = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(
+        out.lines()
+            .any(|l| l.contains("skill e") && l.contains("removed — no longer in source")),
+        "{out}"
+    );
+    assert!(!env.installed("e"));
+}
+
+#[test]
+fn update_removes_an_item_of_the_filter_that_the_source_no_longer_holds_without_failing() {
+    // A name in the item filter that the source no longer holds does not stop
+    // `update`; the item is removed as `no longer in source`.
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "d", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "a", "", "first");
+    write_bundle(&reg, "b.bundle.yaml", &["a", "d"]);
+    env.run(&["add", s(&reg), "d"]);
+    env.run(&["add", s(&reg), "b"]);
+    env.run(&["add", s(&reg), "b", "--exclude", "d"]);
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+
+    fs::remove_dir_all(reg.join("e")).unwrap();
+    let out = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(
+        out.lines()
+            .any(|l| l.contains("skill e") && l.contains("removed — no longer in source")),
+        "{out}"
+    );
+    assert!(!env.installed("e"));
+}
+
+#[test]
+fn update_keeps_a_dependency_whose_two_requirers_are_both_removed_from_a_bundle_source() {
+    let env = Env::new();
+    let reg = env.registry("reg");
+    write_skill(&reg, "e", "", "dependency");
+    write_skill(&reg, "d1", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "d2", "requires:\n  skills: [e]\n", "first");
+    write_skill(&reg, "a", "", "first");
+    write_bundle(&reg, "b.bundle.yaml", &["a"]);
+    env.run(&["add", s(&reg), "d1", "d2"]);
+    env.run(&["add", s(&reg), "b"]);
+    assert_eq!(
+        required_by(&env, "e"),
+        serde_json::json!(["skill:d1", "skill:d2"])
+    );
+    env.run(&["add", s(&reg), "b", "--exclude", "d1", "--exclude", "d2"]);
+    assert!(!env.installed("d1") && !env.installed("d2"));
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
+
+    write_skill(&reg, "e", "", "refreshed e");
+    let out = stdout_of(&env.run(&["update", "--yes"]));
+    assert!(!out.contains("no longer in source"), "{out}");
+    assert!(env.installed("e"), "{out}");
+    assert_eq!(orphaned_dependencies(&env), ["e"]);
 }

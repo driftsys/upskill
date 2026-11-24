@@ -1,6 +1,7 @@
 # AD-0045 — Record the excludes of `add` in the lockfile
 
-Status: **accepted**. Resolves bullet 4 of
+Status: **accepted**; decision 5 amended on 2026-11-23 (see the end of this
+record). Resolves bullet 4 of
 [#570](https://github.com/driftsys/upskill/issues/570). Related:
 [#598](https://github.com/driftsys/upskill/issues/598). The behaviour is
 specified in
@@ -134,13 +135,49 @@ records (`orphan_excludes`). The per-scope set needs neither.
 - The project lockfile is committed, so an exclude applies to every user of the
   repository, as every other lockfile entry does.
 - `required_by` links that earlier lockfiles already hold wrongly are not
-  repaired.
+  repaired. This holds also for links that an earlier exclude removal deleted
+  (see the amendment).
 - An upskill version that predates schema 3 cannot read a lockfile that a
   current version saved, also one without excludes; the user must upgrade.
 - The ways to undo an exclude are `add <source> <name>` and editing the
   lockfile.
 
-Satisfies: #570. Code: `src/lockfile.rs`, `src/pipeline/prepared.rs`,
+Satisfies: #570, #613. Code: `src/lockfile.rs`, `src/pipeline/prepared.rs`,
 `src/pipeline/install.rs`, `src/pipeline/bundle_plan.rs`,
 `src/pipeline/lifecycle.rs`, `src/pipeline/mod.rs`, `src/pipeline/report.rs`,
 `src/main.rs`. Tests: `tests/cli_update_excludes.rs`.
+
+## Amendment: keep required_by links on exclude removal (2026-11-23)
+
+Decision 5 said that `add <source> --exclude d` deletes each `required_by` link
+that names the removed item `d`. This is replaced: the command keeps those
+links, as `remove` does, and prints `removed — excluded <kind> <name>` on
+stdout. Nothing else is removed, the lockfile schema is unchanged, and no field
+is added.
+
+Reason (#613): a dependency `e` that only `d` required had an empty
+`required_by` after the deletion, which means "installed by name". `doctor` then
+did not report `e` as an orphaned dependency, although it does after `remove d`
+(AD-0009: removal never cascades and `doctor` reports the orphan).
+
+Second change, found while testing: for a directory source with recorded
+bundles, the `update` item filter took only entries with an empty `required_by`.
+With the links kept, `e` was no longer in the filter, because no planned item
+required it, and `update` removed it with the message `no longer in source`,
+which is a cascade removal. The filter now also takes an entry whose
+`required_by` is not empty, names no requirer that the lockfile records, and is
+listed by no recorded bundle of the source. A member of a recorded bundle
+follows its bundle: when the bundle no longer lists it in the source, `update`
+removes it as `no longer in source`, as it did before. This is the `doctor`
+condition for an orphaned dependency, shared as
+`Lockfile::is_orphaned_dependency`. An entry that still has an installed
+requirer keeps the earlier behaviour: when that requirer no longer requires the
+entry in the source, `update` still removes the entry as `no longer in source`.
+
+Known limit: the lockfile cannot tell an item installed by name before it was
+required (`add e`, then `add d`) from a pure dependency. After the exclude of
+`d`, or after `remove d`, `e` has `required_by: ["skill:d"]` and `doctor`
+reports it as an orphaned dependency; the user decides what to do.
+
+A lockfile from which an earlier `add --exclude` already deleted links is not
+repaired: the deleted links do not return.
