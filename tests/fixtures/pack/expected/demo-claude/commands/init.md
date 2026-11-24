@@ -18,5 +18,3 @@ to the user:
 - plugin `base-tool`
 - plugin `manual`: <https://example.com/claude-manual>
 - plugin `tool`: <https://example.com/tool>
-- MCP server `base-server`
-- MCP server `srv`

@@ -261,7 +261,7 @@ fn pack_without_a_client_flag_writes_both_directories() {
         .assert()
         .success()
         .stdout(format!(
-            "Wrote {} (7 files)\nWrote {} (7 files)\n",
+            "Wrote {} (8 files)\nWrote {} (8 files)\n",
             f.target().display(),
             f.out.join("demo-copilot").display()
         ));
@@ -416,15 +416,136 @@ fn pack_refuses_a_symbolic_link_target_with_or_without_force() {
 }
 
 #[test]
-fn pack_init_lists_plugins_and_mcps_from_required_bundles_for_both_clients() {
+fn pack_init_lists_plugins_and_no_mcp_server_for_both_clients() {
     let f = Fixture::new();
     f.command_for_clients("demo").assert().success();
     for client in ["claude", "copilot"] {
         let text =
             fs::read_to_string(f.out.join(format!("demo-{client}/commands/init.md"))).unwrap();
         assert!(text.contains("- plugin `base-tool`\n"));
-        assert!(text.contains("- MCP server `base-server`\n"));
+        assert!(!text.contains("MCP server"));
         assert!(!text.contains("vscode-only"));
         assert!(!text.contains("opencode-only"));
+    }
+}
+
+#[test]
+fn pack_writes_mcp_json_with_the_servers_of_the_closure_for_both_clients() {
+    let f = Fixture::new();
+    f.command_for_clients("demo").assert().success();
+    for client in ["claude", "copilot"] {
+        let doc: serde_json::Value = serde_json::from_slice(
+            &fs::read(f.out.join(format!("demo-{client}/.mcp.json"))).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            doc,
+            serde_json::json!({
+                "mcpServers": {
+                    "base-server": { "command": "base-command" },
+                    "srv": { "type": "http", "url": "https://example.com/mcp" }
+                }
+            })
+        );
+    }
+}
+
+#[test]
+fn pack_of_a_bundle_without_mcp_servers_writes_no_mcp_json() {
+    let f = Fixture::new();
+    f.command_for_clients("norules").assert().success();
+    for client in ["claude", "copilot"] {
+        let target = f.out.join(format!("norules-{client}"));
+        assert!(target.is_dir());
+        assert!(!target.join(".mcp.json").exists());
+    }
+}
+
+#[test]
+fn pack_of_a_bundle_with_mcp_servers_and_no_rules_writes_mcp_json_only() {
+    let f = Fixture::new();
+    let bundle = f.registry.join("norules.bundle.yaml");
+    let text = fs::read_to_string(&bundle).unwrap();
+    fs::write(
+        bundle,
+        format!(
+            "{text}mcps:\n  server:\n    local:\n      command: node\n      args: [server.js]\n      env: {{ MODE: fast }}\n  hosted:\n    remote:\n      type: sse\n      url: https://example.com/sse\n      headers: {{ Authorization: \"Bearer ${{TOKEN}}\" }}\n"
+        ),
+    )
+    .unwrap();
+    f.command_for_clients("norules").assert().success();
+    for client in ["claude", "copilot"] {
+        let target = f.out.join(format!("norules-{client}"));
+        let doc: serde_json::Value =
+            serde_json::from_slice(&fs::read(target.join(".mcp.json")).unwrap()).unwrap();
+        assert_eq!(
+            doc,
+            serde_json::json!({
+                "mcpServers": {
+                    "hosted": {
+                        "type": "sse",
+                        "url": "https://example.com/sse",
+                        "headers": { "Authorization": "Bearer ${TOKEN}" }
+                    },
+                    "server": {
+                        "command": "node",
+                        "args": ["server.js"],
+                        "env": { "MODE": "fast" }
+                    }
+                }
+            })
+        );
+        assert!(!target.join("commands/init.md").exists());
+        assert!(!target.join("hooks/hooks.json").exists());
+        assert!(!target.join("hooks.json").exists());
+    }
+}
+
+#[test]
+fn pack_refuses_one_server_name_with_different_content_in_the_closure() {
+    let f = Fixture::new();
+    let bundle = f.registry.join("demo.bundle.yaml");
+    let text = fs::read_to_string(&bundle).unwrap();
+    fs::write(
+        bundle,
+        format!("{text}  base-server:\n    local: {{ command: other-command }}\n"),
+    )
+    .unwrap();
+    f.command_for_clients("demo")
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(
+            "MCP server `base-server` is declared with different content by the bundles `base` and `demo`",
+        ));
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_accepts_one_server_name_with_equal_content_in_the_closure() {
+    for requires_env in ["", "    requires-env: [TOKEN]\n"] {
+        let f = Fixture::new();
+        let bundle = f.registry.join("demo.bundle.yaml");
+        let text = fs::read_to_string(&bundle).unwrap();
+        fs::write(
+            bundle,
+            format!("{text}  base-server:\n    local: {{ command: base-command }}\n{requires_env}"),
+        )
+        .unwrap();
+        f.command_for_clients("demo").assert().success();
+        for client in ["claude", "copilot"] {
+            let doc: serde_json::Value = serde_json::from_slice(
+                &fs::read(f.out.join(format!("demo-{client}/.mcp.json"))).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(
+                doc,
+                serde_json::json!({
+                    "mcpServers": {
+                        "base-server": { "command": "base-command" },
+                        "srv": { "type": "http", "url": "https://example.com/mcp" }
+                    }
+                })
+            );
+        }
     }
 }

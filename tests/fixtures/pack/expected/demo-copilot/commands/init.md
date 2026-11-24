@@ -18,5 +18,3 @@ to the user:
 - plugin `base-tool`
 - plugin `cotool`: <https://example.com/cotool>
 - plugin `manual`: <https://example.com/copilot-manual>
-- MCP server `base-server`
-- MCP server `srv`

@@ -1,6 +1,6 @@
 //! Build and write Claude Code and GitHub Copilot CLI plugin directories from a source bundle.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use crate::generate::Client;
 use crate::model::Bundle;
-use crate::model::bundle::{ClaudePluginDescriptor, CopilotPluginDescriptor};
+use crate::model::bundle::{ClaudePluginDescriptor, CopilotPluginDescriptor, McpTransport};
 use crate::pipeline::plan_bundle_output;
 
 /// A client whose plugin directory can be built.
@@ -82,6 +82,41 @@ fn manifest(bundle: &Bundle) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+/// Build the `.mcp.json` of a plugin from the MCP servers of `bundles`, or
+/// `None` when no bundle declares a server. Two declarations of one name
+/// conflict when their written JSON objects differ, so a difference only in
+/// `requires-env`, which is not written, is not a conflict.
+fn mcp_json(bundles: &[Bundle]) -> Result<Option<Vec<u8>>> {
+    let mut servers: BTreeMap<&str, (&str, serde_json::Value)> = BTreeMap::new();
+    for bundle in bundles {
+        for (name, entry) in &bundle.mcps {
+            let value = match &entry.transport {
+                McpTransport::Local(local) => crate::ancillary::mcp_servers_local_value(local),
+                McpTransport::Remote(remote) => crate::ancillary::mcp_servers_remote_value(remote),
+            };
+            if let Some((first, previous)) = servers.get(name.as_str()) {
+                anyhow::ensure!(
+                    previous == &value,
+                    "MCP server `{name}` is declared with different content by the bundles `{first}` and `{}`",
+                    bundle.name
+                );
+            } else {
+                servers.insert(name, (&bundle.name, value));
+            }
+        }
+    }
+    if servers.is_empty() {
+        return Ok(None);
+    }
+    let servers: BTreeMap<_, _> = servers
+        .into_iter()
+        .map(|(name, (_, value))| (name, value))
+        .collect();
+    let mut bytes = serde_json::to_vec_pretty(&serde_json::json!({ "mcpServers": servers }))?;
+    bytes.push(b'\n');
+    Ok(Some(bytes))
+}
+
 fn init_text(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient) -> String {
     let flag = match client {
         PackClient::Claude => "--claude",
@@ -91,7 +126,6 @@ fn init_text(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient)
         "---\ndescription: Install the rules of the {bundle} bundle into this repository\n---\n\nRun this command in the root directory of the repository. Then report its\noutput to the user.\n\n```text\nupskill add {source} {bundle} --kind rule --project {flag}\n```\n\nIf the command fails, report the error text. Do not run another command in its\nplace.\n"
     );
     let mut plugins = BTreeMap::new();
-    let mut mcps = BTreeSet::new();
     for bundle in bundles {
         for (name, entry) in &bundle.plugins {
             match client {
@@ -123,9 +157,8 @@ fn init_text(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient)
                 }
             }
         }
-        mcps.extend(bundle.mcps.keys());
     }
-    if !plugins.is_empty() || !mcps.is_empty() {
+    if !plugins.is_empty() {
         text.push_str("\nThe command does not install the following. After the install, give this list\nto the user:\n\n");
         for (name, url) in plugins {
             text.push_str(&format!("- plugin `{name}`"));
@@ -133,9 +166,6 @@ fn init_text(bundle: &str, source: &str, bundles: &[Bundle], client: PackClient)
                 text.push_str(&format!(": <{url}>"));
             }
             text.push('\n');
-        }
-        for name in mcps {
-            text.push_str(&format!("- MCP server `{name}`\n"));
         }
     }
     text
@@ -184,6 +214,13 @@ pub fn build(
         bytes: manifest(entry)?,
         mode: None,
     });
+    if let Some(bytes) = mcp_json(&output.bundles)? {
+        files.push(PackFile {
+            rel: ".mcp.json".into(),
+            bytes,
+            mode: None,
+        });
+    }
     if !output.rules.is_empty() {
         files.push(PackFile {
             rel: "commands/init.md".into(),
@@ -607,7 +644,7 @@ mod tests {
         ] {
             let text = init_text("demo", "driftsys/demo@v1", &[base.clone(), demo()], client);
             assert!(text.contains("- plugin `base-tool`\n"));
-            assert!(text.contains("- MCP server `base-server`\n"));
+            assert!(!text.contains("MCP server"));
             assert!(text.contains(&format!(
                 "- plugin `manual`: <https://example.com/{name}-manual>\n"
             )));
@@ -648,6 +685,86 @@ mod tests {
             init_text("demo", "driftsys/demo@v1", &[], PackClient::Claude),
             expected
         );
+    }
+
+    fn bundle(name: &str, mcps: &str) -> Bundle {
+        serde_yaml_ng::from_str(&format!(
+            "schema: 1\nname: {name}\ndescription: d\nitems: {{}}\nmcps:\n{mcps}"
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn init_of_a_closure_with_mcp_servers_and_no_plugin_has_no_list() {
+        let text = init_text(
+            "a",
+            "driftsys/demo@v1",
+            &[bundle("a", "  s:\n    local: { command: c }\n")],
+            PackClient::Claude,
+        );
+        assert!(!text.contains("The command does not install"));
+        assert!(!text.contains("MCP server"));
+    }
+
+    #[test]
+    fn mcp_json_refuses_each_kind_of_different_content() {
+        let cases = [
+            (
+                "  s:\n    local: { command: c }\n",
+                "  s:\n    local: { command: d }\n",
+            ),
+            (
+                "  s:\n    local: { command: c, args: [x] }\n",
+                "  s:\n    local: { command: c, args: [y] }\n",
+            ),
+            (
+                "  s:\n    local: { command: c, env: { K: x } }\n",
+                "  s:\n    local: { command: c, env: { K: y } }\n",
+            ),
+            (
+                "  s:\n    remote: { type: http, url: https://a.example }\n",
+                "  s:\n    remote: { type: http, url: https://b.example }\n",
+            ),
+            (
+                "  s:\n    remote: { type: http, url: https://a.example }\n",
+                "  s:\n    remote: { type: sse, url: https://a.example }\n",
+            ),
+            (
+                "  s:\n    remote: { type: http, url: https://a.example, headers: { H: x } }\n",
+                "  s:\n    remote: { type: http, url: https://a.example, headers: { H: y } }\n",
+            ),
+            (
+                "  s:\n    local: { command: c }\n",
+                "  s:\n    remote: { type: http, url: https://a.example }\n",
+            ),
+        ];
+        for (first, second) in cases {
+            let error = mcp_json(&[bundle("a", first), bundle("b", second)]).unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                "MCP server `s` is declared with different content by the bundles `a` and `b`"
+            );
+        }
+    }
+
+    #[test]
+    fn mcp_json_is_none_without_servers_and_joins_equal_declarations() {
+        assert!(mcp_json(&[demo_without_mcps()]).unwrap().is_none());
+        let server =
+            "  s:\n    remote: { type: http, url: https://a.example, headers: { H: x } }\n";
+        let bytes = mcp_json(&[bundle("a", server), bundle("b", server)])
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            String::from_utf8(bytes).unwrap(),
+            "{\n  \"mcpServers\": {\n    \"s\": {\n      \"headers\": {\n        \"H\": \"x\"\n      },\n      \"type\": \"http\",\n      \"url\": \"https://a.example\"\n    }\n  }\n}\n"
+        );
+    }
+
+    fn demo_without_mcps() -> Bundle {
+        let mut bundle = demo();
+        bundle.mcps.clear();
+        bundle
     }
 
     #[test]
