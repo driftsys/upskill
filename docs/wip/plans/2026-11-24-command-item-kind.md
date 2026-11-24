@@ -530,12 +530,12 @@ Each decision is marked "plan decision" where a task uses it.
 
 ### Task 3: `pack` renders commands and `init` as user-only skills
 
-Before this task starts, the orchestrator rebases this branch on main and
-updates the expected file counts and fixture lists of this task. (Story #634,
-branch `feat/pack-lsp-servers`, adds `.lsp.json` and `lsp.json` to the pack
-fixtures and edits `src/pack.rs`, `tests/cli_pack.rs` and
-`tests/fixtures/pack/registry/base.bundle.yaml`; the counts below are those of
-main at 924e0fe.)
+> **Note of 2026-11-25 (orchestrator).** This branch is based on
+> `feat/pack-lsp-servers` (story #634), so the pack fixtures already hold
+> `.lsp.json` (Claude) and `lsp.json` (Copilot), and `base.bundle.yaml` already
+> declares `lsps`. The file counts written below are those of main at 924e0fe:
+> the implementer computes the counts from the actual output and states them in
+> the report. Keep the `.lsp.json` and `.mcp.json` fixtures unchanged.
 
 **Files:**
 
