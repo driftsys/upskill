@@ -970,4 +970,28 @@ mod tests {
                 .contains("lsp `ra`: extension `rs` must start with a dot")
         );
     }
+
+    #[test]
+    fn lint_flags_a_bare_dot_lsp_extension_in_bundle() {
+        let tmp = tempfile::tempdir().unwrap();
+        write(
+            &tmp.path().join("bad-lsp.bundle.yaml"),
+            concat!(
+                "schema: 1\nname: bad-lsp\ndescription: Invalid LSP extension\nitems: {}\n",
+                "lsps:\n  ra:\n    command: rust-analyzer\n    extensions: { '.': rust }\n",
+            ),
+        );
+        let report = lint(&[tmp.path().to_path_buf()], false).unwrap();
+        let finding = report
+            .findings
+            .iter()
+            .find(|f| f.rule_id == "frontmatter")
+            .expect("frontmatter error");
+        assert_eq!(finding.severity, Severity::Error);
+        assert!(
+            finding
+                .message
+                .contains("extension `.` must have at least one character after the dot")
+        );
+    }
 }

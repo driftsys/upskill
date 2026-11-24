@@ -385,6 +385,18 @@ mod tests {
     }
 
     #[test]
+    fn mcp_entries_accept_unknown_fields() {
+        let bundle: Bundle = serde_yaml_ng::from_str(concat!(
+            "schema: 1\nname: mcp-demo\ndescription: d\nitems: {}\nmcps:\n",
+            "  loc:\n    local:\n      command: npx\n      bogus: 1\n",
+            "  rem:\n    remote:\n      type: http\n      url: https://example.com/mcp\n      bogus: 1\n",
+        ))
+        .unwrap();
+        assert_eq!(bundle.mcps.len(), 2);
+        assert_eq!(bundle.validate_mcps(), Ok(()));
+    }
+
+    #[test]
     fn bundle_without_lsps_serializes_without_the_key() {
         let bundle: Bundle =
             serde_yaml_ng::from_str("schema: 1\nname: old\ndescription: d\nitems: {}\n").unwrap();

@@ -115,6 +115,10 @@ fn bundle_parser_rejects_invalid_lsps_in_load_and_discover() {
             "lsp `ra`: extension `rs` must start with a dot",
         ),
         (
+            "command: rust-analyzer\n    extensions: { '.': rust }",
+            "lsp `ra`: extension `.` must have at least one character after the dot",
+        ),
+        (
             "command: rust-analyzer\n    extensions: { .rs: '' }",
             "lsp `ra`: the language of extension `.rs` must not be empty",
         ),
