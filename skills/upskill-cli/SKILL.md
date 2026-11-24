@@ -407,14 +407,14 @@ client directory changes. Plugin output remains experimental until a smoke test
 with a hosted git marketplace passes in both clients (the local-marketplace
 smoke test of 2026-11-19 passed).
 
-The plugin carries skills and agents. Its init command, when rules target the
-client, runs `add --kind rule --project` for that client. `add --kind` is
-repeatable for `rule`, `skill` and `agent`; it skips plugin and MCP steps.
-Bundle lockfile entries record the selected `kinds`. `update` uses their union
-only when every recorded bundle of the source has recorded kinds; one
-unrestricted bundle leaves that source unrestricted. Every entry of that source
-whose kind is outside the restriction stays unchanged; reinstall it explicitly
-to update it.
+The plugin carries skills, agents and the MCP servers of the bundle closure
+(`.mcp.json`). Its init command, when rules target the client, runs
+`add --kind rule --project` for that client. `add --kind` is repeatable for
+`rule`, `skill` and `agent`; it skips plugin and MCP steps. Bundle lockfile
+entries record the selected `kinds`. `update` uses their union only when every
+recorded bundle of the source has recorded kinds; one unrestricted bundle leaves
+that source unrestricted. Every entry of that source whose kind is outside the
+restriction stays unchanged; reinstall it explicitly to update it.
 
 The embedded notice hook calls `update --notice`. Runs sharing a cache use
 `notice.lock`: a lock younger than 60 seconds makes another run exit silently. A

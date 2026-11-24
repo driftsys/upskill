@@ -1142,6 +1142,27 @@ Durable successor: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions 3
 to 7. The [plugin MVP design](../wip/specs/2026-11-24-plugin-mvp-design.md)
 holds the detail and stays in WIP until the stories of stage 2 are delivered.
 
+## MCP servers in `pack` output
+
+Source path: `docs/wip/plans/2026-11-24-pack-mcp-servers.md`. The raw
+[plan](plans/2026-11-24-pack-mcp-servers.md) is retained unchanged, except that
+its link to the plugin MVP design now points to `docs/wip/specs/`. It is the
+plan of story [#633](https://github.com/driftsys/upskill/issues/633), one of the
+seven stories of the
+[plugin MVP design](../wip/specs/2026-11-24-plugin-mvp-design.md). That design
+is not archived: the other six stories (#631, #632, #634 to #637) are not
+implemented.
+
+Implementation commits on branch `feat/pack-mcp-servers`: `6789c02` (feature)
+and `2804df1` (tests and document corrections). Completion evidence:
+`just verify` and `just sanity` passed on `2804df1`. These are branch commits,
+not a claim of a PR merge.
+
+Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions
+2, 9 and 11; [specification §2.8](../specification/specification.md); the
+[command guide](../book/commands.md#upskill-pack-bundle---source-source---out-dir);
+the [recipe](../book/recipes.md#publish-a-bundle-as-client-plugins).
+
 ## Triage of 2026-11-23
 
 Issue [#536](https://github.com/driftsys/upskill/issues/536). The 36 documents

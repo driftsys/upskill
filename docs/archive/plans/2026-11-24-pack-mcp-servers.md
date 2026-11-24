@@ -19,7 +19,7 @@ come from the two existing value functions of `src/ancillary.rs`, which become
 **Tech stack:** Rust 2024, `serde_json`, `anyhow`; integration tests with
 `assert_cmd` through `common::upskill_cmd`.
 
-**Spec:** [plugin MVP design](../specs/2026-11-24-plugin-mvp-design.md),
+**Spec:** [plugin MVP design](../../wip/specs/2026-11-24-plugin-mvp-design.md),
 sections 3 and 4; [AD-0046](../../adr/0046-plugin-mvp-components.md), Decisions
 2, 9 and 11.
 
