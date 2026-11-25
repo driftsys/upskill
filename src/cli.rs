@@ -58,6 +58,18 @@ pub struct PackArgs {
     /// Write the GitHub Copilot CLI plugin directory.
     #[arg(long)]
     pub copilot: bool,
+    /// Write the marketplace files below this root directory. `--out` must be
+    /// inside it.
+    #[arg(long, value_name = "ROOT")]
+    pub catalog: Option<PathBuf>,
+    /// The `name` of a marketplace file that does not exist yet.
+    #[arg(long, value_name = "NAME", requires = "catalog",
+        value_parser = clap::builder::NonEmptyStringValueParser::new())]
+    pub catalog_name: Option<String>,
+    /// The `owner.name` of a marketplace file that does not exist yet.
+    #[arg(long, value_name = "NAME", requires = "catalog",
+        value_parser = clap::builder::NonEmptyStringValueParser::new())]
+    pub catalog_owner: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]

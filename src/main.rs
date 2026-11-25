@@ -2534,6 +2534,7 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
 }
 
 fn run_pack(args: &PackArgs) -> i32 {
+    use upskill::catalog::{self, Catalog, CatalogUsageError, Header, PackedPlugin};
     use upskill::pack::{self, PackClient};
 
     if let Err(error) = pack::validate_source(&args.source).and_then(|()| {
@@ -2546,29 +2547,61 @@ fn run_pack(args: &PackArgs) -> i32 {
     }
     let result = (|| -> anyhow::Result<()> {
         let root = std::env::current_dir()?;
+        let mut clients = Vec::new();
+        if args.claude || !args.copilot {
+            clients.push(PackClient::Claude);
+        }
+        if args.copilot || !args.claude {
+            clients.push(PackClient::Copilot);
+        }
+        let catalog = args
+            .catalog
+            .as_ref()
+            .map(|catalog_root| {
+                Catalog::open(
+                    &root,
+                    catalog_root,
+                    &args.out,
+                    &clients,
+                    Header {
+                        name: args.catalog_name.as_deref(),
+                        owner: args.catalog_owner.as_deref(),
+                    },
+                )
+            })
+            .transpose()?;
         let bundles = pack::select_bundles(&root, &args.bundles, args.all)?;
         let mut directories = Vec::new();
+        let mut plugins = Vec::new();
         for bundle in bundles {
-            if args.claude || !args.copilot {
-                directories.push(pack::build(
-                    &root,
-                    &bundle.name,
-                    &args.source,
-                    PackClient::Claude,
-                )?);
-            }
-            if args.copilot || !args.claude {
-                directories.push(pack::build(
-                    &root,
-                    &bundle.name,
-                    &args.source,
-                    PackClient::Copilot,
-                )?);
+            for &client in &clients {
+                let directory = pack::build(&root, &bundle.name, &args.source, client)?;
+                plugins.push(PackedPlugin {
+                    client,
+                    name: bundle.name.clone(),
+                    description: bundle.description.clone(),
+                    dir_name: directory.dir_name.clone(),
+                });
+                directories.push(directory);
             }
         }
+        let updates = catalog
+            .as_ref()
+            .map(|catalog| catalog.render(&plugins, args.all))
+            .transpose()?
+            .unwrap_or_default();
         for (target, count) in pack::write_plugin_dirs(&args.out, &directories, args.force)? {
             if !style::is_quiet() {
                 println!("Wrote {} ({} files)", target.display(), count);
+            }
+        }
+        catalog::write_updates(&updates)?;
+        if !style::is_quiet() {
+            for update in updates {
+                for name in update.removed {
+                    println!("Removed {} from {}", name, update.path.display());
+                }
+                println!("Wrote {}", update.path.display());
             }
         }
         Ok(())
@@ -2576,8 +2609,13 @@ fn run_pack(args: &PackArgs) -> i32 {
     match result {
         Ok(()) => EXIT_SUCCESS,
         Err(error) => {
+            let code = if error.downcast_ref::<CatalogUsageError>().is_some() {
+                EXIT_USAGE
+            } else {
+                EXIT_ERROR
+            };
             print_error(format!("{error:#}"));
-            EXIT_ERROR
+            code
         }
     }
 }

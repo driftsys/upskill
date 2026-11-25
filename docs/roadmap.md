@@ -111,7 +111,8 @@ covers all items below and amends
 which limited the plugin content to skills, resources and agents, and whose
 `init` command listed the MCP servers of the bundle without installing them. MCP
 servers in `pack` are implemented in #633, command items and the user-only init
-skill in #632, LSP servers in `pack` in #634, and hook items in #631.
+skill in #632, LSP servers in `pack` in #634, and hook items in #631. Several
+bundles, `--all` and the marketplace files in `pack` are implemented in #635.
 
 - **Hook item kind (`HOOK.md`).** One file in an item directory holds all hook
   events of that directory, one `## <event>` section for each event. An event
@@ -141,7 +142,8 @@ skill in #632, LSP servers in `pack` in #634, and hook items in #631.
   restriction applies.
 - **Catalog generation.** Write the marketplace manifests
   (`.claude-plugin/marketplace.json`, `.github/plugin/marketplace.json`) from
-  the bundles of a registry, so they match the packed plugins.
+  the bundles of a registry, so they match the packed plugins. Implemented in
+  #635 with `pack --catalog`.
 - **Hosted-marketplace smoke test** in both clients, with hooks, commands, MCP
   servers, LSP servers, the `init` command and a generated catalog. When it
   passes, plugin output is no longer experimental.

@@ -85,6 +85,7 @@ src/
 ├── target.rs            Stable identities for client configuration surfaces
 ├── conflict.rs          Item conflict detection for `upskill add`
 ├── pack.rs              Build Claude Code and Copilot CLI plugin output from a bundle
+├── catalog.rs           Marketplace files of pack --catalog
 ├── pack/hooks.rs        Hook file, context files and command-hook resources
 ├── plugin.rs            Client CLI shell-out for plugin installation
 ├── mcp.rs               Client-native MCP server configuration

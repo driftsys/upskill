@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "description": "Hand-written"
+  },
+  "name": "market",
+  "owner": {
+    "email": "maintainer@example.com",
+    "name": "driftsys"
+  },
+  "plugins": [
+    {
+      "name": "base",
+      "source": "./plugins/base-claude",
+      "description": "Base bundle"
+    },
+    {
+      "name": "demo",
+      "source": "./plugins/demo-claude",
+      "description": "Demo bundle"
+    },
+    {
+      "name": "norules",
+      "source": "./plugins/norules-claude",
+      "description": "Bundle without rules"
+    },
+    {
+      "name": "remote",
+      "source": {
+        "repo": "example/remote",
+        "source": "github"
+      },
+      "description": "Remote plugin"
+    },
+    {
+      "name": "tool",
+      "source": "./vendor/tool",
+      "description": "Vendored tool"
+    }
+  ]
+}

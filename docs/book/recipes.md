@@ -251,11 +251,28 @@ upskill pack my-bundle --source owner/repo@v1 --out dist
 Several bundle names can be given in one run; `--all` builds every bundle of the
 current source registry.
 
-Copy `dist/my-bundle-claude` and `dist/my-bundle-copilot` into your marketplace
-repository and configure publication there. upskill does not install, register
-or publish these plugins. Add README and LICENSE files yourself if needed;
-`pack --force` replaces the selected output directories, so files that you add
-there are deleted.
+Write the plugins and marketplace files into your marketplace repository:
+
+```bash
+upskill pack --all --source owner/repo@v1 --out market/packed \
+  --catalog market --catalog-name my-market --catalog-owner my-org
+```
+
+A hand-written plugin that must stay in the catalog has its directory outside
+`--out`: `--all` removes an entry inside `--out` that names no packed directory.
+Keep packed output below `packed/` and hand-written plugins below `plugins/`.
+From the root of the marketplace repository, which also holds the source
+registry and existing marketplace files, rebuild with:
+
+```bash
+upskill pack --all --force --source owner/repo@v1 --out packed --catalog .
+```
+
+The packed plugins are below `packed/`; hand-written plugins below `plugins/`
+keep their entries. Configure publication in that repository. upskill does not
+install, register or publish these plugins. Add README and LICENSE files
+yourself if needed; `pack --force` replaces the selected output directories, so
+files that you add there are deleted.
 
 Install with the client's marketplace command. When the output includes rules,
 call `/<plugin>:init` in an interactive session in each project to install only

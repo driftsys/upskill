@@ -80,3 +80,14 @@ fn pack_man_page_documents_client_selection() {
         assert!(page.contains(text), "missing {text}: {page}");
     }
 }
+
+#[test]
+fn pack_man_page_documents_the_catalog_flags() {
+    let root = Cli::command();
+    let page = render(root.find_subcommand("pack").unwrap().clone());
+    assert!(page.contains(r"\-\-catalog\-name"), "{page}");
+    assert!(
+        page.contains("Write the marketplace files below this root directory"),
+        "{page}"
+    );
+}
