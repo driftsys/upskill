@@ -47,7 +47,7 @@ items: # required — may be empty {} for meta-bundles
     - agent-one
   commands: # optional — only upskill pack renders them
     - release-notes
-  hooks: # optional — add and update do not install them
+  hooks: # optional — only upskill pack renders them
     - guard
 
 requires: # optional — dependencies on other bundles

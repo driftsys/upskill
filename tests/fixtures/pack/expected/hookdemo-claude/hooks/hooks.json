@@ -1,0 +1,35 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v upskill >/dev/null 2>&1 || exit 0; n=$(upskill update --notice 2>/dev/null) || exit 0; [ -n \"$n\" ] || exit 0; t=$(printf '%s\\n' \"$n\" | tr '\\001-\\011\\013-\\037' ' ' | sed -e 's/\\\\/\\\\\\\\/g' -e 's/\"/\\\\\"/g' | awk 'NR>1{printf \"\\\\n\"} {printf \"%s\",$0}'); printf '{\"systemMessage\":\"%s\",\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"%s\"}}\\n' \"$t\" \"$t\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/context/session-start.json\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/context/prompt-submit.json\""
+          }
+        ]
+      }
+    ]
+  }
+}

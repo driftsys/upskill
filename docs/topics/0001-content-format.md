@@ -63,7 +63,8 @@ establish identity and role ("you are a security reviewer; when invoked, do X").
 `upskill update` do not install command items. Only `pack` renders a command.
 
 **Hook**: text for the model's context or a script, run on a client event.
-`upskill add` and `upskill update` do not install hook items.
+`upskill add` and `upskill update` do not install hook items. Only
+`upskill pack` writes the context hooks of a hook item.
 
 **Bundle**: a manifest file grouping items (and optionally other bundles) by
 reference for distribution. Bundles contain no content themselves.
@@ -1171,13 +1172,25 @@ Each event value is empty or a map with these settings:
 | `timeout` | integer       | Seconds; allowed only with `run`.    |
 
 A matcher string applies to both clients. A matcher map accepts only `claude`
-and `copilot`, and MUST contain at least one of them. `matcher` is not allowed
-on `prompt-submit` or `stop`.
+and `copilot`, and MUST contain at least one of them. A client without a key
+gets no hook for that event. `matcher` is not allowed on `prompt-submit` or
+`stop`.
 
-The ten portable event names are `session-start`, `session-end`,
-`prompt-submit`, `pre-tool`, `post-tool`, `permission-request`, `stop`,
-`subagent-start`, `subagent-stop`, and `pre-compact`. An unknown event is an
+The ten portable events map to these client event names. An unknown event is an
 error.
+
+| Portable             | Claude Code         | Copilot CLI           |
+| -------------------- | ------------------- | --------------------- |
+| `session-start`      | `SessionStart`      | `sessionStart`        |
+| `session-end`        | `SessionEnd`        | `sessionEnd`          |
+| `prompt-submit`      | `UserPromptSubmit`  | `userPromptSubmitted` |
+| `pre-tool`           | `PreToolUse`        | `preToolUse`          |
+| `post-tool`          | `PostToolUse`       | `postToolUse`         |
+| `permission-request` | `PermissionRequest` | `permissionRequest`   |
+| `stop`               | `Stop`              | `agentStop`           |
+| `subagent-start`     | `SubagentStart`     | `subagentStart`       |
+| `subagent-stop`      | `SubagentStop`      | `subagentStop`        |
+| `pre-compact`        | `PreCompact`        | `preCompact`          |
 
 An event without `run` is a **context hook**. It requires text and is valid only
 on `session-start`, `prompt-submit`, `post-tool`, and `subagent-start`. An event
@@ -1197,6 +1210,14 @@ when the body has event sections; use a level-3 heading for content. Headings
 inside code fences are content, and a setext level-2 heading starts a section.
 Each event text MUST have balanced `@client` blocks (§6.3), including when the
 whole body is balanced.
+
+Only `upskill pack` writes the context hooks of hook items. It merges
+client-processed text for each event and distinct matcher in closure order into
+ASCII-only static JSON files. A `session-start` context hook without a matcher
+gets `startup|clear|compact` in Claude Code and no matcher in Copilot CLI. The
+generated entries print the files without calling `upskill`. See
+[the pack specification](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#28-pack)
+for output paths, JSON formats, commands, notice ordering and known limits.
 
 ---
 

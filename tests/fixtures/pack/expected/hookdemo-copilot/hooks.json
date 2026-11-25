@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "if [ -n \"${COPILOT_PROJECT_DIR:-}\" ]; then cd -- \"$COPILOT_PROJECT_DIR\" >/dev/null 2>&1 || exit 0; fi; command -v upskill >/dev/null 2>&1 || exit 0; n=$(upskill update --notice --repeat 2>/dev/null) || exit 0; [ -n \"$n\" ] || exit 0; t=$(printf '%s\\n' \"$n\" | tr '\\001-\\011\\013-\\037' ' ' | sed -e 's/\\\\/\\\\\\\\/g' -e 's/\"/\\\\\"/g' | awk 'NR>1{printf \"\\\\n\"} {printf \"%s\",$0}'); printf '{\"additionalContext\":\"Tell the user at the start of your first reply: %s\"}\\n' \"$t\"",
+        "timeoutSec": 30
+      },
+      {
+        "type": "command",
+        "bash": "cat hooks/context/session-start.json",
+        "powershell": "Get-Content -Raw -Encoding UTF8 -LiteralPath hooks/context/session-start.json"
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "cat hooks/context/prompt-submit.json",
+        "powershell": "Get-Content -Raw -Encoding UTF8 -LiteralPath hooks/context/prompt-submit.json"
+      }
+    ]
+  }
+}

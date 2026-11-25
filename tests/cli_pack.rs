@@ -1048,3 +1048,413 @@ fn pack_reads_a_command_of_a_bundle_from_a_git_source() {
         "{rendered}"
     );
 }
+
+impl Fixture {
+    fn hook(&self, directory: &str, fields: &str, body: &str) {
+        let dir = self.registry.join("items").join(directory);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("HOOK.md"),
+            format!("---\nschema: 1\ndescription: Test hook\n{fields}\n---\n\n{body}\n"),
+        )
+        .unwrap();
+    }
+
+    fn hook_bundle(&self, name: &str, hooks: &str, extra: &str) {
+        fs::write(
+            self.registry.join(format!("{name}.bundle.yaml")),
+            format!(
+                "schema: 1\nname: {name}\ndescription: Test bundle\nitems:\n  hooks: [{hooks}]\n{extra}\n"
+            ),
+        )
+        .unwrap();
+    }
+
+    fn hook_json(&self, bundle: &str, client: &str) -> serde_json::Value {
+        let file = if client == "claude" {
+            "hooks/hooks.json"
+        } else {
+            "hooks.json"
+        };
+        read_json(&self.out.join(format!("{bundle}-{client}")).join(file))
+    }
+
+    fn context_bytes(&self, bundle: &str, client: &str, event: &str) -> Vec<u8> {
+        fs::read(
+            self.out
+                .join(format!("{bundle}-{client}/hooks/context/{event}.json")),
+        )
+        .unwrap()
+    }
+
+    fn context_text(&self, bundle: &str, client: &str, event: &str) -> String {
+        let value: serde_json::Value =
+            serde_json::from_slice(&self.context_bytes(bundle, client, event)).unwrap();
+        let output = if client == "claude" {
+            &value["hookSpecificOutput"]
+        } else {
+            &value
+        };
+        output["additionalContext"].as_str().unwrap().to_string()
+    }
+
+    fn hook_error(&self, bundle: &str, messages: &[&str]) {
+        let mut assertion = self.command_for_clients(bundle).assert().code(1);
+        for message in messages {
+            assertion = assertion.stderr(predicates::str::contains(*message));
+        }
+        assert!(!self.out.exists());
+    }
+}
+
+fn read_json(path: &Path) -> serde_json::Value {
+    serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
+}
+
+#[test]
+fn pack_writes_the_hook_plugin_directories() {
+    let f = Fixture::new();
+    f.command_for_clients("hookdemo").assert().success();
+    for client in ["claude", "copilot"] {
+        let dir = format!("hookdemo-{client}");
+        assert_eq!(
+            tree(&f.out.join(&dir)),
+            tree(&Path::new("tests/fixtures/pack/expected").join(dir))
+        );
+    }
+}
+
+#[test]
+fn pack_merges_the_context_hooks_of_one_event_in_closure_order() {
+    let f = Fixture::new();
+    f.command_for_clients("hookdemo").assert().success();
+    for client in ["claude", "copilot"] {
+        assert_eq!(
+            f.context_text("hookdemo", client, "session-start"),
+            "Follow the team conventions.\n\nRead `CONVENTIONS.md` before you edit a file.\n\nRun the checks before you commit."
+        );
+    }
+}
+
+#[test]
+fn pack_gives_session_start_the_default_matcher_in_claude_code_only() {
+    let f = Fixture::new();
+    f.command_for_clients("hookdemo").assert().success();
+    assert_eq!(
+        f.hook_json("hookdemo", "claude")["hooks"]["SessionStart"][1]["matcher"],
+        "startup|clear|compact"
+    );
+    assert!(
+        f.hook_json("hookdemo", "copilot")["hooks"]["sessionStart"][1]
+            .get("matcher")
+            .is_none()
+    );
+}
+
+#[test]
+fn pack_writes_one_context_file_for_each_distinct_matcher() {
+    let f = Fixture::new();
+    f.hook(
+        "after-edit",
+        "events:\n  post-tool: { matcher: edit }",
+        "After an edit.",
+    );
+    f.hook(
+        "after-shell",
+        "events:\n  post-tool: { matcher: shell }",
+        "After a shell command.",
+    );
+    f.hook_bundle("twogroups", "after-edit, after-shell", "");
+    f.command_for_clients("twogroups").assert().success();
+    for client in ["claude", "copilot"] {
+        assert_eq!(
+            f.context_text("twogroups", client, "post-tool"),
+            "After an edit."
+        );
+        assert_eq!(
+            f.context_text("twogroups", client, "post-tool-2"),
+            "After a shell command."
+        );
+        let hooks = f.hook_json("twogroups", client);
+        let event = if client == "claude" {
+            "PostToolUse"
+        } else {
+            "postToolUse"
+        };
+        let entries = &hooks["hooks"][event];
+        assert_eq!(entries[0]["matcher"], "edit");
+        assert_eq!(entries[1]["matcher"], "shell");
+        if client == "claude" {
+            assert_eq!(
+                entries[1]["hooks"][0]["command"],
+                "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/context/post-tool-2.json\""
+            );
+        } else {
+            assert_eq!(entries[1]["bash"], "cat hooks/context/post-tool-2.json");
+        }
+    }
+}
+
+#[test]
+fn pack_writes_a_string_matcher_for_both_clients() {
+    let f = Fixture::new();
+    f.hook(
+        "tool",
+        "events:\n  post-tool: { matcher: edit }",
+        "After an edit.",
+    );
+    f.hook_bundle("stringmatcher", "tool", "");
+    f.command_for_clients("stringmatcher").assert().success();
+    assert_eq!(
+        f.hook_json("stringmatcher", "claude")["hooks"]["PostToolUse"][0]["matcher"],
+        "edit"
+    );
+    assert_eq!(
+        f.hook_json("stringmatcher", "copilot")["hooks"]["postToolUse"][0]["matcher"],
+        "edit"
+    );
+}
+
+#[test]
+fn pack_writes_a_map_matcher_only_for_the_named_client() {
+    let f = Fixture::new();
+    f.hook(
+        "tool",
+        "events:\n  post-tool: { matcher: { claude: Edit } }",
+        "After an edit.",
+    );
+    // The reminder also gives Copilot a hook file so the missing key is checked.
+    f.hook_bundle("mapmatcher", "tool", "requires:\n  - name: hookbase");
+    f.command_for_clients("mapmatcher").assert().success();
+    assert_eq!(
+        f.hook_json("mapmatcher", "claude")["hooks"]["PostToolUse"][0]["matcher"],
+        "Edit"
+    );
+    assert!(
+        f.hook_json("mapmatcher", "copilot")["hooks"]
+            .get("postToolUse")
+            .is_none()
+    );
+    assert!(
+        f.out
+            .join("mapmatcher-claude/hooks/context/post-tool.json")
+            .is_file()
+    );
+    assert!(
+        !f.out
+            .join("mapmatcher-copilot/hooks/context/post-tool.json")
+            .exists()
+    );
+}
+
+#[test]
+fn pack_of_a_bundle_with_hooks_and_no_rules_writes_a_hook_file_without_the_notice() {
+    let f = Fixture::new();
+    f.command_for_clients("hookbase").assert().success();
+    for client in ["claude", "copilot"] {
+        assert!(
+            !f.hook_json("hookbase", client)
+                .to_string()
+                .contains("upskill")
+        );
+        assert!(
+            !f.out
+                .join(format!("hookbase-{client}/skills/init"))
+                .exists()
+        );
+    }
+    assert_eq!(
+        f.hook_json("hookbase", "claude")["hooks"]["SessionStart"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn pack_context_hooks_do_not_call_upskill() {
+    let f = Fixture::new();
+    f.command_for_clients("hookbase").assert().success();
+    for client in ["claude", "copilot"] {
+        for bytes in tree(&f.out.join(format!("hookbase-{client}"))).values() {
+            assert!(!String::from_utf8_lossy(bytes).contains("upskill"));
+        }
+    }
+}
+
+#[test]
+fn pack_processes_client_directives_in_context_text() {
+    let f = Fixture::new();
+    f.hook("directed", "events:\n  session-start:",
+        "<!-- @client:claude -->\nClaude only\n<!-- @endclient -->\n\n<!-- @client:copilot -->\nCopilot only\n<!-- @endclient -->");
+    f.hook_bundle("directives", "directed", "");
+    f.command_for_clients("directives").assert().success();
+    assert_eq!(
+        f.context_text("directives", "claude", "session-start"),
+        "Claude only"
+    );
+    assert_eq!(
+        f.context_text("directives", "copilot", "session-start"),
+        "Copilot only"
+    );
+}
+
+#[test]
+fn pack_writes_no_entry_for_a_client_whose_context_text_is_empty() {
+    let f = Fixture::new();
+    f.hook(
+        "directed",
+        "events:\n  session-start:",
+        "<!-- @client:claude -->\nClaude only\n<!-- @endclient -->",
+    );
+    f.hook_bundle("directives", "directed", "");
+    f.command_for_clients("directives").assert().success();
+    assert!(f.out.join("directives-claude/hooks/hooks.json").is_file());
+    assert!(!f.out.join("directives-copilot/hooks.json").exists());
+    assert!(!f.out.join("directives-copilot/hooks").exists());
+}
+
+#[test]
+fn pack_escapes_context_text_as_json() {
+    let f = Fixture::new();
+    let text = "Say \"hi\"\nto C:\\temp and to Zoë.";
+    f.hook("escaped", "events:\n  session-start:", text);
+    f.hook_bundle("escaped", "escaped", "");
+    f.command_for_clients("escaped").assert().success();
+    for client in ["claude", "copilot"] {
+        assert!(
+            f.context_bytes("escaped", client, "session-start")
+                .is_ascii()
+        );
+        assert_eq!(f.context_text("escaped", client, "session-start"), text);
+    }
+}
+
+#[test]
+fn pack_refuses_an_invalid_hook() {
+    let f = Fixture::new();
+    f.hook("bad", "events:\n  stop:", "Text.");
+    f.hook_bundle("badhook", "bad", "");
+    f.hook_error(
+        "badhook",
+        &[
+            "hook `bad` of bundle `badhook`",
+            "event `stop` has no `run`",
+        ],
+    );
+}
+
+#[test]
+fn pack_refuses_a_listed_hook_without_a_hook_md() {
+    let f = Fixture::new();
+    f.hook_bundle("missinghook", "missing", "");
+    f.hook_error(
+        "missinghook",
+        &["no directory with a HOOK.md for the hook `missing`"],
+    );
+}
+
+#[test]
+fn pack_refuses_one_hook_named_by_two_bundles() {
+    let f = Fixture::new();
+    f.hook_bundle("dup", "reminder", "requires:\n  - name: hookbase");
+    f.hook_error(
+        "dup",
+        &["hook `reminder` is named by both bundles `hookbase` and `dup`"],
+    );
+}
+
+#[test]
+fn pack_refuses_a_hook_named_context() {
+    let f = Fixture::new();
+    f.hook("context", "events:\n  session-start:", "Text.");
+    f.hook_bundle("reserved", "context", "");
+    f.hook_error("reserved", &["the hook name `context` is reserved"]);
+}
+
+#[test]
+fn pack_refuses_a_hook_name_outside_the_name_rule() {
+    let f = Fixture::new();
+    f.hook("upper", "name: Upper\nevents:\n  session-start:", "Text.");
+    f.hook_bundle("upperhook", "Upper", "");
+    f.hook_error(
+        "upperhook",
+        &["hook name `Upper` must consist of lowercase letters"],
+    );
+}
+
+#[test]
+fn pack_refuses_a_command_hook_in_this_task() {
+    let f = Fixture::new();
+    f.hook(
+        "tool",
+        "events:\n  post-tool: { run: check.sh }",
+        "Check the file.",
+    );
+    fs::write(
+        f.registry.join("items/tool/check.sh"),
+        "#!/bin/sh\nexit 0\n",
+    )
+    .unwrap();
+    f.hook_bundle("commandhook", "tool", "");
+    f.hook_error(
+        "commandhook",
+        &[
+            "hook `tool` of bundle `commandhook`",
+            "this version of `pack` does not write command hooks",
+        ],
+    );
+}
+
+#[test]
+fn pack_reads_a_hook_of_a_bundle_from_a_git_source() {
+    let f = Fixture::new();
+    let upstream = f._tmp.path().join("upstream");
+    fs::create_dir_all(upstream.join("items/guidance")).unwrap();
+    fs::write(
+        upstream.join("items/guidance/HOOK.md"),
+        "---\ndescription: Session guidance\nevents:\n  session-start:\n---\n\nRead the guide.\n",
+    )
+    .unwrap();
+    fs::write(
+        upstream.join("base.bundle.yaml"),
+        "schema: 1\nname: base\ndescription: Test bundle\nitems:\n  hooks: [guidance]\n",
+    )
+    .unwrap();
+    git(&f.home, &upstream, &["init", "-q", "--initial-branch=main"]);
+    git(&f.home, &upstream, &["add", "."]);
+    git(&f.home, &upstream, &["commit", "-q", "-m", "init"]);
+    let remote = "https://example.invalid/team/base";
+    write_bundle(
+        &f,
+        "entry",
+        &format!("requires: [{{name: base, source: \"{remote}\"}}]\nitems: {{}}"),
+    );
+    let mut cmd = f.command_for_clients("entry");
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    cmd.env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", f.home.join("empty-gitconfig"))
+        .env("GIT_CONFIG_COUNT", "2")
+        .env(
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", upstream.display()),
+        )
+        .env("GIT_CONFIG_VALUE_0", format!("{remote}.git"))
+        .env("GIT_CONFIG_KEY_1", "protocol.file.allow")
+        .env("GIT_CONFIG_VALUE_1", "always")
+        .env("GIT_ALLOW_PROTOCOL", "file")
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .assert()
+        .success();
+    for client in ["claude", "copilot"] {
+        assert_eq!(
+            f.context_text("entry", client, "session-start"),
+            "Read the guide."
+        );
+    }
+}

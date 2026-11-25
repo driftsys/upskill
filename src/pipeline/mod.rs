@@ -49,8 +49,8 @@ mod report;
 
 pub use apply::{ConflictState, FileConflict};
 pub use bundle_plan::{
-    BundleCommand, BundleFile, BundleOutput, CommandResource, CommandSource, plan_bundle_output,
-    read_command,
+    BundleCommand, BundleFile, BundleHook, BundleOutput, CommandResource, CommandSource,
+    HookSource, plan_bundle_output, read_command, read_hook,
 };
 pub use check::{
     CheckedSource, GitRemote, LookupError, RemoteLookup, ScopedCheck, SourceStatus, check_scopes,

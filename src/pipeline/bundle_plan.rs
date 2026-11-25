@@ -5,9 +5,9 @@ use std::path::{Component, Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 
-use super::discovery::{find_command_dir, iter_item_resources};
+use super::discovery::{find_command_dir, find_hook_dir, iter_item_resources};
 use super::ignore::filter_ignored;
-use crate::model::Command;
+use crate::model::{Command, Hook};
 use crate::parse::frontmatter;
 
 use super::ItemKind;
@@ -84,13 +84,54 @@ pub fn read_command(root: &Path, name: &str) -> Result<CommandSource> {
     })
 }
 
+/// A hook declaration and the root of its bundle's source.
+pub struct BundleHook {
+    pub name: String,
+    pub bundle: String,
+    pub root: PathBuf,
+}
+
+/// A parsed hook and its source paths and body.
+pub struct HookSource {
+    pub hook: Hook,
+    pub path: PathBuf,
+    pub dir: PathBuf,
+    pub body: String,
+}
+
+/// Read a named hook without writing consumer state or generated files.
+pub fn read_hook(root: &Path, name: &str) -> Result<HookSource> {
+    let dir = find_hook_dir(root, name)?.with_context(|| {
+        format!(
+            "no directory with a HOOK.md for the hook `{name}` in {}",
+            root.display()
+        )
+    })?;
+    let path = dir.join("HOOK.md");
+    let raw =
+        std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+    let (hook, body) =
+        frontmatter::parse::<Hook>(&raw).with_context(|| format!("reading {}", path.display()))?;
+    Ok(HookSource {
+        hook,
+        path,
+        dir,
+        body: body.to_string(),
+    })
+}
+
+/// Files and pack-only declarations of the bundle closure for one client.
 pub struct BundleOutput {
     /// The closure, dependencies before dependents; the last is the entry.
     pub bundles: Vec<crate::model::Bundle>,
-    /// Skill and agent files for the client. No rule or command file.
+    /// Skill and agent files for the client. No rule, command or hook file.
     pub files: Vec<BundleFile>,
     /// Commands in closure order, then in each bundle list order.
     pub commands: Vec<BundleCommand>,
+    /// Hooks in closure order, then in each bundle list order.
+    pub hooks: Vec<BundleHook>,
+    /// Keep fetched sources alive until pack has read their hooks.
+    _source_guards: Vec<tempfile::TempDir>,
     /// Names of the rules that generate output for the client, sorted.
     pub rules: Vec<String>,
 }
@@ -154,9 +195,17 @@ pub fn plan_bundle_output(
             }
         }
     }
-    // Read each command now: a fetched source is deleted when `closure` drops.
+    // Read commands here; retain fetched sources for the later hook validation.
     let mut commands = Vec::new();
+    let mut hooks = Vec::new();
     for resolved in &bundles {
+        for name in &resolved.bundle.items.hooks {
+            hooks.push(BundleHook {
+                name: name.clone(),
+                bundle: resolved.bundle.name.clone(),
+                root: closure.source_roots[&resolved.source_label].clone(),
+            });
+        }
         for name in &resolved.bundle.items.commands {
             let root = &closure.source_roots[&resolved.source_label];
             let source = read_command(root, name).with_context(|| {
@@ -176,6 +225,8 @@ pub fn plan_bundle_output(
             .collect(),
         files,
         commands,
+        hooks,
+        _source_guards: closure.guards,
         rules: rules.into_iter().collect(),
     })
 }
