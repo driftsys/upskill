@@ -467,14 +467,15 @@ mod tests {
     #[test]
     fn pack_only_items_lists_hooks_between_commands_and_lsp_servers() {
         let bundle: Bundle = serde_yaml_ng::from_str(
-            "schema: 1\nname: demo\ndescription: Test\nitems:\n  commands: [c]\n  hooks: [h]\nlsps:\n  l:\n    command: l\n    extensions: { .rs: rust }\n",
+            "schema: 1\nname: demo\ndescription: Test\nitems:\n  commands: [c]\n  hooks: [h2, h1]\nlsps:\n  l:\n    command: l\n    extensions: { .rs: rust }\n",
         )
         .unwrap();
         assert_eq!(
             pack_only_items(&[bundle]),
             vec![
                 (PackOnlyKind::Command, "c".into()),
-                (PackOnlyKind::Hook, "h".into()),
+                (PackOnlyKind::Hook, "h1".into()),
+                (PackOnlyKind::Hook, "h2".into()),
                 (PackOnlyKind::LspServer, "l".into()),
             ]
         );

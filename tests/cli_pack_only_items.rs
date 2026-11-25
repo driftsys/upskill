@@ -120,7 +120,7 @@ fn assert_no_lsp_files(f: &Fixture) {
 }
 
 /// Asserts that no file or directory below `.claude/` has one of `names` or
-/// is a `COMMAND.md`, and that the lockfile does not contain any of `names`.
+/// is a `COMMAND.md` or `HOOK.md`, and that the lockfile does not contain any of `names`.
 fn assert_not_installed(f: &Fixture, names: &[&str]) {
     let claude = f.consumer.join(".claude");
     if claude.exists() {
@@ -128,7 +128,7 @@ fn assert_not_installed(f: &Fixture, names: &[&str]) {
             let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
             let stem = file_name.trim_end_matches(".md");
             assert!(
-                file_name != "COMMAND.md" && !names.contains(&stem),
+                file_name != "COMMAND.md" && file_name != "HOOK.md" && !names.contains(&stem),
                 "unexpected installed path: {}",
                 path.display()
             );
@@ -326,15 +326,19 @@ fn add_kind_command_is_a_usage_error() {
 }
 
 #[test]
-fn add_of_a_whole_source_ignores_command_directories() {
+fn add_of_a_whole_source_ignores_command_and_hook_directories() {
     let f = Fixture::new();
     fs::remove_file(f.registry.join("skills/team.bundle.yaml")).unwrap();
     fs::remove_file(f.registry.join("skills/hooked.bundle.yaml")).unwrap();
     f.add(&["--claude"])
         .success()
-        .stderr(predicate::str::contains("command item").not());
+        .stderr(predicate::str::contains("command item").not())
+        .stderr(predicate::str::contains("hook item").not());
     assert!(f.consumer.join(".claude/skills/alpha/SKILL.md").is_file());
-    assert_not_installed(&f, &["release-notes", "standup"]);
+    assert_not_installed(
+        &f,
+        &["release-notes", "standup", "guard", "edit-checks", "checks"],
+    );
 }
 
 #[test]
@@ -645,4 +649,55 @@ fn update_reports_the_skipped_hook_items_of_a_recorded_bundle() {
         assert_not_installed(&f, &["guard", "standup", "ra"]);
     }
     assert_no_lsp_files(&f);
+}
+
+#[test]
+fn add_reports_two_skipped_hook_items() {
+    let f = Fixture::new();
+    f.bundle(
+        "twohooks",
+        "  skills: [alpha]\n  hooks: [guard, checks]\n",
+        "",
+    );
+    f.add(&["twohooks", "--claude"])
+        .success()
+        .stderr(predicate::str::contains(
+            "skipped 2 hook item(s): only `upskill pack` writes them",
+        ));
+    assert_not_installed(&f, &["guard", "checks", "edit-checks"]);
+}
+
+#[test]
+fn add_of_a_skill_with_a_colocated_hook_file_does_not_install_the_hook() {
+    let f = Fixture::new();
+    let dir = f.registry.join("skills/colocated");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nschema: 1\nname: colocated\ndescription: Test item\n---\n\nTest body.\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("HOOK.md"),
+        "---\nschema: 1\nname: colocated-hook\ndescription: Test hook\nevents:\n  session-start:\n---\n\nRead the guide.\n",
+    )
+    .unwrap();
+    f.add(&["colocated", "--claude"]).success();
+    assert!(
+        f.consumer
+            .join(".claude/skills/colocated/SKILL.md")
+            .is_file()
+    );
+    assert_not_installed(&f, &["colocated-hook"]);
+}
+
+#[test]
+fn add_exclude_hook_is_a_usage_error() {
+    let f = Fixture::new();
+    f.add(&["hooked", "--claude", "--exclude", "guard"])
+        .code(2)
+        .stderr(predicate::str::contains(
+            "--exclude matches no item of the source",
+        ));
+    assert!(!f.consumer.join(".upskill-lock.json").exists());
 }

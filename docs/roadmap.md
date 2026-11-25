@@ -136,8 +136,8 @@ skill in #632, and LSP servers in `pack` in #634.
   (`.lsp.json` in Claude Code, `lsp.json` in Copilot CLI). Implemented in #634
   for `pack`, using the bundle key `lsps`. `add` and `update` do not configure
   LSP servers or record them in the lockfile. They report their count in the
-  same stderr skip line as command items, unless `--quiet` or a kind restriction
-  applies.
+  same stderr skip line as command and hook items, unless `--quiet` or a kind
+  restriction applies.
 - **Catalog generation.** Write the marketplace manifests
   (`.claude-plugin/marketplace.json`, `.github/plugin/marketplace.json`) from
   the bundles of a registry, so they match the packed plugins.
