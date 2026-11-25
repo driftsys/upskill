@@ -110,22 +110,23 @@ covers all items below and amends
 [ADR-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-plugin-output-of-a-bundle.md),
 which limited the plugin content to skills, resources and agents, and whose
 `init` command listed the MCP servers of the bundle without installing them. MCP
-servers in `pack` are implemented in #633; LSP servers in `pack` are implemented
-in #634.
+servers in `pack` are implemented in #633, command items and the user-only init
+skill in #632, and LSP servers in `pack` in #634.
 
 - **Hook item kind (`HOOK.md`).** One file in an item directory holds all hook
   events of that directory, one `## <event>` section for each event. An event
   either adds text to the model's context or runs a script. The target is `pack`
   output.
 - **Command item kind (`COMMAND.md`).** A command that the user calls in the
-  client. `pack` renders it in both clients as a skill that only the user calls.
+  client. Implemented in #632: `pack` renders it in both clients as a user-only
+  skill at `skills/<name>/SKILL.md`; `add` and `update` skip it with a count.
 - **Init command.** The `init` command of a packed plugin copies into the git
   repository the content that a plugin cannot load, today the rules of the
   bundle, with `upskill add --kind rule --project`. `pack` already writes it
-  (ADR-0044). In the plugin MVP, `init` copies only rules (ADR-0046), and the
-  smoke test qualifies it. `init` never writes `AGENTS.md`: the user owns it,
-  and upskill only creates a `CLAUDE.md` that holds `@AGENTS.md` when no
-  `CLAUDE.md` exists.
+  (ADR-0044). Implemented in #632 as the user-only skill `skills/init/SKILL.md`.
+  In the plugin MVP, `init` copies only rules (ADR-0046), and the smoke test
+  qualifies it. `init` never writes `AGENTS.md`: the user owns it, and upskill
+  only creates a `CLAUDE.md` that holds `@AGENTS.md` when no `CLAUDE.md` exists.
 - **MCP servers in the plugin.** `pack` writes the MCP servers that a bundle
   declares into the plugin, so the client installs and removes them with the
   plugin. Implemented in #633: `pack` writes them to `.mcp.json` at the plugin
@@ -134,7 +135,9 @@ in #634.
   declares into the plugin. Both clients load LSP servers from a plugin
   (`.lsp.json` in Claude Code, `lsp.json` in Copilot CLI). Implemented in #634
   for `pack`, using the bundle key `lsps`. `add` and `update` do not configure
-  LSP servers.
+  LSP servers or record them in the lockfile. They report their count in the
+  same stderr skip line as command items, unless `--quiet` or a kind restriction
+  applies.
 - **Catalog generation.** Write the marketplace manifests
   (`.claude-plugin/marketplace.json`, `.github/plugin/marketplace.json`) from
   the bundles of a registry, so they match the packed plugins.

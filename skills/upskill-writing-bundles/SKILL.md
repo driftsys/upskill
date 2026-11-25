@@ -45,6 +45,8 @@ items: # required — may be empty {} for meta-bundles
     - rule-one
   agents:
     - agent-one
+  commands: # optional — only upskill pack renders them
+    - release-notes
 
 requires: # optional — dependencies on other bundles
   - name: other-bundle
@@ -87,6 +89,10 @@ metadata: # optional — freeform
 | Filename stem = `name:` field | `my-bundle.bundle.yaml` → `name: my-bundle` |
 | No collision with item names  | Bundle `foo` + skill `foo/` → lint error    |
 
+A command-only directory (`COMMAND.md` with no `SKILL.md`, `RULE.md` or
+`AGENT.md`) is excluded from this check, so a bundle may share its name with a
+command.
+
 **Name collision prevention:** If your bundle is called `prompt-engineering`,
 don't have a skill directory also called `prompt-engineering/`. Use a distinct
 name for one of them (e.g., rename the skill to `upskill-prompt-design`).
@@ -111,7 +117,9 @@ Rules of thumb:
   project name over a long topic name (`upskill-`, not `prompt-engineering-`).
 - Co-located entrypoints keep one prefixed base name and differ only by kind
   (`upskill-writing-rules` skill + rule) — the resolver allows same `name`
-  across different kinds.
+  across different kinds. A command is the exception: a command and a skill
+  cannot share a name in one bundle closure, and one directory cannot hold both
+  `COMMAND.md` and `SKILL.md` (`lint` reports `command-with-skill`).
 - Pre-1.0, if a second bundle later collides on a descriptor, just rename one.
   No migration path needed.
 
@@ -211,6 +219,8 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
+They report their count in the same stderr skip line as command items, unless
+`--quiet` or a kind restriction applies.
 
 ## The `requires` Dependency Graph
 
@@ -230,6 +240,8 @@ requires:
 - Missing requirements are a hard error
 - Item conflicts (two bundles declaring same `(kind, name)`) are a hard error
 - Same name in different kinds is allowed (rule `shared` + skill `shared`)
+- A command and a skill with the same name in one closure are a hard error for
+  `pack`: both would be written to `skills/<name>/SKILL.md`
 
 ## Validation Workflow
 
@@ -241,7 +253,9 @@ upskill lint <registry-dir> --strict
 
 Common findings:
 
-- `name-collision` — bundle name matches an item directory name
+- `name-collision` — bundle name matches an item directory name (a directory
+  that holds only `COMMAND.md` is excluded)
+- `command-with-skill` — one directory holds both `COMMAND.md` and `SKILL.md`
 - Schema parse error — missing required field or invalid YAML
 - Filename/name mismatch — stem doesn't match `name:` field
 
@@ -253,7 +267,8 @@ Common findings:
    registry
 2. **Create the file** — `skills/<name>.bundle.yaml`
 3. **Fill required fields** — `schema: 1`, `name`, `description`, `items`
-4. **Add items** — list skill/rule/agent names that exist in the registry
+4. **Add items** — list skill/rule/agent/command names that exist in the
+   registry
 5. **Add plugins** (if any) — declare per-client plugin dependencies
 6. **Add requires** (if any) — declare bundle dependencies
 7. **Lint** — `upskill lint <dir> --strict`

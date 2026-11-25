@@ -8,6 +8,7 @@
 
 mod common;
 
+use predicates::prelude::PredicateBooleanExt;
 use std::fs;
 use std::path::Path;
 
@@ -300,6 +301,61 @@ fn lint_flags_bundle_item_name_collision() {
 }
 
 #[test]
+fn lint_excludes_a_command_only_directory_from_name_collision() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("standup/COMMAND.md"),
+        "---\nschema: 1\nname: standup\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    write(
+        &tmp.path().join("standup.bundle.yaml"),
+        "schema: 1\nname: standup\ndescription: a bundle\nitems:\n  commands:\n    - standup\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict"])
+        .assert()
+        .success()
+        .stdout(predicates::str::contains("name-collision").not())
+        .stdout(predicates::str::contains("0 findings"));
+}
+
+/// Counterpart of the test above: a skill directory that has a bundle's name
+/// is still reported, so the exclusion is limited to command items.
+#[test]
+fn lint_still_reports_a_skill_directory_that_collides_with_a_bundle_next_to_a_command() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("standup/COMMAND.md"),
+        "---\nschema: 1\nname: standup\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    write(
+        &tmp.path().join("standup.bundle.yaml"),
+        "schema: 1\nname: standup\ndescription: a bundle\nitems:\n  commands:\n    - standup\n",
+    );
+    write(
+        &tmp.path().join("baseline/SKILL.md"),
+        "---\nschema: 1\nname: baseline\ndescription: A skill\n---\n\nBody.\n",
+    );
+    write(
+        &tmp.path().join("baseline.bundle.yaml"),
+        "schema: 1\nname: baseline\ndescription: a bundle\nitems:\n  skills:\n    - baseline\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict"])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains("name-collision"))
+        .stdout(predicates::str::contains("baseline"))
+        .stdout(predicates::str::contains("standup.bundle.yaml").not());
+}
+
+#[test]
 fn lint_accepts_items_without_schema_field() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
@@ -385,4 +441,229 @@ fn copy_dir_all(from: &Path, to: &Path) -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+#[test]
+fn lint_accepts_a_command_with_argument_hint() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("release-notes/COMMAND.md"),
+        "---\nschema: 1\nname: release-notes\ndescription: Write the release notes\nargument-hint: \"[version]\"\n---\n\n## Steps\n\nWrite the notes for $ARGUMENTS.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "."])
+        .assert()
+        .success()
+        .stdout(predicates::str::contains("1 file(s)"));
+}
+
+#[test]
+fn lint_flags_a_command_without_name_as_error() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("release-notes/COMMAND.md"),
+        "---\nschema: 1\ndescription: Write the release notes\n---\n\nWrite the notes.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "."])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("[frontmatter]"))
+        .stdout(predicates::str::contains("missing field `name`"));
+}
+
+#[test]
+fn lint_flags_a_command_name_that_differs_from_its_directory() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("foo/COMMAND.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "."])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains(
+            "command `name: bar` must equal directory `foo`",
+        ));
+}
+
+#[test]
+fn lint_flags_a_command_name_mismatch_from_a_bare_relative_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("foo/COMMAND.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    for arg in ["COMMAND.md", "."] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path().join("foo"))
+            .args(["lint", "--strict", arg])
+            .assert()
+            .code(1)
+            .stdout(predicates::str::contains(
+                "command `name: bar` must equal directory `foo`",
+            ));
+    }
+}
+
+#[test]
+fn lint_flags_a_skill_name_mismatch_from_a_bare_relative_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("foo/SKILL.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    for arg in ["SKILL.md", "."] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path().join("foo"))
+            .args(["lint", "--strict", arg])
+            .assert()
+            .code(1)
+            .stdout(predicates::str::contains(
+                "skill `name: bar` must equal directory `foo`",
+            ));
+    }
+}
+
+#[test]
+fn lint_flags_a_skill_name_mismatch_through_a_parent_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("foo/SKILL.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    fs::create_dir_all(tmp.path().join("foo/sub")).unwrap();
+    for arg in ["..", "../SKILL.md"] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path().join("foo/sub"))
+            .args(["lint", "--strict", arg])
+            .assert()
+            .code(1)
+            .stdout(predicates::str::contains(
+                "skill `name: bar` must equal directory `foo`",
+            ));
+    }
+}
+
+#[test]
+fn lint_flags_a_command_name_mismatch_through_a_parent_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("foo/COMMAND.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    fs::create_dir_all(tmp.path().join("foo/sub")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path().join("foo/sub"))
+        .args(["lint", "--strict", "../COMMAND.md"])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains(
+            "command `name: bar` must equal directory `foo`",
+        ));
+}
+
+/// A symbolic link to a skill directory is compared by the name that the
+/// path has as written, not by the name of the link target.
+#[cfg(unix)]
+#[test]
+fn lint_compares_a_skill_through_a_symlinked_directory_by_the_link_name() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("store/target/SKILL.md"),
+        "---\nschema: 1\nname: linked\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    fs::create_dir_all(tmp.path().join("skills")).unwrap();
+    std::os::unix::fs::symlink(
+        tmp.path().join("store/target"),
+        tmp.path().join("skills/linked"),
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "skills/linked/SKILL.md"])
+        .assert()
+        .success()
+        .stdout(predicates::str::contains("must equal directory").not());
+    // The same directory under another link name does not match `linked`.
+    std::os::unix::fs::symlink(
+        tmp.path().join("store/target"),
+        tmp.path().join("skills/other"),
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "skills/other/SKILL.md"])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains(
+            "skill `name: linked` must equal directory `other`",
+        ));
+}
+
+#[test]
+fn lint_flags_a_command_and_a_skill_in_one_directory() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    for entry in ["COMMAND.md", "SKILL.md"] {
+        write(
+            &tmp.path().join("both").join(entry),
+            "---\nschema: 1\nname: both\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+        );
+    }
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "."])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("[command-with-skill]"))
+        .stdout(predicates::str::contains(
+            "a COMMAND.md and a SKILL.md cannot share the directory `both`",
+        ));
+    // The finding is an error: it fails the run without `--strict` too.
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "."])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("error"))
+        .stdout(predicates::str::contains("[command-with-skill]"));
+}
+
+#[test]
+fn lint_flags_an_unknown_command_field_as_error() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("release-notes/COMMAND.md"),
+        "---\nschema: 1\nname: release-notes\ndescription: Write the notes\naudience: [claude]\n---\n\nWrite the notes.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "."])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("unknown field `audience`"));
 }

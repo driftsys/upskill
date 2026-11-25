@@ -251,3 +251,99 @@ fn fmt_reports_files_changed_count() {
         "expected change count: {out}"
     );
 }
+
+#[test]
+fn fmt_orders_command_keys_canonically() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let path = tmp.path().join("release-notes/COMMAND.md");
+    write(
+        &path,
+        "---\nargument-hint: \"[version]\"\ndescription: Write the notes\nname: release-notes\nschema: 1\n---\n\nWrite the notes.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    let after = fs::read_to_string(&path).unwrap();
+    let lines: Vec<_> = after.lines().collect();
+    assert_eq!(lines.len(), 8, "{after}");
+    assert_eq!(lines[0], "---", "{after}");
+    assert_eq!(lines[5], "---", "{after}");
+    assert!(after.ends_with("Write the notes.\n"), "{after}");
+    for (line, key) in
+        lines
+            .iter()
+            .skip(1)
+            .zip(["schema:", "name:", "description:", "argument-hint:"])
+    {
+        assert!(line.starts_with(key), "{after}");
+    }
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    assert_eq!(fs::read_to_string(&path).unwrap(), after);
+}
+
+#[test]
+fn fmt_orders_every_command_key_canonically() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let path = tmp.path().join("release-notes/COMMAND.md");
+    write(
+        &path,
+        "---\nignore: [\"*.tmp\"]\nmetadata: {team: docs}\nlicense: MIT\nargument-hint: \"[version]\"\ndescription: Write the notes\nname: release-notes\nschema: 1\n---\n\nWrite the notes.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    let after = fs::read_to_string(&path).unwrap();
+    let keys: Vec<_> = after
+        .lines()
+        .skip(1)
+        .take_while(|line| *line != "---")
+        .map(|line| line.split(':').next().unwrap().to_string())
+        .collect();
+    assert_eq!(
+        keys,
+        [
+            "schema",
+            "name",
+            "description",
+            "argument-hint",
+            "license",
+            "metadata",
+            "ignore"
+        ],
+        "{after}"
+    );
+}
+
+#[test]
+fn fmt_refuses_a_command_with_an_unknown_field_or_a_client_block() {
+    for (extra, field) in [("audience: [x]\n", "audience"), ("claude: {}\n", "claude")] {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        fs::create_dir_all(&home).unwrap();
+        let path = tmp.path().join("release-notes/COMMAND.md");
+        let raw = format!(
+            "---\nschema: 1\nname: release-notes\ndescription: Write the notes\n{extra}---\n\nWrite the notes.\n"
+        );
+        write(&path, &raw);
+        let assert = common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["fmt", "."])
+            .assert()
+            .failure();
+        let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+        assert!(stderr.contains(field), "{field}: {stderr}");
+        assert_eq!(fs::read_to_string(&path).unwrap(), raw);
+    }
+}

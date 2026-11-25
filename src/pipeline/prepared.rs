@@ -24,6 +24,7 @@ use super::{
     bundle_item_names, fetch_ssot, owned,
 };
 use crate::lockfile::{LockedItem, Lockfile, SourceStamp};
+use crate::model::{PackOnlyKind, pack_only_items};
 use crate::plugin::PluginScope;
 use crate::source::InstallSource;
 
@@ -132,6 +133,19 @@ pub(super) fn prepare_install(
     let tmp_guard = fetched.guard;
     let commit = fetched.commit;
     let scanned_items = scan_source_items(&local_source)?;
+    if !options.keep_recorded_excludes && !discovery::is_bundle_file(&local_source) {
+        for name in items {
+            if !scanned_items.iter().any(|(_, scanned)| scanned == name)
+                && discovery::find_bundle_by_name(&local_source, name).is_none()
+                && discovery::find_command_dir(&local_source, name)?.is_some()
+            {
+                anyhow::bail!(
+                    "`{name}` is a command item; `upskill add` does not install command items. \
+                     Use `upskill pack` to build a plugin that holds it"
+                );
+            }
+        }
+    }
 
     // -- Validate bare --as with multi-item source --
     if options.aliases.iter().any(|(from, _)| from.is_empty()) {
@@ -483,6 +497,23 @@ pub(super) fn prepare_install(
 }
 
 impl PreparedInstall {
+    /// Each skipped command or LSP server once, unless kinds restrict the run.
+    pub fn pack_only_skipped(&self) -> Vec<(PackOnlyKind, String)> {
+        if !self.options.kinds.is_empty() {
+            return Vec::new();
+        }
+        if self.resolved_bundles.is_empty() {
+            pack_only_items(&self.report.bundles)
+        } else {
+            let bundles: Vec<_> = self
+                .resolved_bundles
+                .iter()
+                .map(|resolved| resolved.bundle.clone())
+                .collect();
+            pack_only_items(&bundles)
+        }
+    }
+
     /// The items that an exclude kept out of this run, each once.
     pub fn excluded(&self) -> &[(ItemKind, String)] {
         &self.report.excluded

@@ -54,6 +54,7 @@ fn add_global_writes_under_home_not_cwd() {
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
+        .env_remove("XDG_CONFIG_HOME")
         .args(["add", "--global", source.to_str().unwrap()])
         .assert()
         .success();
@@ -94,6 +95,7 @@ fn add_short_g_flag_works_too() {
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
+        .env_remove("XDG_CONFIG_HOME")
         .args(["add", "-g", source.to_str().unwrap()])
         .assert()
         .success();
@@ -117,6 +119,7 @@ fn update_outside_a_git_repository_uses_global() {
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
+        .env_remove("XDG_CONFIG_HOME")
         .args(["add", "--global", source.to_str().unwrap()])
         .assert()
         .success();
@@ -125,6 +128,7 @@ fn update_outside_a_git_repository_uses_global() {
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
+        .env_remove("XDG_CONFIG_HOME")
         .args(["update", "--yes"])
         .output()
         .unwrap();
@@ -157,6 +161,7 @@ fn project_flag_installs_into_cwd_outside_a_git_repository() {
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
+        .env_remove("XDG_CONFIG_HOME")
         .args(["add", "--project", source.to_str().unwrap()])
         .assert()
         .success();
@@ -199,6 +204,7 @@ fn list_global_reads_home_lockfile() {
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
+        .env_remove("XDG_CONFIG_HOME")
         .args(["add", "--global", source.to_str().unwrap()])
         .assert()
         .success();
@@ -208,6 +214,7 @@ fn list_global_reads_home_lockfile() {
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
+        .env_remove("XDG_CONFIG_HOME")
         .args(["list", "--project"])
         .assert()
         .success();
@@ -222,6 +229,7 @@ fn list_global_reads_home_lockfile() {
         .unwrap()
         .current_dir(&cwd)
         .env("HOME", &home)
+        .env_remove("XDG_CONFIG_HOME")
         .args(["list", "-g"])
         .assert()
         .success();

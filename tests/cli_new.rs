@@ -160,3 +160,114 @@ fn new_output_passes_lint_and_fmt() {
         "scaffold not canonical: {out}"
     );
 }
+
+#[test]
+fn new_command_creates_command_md() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", "command", "release-notes"])
+        .assert()
+        .success();
+    let path = tmp.path().join("release-notes/COMMAND.md");
+    let before = fs::read_to_string(&path).unwrap();
+    assert!(before.contains("\nschema: 1\n"), "{before}");
+    assert!(before.contains("\nname: release-notes\n"), "{before}");
+    assert!(before.contains("description:"), "{before}");
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "release-notes"])
+        .assert()
+        .success();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "release-notes"])
+        .assert()
+        .success();
+    assert_eq!(fs::read_to_string(&path).unwrap(), before);
+}
+
+#[test]
+fn new_command_colocates_with_a_rule() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    for kind in ["rule", "command"] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["new", kind, "x"])
+            .assert()
+            .success();
+    }
+    assert!(tmp.path().join("x/RULE.md").is_file());
+    assert!(tmp.path().join("x/COMMAND.md").is_file());
+}
+
+#[test]
+fn new_command_refuses_a_directory_with_a_skill() {
+    assert_skill_command_colocation_refused("skill", "command", "COMMAND.md");
+}
+
+#[test]
+fn new_skill_refuses_a_directory_with_a_command() {
+    assert_skill_command_colocation_refused("command", "skill", "SKILL.md");
+}
+
+fn assert_skill_command_colocation_refused(first: &str, second: &str, refused: &str) {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", first, "x"])
+        .assert()
+        .success();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", second, "x"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(
+            "a COMMAND.md and a SKILL.md cannot share one item directory",
+        ));
+    assert!(!tmp.path().join("x").join(refused).exists());
+}
+
+#[test]
+fn new_refuses_a_directory_whose_command_declares_another_name() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join("foo")).unwrap();
+    fs::write(
+        tmp.path().join("foo/COMMAND.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", "rule", "foo"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(
+            "existing command entrypoint declares `name: bar` \u{2014} a command must have the name of its directory `foo`",
+        ));
+    assert!(!tmp.path().join("foo/RULE.md").exists());
+}
+
+#[test]
+fn new_rejects_an_unknown_kind_and_lists_four_kinds() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", "bundle", "x"])
+        .assert()
+        .code(2)
+        .stderr(predicates::str::contains(
+            "expected one of: rule, skill, agent, command",
+        ));
+}

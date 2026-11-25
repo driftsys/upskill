@@ -255,20 +255,24 @@ or publish these plugins. Add README and LICENSE files yourself if needed;
 there are deleted.
 
 Install with the client's marketplace command. When the output includes rules,
-invoke its init command in each project to install only rules through
-`add --kind rule --project` for that client. Init reports third-party plugins
-for separate setup. The plugin holds the MCP servers of the bundle closure in
-`.mcp.json` and its LSP servers in `.lsp.json` for Claude Code or `lsp.json` for
-Copilot CLI. Declare LSP servers in the bundle's
+call `/<plugin>:init` in an interactive session in each project to install only
+rules through `add --kind rule --project` for that client. Init reports
+third-party plugins for separate setup. The plugin holds the command items of
+the bundle closure as user-only skills at `skills/<name>/SKILL.md`, with their
+resources beside them. Call them as `/<plugin>:<name>`. It also holds the MCP
+servers in `.mcp.json` and its LSP servers in `.lsp.json` for Claude Code or
+`lsp.json` for Copilot CLI. Declare LSP servers in the bundle's
 [`lsps` map](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#lsps-map).
 The plugin does not install the server binary. `upskill add` and
-`upskill update` do not configure LSP servers. Run `upskill update` in the
-project to update the rules that init installed; the client marketplace manages
-plugin content.
+`upskill update` do not configure LSP servers. They report their count in the
+same stderr skip line as command items, unless `--quiet` or a kind restriction
+applies. Run `upskill update` in the project to update the rules that init
+installed; the client marketplace manages plugin content.
 
 Plugin output is experimental until a smoke test with a hosted git marketplace
-passes in both clients (the local-marketplace smoke test of 2026-11-19 passed).
-Check for duplicate skills from an existing `add` install and check that Copilot
-does not also load the Claude directory. See
+passes in both clients. The local-marketplace smoke test of 2026-11-19 ran the
+earlier `commands/init.md` layout; the current layout has not passed a smoke
+test yet. Check for duplicate skills from an existing `add` install and check
+that Copilot does not also load the Claude directory. See
 [pack](commands.md#upskill-pack-bundle---source-source---out-dir) for the output
 layout and limits.

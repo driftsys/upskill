@@ -20,8 +20,8 @@ side you are on.
 
 - **Source registry** — the repo where SSOT content is authored. Holds a
   `skills/` directory with item subfolders (`skills/<name>/SKILL.md`, `RULE.md`,
-  `AGENT.md`) and bundle manifests (`skills/<name>.bundle.yaml`). The layout is
-  documented in
+  `AGENT.md`, `COMMAND.md`) and bundle manifests (`skills/<name>.bundle.yaml`).
+  The layout is documented in
   [Conventions](https://driftsys.github.io/upskill/conventions.html). Author
   commands: `new`, `fmt`, `lint`, `pack`.
 - **Consumer project** — a downstream repo that installs from one or more source
@@ -272,7 +272,7 @@ than from this skill.
 ### Source side vs consumer side
 
 - **Source registry**: holds `skills/<name>/SKILL.md`, `RULE.md`, `AGENT.md`,
-  and `skills/<name>.bundle.yaml`. Author here; commit here.
+  `COMMAND.md`, and `skills/<name>.bundle.yaml`. Author here; commit here.
 - **Consumer project**: holds generated `.claude/`, `.github/`, `.opencode/`
   content plus `.upskill-lock.json`. Generated files are produced by
   `upskill add` / `upskill update`. **Never hand-edit generated files** —
@@ -404,20 +404,25 @@ writes both; `--claude` and `--copilot` select clients. It reads no lockfile and
 does not install or publish the output. A non-empty client directory needs
 `--force`, which replaces it; the new content is written in full before any
 client directory changes. Plugin output remains experimental until a smoke test
-with a hosted git marketplace passes in both clients (the local-marketplace
-smoke test of 2026-11-19 passed).
+with a hosted git marketplace passes in both clients. The local-marketplace
+smoke test of 2026-11-19 ran the earlier `commands/init.md` layout; the current
+layout has not passed a smoke test yet.
 
-The plugin carries skills, agents, MCP servers (`.mcp.json`) and LSP servers
-(`.lsp.json` for Claude Code, `lsp.json` for Copilot CLI) of the bundle closure.
-The bundle's `lsps` map declares LSP servers. The plugin does not install the
-server binary; `add` and `update` do not configure LSP servers. Its init
-command, when rules target the client, runs `add --kind rule --project` for that
-client. `add --kind` is repeatable for `rule`, `skill` and `agent`; it skips
-plugin and MCP steps. Bundle lockfile entries record the selected `kinds`.
-`update` uses their union only when every recorded bundle of the source has
-recorded kinds; one unrestricted bundle leaves that source unrestricted. Every
-entry of that source whose kind is outside the restriction stays unchanged;
-reinstall it explicitly to update it.
+The plugin carries skills, agents, command items as user-only skills, MCP
+servers (`.mcp.json`) and LSP servers (`.lsp.json` for Claude Code, `lsp.json`
+for Copilot CLI) of the bundle closure. The bundle's `lsps` map declares LSP
+servers. The plugin does not install the server binary; `add` and `update` do
+not configure LSP servers. They report their count in the same stderr skip line
+as command items, unless `--quiet` or a kind restriction applies. The user calls
+a command as `/<plugin>:<name>`. When rules of the closure target the client,
+init is written at `skills/init/SKILL.md`; call it as `/<plugin>:init` in an
+interactive session. It runs `add --kind rule --project` for that client.
+`add --kind` is repeatable for `rule`, `skill` and `agent`; it skips plugin and
+MCP steps. Bundle lockfile entries record the selected `kinds`. `update` uses
+their union only when every recorded bundle of the source has recorded kinds;
+one unrestricted bundle leaves that source unrestricted. Every entry of that
+source whose kind is outside the restriction stays unchanged; reinstall it
+explicitly to update it.
 
 The embedded notice hook calls `update --notice`. Runs sharing a cache use
 `notice.lock`: a lock younger than 60 seconds makes another run exit silently. A

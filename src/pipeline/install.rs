@@ -1592,14 +1592,14 @@ fn install_items_of_kind(
 /// Unix permission bits of the source file at `path`; `None` on other
 /// platforms.
 #[cfg(unix)]
-fn source_mode(path: &Path) -> Result<Option<u32>> {
+pub(super) fn source_mode(path: &Path) -> Result<Option<u32>> {
     use std::os::unix::fs::PermissionsExt;
     let meta = fs::metadata(path).with_context(|| format!("inspecting {}", path.display()))?;
     Ok(Some(meta.permissions().mode() & 0o7777))
 }
 
 #[cfg(not(unix))]
-fn source_mode(_path: &Path) -> Result<Option<u32>> {
+pub(super) fn source_mode(_path: &Path) -> Result<Option<u32>> {
     Ok(None)
 }
 

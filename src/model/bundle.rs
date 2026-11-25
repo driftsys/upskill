@@ -12,7 +12,7 @@
 
 use crate::model::common::{License, Metadata, SchemaVersion};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Bundle {
@@ -56,6 +56,51 @@ pub struct Bundle {
     pub extra: BTreeMap<String, serde_yaml_ng::Value>,
 }
 
+/// A kind that `upskill pack` renders and `add` and `update` skip.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum PackOnlyKind {
+    Command,
+    LspServer,
+}
+
+impl PackOnlyKind {
+    pub const ALL: [PackOnlyKind; 2] = [PackOnlyKind::Command, PackOnlyKind::LspServer];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Command => "command item(s)",
+            Self::LspServer => "LSP server(s)",
+        }
+    }
+}
+
+impl Bundle {
+    /// Names that `add` and `update` skip for this kind.
+    pub fn pack_only(&self, kind: PackOnlyKind) -> Vec<&str> {
+        match kind {
+            PackOnlyKind::Command => self.items.commands.iter().map(String::as_str).collect(),
+            PackOnlyKind::LspServer => self.lsps.keys().map(String::as_str).collect(),
+        }
+    }
+}
+
+/// Each `(kind, name)` of `bundles` once, sorted.
+pub fn pack_only_items(bundles: &[Bundle]) -> Vec<(PackOnlyKind, String)> {
+    bundles
+        .iter()
+        .flat_map(|bundle| {
+            PackOnlyKind::ALL.into_iter().flat_map(|kind| {
+                bundle
+                    .pack_only(kind)
+                    .into_iter()
+                    .map(move |name| (kind, name.to_string()))
+            })
+        })
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
 /// What this bundle provides. Every list is optional and defaults to empty
 /// — a bundle that only carries `requires` (a meta-bundle composing other
 /// bundles) is valid.
@@ -67,12 +112,17 @@ pub struct BundleItems {
     pub skills: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub agents: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub commands: Vec<String>,
 }
 
 impl BundleItems {
-    /// True when no rule, skill, or agent is named.
+    /// True when no rule, skill, agent, or command is named.
     pub fn is_empty(&self) -> bool {
-        self.rules.is_empty() && self.skills.is_empty() && self.agents.is_empty()
+        self.rules.is_empty()
+            && self.skills.is_empty()
+            && self.agents.is_empty()
+            && self.commands.is_empty()
     }
 }
 
@@ -358,6 +408,47 @@ pub struct McpLocal {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pack_only_items_lists_each_command_once_in_sorted_order() {
+        let bundle = |name: &str, commands: &str| {
+            serde_yaml_ng::from_str::<Bundle>(&format!(
+                "schema: 1\nname: {name}\ndescription: Test\nitems:\n  commands: {commands}\n"
+            ))
+            .unwrap()
+        };
+        assert_eq!(
+            pack_only_items(&[bundle("first", "[b, a]"), bundle("second", "[a]")]),
+            vec![
+                (PackOnlyKind::Command, "a".into()),
+                (PackOnlyKind::Command, "b".into())
+            ]
+        );
+    }
+
+    #[test]
+    fn pack_only_items_sorts_and_deduplicates_lsp_servers_by_kind_and_name() {
+        let mut first = lsp_bundle("command: rust-analyzer\n    extensions: { .rs: rust }");
+        let entry = first.lsps["rust-analyzer"].clone();
+        first.lsps = BTreeMap::from([("z-server".to_string(), entry.clone())]);
+        first.items.commands = vec!["rust-analyzer".into()];
+        let mut second = first.clone();
+        second.lsps = BTreeMap::from([("a-server".to_string(), entry)]);
+        assert_eq!(
+            pack_only_items(&[first, second]),
+            vec![
+                (PackOnlyKind::Command, "rust-analyzer".into()),
+                (PackOnlyKind::LspServer, "a-server".into()),
+                (PackOnlyKind::LspServer, "z-server".into())
+            ]
+        );
+        assert_eq!(
+            PackOnlyKind::ALL,
+            [PackOnlyKind::Command, PackOnlyKind::LspServer]
+        );
+        assert_eq!(PackOnlyKind::Command.label(), "command item(s)");
+        assert_eq!(PackOnlyKind::LspServer.label(), "LSP server(s)");
+    }
 
     fn lsp_bundle(entry: &str) -> Bundle {
         serde_yaml_ng::from_str(&format!(

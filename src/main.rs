@@ -11,6 +11,7 @@ use upskill::config;
 use upskill::fmt::{FmtReport, fmt};
 use upskill::index;
 use upskill::lint::{LintReport, lint};
+use upskill::model::PackOnlyKind;
 use upskill::notice;
 use upskill::pipeline::{
     DoctorReport, DoctorScopes, GitRemote, InstallReport, ItemKind, ListedBundle, ListedItem,
@@ -377,6 +378,7 @@ fn run_add(args: AddArgs) -> i32 {
         Ok(report) => {
             print_install_report(&report, source);
             print_excluded(&report);
+            print_pack_only_skipped(&report.pack_only_skipped);
             print_adoption_notice(report.adopted.as_deref());
             print_selection_skipped(&report);
             print_plugin_results(&report);
@@ -711,6 +713,27 @@ fn print_excluded_items(excluded: &[(ItemKind, String)]) {
             style::name(name)
         );
     }
+}
+
+/// One stderr line for the commands and LSP servers that the run skips.
+fn print_pack_only_skipped(items: &[(PackOnlyKind, String)]) {
+    if items.is_empty() || style::is_quiet() {
+        return;
+    }
+    let parts: Vec<_> = PackOnlyKind::ALL
+        .into_iter()
+        .filter_map(|kind| {
+            let count = items
+                .iter()
+                .filter(|(item_kind, _)| *item_kind == kind)
+                .count();
+            (count > 0).then(|| format!("{count} {}", kind.label()))
+        })
+        .collect();
+    eprintln!(
+        "skipped {}: only `upskill pack` writes them",
+        parts.join(", ")
+    );
 }
 
 fn kind_label_of(kind: ItemKind) -> &'static str {
@@ -1191,6 +1214,7 @@ fn run_update(args: UpdateArgs) -> i32 {
     match result {
         Ok(report) => {
             print_excluded_items(&report.excluded);
+            print_pack_only_skipped(&report.pack_only_skipped);
             // The plugin results of the run, with any outcome: the plugin step
             // of each applied source and the plugin repair (issue #229).
             print_plugin_result_list(&report.plugin_results);
@@ -2680,6 +2704,7 @@ fn print_scaffold_report(report: &ScaffoldReport) {
         NewKind::Rule => "rule",
         NewKind::Skill => "skill",
         NewKind::Agent => "agent",
+        NewKind::Command => "command",
     };
     println!(
         "{} {kind_label} `{}` at {}",

@@ -7,11 +7,11 @@
 ## Abstract
 
 This specification defines a portable, tool-agnostic format for authoring rules,
-skills, and agents targeting AI coding assistants. It also defines a bundle
-manifest format for distributing curated sets of these items. The format is
-inspired by and compatible with the Agent Skills open standard (agentskills.io)
-and extends it to cover always-on rules and agent definitions, which the open
-standard does not address.
+skills, agents, and commands targeting AI coding assistants. It also defines a
+bundle manifest format for distributing curated sets of these items. The format
+is inspired by and compatible with the Agent Skills open standard
+(agentskills.io) and extends it to cover always-on rules and agent definitions,
+which the open standard does not address.
 
 The specification intentionally leaves implementation details (installation
 mechanics, caching, registry protocols, CLI surface) to the implementing tool.
@@ -20,10 +20,10 @@ body conventions, and conditional directives.
 
 ## Audience
 
-Authors of AI-assistance content (rules, skills, agents) targeting multiple AI
-coding clients from a single source. Implementers of tools that consume this
-format to generate client-specific outputs. Maintainers of CI pipelines that
-validate content against this specification.
+Authors of AI-assistance content (rules, skills, agents, commands) targeting
+multiple AI coding clients from a single source. Implementers of tools that
+consume this format to generate client-specific outputs. Maintainers of CI
+pipelines that validate content against this specification.
 
 ## Conformance keywords
 
@@ -45,8 +45,8 @@ upskill generates no output for Codex.
 
 ## 1. Terminology
 
-**Item**: a rule, skill, or agent. The three kinds share a base schema and
-differ in semantic role and a small number of kind-specific fields.
+**Item**: a rule, skill, agent, or command. The four kinds share common fields
+and differ in semantic role and kind-specific fields.
 
 **Rule**: always-on behavioral guidance, loaded into every session of compatible
 clients. Rules constrain behavior ("never do X", "always check Y").
@@ -58,6 +58,9 @@ follow these steps").
 **Agent**: a persona definition with its own system prompt and tool scope,
 invocable as a subagent or primary agent depending on the target client. Agents
 establish identity and role ("you are a security reviewer; when invoked, do X").
+
+**Command**: a procedure that the user calls by name. `upskill add` and
+`upskill update` do not install command items. Only `pack` renders a command.
 
 **Bundle**: a manifest file grouping items (and optionally other bundles) by
 reference for distribution. Bundles contain no content themselves.
@@ -100,6 +103,8 @@ determined by the entrypoint filename:
 │   └── SKILL.md
 ├── <name-c>/
 │   └── AGENT.md
+├── <name-command>/
+│   └── COMMAND.md
 └── <name-d>/                # optional co-location: multiple kinds in one item directory
     ├── SKILL.md             # name omitted or name: <name-d> (skill must match the directory)
     └── RULE.md              # name: <name-d> or a divergent name (rule/agent name MAY differ)
@@ -108,19 +113,22 @@ determined by the entrypoint filename:
 Constraints:
 
 - An item directory MUST contain at least one entrypoint file (`RULE.md`,
-  `SKILL.md`, or `AGENT.md`).
+  `SKILL.md`, `AGENT.md`, or `COMMAND.md`).
 - An item directory MAY contain more than one entrypoint when the kinds
   represent a tightly-coupled set for one capability (for example, a skill
   paired with its enforcing rule, or an agent paired with a skill it preloads).
-  Co-location is optional; solo-kind item directories are the common case.
-  Co-location expresses a _symmetric, inseparable_ unit; a _directed_ "A needs
-  B" relationship is expressed with `requires` (§3.7) instead. See
+  A `COMMAND.md` and a `SKILL.md` MUST NOT share a directory because both take
+  the directory name. Co-location is optional; solo-kind item directories are
+  the common case. Co-location expresses a _symmetric, inseparable_ unit; a
+  _directed_ "A needs B" relationship is expressed with `requires` (§3.7)
+  instead. See
   [ADR-0009](https://github.com/driftsys/upskill/blob/main/docs/adr/0009-coupling-tiers-and-dependencies.md).
 - **Effective name and relaxed naming.** Each entrypoint resolves to an
   **effective name**:
   - A **skill** `name:` is optional. When present it MUST equal the directory
     name (the Agent Skills standard mandate). When absent, the skill's effective
     name is the directory name.
+  - A **command** MUST declare `name:`, and it MUST equal the directory name.
   - A **rule** or **agent** `name:` comes from frontmatter and MAY differ from
     the directory name. When absent, the effective name is the directory name. A
     divergent rule/agent name is legal and is not a diagnostic.
@@ -134,9 +142,9 @@ Constraints:
 - The **effective name** MUST NOT start or end with a hyphen.
 - The **effective name** MUST be at most 64 characters.
 - Kind is determined by the entrypoint filename: `RULE.md` for a rule,
-  `SKILL.md` for a skill, `AGENT.md` for an agent. Implementations MUST NOT
-  infer kind from any other source (parent directory name, frontmatter field,
-  etc.).
+  `SKILL.md` for a skill, `AGENT.md` for an agent, and `COMMAND.md` for a
+  command. Implementations MUST NOT infer kind from any other source (parent
+  directory name, frontmatter field, etc.).
 - `<item-root>` is the SSOT path within a **source registry** repository. SSOT
   items live only in source registries; consumer projects (where developers run
   `upskill add`) only ever hold generated, client-specific outputs and never
@@ -191,10 +199,10 @@ Bundles are flat YAML manifest files, not directories:
 ### 2.3 Client-specific bodies
 
 There are no per-client body files. Each item has one body: the body of its
-canonical entrypoint (`SKILL.md`, `RULE.md` or `AGENT.md`). A file such as
-`SKILL.claude.md` or `RULE.copilot.md` has no special meaning; it is an ordinary
-supporting resource and is copied with the item's other resources (§2.4) for
-every client.
+canonical entrypoint (`SKILL.md`, `RULE.md`, `AGENT.md` or `COMMAND.md`). A file
+such as `SKILL.claude.md` or `RULE.copilot.md` has no special meaning; it is an
+ordinary supporting resource and is copied with the item's other resources
+(§2.4) for every client.
 
 Authors express client differences in one of two ways:
 
@@ -278,17 +286,20 @@ Items MAY contain supporting files in their directory:
 
 ## 3. Frontmatter schema
 
-Item entrypoint files (RULE.md, SKILL.md, AGENT.md) begin with YAML frontmatter
-delimited by `---` markers, followed by a blank line and then markdown body
-content. Bundle manifests (`*.bundle.yaml`, §2.2) are pure YAML — the same
-schema, but the file content IS the YAML, with no `---` wrapping and no body.
+Item entrypoint files (`RULE.md`, `SKILL.md`, `AGENT.md`, `COMMAND.md`) begin
+with YAML frontmatter delimited by `---` markers, followed by a blank line and
+then markdown body content. Bundle manifests (`*.bundle.yaml`, §2.2) are pure
+YAML: the file content is the YAML, with no `---` wrapping and no body.
 
 ### 3.1 Common fields (all kinds and bundles)
+
+Commands require `name` and accept only the fields listed in §3.9. They reject
+`audience` and `requires`.
 
 | Field         | Type     | Required | Description                                                                                                                                                                                                |
 | ------------- | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `schema`      | integer  | varies   | Protocol version of this specification. Current: `1`. Required for bundles; optional for items (an item without `schema` is read as `schema: 1`).                                                          |
-| `name`        | string   | varies   | Stable identifier. Required for bundles; optional for items (effective name defaults to the directory name). See §2.1.                                                                                     |
+| `name`        | string   | varies   | Required for bundles and commands; see §2.1.                                                                                                                                                               |
 | `description` | string   | YES      | What this item does and when to use it. Max 1024 characters. Skill-specific guidance: see §3.3.                                                                                                            |
 | `license`     | string   | no       | SPDX identifier or custom (`proprietary`, `LicenseRef-*`).                                                                                                                                                 |
 | `audience`    | string[] | no       | Target families (`claude`, `copilot`, `codex`, `opencode`). When present, output is limited to listed families and supported selected surfaces. When absent, all supported selected families are targeted. |
@@ -314,13 +325,14 @@ Field semantics:
 
 - `schema`: implementations MUST reject files with `schema` greater than the
   highest version they support and SHOULD report a clear upgrade message. See §8
-  for evolution rules. An item (rule, skill, or agent) without a `schema` field
-  is read as `schema: 1`, so a standard Agent Skills file with only `name` and
-  `description` is accepted. A bundle MUST declare `schema`.
+  for evolution rules. An item (rule, skill, agent, or command) without a
+  `schema` field is read as `schema: 1`, so a standard Agent Skills file with
+  only `name` and `description` is accepted. A bundle MUST declare `schema`.
 - `name`: the effective name (§2.1) is used as the `/slash-command` name in
   clients that support it and as the identifier in bundle manifests. When `name`
-  is omitted on an item, the directory name is the effective name; a rule or
-  agent `name` MAY differ from its directory.
+  is omitted on a rule, skill, or agent, the directory name is the effective
+  name; a rule or agent `name` MAY differ from its directory. A command MUST
+  declare `name`, equal to its directory name.
 - `description`: for skills, this is the activation hint — the model reads it
   during discovery and decides whether to load the full body. For rules and
   agents, it serves as documentation. Front-load the key use case. Convention:
@@ -466,7 +478,8 @@ Implementations map these fields to each client's agent definition format:
 ### 3.5 Client-specific passthrough blocks
 
 Items MAY include top-level blocks named after specific clients for fields that
-have no neutral equivalent:
+have no neutral equivalent. `COMMAND.md` does not accept them: its frontmatter
+rejects unknown fields (§3.9).
 
 ```yaml
 copilot:
@@ -552,21 +565,22 @@ metadata:
 An optional sibling `<bundle-root>/platform-baseline.bundle.md` MAY carry
 human-readable documentation; the parser ignores it (§2.2).
 
-| Field          | Type     | Required | Description                          |
-| -------------- | -------- | -------- | ------------------------------------ |
-| `schema`       | integer  | YES      | Same as §3.1.                        |
-| `name`         | string   | YES      | Same as §3.1. Matches filename stem. |
-| `description`  | string   | YES      | Same as §3.1.                        |
-| `license`      | string   | no       | Same as §3.1.                        |
-| `items`        | map      | YES      | What this bundle provides.           |
-| `items.rules`  | string[] | no       | Rule names.                          |
-| `items.skills` | string[] | no       | Skill names.                         |
-| `items.agents` | string[] | no       | Agent names.                         |
-| `requires`     | array    | no       | Bundle dependencies. See below.      |
-| `plugins`      | map      | no       | Client-native plugins. See below.    |
-| `mcps`         | map      | no       | MCP server descriptors. See below.   |
-| `lsps`         | map      | no       | LSP server descriptors for `pack`.   |
-| `metadata`     | map      | no       | Same as §3.6.                        |
+| Field            | Type     | Required | Description                          |
+| ---------------- | -------- | -------- | ------------------------------------ |
+| `schema`         | integer  | YES      | Same as §3.1.                        |
+| `name`           | string   | YES      | Same as §3.1. Matches filename stem. |
+| `description`    | string   | YES      | Same as §3.1.                        |
+| `license`        | string   | no       | Same as §3.1.                        |
+| `items`          | map      | YES      | What this bundle provides.           |
+| `items.rules`    | string[] | no       | Rule names.                          |
+| `items.skills`   | string[] | no       | Skill names.                         |
+| `items.agents`   | string[] | no       | Agent names.                         |
+| `items.commands` | string[] | no       | Command names (§3.9).                |
+| `requires`       | array    | no       | Bundle dependencies. See below.      |
+| `plugins`        | map      | no       | Client-native plugins. See below.    |
+| `mcps`           | map      | no       | MCP server descriptors. See below.   |
+| `lsps`           | map      | no       | LSP server descriptors for `pack`.   |
+| `metadata`       | map      | no       | Same as §3.6.                        |
 
 `requires` entries are maps. Each entry references another bundle by `name`,
 optionally pinned with a semver `version` constraint, and optionally located in
@@ -991,7 +1005,9 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
-`upskill doctor` does not check LSP servers.
+They report their count in the same stderr skip line as command items, unless
+`--quiet` or a kind restriction applies. `upskill doctor` does not check LSP
+servers.
 
 #### Item `requires` resolution
 
@@ -1037,12 +1053,13 @@ linter MAY report a `body-format` finding when a body is not canonical.
 emit keys in the following order (unlisted keys appear at the end in their
 original relative order):
 
-| Kind   | Key order                                                                                                                                                                       |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rule   | `schema`, `name`, `description`, `audience`, `license`, `scope`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                                    |
-| Skill  | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
-| Agent  | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
-| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `lsps`, `metadata`, `extras`                                                                |
+| Kind    | Key order                                                                                                                                                                       |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule    | `schema`, `name`, `description`, `audience`, `license`, `scope`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                                    |
+| Skill   | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
+| Agent   | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
+| Command | `schema`, `name`, `description`, `argument-hint`, `license`, `metadata`, `ignore`                                                                                               |
+| Bundle  | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `lsps`, `metadata`, `extras`                                                                |
 
 **Comment preservation.** Canonicalisation:
 
@@ -1061,6 +1078,38 @@ resulting data structures.
 
 **Idempotency.** Running canonicalisation twice on the same input MUST produce
 identical output.
+
+### 3.9 Command-specific fields
+
+```markdown
+---
+name: release-notes
+description: Write the release notes of the current branch
+argument-hint: "[version]"
+---
+
+Write the release notes for version $ARGUMENTS.
+```
+
+| Field           | Type   | Required | Description                                   |
+| --------------- | ------ | -------- | --------------------------------------------- |
+| `name`          | string | YES      | Must equal the directory name (§2.1).         |
+| `description`   | string | YES      | What the command does when the user calls it. |
+| `argument-hint` | string | no       | Hint for the arguments the user gives.        |
+
+Commands also accept the common fields `schema`, `license`, `metadata`, and
+`ignore`. Any other field is an error, including `audience`, `requires`,
+`allowed-tools`, and client-specific passthrough blocks. `$ARGUMENTS` in the
+body stands for the text that the user gives.
+
+Only `upskill pack` renders command items. For Claude Code, it writes
+`skills/<name>/SKILL.md` with frontmatter keys `name`, `description`, optional
+`argument-hint`, and `disable-model-invocation: true`, in that order. For
+Copilot CLI, it writes the same path with `name`, `description`, and
+`disable-model-invocation: true`, omitting `argument-hint`. Both outputs copy
+resources beside `SKILL.md`, honour `ignore`, and process client directives in
+the body. The user calls a command as `/<plugin>:<name>`. Commands have no
+opencode output.
 
 ---
 
@@ -1197,6 +1246,9 @@ every client, wrap it in a matching-client directive block (§6). Items that
 target only one client end-to-end MAY instead be marked single-client via
 `audience` (§3.1).
 
+The exception is the body of a command (§3.9): it MAY hold `$ARGUMENTS`, and the
+renderer keeps `$ARGUMENTS` unchanged in every output.
+
 ---
 
 ## 6. Conditional content directives
@@ -1290,9 +1342,11 @@ state how far the output for each client and kind is verified.
 
 This section describes the expected output per client: which files an
 implementation writes for each item kind, and how SSOT frontmatter maps onto
-each client's frontmatter shape. It is informational; client conventions may
-change independently of this specification. Implementations SHOULD verify output
-against actual client behavior.
+each client's frontmatter shape. Command items have no `add` output and no
+subsection here; `pack` writes them as described in §3.9. This section, §7, is
+informational; client conventions may change independently of this
+specification. Implementations SHOULD verify output against actual client
+behavior.
 
 This section is deliberately scoped to "what file and frontmatter each client
 reads". Adjacent behavior — bridging files, IDE configuration mutation,
@@ -1376,7 +1430,7 @@ Current version: **1**.
   version and suggesting an upgrade of the implementing tool.
 - MUST accept files with `schema` equal to or less than the highest supported
   version.
-- MUST read an item (rule, skill, or agent) without a `schema` field as
+- MUST read an item (rule, skill, agent, or command) without a `schema` field as
   `schema: 1`. Bundle discovery skips a bundle file without `schema`; an
   explicit-path load or lint of that file fails with a parse error (§2.2).
 - When processing older schema versions, MUST NOT silently apply newer defaults
@@ -1386,8 +1440,9 @@ Current version: **1**.
 
 - MINOR additions (new optional fields, new optional top-level blocks) MAY occur
   within the same schema version. Implementations MUST ignore unknown fields
-  they don't support. The one exception is an entry of the bundle `lsps` map,
-  which rejects unknown fields (see the `lsps` map in §3.7).
+  they don't support. There are two exceptions: an entry of the bundle `lsps`
+  map rejects unknown fields (see the `lsps` map in §3.7), and so does the
+  frontmatter of a `COMMAND.md` (§3.9).
 - BREAKING changes (removed fields, renamed fields, changed semantics of
   existing fields, new required fields) MUST increment the schema version.
 - Each published schema version MUST have a stable reference document with a
@@ -1400,7 +1455,9 @@ Current version: **1**.
 An implementation is conformant with this specification if:
 
 1. It correctly parses all frontmatter fields defined in §3, accepting unknown
-   fields within `metadata` and client passthrough blocks without error.
+   fields within `metadata` and client passthrough blocks without error. The
+   exception is `COMMAND.md`, whose frontmatter rejects unknown fields and
+   accepts no client passthrough blocks (§3.9).
 2. It validates `name` against §2.1 constraints and rejects non-conforming names
    with a clear error.
 3. It rejects files with unsupported `schema` versions per §8.

@@ -14,7 +14,7 @@ a source-registry repo).
 | `doctor`     | Consumer | Verify installation consistency.                            |
 | `search`     | Consumer | Look up skills via the public registry.                     |
 | `index`      | Consumer | Build or manage the local registry index cache.             |
-| `new`        | Author   | Scaffold a new rule, skill, or agent.                       |
+| `new`        | Author   | Scaffold a rule, skill, agent, or command.                  |
 | `lint`       | Author   | Validate SSOT files against the format spec.                |
 | `pack`       | Author   | Build Claude Code and Copilot CLI plugin directories.       |
 | `fmt`        | Author   | Canonicalise YAML frontmatter and format the markdown body. |
@@ -101,6 +101,12 @@ directory fails before this check, with exit code 1, nothing written, and the
 error that says there are no matching items or bundles, not with the command to
 use instead. This check applies to `add` only: `update` and the sources of
 `requires` entries are not checked. `.` alone is a local path, the same as `./`.
+
+A directory that holds `COMMAND.md` and none of `SKILL.md`, `RULE.md` and
+`AGENT.md` is refused in the same cases, for a local path and for a git source.
+`add` then writes nothing, exits with code 1, and prints an error that names the
+source, says that it is a command item directory, and names `upskill pack`
+instead of a command to run.
 
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a flag uses the project scope. Outside a
@@ -304,6 +310,27 @@ a single MCP failure or skip never fails the rest of the bundle install.
 Configured and warn-skipped servers are recorded in the lockfile; remove one
 with [`upskill remove-mcp`](#upskill-remove-mcp-name). If an MCP server needs an
 environment variable that is unset, `add` warns so you can export it.
+
+**Bundle command items.** `add` does not install entries of `items.commands`. It
+counts each command name once across the resolved bundles and prints one line to
+stderr, for example:
+
+```text
+skipped 2 command item(s): only `upskill pack` writes them
+```
+
+LSP servers declared in `lsps` are also skipped. Their count appears in the same
+line as `<n> LSP server(s)`, after the command count when both are present. No
+skip line is printed with `--quiet` or any `--kind` restriction. A whole-source
+install without a resolved bundle ignores command directories without a skip
+line. When the source is a directory, `add <source> <name>` with a command item
+name fails with exit code 1 and names `upskill pack`; a source that is a
+`*.bundle.yaml` file does not check positional names, and a name that matches
+both a bundle and a command item resolves as the bundle. A source that is a
+command item directory also fails with exit code 1 and names `upskill pack`.
+When several positional names include a command item, the error occurs before
+any write. `--kind command` and an `--exclude` that names only a command item
+remain usage errors (exit code 2).
 
 ### `upskill update [name...]`
 
@@ -624,6 +651,11 @@ Each block is exact for the files on disk, but because nothing is applied, a
 later block does not include the effect of applying an earlier source. With a
 `schema: 1` lockfile, the previews are computed from an adoption held in memory,
 and nothing is written.
+
+`update` reports command items and LSP servers of every bundle it prepares in
+the same skip line as `add`, each name counted once per kind across the run. It
+reports them also for sources that are not applied and with `--dry-run`. No skip
+line is printed with `--quiet` or for a source under a kind restriction.
 
 The plugin and MCP steps of a bundle source run when the source is applied
 without a kind restriction. `update` skips both steps for a source under a kind
@@ -1321,20 +1353,45 @@ result lines.
 upskill pack my-bundle --source owner/repo@v1 --out dist
 ```
 
-| Content                                    | Claude Code output                     | GitHub Copilot CLI output              |
-| ------------------------------------------ | -------------------------------------- | -------------------------------------- |
-| Directory                                  | `<out>/<bundle>-claude/`               | `<out>/<bundle>-copilot/`              |
-| Manifest                                   | `.claude-plugin/plugin.json`           | `plugin.json`                          |
-| Skills and resources                       | `skills/<name>/SKILL.md` and resources | `skills/<name>/SKILL.md` and resources |
-| Agents                                     | `agents/<name>.md`                     | `agents/<name>.agent.md`               |
-| MCP servers, when declared                 | `.mcp.json`                            | `.mcp.json`                            |
-| LSP servers, when declared                 | `.lsp.json`                            | `lsp.json`                             |
-| Init, when rules target this client        | `commands/init.md`                     | `commands/init.md`                     |
-| Notice hook, when rules target this client | `hooks/hooks.json`                     | `hooks.json`                           |
+| Content      | Claude Code output           | Copilot CLI output        |
+| ------------ | ---------------------------- | ------------------------- |
+| Directory    | `<out>/<bundle>-claude/`     | `<out>/<bundle>-copilot/` |
+| Manifest     | `.claude-plugin/plugin.json` | `plugin.json`             |
+| Skills       | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`  |
+| Commands     | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`  |
+| Agents       | `agents/<name>.md`           | `agents/<name>.agent.md`  |
+| MCP servers  | `.mcp.json`                  | `.mcp.json`               |
+| LSP servers  | `.lsp.json`                  | `lsp.json`                |
+| Init (rules) | `skills/init/SKILL.md`       | `skills/init/SKILL.md`    |
+| Hook (rules) | `hooks/hooks.json`           | `hooks.json`              |
+
+`pack` renders every command in `items.commands` from the bundle's `requires`
+closure as `skills/<name>/SKILL.md`, with its resources beside it. Claude Code
+frontmatter contains `name`, `description`, optional `argument-hint`, and
+`disable-model-invocation: true`, in that order. Copilot CLI frontmatter
+contains `name`, `description`, and `disable-model-invocation: true`; it omits
+`argument-hint`. Both outputs keep `$ARGUMENTS` in the body and process client
+directives. The user calls a command as `/<plugin>:<name>`.
+
+The following errors fail with exit code 1 before any output is written. Name
+checks cover the whole closure, regardless of the selected client:
+
+- Two bundles list one command name.
+- A command and a skill have one name in the closure; both would be written to
+  `skills/<name>/SKILL.md`.
+- A command named `init` is listed when any bundle in the closure lists rules.
+- A skill named `init` is listed when any bundle in the closure lists rules.
+- A listed command has no directory with a `COMMAND.md` in its source.
+- The `name` in a `COMMAND.md` differs from its directory name.
+
+Command reading errors identify the command and its bundle. Duplicate command
+errors identify both bundles. `pack` is the only command that renders
+`items.commands`.
 
 Skills and agents include the bundle's `requires` closure and use the existing
-client generators. The manifest takes `name`, `description`, optional `license`
-and optional `metadata.version` (as `version`) from the bundle. No README and no
+client generators. Skill and command resources are copied beside their
+`SKILL.md`. The manifest takes `name`, `description`, optional `license` and
+optional `metadata.version` (as `version`) from the bundle. No README and no
 LICENSE file is written, so `claude plugin validate` reports both as missing.
 
 `pack` writes the MCP servers of the bundle closure under `mcpServers` in
@@ -1370,6 +1427,8 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
+They report their count in the same stderr skip line as command items, unless
+`--quiet` or a kind restriction applies.
 
 All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force`
@@ -1399,10 +1458,13 @@ register the plugin, write a marketplace manifest, or publish it. The bundle
 schema adds the optional `lsps` map without changing its version. Copy the
 outputs into a marketplace repository and install through the client. Plugin
 output is experimental until a smoke test with a hosted git marketplace passes
-in both clients (the local-marketplace smoke test of 2026-11-19 passed);
-`doctor` gains no row.
+in both clients. The local-marketplace smoke test of 2026-11-19 covered the
+earlier `commands/init.md` layout; the current layout, with `init` as a skill
+that only the user calls, has not passed a smoke test yet. `doctor` gains no
+row.
 
-No rule file is included. Init instructs the model to run
+No rule file is included. Init is a user-only skill at `skills/init/SKILL.md`,
+rendered by the command renderer. It instructs the model to run
 `upskill add <source> <bundle> --kind rule --project --claude`, or the same
 command with `--copilot`, in the repository root and report the result. On
 failure it reports the error and runs no substitute command. It lists declared
@@ -1413,23 +1475,27 @@ notice hook. The hook is copied unchanged from the corresponding upskill notice
 plugin and runs `upskill update --notice`; it is silent when the upskill binary
 is absent.
 
-Known limits: init and the hook need the upskill binary on the host; installing
-the same skills with both a plugin and `add` exposes duplicates; references by
-short skill name are not verified to resolve to `<plugin>:<skill>`. When both
-outputs are published together, check that Copilot does not also load the Claude
-directory. Codex, OpenCode, VS Code, general hook authoring, third-party plugin
-packaging, and duplicate detection are outside this command's scope.
+Known limits: the init skill has `disable-model-invocation: true` and cannot be
+started in Copilot CLI prompt mode (`-p`), which does not process slash commands
+(technote T4, trial 1). The user starts it in an interactive session. Init and
+the hook need the upskill binary on the host; installing the same skills with
+both a plugin and `add` exposes duplicates; references by short skill name are
+not verified to resolve to `<plugin>:<skill>`. When both outputs are published
+together, check that Copilot does not also load the Claude directory. Codex,
+OpenCode, VS Code, general hook authoring, third-party plugin packaging, and
+duplicate detection are outside this command's scope.
 
 ### `upskill new <kind> <name>`
 
-Scaffold a new SSOT item directory. `<kind>` is one of `rule`, `skill`, or
-`agent`; `<name>` is both the item name and the directory name (lowercase
+Scaffold a new SSOT item directory. `<kind>` is one of `rule`, `skill`, `agent`,
+or `command`; `<name>` is both the item name and the directory name (lowercase
 letters, digits, hyphens; max 64 chars).
 
 ```bash
 upskill new rule  no-direct-database-access
 upskill new skill code-review
 upskill new agent security-reviewer
+upskill new command release-notes
 ```
 
 Creates `<name>/<KIND>.md` **relative to the current directory** with the
@@ -1451,27 +1517,29 @@ upskill new rule  api-handler   # → api-handler/RULE.md (added alongside)
 ```
 
 This expresses one capability across multiple kinds (for example a skill paired
-with its enforcing rule). Co-location is refused only when an existing **skill**
-entrypoint's `name:` diverges from `<name>`; rule and agent siblings MAY carry a
-divergent name.
+with its enforcing rule). A command and a skill cannot share a directory.
+Co-location is also refused when an existing skill or command entrypoint's
+`name:` differs from `<name>`; rule and agent siblings MAY carry a different
+name.
 
 `upskill new` is an author command — it refuses to run inside a consumer project
 (one with a `.upskill-lock.json`).
 
 ### `upskill lint [paths...]`
 
-Validate SSOT files against the [format spec](format-spec.md). Seven rules ship
-out of the box:
+Validate SSOT files against the [format spec](format-spec.md). Eight rules are
+available:
 
-| Rule ID            | Severity | Source                                          |
-| ------------------ | -------- | ----------------------------------------------- |
-| `frontmatter`      | error    | format-spec §3                                  |
-| `name-matches-dir` | error    | format-spec §2.1                                |
-| `body-h1`          | warning  | format-spec §5.1                                |
-| `fence-lang`       | warning  | format-spec §5.2                                |
-| `body-format`      | warning  | format-spec §3.8                                |
-| `directive`        | error    | format-spec §6.3                                |
-| `name-collision`   | error    | a bundle and an item of one source share a name |
+| Rule ID              | Severity | Source                                                                      |
+| -------------------- | -------- | --------------------------------------------------------------------------- |
+| `frontmatter`        | error    | format-spec §3                                                              |
+| `name-matches-dir`   | error    | format-spec §2.1                                                            |
+| `body-h1`            | warning  | format-spec §5.1                                                            |
+| `fence-lang`         | warning  | format-spec §5.2                                                            |
+| `body-format`        | warning  | format-spec §3.8                                                            |
+| `directive`          | error    | format-spec §6.3                                                            |
+| `command-with-skill` | error    | format-spec §2.1                                                            |
+| `name-collision`     | error    | a bundle and an item of one source share a name; command items are excluded |
 
 ```bash
 upskill lint                # lint everything in the working tree

@@ -100,6 +100,12 @@ reference rather than this compatibility page.
 
 - [3.8 Frontmatter canonicalisation](../topics/0001-content-format.md#38-frontmatter-canonicalisation)
 
+<a id="39-command-specific-fields"></a>
+
+- [3.9 Command-specific fields][command-fields]
+
+[command-fields]: ../topics/0001-content-format.md#39-command-specific-fields
+
 <a id="4-capability-level-tool-vocabulary"></a>
 
 - [4. Capability-level tool vocabulary](../topics/0001-content-format.md#4-capability-level-tool-vocabulary)

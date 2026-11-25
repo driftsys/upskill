@@ -206,6 +206,19 @@ metadata:
 ";
 
     #[test]
+    fn load_parses_items_commands() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_file(
+            tmp.path(),
+            "demo.bundle.yaml",
+            "schema: 1\nname: demo\ndescription: Demo\nitems:\n  commands: [release-notes]\n",
+        );
+        let bundle = load(&path).unwrap();
+        assert_eq!(bundle.items.commands, ["release-notes"]);
+        assert!(!bundle.items.is_empty());
+    }
+
+    #[test]
     fn load_round_trips_format_spec_example() {
         let tmp = tempfile::tempdir().unwrap();
         let path = write_file(tmp.path(), "platform-baseline.bundle.yaml", PLATFORM);

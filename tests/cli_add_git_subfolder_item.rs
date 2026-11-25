@@ -110,6 +110,13 @@ fn env() -> Env {
         "schema: 1\nname: meta\ndescription: d\nitems: {}\n",
     )
     .unwrap();
+    let command = upstream.join("commands").join("standup");
+    fs::create_dir_all(&command).unwrap();
+    fs::write(
+        command.join("COMMAND.md"),
+        "---\nname: standup\ndescription: Use for testing a command directory\n---\n\nBody.\n",
+    )
+    .unwrap();
     git(&home, &upstream, &["add", "."]);
     git(&home, &upstream, &["commit", "-q", "-m", "init"]);
     git(&home, &upstream, &["tag", "v1"]);
@@ -231,6 +238,23 @@ fn git_subfolder_item_is_refused_with_the_parent_subfolder() {
         &format!("{REMOTE}:skills/foo"),
         &format!("upskill add {REMOTE}:skills foo"),
     );
+}
+
+#[test]
+fn git_subfolder_command_item_is_refused_with_a_pack_message() {
+    let e = env();
+    let source = format!("{REMOTE}:commands/standup");
+    let out = run(&e, &["add", &source, "--project", "--claude"]);
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(1), "stderr: {err}");
+    assert!(
+        err.contains(&format!(
+            "source {source} is a command item directory (it holds COMMAND.md)"
+        )),
+        "stderr: {err}"
+    );
+    assert!(err.contains("upskill pack"), "stderr: {err}");
+    assert!(written(&e).is_empty(), "written: {:?}", written(&e));
 }
 
 #[test]

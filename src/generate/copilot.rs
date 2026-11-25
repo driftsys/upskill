@@ -1,6 +1,6 @@
 //! GitHub Copilot generation (§7.2).
 
-use crate::model::{Agent, Rule, Skill, ToolCap};
+use crate::model::{Agent, Command, Rule, Skill, ToolCap};
 use anyhow::{Context, Result};
 use serde_yaml_ng::{Mapping, Value};
 
@@ -8,6 +8,18 @@ use serde_yaml_ng::{Mapping, Value};
 /// Skills open standard.
 pub fn skill_frontmatter(skill: &Skill, name: &str) -> Result<String> {
     super::build_skill_frontmatter(skill, name, skill.copilot.as_ref())
+}
+
+/// Command frontmatter for a skill that only the user can invoke.
+pub fn command_frontmatter(command: &Command) -> Result<String> {
+    let mut map = Mapping::new();
+    map.insert(Value::from("name"), Value::from(command.name.clone()));
+    map.insert(
+        Value::from("description"),
+        Value::from(command.description.clone()),
+    );
+    map.insert(Value::from("disable-model-invocation"), Value::Bool(true));
+    serde_yaml_ng::to_string(&map).context("serializing copilot command frontmatter")
 }
 
 /// Rule frontmatter per §7.2: `name`, `description`, `applyTo:`

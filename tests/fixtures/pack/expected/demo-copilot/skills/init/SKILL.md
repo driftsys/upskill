@@ -1,5 +1,7 @@
 ---
+name: init
 description: Install the rules of the demo bundle into this repository
+disable-model-invocation: true
 ---
 
 Run this command in the root directory of the repository. Then report its

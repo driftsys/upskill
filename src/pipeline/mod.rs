@@ -47,10 +47,14 @@ mod prepared;
 mod report;
 
 pub use apply::{ConflictState, FileConflict};
-pub use bundle_plan::{BundleFile, BundleOutput, plan_bundle_output};
+pub use bundle_plan::{
+    BundleCommand, BundleFile, BundleOutput, CommandResource, CommandSource, plan_bundle_output,
+    read_command,
+};
 pub use check::{
     CheckedSource, GitRemote, LookupError, RemoteLookup, ScopedCheck, SourceStatus, check_scopes,
 };
+pub(crate) use discovery::normalize_lexically;
 pub use git::{FetchedSource, fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;
@@ -294,7 +298,9 @@ pub fn install_with_lockfile(
         prepared.source_items(),
         output::RecordedUse::AddReads,
     )?;
+    let pack_only_skipped = prepared.pack_only_skipped();
     let mut report = prepared.commit(target, plugin_scope)?;
+    report.pack_only_skipped = pack_only_skipped;
     // An item of this source that the command excludes and that is already
     // installed is removed, as `remove` removes it, but without the other
     // members of its group (issue #570).

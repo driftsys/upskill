@@ -111,7 +111,7 @@ fn pack_of_a_bundle_without_rules_writes_no_init_command_and_no_hook() {
     let f = Fixture::new();
     f.command("norules").assert().success();
     let target = f.out.join("norules-claude");
-    assert!(!target.join("commands").exists());
+    assert!(!target.join("skills/init/SKILL.md").exists());
     assert!(!target.join("hooks").exists());
     let manifest: serde_json::Value =
         serde_json::from_slice(&fs::read(target.join(".claude-plugin/plugin.json")).unwrap())
@@ -261,7 +261,7 @@ fn pack_without_a_client_flag_writes_both_directories() {
         .assert()
         .success()
         .stdout(format!(
-            "Wrote {} (9 files)\nWrote {} (9 files)\n",
+            "Wrote {} (11 files)\nWrote {} (11 files)\n",
             f.target().display(),
             f.out.join("demo-copilot").display()
         ));
@@ -320,10 +320,10 @@ fn pack_gives_no_init_command_to_a_client_that_no_rule_targets() {
     f.command_for_clients("claudeonly").assert().success();
     let copilot = f.out.join("claudeonly-copilot");
     assert!(copilot.join("skills/alpha/SKILL.md").is_file());
-    assert!(!copilot.join("commands").exists());
+    assert!(!copilot.join("skills/init/SKILL.md").exists());
     assert!(!copilot.join("hooks.json").exists());
     let claude = f.out.join("claudeonly-claude");
-    assert!(claude.join("commands/init.md").is_file());
+    assert!(claude.join("skills/init/SKILL.md").is_file());
     assert!(claude.join("hooks/hooks.json").is_file());
 }
 
@@ -421,7 +421,7 @@ fn pack_init_lists_plugins_and_no_mcp_server_for_both_clients() {
     f.command_for_clients("demo").assert().success();
     for client in ["claude", "copilot"] {
         let text =
-            fs::read_to_string(f.out.join(format!("demo-{client}/commands/init.md"))).unwrap();
+            fs::read_to_string(f.out.join(format!("demo-{client}/skills/init/SKILL.md"))).unwrap();
         assert!(text.contains("- plugin `base-tool`\n"));
         assert!(!text.contains("MCP server"));
         assert!(!text.contains("vscode-only"));
@@ -495,7 +495,7 @@ fn pack_of_a_bundle_with_mcp_servers_and_no_rules_writes_mcp_json_only() {
                 }
             })
         );
-        assert!(!target.join("commands/init.md").exists());
+        assert!(!target.join("skills/init/SKILL.md").exists());
         assert!(!target.join("hooks/hooks.json").exists());
         assert!(!target.join("hooks.json").exists());
     }
@@ -608,7 +608,7 @@ fn pack_of_a_bundle_with_lsp_servers_and_no_rules_writes_no_init() {
     for (client, file) in [("claude", ".lsp.json"), ("copilot", "lsp.json")] {
         let target = f.out.join(format!("norules-{client}"));
         assert!(target.join(file).is_file());
-        assert!(!target.join("commands").exists());
+        assert!(!target.join("skills/init/SKILL.md").exists());
         assert!(!target.join("hooks").exists());
         assert!(!target.join("hooks.json").exists());
     }
@@ -643,4 +643,408 @@ fn pack_refuses_a_bundle_with_an_invalid_lsp_entry() {
             "lsp `ra`: extension `rs` must start with a dot",
         ));
     assert!(!f.out.exists());
+}
+
+fn command_frontmatter(path: &Path) -> (serde_yaml_ng::Mapping, String) {
+    let text = fs::read_to_string(path).unwrap();
+    let (yaml, body) = upskill::parse::frontmatter::split(&text).unwrap();
+    (serde_yaml_ng::from_str(yaml).unwrap(), body.to_string())
+}
+
+fn write_bundle(f: &Fixture, name: &str, fields: &str) {
+    fs::write(
+        f.registry.join(format!("{name}.bundle.yaml")),
+        format!("schema: 1\nname: {name}\ndescription: Test bundle\n{fields}\n"),
+    )
+    .unwrap();
+}
+
+fn write_command(f: &Fixture, name: &str, fields: &str, body: &str) {
+    let dir = f.registry.join("items").join(name);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("COMMAND.md"),
+        format!("---\nname: {name}\ndescription: Test command\n{fields}---\n\n{body}\n"),
+    )
+    .unwrap();
+}
+
+fn assert_command_error(f: &Fixture, bundle: &str, messages: &[&str]) {
+    for flags in [&[][..], &["--claude"][..], &["--copilot"][..]] {
+        let mut command = f.command_for_clients(bundle);
+        command.args(flags);
+        let mut assertion = command.assert().code(1);
+        for message in messages {
+            assertion = assertion.stderr(predicates::str::contains(*message));
+        }
+        assert!(!f.out.exists());
+    }
+}
+
+#[test]
+fn pack_renders_a_command_as_a_user_only_skill_for_both_clients() {
+    let f = Fixture::new();
+    f.command_for_clients("demo").assert().success();
+    for (client, keys) in [
+        (
+            "claude",
+            vec![
+                "name",
+                "description",
+                "argument-hint",
+                "disable-model-invocation",
+            ],
+        ),
+        (
+            "copilot",
+            vec!["name", "description", "disable-model-invocation"],
+        ),
+    ] {
+        let dir = f.out.join(format!("demo-{client}/skills/release-notes"));
+        let (map, body) = command_frontmatter(&dir.join("SKILL.md"));
+        assert_eq!(
+            map.keys().map(|k| k.as_str().unwrap()).collect::<Vec<_>>(),
+            keys
+        );
+        assert_eq!(map["name"].as_str(), Some("release-notes"));
+        assert_eq!(
+            map["description"].as_str(),
+            Some("Write the release notes of the current branch")
+        );
+        assert_eq!(map["disable-model-invocation"].as_bool(), Some(true));
+        if client == "claude" {
+            assert_eq!(map["argument-hint"].as_str(), Some("[version]"));
+        }
+        assert!(body.contains("$ARGUMENTS"));
+        assert_eq!(
+            fs::read(dir.join("template.md")).unwrap(),
+            fs::read(f.registry.join("items/release-notes/template.md")).unwrap()
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn pack_preserves_command_resource_permissions() {
+    use std::os::unix::fs::PermissionsExt;
+    let f = Fixture::new();
+    fs::set_permissions(
+        f.registry.join("items/release-notes/template.md"),
+        fs::Permissions::from_mode(0o755),
+    )
+    .unwrap();
+    f.command_for_clients("demo").assert().success();
+    for client in ["claude", "copilot"] {
+        let path = f
+            .out
+            .join(format!("demo-{client}/skills/release-notes/template.md"));
+        assert_eq!(
+            fs::metadata(path).unwrap().permissions().mode() & 0o777,
+            0o755,
+            "{client}"
+        );
+    }
+}
+
+#[test]
+fn pack_writes_no_commands_directory() {
+    let f = Fixture::new();
+    f.command_for_clients("demo").assert().success();
+    for client in ["claude", "copilot"] {
+        assert!(
+            tree(&f.out.join(format!("demo-{client}")))
+                .keys()
+                .all(|path| !path.starts_with("commands"))
+        );
+    }
+}
+
+#[test]
+fn pack_renders_init_as_a_user_only_skill() {
+    let f = Fixture::new();
+    f.command("demo").assert().success();
+    let (map, body) = command_frontmatter(&f.target().join("skills/init/SKILL.md"));
+    assert_eq!(map["name"].as_str(), Some("init"));
+    assert_eq!(
+        map["description"].as_str(),
+        Some("Install the rules of the demo bundle into this repository")
+    );
+    assert_eq!(map["disable-model-invocation"].as_bool(), Some(true));
+    assert!(body.contains("upskill add driftsys/demo@v1 demo --kind rule --project --claude"));
+}
+
+#[test]
+fn pack_refuses_a_command_and_a_skill_with_one_name_in_the_closure() {
+    let f = Fixture::new();
+    write_command(&f, "beta", "", "Write notes.");
+    write_bundle(
+        &f,
+        "clash",
+        "requires: [{name: base}]\nitems:\n  commands: [beta]",
+    );
+    assert_command_error(
+        &f,
+        "clash",
+        &[
+            "command `beta` and skill `beta` have one name in the bundle closure; both would be written to skills/beta/SKILL.md",
+        ],
+    );
+}
+
+#[test]
+fn pack_refuses_a_command_named_init_in_a_closure_with_rules() {
+    let f = Fixture::new();
+    write_command(&f, "init", "", "Author init.");
+    write_bundle(
+        &f,
+        "initcmd",
+        "requires: [{name: base}]\nitems:\n  commands: [init]",
+    );
+    assert_command_error(
+        &f,
+        "initcmd",
+        &[
+            "command `init` cannot be packed with rules: `pack` writes the init command to skills/init/SKILL.md",
+        ],
+    );
+}
+
+#[test]
+fn pack_refuses_a_skill_named_init_in_a_closure_with_rules() {
+    let f = Fixture::new();
+    let dir = f.registry.join("items/init");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nname: init\ndescription: Author init\n---\n\nAuthor init.\n",
+    )
+    .unwrap();
+    write_bundle(
+        &f,
+        "initskill",
+        "requires: [{name: base}]\nitems:\n  skills: [init]",
+    );
+    assert_command_error(
+        &f,
+        "initskill",
+        &[
+            "skill `init` cannot be packed with rules: `pack` writes the init command to skills/init/SKILL.md",
+        ],
+    );
+}
+
+#[test]
+fn pack_accepts_a_command_named_init_in_a_closure_without_rules() {
+    let f = Fixture::new();
+    write_command(&f, "init", "", "Author init.");
+    let path = f.registry.join("items/init/COMMAND.md");
+    fs::write(
+        &path,
+        fs::read_to_string(&path)
+            .unwrap()
+            .replace("Test command", "Author init"),
+    )
+    .unwrap();
+    write_bundle(&f, "ownit", "items:\n  commands: [init]");
+    f.command("ownit").assert().success();
+    let (map, _) = command_frontmatter(&f.out.join("ownit-claude/skills/init/SKILL.md"));
+    assert_eq!(map["description"].as_str(), Some("Author init"));
+}
+
+#[test]
+fn pack_refuses_one_command_named_by_two_bundles() {
+    let f = Fixture::new();
+    write_bundle(
+        &f,
+        "dup",
+        "requires: [{name: base}]\nitems:\n  commands: [release-notes]",
+    );
+    assert_command_error(
+        &f,
+        "dup",
+        &["command `release-notes` is named by both bundles `base` and `dup`"],
+    );
+}
+
+#[test]
+fn pack_refuses_a_listed_command_without_a_command_md() {
+    let f = Fixture::new();
+    write_bundle(&f, "missing", "items:\n  commands: [missing]");
+    assert_command_error(
+        &f,
+        "missing",
+        &[
+            "command `missing` of bundle `missing`",
+            "no directory `missing` with a COMMAND.md",
+        ],
+    );
+}
+
+#[test]
+fn pack_refuses_a_command_whose_name_differs_from_its_directory() {
+    let f = Fixture::new();
+    write_command(&f, "misnamed", "", "Write notes.");
+    let path = f.registry.join("items/misnamed/COMMAND.md");
+    fs::write(
+        &path,
+        fs::read_to_string(&path)
+            .unwrap()
+            .replace("name: misnamed", "name: other"),
+    )
+    .unwrap();
+    write_bundle(&f, "misnamed", "items:\n  commands: [misnamed]");
+    assert_command_error(
+        &f,
+        "misnamed",
+        &[
+            "command `misnamed` of bundle `misnamed`",
+            "`name: other` must equal the directory name `misnamed`",
+        ],
+    );
+}
+
+#[test]
+fn pack_copies_neither_a_co_located_rule_nor_an_ignored_file() {
+    let f = Fixture::new();
+    write_command(&f, "notes", "ignore: [draft.md]\n", "Write notes.");
+    let dir = f.registry.join("items/notes");
+    fs::write(
+        dir.join("RULE.md"),
+        "---\nname: notes\ndescription: Notes rules\n---\n\nRules.\n",
+    )
+    .unwrap();
+    fs::write(dir.join("draft.md"), "Draft.").unwrap();
+    fs::write(dir.join("ref.md"), "Reference.").unwrap();
+    write_bundle(&f, "notes", "items:\n  commands: [notes]");
+    f.command_for_clients("notes").assert().success();
+    for client in ["claude", "copilot"] {
+        let files = tree(&f.out.join(format!("notes-{client}/skills/notes")));
+        assert_eq!(
+            files.keys().cloned().collect::<Vec<_>>(),
+            vec![PathBuf::from("SKILL.md"), PathBuf::from("ref.md")]
+        );
+        assert_eq!(files[Path::new("ref.md")], b"Reference.");
+    }
+}
+
+#[test]
+fn pack_processes_client_directives_in_a_command_body() {
+    let f = Fixture::new();
+    write_command(
+        &f,
+        "notes",
+        "",
+        "<!-- @client:claude -->\nClaude only\n<!-- @endclient -->\n\n<!-- @client:copilot -->\nCopilot only\n<!-- @endclient -->",
+    );
+    write_bundle(&f, "notes", "items:\n  commands: [notes]");
+    f.command_for_clients("notes").assert().success();
+    for (client, present, absent) in [
+        ("claude", "Claude only", "Copilot only"),
+        ("copilot", "Copilot only", "Claude only"),
+    ] {
+        let text = fs::read_to_string(f.out.join(format!("notes-{client}/skills/notes/SKILL.md")))
+            .unwrap();
+        assert!(text.contains(present));
+        assert!(!text.contains(absent));
+        assert!(!text.contains("@client"));
+    }
+}
+
+#[test]
+fn pack_accepts_a_command_listed_twice_in_one_bundle() {
+    let f = Fixture::new();
+    write_command(&f, "release-notes", "", "Write notes.");
+    write_bundle(
+        &f,
+        "twice",
+        "items:\n  commands: [release-notes, release-notes]",
+    );
+    f.command("twice").assert().success();
+    assert!(
+        f.out
+            .join("twice-claude/skills/release-notes/SKILL.md")
+            .is_file()
+    );
+}
+
+fn git(home: &Path, dir: &Path, args: &[&str]) {
+    let mut cmd = std::process::Command::new("git");
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    let output = cmd
+        .current_dir(dir)
+        .env("HOME", home)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", home.join("empty-gitconfig"))
+        .env("GIT_AUTHOR_NAME", "Test")
+        .env("GIT_AUTHOR_EMAIL", "test@example.com")
+        .env("GIT_COMMITTER_NAME", "Test")
+        .env("GIT_COMMITTER_EMAIL", "test@example.com")
+        .args(args)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "git {args:?}: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn pack_reads_a_command_of_a_bundle_from_a_git_source() {
+    let f = Fixture::new();
+    let upstream = f._tmp.path().join("upstream");
+    fs::create_dir_all(upstream.join("items/release-notes")).unwrap();
+    fs::write(
+        upstream.join("items/release-notes/COMMAND.md"),
+        "---\nname: release-notes\ndescription: Command held by the git source\n---\n\nWrite notes from the git source.\n",
+    )
+    .unwrap();
+    fs::write(
+        upstream.join("base.bundle.yaml"),
+        "schema: 1\nname: base\ndescription: Test bundle\nitems:\n  commands: [release-notes]\n",
+    )
+    .unwrap();
+    git(&f.home, &upstream, &["init", "-q", "--initial-branch=main"]);
+    git(&f.home, &upstream, &["add", "."]);
+    git(&f.home, &upstream, &["commit", "-q", "-m", "init"]);
+    let remote = "https://example.invalid/team/base";
+    write_bundle(
+        &f,
+        "entry",
+        &format!("requires: [{{name: base, source: \"{remote}\"}}]\nitems: {{}}"),
+    );
+    let mut cmd = f.command("entry");
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    cmd.env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", f.home.join("empty-gitconfig"))
+        .env("GIT_CONFIG_COUNT", "2")
+        .env(
+            "GIT_CONFIG_KEY_0",
+            format!("url.file://{}.insteadOf", upstream.display()),
+        )
+        .env("GIT_CONFIG_VALUE_0", format!("{remote}.git"))
+        .env("GIT_CONFIG_KEY_1", "protocol.file.allow")
+        .env("GIT_CONFIG_VALUE_1", "always")
+        .env("GIT_ALLOW_PROTOCOL", "file")
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .assert()
+        .success();
+    let rendered =
+        fs::read_to_string(f.out.join("entry-claude/skills/release-notes/SKILL.md")).unwrap();
+    assert!(
+        rendered.contains("Command held by the git source"),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("Write notes from the git source."),
+        "{rendered}"
+    );
 }
