@@ -287,6 +287,19 @@ pub fn check_hook(hook: &Hook, body: &str, dir: &Path) -> Vec<HookProblem> {
                     None,
                     format!("event `{key}`: `run: {run}` names no file in the item directory"),
                 );
+            } else if let Some(actual) = case_mismatch(dir, run) {
+                // A case-insensitive filesystem finds the file under another
+                // spelling, but pack copies it under its real name.
+                let message = if ENTRYPOINTS.contains(&actual.as_str()) {
+                    format!(
+                        "event `{key}`: run file `{run}` is not copied by pack: it is an entry file"
+                    )
+                } else {
+                    format!(
+                        "event `{key}`: run file `{run}` does not exist; the directory holds `{actual}`"
+                    )
+                };
+                push("hook-run", None, message);
             } else if !is_executable(&dir.join(run)) {
                 push(
                     "hook-run",
@@ -315,6 +328,21 @@ pub fn check_hook(hook: &Hook, body: &str, dir: &Path) -> Vec<HookProblem> {
         }
     }
     problems
+}
+
+/// The name of a directory entry that equals `run` in ASCII case but not
+/// byte for byte, when no entry equals `run` exactly.
+fn case_mismatch(dir: &Path, run: &str) -> Option<String> {
+    let names: Vec<String> = std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+        .collect();
+    if names.iter().any(|name| name == run) {
+        return None;
+    }
+    names
+        .into_iter()
+        .find(|name| name.eq_ignore_ascii_case(run))
 }
 
 /// Whether the file has an executable bit. Always true off unix, where the
@@ -610,6 +638,50 @@ mod tests {
             problems[0].message,
             "event `post-tool`: run file `check.sh` is not executable"
         );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn check_hook_tests_the_executable_bit_of_any_class() {
+        use std::os::unix::fs::PermissionsExt;
+        let hook: Hook = serde_yaml_ng::from_str(
+            "name: guard\ndescription: d\nevents: { post-tool: { run: check.sh } }\n",
+        )
+        .unwrap();
+        // The check passes with an executable bit of the owner, the group or
+        // others, and fails with none.
+        for (mode, passes) in [
+            (0o744, true),
+            (0o654, true),
+            (0o645, true),
+            (0o644, false),
+            (0o600, false),
+        ] {
+            let tmp = tempfile::tempdir().unwrap();
+            let script = tmp.path().join("check.sh");
+            write_script(&script);
+            std::fs::set_permissions(&script, std::fs::Permissions::from_mode(mode)).unwrap();
+            let problems = check_hook(&hook, "", tmp.path());
+            assert_eq!(problems.is_empty(), passes, "{mode:o}: {problems:?}");
+        }
+    }
+
+    #[test]
+    fn check_hook_compares_a_run_file_name_byte_for_byte() {
+        // On a case-insensitive filesystem `is_file` finds the file under the
+        // wrong spelling. On a case-sensitive one the file does not exist.
+        // Both cases are reported.
+        for (run, on_disk) in [("Check.sh", "check.sh"), ("hook.md", "HOOK.md")] {
+            let tmp = tempfile::tempdir().unwrap();
+            write_script(&tmp.path().join(on_disk));
+            let hook: Hook = serde_yaml_ng::from_str(&format!(
+                "name: guard\ndescription: d\nevents: {{ post-tool: {{ run: {run} }} }}\n"
+            ))
+            .unwrap();
+            let problems = check_hook(&hook, "", tmp.path());
+            assert_eq!(problems.len(), 1, "{run}: {problems:?}");
+            assert_eq!(problems[0].rule_id, "hook-run", "{run}");
+        }
     }
 
     #[test]

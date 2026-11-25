@@ -1849,10 +1849,12 @@ fn pack_reports_every_problem_of_a_hook_one_per_line() {
     let assertion = f.command_for_clients("commandonly").assert().code(1);
     let stderr = String::from_utf8(assertion.get_output().stderr.clone()).unwrap();
     let lines: Vec<_> = stderr.lines().collect();
+    let source = f.registry.join("items/tool/HOOK.md");
+    let prefix = format!("{}: ", source.display());
     assert!(
-        lines
-            .iter()
-            .any(|line| line.contains("`run: missing.sh` names no file in the item directory")),
+        lines.iter().any(|line| line.contains(&format!(
+            "{prefix}event `post-tool`: `run: missing.sh` names no file in the item directory"
+        ))),
         "{stderr}"
     );
     assert!(

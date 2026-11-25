@@ -667,7 +667,7 @@ fn add_reports_two_skipped_hook_items() {
 }
 
 #[test]
-fn add_of_a_skill_with_a_colocated_hook_file_does_not_install_the_hook() {
+fn add_of_a_skill_with_a_named_colocated_hook_file_does_not_install_the_hook() {
     let f = Fixture::new();
     let dir = f.registry.join("skills/colocated");
     fs::create_dir_all(&dir).unwrap();
@@ -678,7 +678,7 @@ fn add_of_a_skill_with_a_colocated_hook_file_does_not_install_the_hook() {
     .unwrap();
     fs::write(
         dir.join("HOOK.md"),
-        "---\nschema: 1\ndescription: Test hook\nevents:\n  session-start:\n---\n\nRead the guide.\n",
+        "---\nschema: 1\nname: colocated-hook\ndescription: Test hook\nevents:\n  session-start:\n---\n\nRead the guide.\n",
     )
     .unwrap();
     f.add(&["colocated", "--claude"]).success();

@@ -1453,7 +1453,8 @@ Every `run` must name a copied resource. A missing file, an entry file, an
 `ignore` match, a symbolic link, or (on Unix) a file without an executable bit
 fails with exit code 1 before any output is written, even when a matcher
 excludes the selected client. The error identifies the hook and its bundle and
-reports every problem of the hook, one per line.
+lists the problems that the hook check finds, one per line. It checks the
+directives of the whole hook body only when it found no other problem.
 
 A hook file is written when rules target the client or hook items produce an
 entry. Without either, no hook file is written. With rules and no hook items,

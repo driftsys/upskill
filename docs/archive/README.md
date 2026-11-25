@@ -1345,13 +1345,14 @@ is not archived: the stories #635 to #637 are not implemented.
 
 A Fable reviewer checked the decisions of the plan before implementation. The
 orchestrator then added decision 21 (context files contain only ASCII
-characters) and the restriction that a matcher is not allowed on the
-`prompt-submit` and `stop` events.
+characters) and the restriction that a context hook (a hook event without `run`)
+is not allowed to have a matcher on the `prompt-submit` and `stop` events.
 
 Implementation: pull request
 [#645](https://github.com/driftsys/upskill/pull/645) of branch
 `feat/pack-hooks`. Completion evidence: the CI checks of that pull request
-(Quality, Documentation, and Test on ubuntu-latest and macos-latest).
+(Quality, Documentation, MSRV (Rust 1.85), and Test on ubuntu-latest,
+macos-latest and windows-latest).
 
 Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions 3
 to 7, 11 and 12; [content format](../topics/0001-content-format.md);
