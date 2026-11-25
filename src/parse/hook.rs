@@ -269,6 +269,16 @@ pub fn check_hook(hook: &Hook, body: &str, dir: &Path) -> Vec<HookProblem> {
                         "event `{key}`: run file `{run}` is not copied by pack: it matches `ignore`"
                     ),
                 );
+            } else if std::fs::symlink_metadata(dir.join(run))
+                .is_ok_and(|meta| meta.file_type().is_symlink())
+            {
+                push(
+                    "hook-run",
+                    None,
+                    format!(
+                        "event `{key}`: run file `{run}` is a symbolic link; pack does not copy it"
+                    ),
+                );
             } else if !dir.join(run).is_file() {
                 push(
                     "hook-run",

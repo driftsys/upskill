@@ -1217,7 +1217,7 @@ same texts, pretty-printed.
   functions; the implementer chooses), with the shell text of plan decision 12
   and `powershell: None`.
 - Error text, wrapped in the context `` hook `{name}` of bundle `{bundle}` ``:
-  ``event `{event}`: `run: {run}` names no copied file of the item directory (it is missing, an entry file, or matched by `ignore`)``.
+  ``event `{event}`: `run: {run}` names no copied file of the item directory (it is missing, an entry file, matched by `ignore`, or a symbolic link)``.
 
 **Algorithm addition of `hook_files`:** after the context groups, for each hook
 in closure order and each event with `run` in map order:

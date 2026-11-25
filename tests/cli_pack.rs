@@ -36,10 +36,14 @@ impl Fixture {
         let registry = tmp.path().join("registry");
         let home = tmp.path().join("home");
         fs::create_dir_all(&home).unwrap();
-        for (rel, bytes) in tree(Path::new("tests/fixtures/pack/registry")) {
-            let dest = registry.join(rel);
+        let source = Path::new("tests/fixtures/pack/registry");
+        for (rel, bytes) in tree(source) {
+            let dest = registry.join(&rel);
             fs::create_dir_all(dest.parent().unwrap()).unwrap();
-            fs::write(dest, bytes).unwrap();
+            fs::write(&dest, bytes).unwrap();
+            // Keep the source mode, so a script stays executable.
+            let mode = fs::metadata(source.join(&rel)).unwrap().permissions();
+            fs::set_permissions(&dest, mode).unwrap();
         }
         let out = tmp.path().join("out");
         Self {
@@ -1525,11 +1529,9 @@ fn pack_does_not_copy_a_hook_without_a_command_hook() {
     let f = Fixture::new();
     f.command_for_clients("hookdemo").assert().success();
     for client in ["claude", "copilot"] {
-        assert!(
-            !f.out
-                .join(format!("hookdemo-{client}/hooks/reminder"))
-                .exists()
-        );
+        let root = f.out.join(format!("hookdemo-{client}"));
+        assert!(!root.join("hooks/reminder").exists());
+        assert!(!tree(&root).keys().any(|rel| rel.ends_with("notes.txt")));
     }
 }
 
@@ -1569,7 +1571,14 @@ fn pack_refuses_a_run_file_matched_by_ignore() {
     );
     fs::write(f.registry.join("items/tool/go.sh"), "#!/bin/sh\nexit 0\n").unwrap();
     f.hook_bundle("commandonly", "tool", "");
-    f.hook_error("commandonly", &["hook `tool` of bundle `commandonly`", "event `post-tool`: `run: go.sh` names no copied file of the item directory (it is missing, an entry file, or matched by `ignore`)"]);
+    let message = concat!(
+        "event `post-tool`: `run: go.sh` names no copied file of the item directory ",
+        "(it is missing, an entry file, matched by `ignore`, or a symbolic link)"
+    );
+    f.hook_error(
+        "commandonly",
+        &["hook `tool` of bundle `commandonly`", message],
+    );
 }
 
 #[test]
@@ -1577,11 +1586,6 @@ fn pack_refuses_a_run_file_matched_by_ignore() {
 fn pack_keeps_the_mode_of_a_command_hook_script() {
     use std::os::unix::fs::PermissionsExt;
     let f = Fixture::new();
-    fs::set_permissions(
-        f.registry.join("items/checks/check.sh"),
-        fs::Permissions::from_mode(0o755),
-    )
-    .unwrap();
     f.command_for_clients("hookdemo").assert().success();
     for client in ["claude", "copilot"] {
         let path = f

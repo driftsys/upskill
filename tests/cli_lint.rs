@@ -791,6 +791,32 @@ fn lint_flags_a_run_file_that_does_not_exist() {
 }
 
 #[test]
+#[cfg(unix)]
+fn lint_flags_a_run_file_that_is_a_symbolic_link() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let dir = source.join("guard");
+    write(
+        &dir.join("HOOK.md"),
+        "---\nschema: 1\ndescription: Test hook\nevents:\n  post-tool: { run: go.sh }\n---\n\n",
+    );
+    write(&tmp.path().join("real.sh"), "exit 0\n");
+    std::os::unix::fs::symlink(tmp.path().join("real.sh"), dir.join("go.sh")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict"])
+        .arg(&source)
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("[hook-run]"))
+        .stdout(predicates::str::contains(
+            "run file `go.sh` is a symbolic link; pack does not copy it",
+        ));
+}
+
+#[test]
 fn lint_flags_a_run_value_with_a_path() {
     lint_hook_case(
         "guard",

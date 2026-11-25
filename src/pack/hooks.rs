@@ -48,18 +48,26 @@ pub(super) fn read_pack_hooks(hooks: &[BundleHook]) -> Result<Vec<PackHook>> {
                 let source = read_hook(&declared.root, &declared.name)?;
                 // Validate copied run files before client filtering and lint errors.
                 for (event, settings) in &source.hook.events {
-                    if let Some(run) = settings.as_ref().and_then(|settings| settings.run.as_ref())
-                        && crate::model::hook::is_run_file_name(run)
-                        && !source.resources.iter().any(|resource| resource.rel == std::path::Path::new(run))
-                    {
+                    let Some(run) = settings.as_ref().and_then(|settings| settings.run.as_ref())
+                    else {
+                        continue;
+                    };
+                    let copied = source
+                        .resources
+                        .iter()
+                        .any(|resource| resource.rel == std::path::Path::new(run));
+                    if crate::model::hook::is_run_file_name(run) && !copied {
+                        let causes = concat!(
+                            "it is missing, an entry file, ",
+                            "matched by `ignore`, or a symbolic link"
+                        );
                         bail!(
-                            "event `{event}`: `run: {run}` names no copied file of the item directory (it is missing, an entry file, or matched by `ignore`)"
+                            "event `{event}`: `run: {run}` names no copied file \
+                             of the item directory ({causes})"
                         );
                     }
                 }
-                if let Some(problem) =
-                    check_hook(&source.hook, &source.body, &source.dir).first()
-                {
+                if let Some(problem) = check_hook(&source.hook, &source.body, &source.dir).first() {
                     bail!("{}: {}", source.path.display(), problem.message);
                 }
                 // `check_hook` leaves errors of the whole body to lint. Check
