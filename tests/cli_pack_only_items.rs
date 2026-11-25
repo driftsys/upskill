@@ -678,7 +678,7 @@ fn add_of_a_skill_with_a_colocated_hook_file_does_not_install_the_hook() {
     .unwrap();
     fs::write(
         dir.join("HOOK.md"),
-        "---\nschema: 1\nname: colocated-hook\ndescription: Test hook\nevents:\n  session-start:\n---\n\nRead the guide.\n",
+        "---\nschema: 1\ndescription: Test hook\nevents:\n  session-start:\n---\n\nRead the guide.\n",
     )
     .unwrap();
     f.add(&["colocated", "--claude"]).success();
@@ -688,6 +688,119 @@ fn add_of_a_skill_with_a_colocated_hook_file_does_not_install_the_hook() {
             .is_file()
     );
     assert_not_installed(&f, &["colocated-hook"]);
+}
+
+#[test]
+fn add_of_a_name_that_is_a_skill_with_an_unnamed_colocated_hook_file_installs_the_skill() {
+    let f = Fixture::new();
+    let dir = f.registry.join("skills/colocated");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nschema: 1\nname: colocated\ndescription: Test item\n---\n\nTest body.\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("HOOK.md"),
+        "---\nschema: 1\ndescription: Test hook\nevents:\n  session-start:\n---\n\nRead the guide.\n",
+    )
+    .unwrap();
+    f.add(&["colocated", "--claude"])
+        .success()
+        .stderr(predicate::str::contains("is a hook item").not());
+    assert!(
+        f.consumer
+            .join(".claude/skills/colocated/SKILL.md")
+            .is_file()
+    );
+}
+
+#[test]
+fn add_of_a_name_that_is_a_bundle_and_a_hook_item_installs_the_bundle() {
+    let f = Fixture::new();
+    f.bundle("guard", "  skills: [alpha]\n  hooks: [guard]\n", "");
+    f.add(&["guard", "--claude"])
+        .success()
+        .stderr(predicate::str::contains("is a hook item;").not())
+        .stderr(predicate::str::contains(
+            "skipped 1 hook item(s): only `upskill pack` writes them",
+        ));
+    assert!(f.consumer.join(".claude/skills/alpha/SKILL.md").is_file());
+}
+
+#[test]
+fn add_with_quiet_prints_no_hook_skip_line() {
+    let f = Fixture::new();
+    f.add(&["hooked", "--claude", "--quiet"])
+        .success()
+        .stderr(predicate::str::contains("skipped").not());
+    assert!(f.consumer.join(".claude/skills/alpha/SKILL.md").is_file());
+}
+
+#[test]
+fn add_of_a_skill_and_a_hook_directory_as_source_is_refused_as_a_skill_directory() {
+    let f = Fixture::new();
+    let dir = f.registry.parent().unwrap().join("mixed");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("SKILL.md"),
+        "---\nschema: 1\nname: mixed\ndescription: Test item\n---\n\nTest body.\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("HOOK.md"),
+        "---\nschema: 1\ndescription: Test hook\nevents:\n  session-start:\n---\n\nRead the guide.\n",
+    )
+    .unwrap();
+    f.command("add")
+        .arg(&dir)
+        .arg("--claude")
+        .assert()
+        .code(1)
+        .stderr(predicate::str::contains(
+            "is an item directory (it holds SKILL.md)",
+        ))
+        .stderr(predicate::str::contains("is a hook item directory").not());
+}
+
+#[test]
+fn update_counts_a_hook_that_two_sources_list_once() {
+    let f = Fixture::new();
+    let other = f.registry.parent().unwrap().join("other");
+    for (name, entry) in [("beta", "SKILL.md"), ("guard", "HOOK.md")] {
+        let dir = other.join("skills").join(name);
+        fs::create_dir_all(&dir).unwrap();
+        let extra = if entry == "HOOK.md" {
+            "events:\n  session-start:\n"
+        } else {
+            ""
+        };
+        fs::write(
+            dir.join(entry),
+            format!(
+                "---\nschema: 1\nname: {name}\ndescription: Test item\n{extra}---\n\nTest body.\n"
+            ),
+        )
+        .unwrap();
+    }
+    fs::write(
+        other.join("skills/second.bundle.yaml"),
+        "schema: 1\nname: second\ndescription: Test bundle\nitems:\n  skills: [beta]\n  hooks: [guard]\n",
+    )
+    .unwrap();
+    f.bundle("first", "  skills: [alpha]\n  hooks: [guard]\n", "");
+    f.add(&["first", "--claude"]).success();
+    f.command("add")
+        .arg(&other)
+        .args(["second", "--claude"])
+        .assert()
+        .success();
+    f.command("update")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains(
+            "skipped 1 hook item(s): only `upskill pack` writes them",
+        ));
 }
 
 #[test]

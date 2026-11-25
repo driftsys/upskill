@@ -322,6 +322,25 @@ fn new_hook_colocates_with_a_skill() {
 }
 
 #[test]
+fn new_skill_colocates_with_a_hook_whose_name_differs_from_the_directory() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(tmp.path().join("x")).unwrap();
+    fs::create_dir_all(&home).unwrap();
+    fs::write(
+        tmp.path().join("x/HOOK.md"),
+        "---\nschema: 1\nname: other\ndescription: Test hook\nevents:\n  session-start:\n---\n\nText.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", "skill", "x"])
+        .assert()
+        .success();
+    assert!(tmp.path().join("x/SKILL.md").is_file());
+}
+
+#[test]
 fn new_hook_refuses_the_reserved_name_context() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");

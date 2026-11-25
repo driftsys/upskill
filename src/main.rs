@@ -715,7 +715,7 @@ fn print_excluded_items(excluded: &[(ItemKind, String)]) {
     }
 }
 
-/// One stderr line for the commands and LSP servers that the run skips.
+/// One stderr line for the commands, hooks and LSP servers that the run skips.
 fn print_pack_only_skipped(items: &[(PackOnlyKind, String)]) {
     if items.is_empty() || style::is_quiet() {
         return;

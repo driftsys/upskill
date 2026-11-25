@@ -175,13 +175,15 @@ pub fn check_hook(hook: &Hook, body: &str, dir: &Path) -> Vec<HookProblem> {
                 );
             }
         }
-        if settings.matcher.is_some() && matches!(event, HookEvent::PromptSubmit | HookEvent::Stop)
+        if settings.run.is_none()
+            && settings.matcher.is_some()
+            && matches!(event, HookEvent::PromptSubmit | HookEvent::Stop)
         {
             push(
                 "hook-event",
                 None,
                 format!(
-                    "event `{key}` cannot have a `matcher`: Claude Code ignores a matcher on this event, so the texts of several hooks would have no defined order"
+                    "a context hook on `{key}` cannot have a `matcher`: Claude Code ignores a matcher on this event, so the texts of several hooks would have no defined order"
                 ),
             );
         }
@@ -285,6 +287,12 @@ pub fn check_hook(hook: &Hook, body: &str, dir: &Path) -> Vec<HookProblem> {
                     None,
                     format!("event `{key}`: `run: {run}` names no file in the item directory"),
                 );
+            } else if !is_executable(&dir.join(run)) {
+                push(
+                    "hook-run",
+                    None,
+                    format!("event `{key}`: run file `{run}` is not executable"),
+                );
             }
         }
     }
@@ -309,6 +317,19 @@ pub fn check_hook(hook: &Hook, body: &str, dir: &Path) -> Vec<HookProblem> {
     problems
 }
 
+/// Whether the file has an executable bit. Always true off unix, where the
+/// file mode has no such bit.
+#[cfg(unix)]
+fn is_executable(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(path).is_ok_and(|meta| meta.permissions().mode() & 0o111 != 0)
+}
+
+#[cfg(not(unix))]
+fn is_executable(_path: &Path) -> bool {
+    true
+}
+
 /// The effective-name rule of format-spec §2.1.
 pub fn is_valid_hook_name(name: &str) -> bool {
     !name.is_empty()
@@ -324,6 +345,16 @@ pub fn is_valid_hook_name(name: &str) -> bool {
 mod tests {
     use super::*;
     const EVENTS: &[&str] = &["session-start", "prompt-submit"];
+
+    /// Write a script file with the executable bit that `check_hook` requires.
+    fn write_script(path: &Path) {
+        std::fs::write(path, "exit 0\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+    }
 
     #[test]
     fn split_hook_body_gives_the_whole_body_to_every_event_without_event_headings() {
@@ -382,7 +413,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("guard");
         std::fs::create_dir(&dir).unwrap();
-        std::fs::write(dir.join("check.sh"), "exit 0\n").unwrap();
+        write_script(&dir.join("check.sh"));
         let cases = [
             (
                 "{}",
@@ -424,7 +455,14 @@ mod tests {
                 "Text.",
                 "hook-event",
                 None,
-                "event `prompt-submit` cannot have a `matcher`: Claude Code ignores a matcher on this event, so the texts of several hooks would have no defined order",
+                "a context hook on `prompt-submit` cannot have a `matcher`: Claude Code ignores a matcher on this event, so the texts of several hooks would have no defined order",
+            ),
+            (
+                "{ stop: { matcher: edit } }",
+                "Text.",
+                "hook-event",
+                None,
+                "a context hook on `stop` cannot have a `matcher`: Claude Code ignores a matcher on this event, so the texts of several hooks would have no defined order",
             ),
             (
                 "{ session-start: }",
@@ -535,9 +573,57 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("guard");
         std::fs::create_dir(&dir).unwrap();
-        std::fs::write(dir.join("check.sh"), "exit 0\n").unwrap();
+        write_script(&dir.join("check.sh"));
         let hook: Hook = serde_yaml_ng::from_str("description: d\nevents: { session-start: , post-tool: { matcher: { claude: Edit }, run: check.sh, timeout: 5 } }\n").unwrap();
         assert!(check_hook(&hook, "Text.", &dir).is_empty());
+    }
+
+    #[test]
+    fn check_hook_accepts_a_matcher_on_a_command_hook_of_prompt_submit_and_stop() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_script(&tmp.path().join("check.sh"));
+        for event in ["prompt-submit", "stop"] {
+            let hook: Hook = serde_yaml_ng::from_str(&format!(
+                "name: guard\ndescription: d\nevents: {{ {event}: {{ matcher: edit, run: check.sh }} }}\n"
+            ))
+            .unwrap();
+            assert!(check_hook(&hook, "", tmp.path()).is_empty(), "{event}");
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn check_hook_reports_a_run_file_without_an_executable_bit() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let script = tmp.path().join("check.sh");
+        write_script(&script);
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let hook: Hook = serde_yaml_ng::from_str(
+            "name: guard\ndescription: d\nevents: { post-tool: { run: check.sh } }\n",
+        )
+        .unwrap();
+        let problems = check_hook(&hook, "", tmp.path());
+        assert_eq!(problems.len(), 1, "{problems:?}");
+        assert_eq!(problems[0].rule_id, "hook-run");
+        assert_eq!(
+            problems[0].message,
+            "event `post-tool`: run file `check.sh` is not executable"
+        );
+    }
+
+    #[test]
+    fn check_hook_does_not_repeat_a_body_directive_error_for_each_event() {
+        let tmp = tempfile::tempdir().unwrap();
+        let hook: Hook = serde_yaml_ng::from_str(
+            "name: guard\ndescription: d\nevents: { session-start: , prompt-submit: }\n",
+        )
+        .unwrap();
+        let problems = check_hook(&hook, "<!-- @client:claude -->\nText.\n", tmp.path());
+        assert!(
+            problems.iter().all(|p| p.rule_id != "directive"),
+            "{problems:?}"
+        );
     }
 
     #[test]

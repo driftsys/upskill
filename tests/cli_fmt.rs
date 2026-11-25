@@ -356,7 +356,7 @@ fn fmt_orders_hook_keys_canonically() {
     let path = tmp.path().join("guard/HOOK.md");
     write(
         &path,
-        "---\nevents:\n  session-start:\n  prompt-submit:\ndescription: Test hook\nname: guard\nschema: 1\n---\n\nText.\n",
+        "---\nignore:\n  - draft.md\nmetadata:\n  version: \"1.0\"\nlicense: MIT\nevents:\n  session-start:\n  prompt-submit:\ndescription: Test hook\nname: guard\nschema: 1\n---\n\nText.\n",
     );
     common::upskill_cmd(&home)
         .current_dir(tmp.path())
@@ -366,7 +366,7 @@ fn fmt_orders_hook_keys_canonically() {
     let after = fs::read_to_string(&path).unwrap();
     assert_eq!(
         after,
-        "---\nschema: 1\nname: guard\ndescription: Test hook\nevents:\n  session-start:\n  prompt-submit:\n---\n\nText.\n"
+        "---\nschema: 1\nname: guard\ndescription: Test hook\nevents:\n  session-start:\n  prompt-submit:\nlicense: MIT\nmetadata:\n  version: \"1.0\"\nignore:\n  - draft.md\n---\n\nText.\n"
     );
     common::upskill_cmd(&home)
         .current_dir(tmp.path())

@@ -154,6 +154,11 @@ A directory that holds `COMMAND.md` and none of `SKILL.md`, `RULE.md` and
 source, says that it is a command item directory, and names `upskill pack`
 instead of a command to run.
 
+A directory that holds `HOOK.md` and none of `SKILL.md`, `RULE.md`, `AGENT.md`
+and `COMMAND.md` is refused in the same way: `add` writes nothing, exits with
+code 1, and prints an error that names the source, says that it is a hook item
+directory, and names `upskill pack` instead of a command to run.
+
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a scope flag uses the project scope.
 Outside a git repository, `add` without a scope flag writes nothing and stops
@@ -1014,9 +1019,11 @@ Copilot paths are relative to the plugin directory, which was the working
 directory of a plugin hook in one local-install observation (technote T4, trial
 5).
 
-A matcher string applies unchanged to both clients. A matcher map selects the
-`claude` and `copilot` values; a client without a key gets no hook for that
-event. A `session-start` context hook without a matcher gets
+A matcher string applies unchanged to both clients. A context hook on
+`prompt-submit` or `stop` cannot have a matcher, because Claude Code ignores a
+matcher on these events; a command hook on them may have one. A matcher map
+selects the `claude` and `copilot` values; a client without a key gets no hook
+for that event. A `session-start` context hook without a matcher gets
 `startup|clear|compact` in Claude Code and no matcher in Copilot CLI. Other
 context events without a matcher get no matcher in either client. Each event
 array holds the notice entry first, when rules target the client, then context
@@ -1039,10 +1046,11 @@ CLI `bash` command is `UPSKILL_CLIENT=copilot ./hooks/<name>/<run>`; it has no
 Copilot CLI, in seconds. A command hook has no default matcher, including on
 `session-start`.
 
-Every `run` must name a copied resource. A missing file, an entry file, or an
-`ignore` match fails with exit code 1 before any output is written, even when a
-matcher excludes the selected client. The error identifies the hook and its
-bundle and reports that `run` names no copied file of the item directory.
+Every `run` must name a copied resource. A missing file, an entry file, an
+`ignore` match, a symbolic link, or (on Unix) a file without an executable bit
+fails with exit code 1 before any output is written, even when a matcher
+excludes the selected client. The error identifies the hook and its bundle and
+reports every problem of the hook, one per line.
 
 A hook file is written when rules target the client or hook items produce an
 entry. Without either, no hook file is written. With rules and no hook items,
@@ -1051,7 +1059,7 @@ list one hook name fail with exit code 1 and identify both bundles. A listed
 hook without a directory holding `HOOK.md`, an unreadable or invalid `HOOK.md`,
 or any hook validation problem also fails with exit code 1 before any output is
 written. Reading and validation errors identify the hook and its bundle;
-validation errors include the source path and first problem. Hook validation
+validation errors include the source path of each problem. Hook validation
 includes the effective name rule, the reserved name `context`, event settings,
 body sections, text and client directives.
 

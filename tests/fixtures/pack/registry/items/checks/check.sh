@@ -1,4 +1,4 @@
 #!/bin/sh
-# Reads the hook input of the client that UPSKILL_CLIENT names.
+# Sources a helper script, then exits with status 0.
 . "$(dirname "$0")/lib/common.sh"
 exit 0

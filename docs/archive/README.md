@@ -1348,8 +1348,10 @@ orchestrator then added decision 21 (context files contain only ASCII
 characters) and the restriction that a matcher is not allowed on the
 `prompt-submit` and `stop` events.
 
-Implementation: the pull request of branch `feat/pack-hooks`. Completion
-evidence: `just verify` and `just sanity` passed on commit `f8afef7`.
+Implementation: pull request
+[#645](https://github.com/driftsys/upskill/pull/645) of branch
+`feat/pack-hooks`. Completion evidence: the CI checks of that pull request
+(Quality, Documentation, and Test on ubuntu-latest and macos-latest).
 
 Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions 3
 to 7, 11 and 12; [content format](../topics/0001-content-format.md);

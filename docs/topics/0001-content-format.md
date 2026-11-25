@@ -279,7 +279,9 @@ Items MAY contain supporting files in their directory:
   markdown relative links.
 - Implementations MUST preserve supporting files and their directory structure
   during generation (copy them alongside the generated entrypoint into the
-  client-expected location).
+  client-expected location). A hook item copies its supporting files only for a
+  command hook, into `hooks/<name>/`; a hook item with only context hooks copies
+  none, so a file that its text links to is not available in the output.
 - An item MAY declare an `ignore` list (§3.1) to scope which supporting files
   are copied. The list is `.gitignore`-style and **subtractive only** — there is
   no `include`/allowlist form. A file matching any `ignore` pattern is not
@@ -1173,8 +1175,10 @@ Each event value is empty or a map with these settings:
 
 A matcher string applies to both clients. A matcher map accepts only `claude`
 and `copilot`, and MUST contain at least one of them. A client without a key
-gets no hook for that event. `matcher` is not allowed on `prompt-submit` or
-`stop`.
+gets no hook for that event. A context hook (an event without `run`) cannot have
+a `matcher` on `prompt-submit` or `stop`: Claude Code ignores a matcher on these
+events, so the texts of several hooks would have no defined order. A command
+hook on these events may have a matcher.
 
 The ten portable events map to these client event names. An unknown event is an
 error.
@@ -1195,9 +1199,10 @@ error.
 An event without `run` is a **context hook**. It requires text and is valid only
 on `session-start`, `prompt-submit`, `post-tool`, and `subagent-start`. An event
 with `run` is a **command hook**; its body text is documentation. `run` MUST
-name an existing file, without a path or arguments. Its first character MUST be
-an ASCII letter or digit; the remaining characters MUST be ASCII letters,
-digits, `.`, `_`, or `-`.
+name an existing file, without a path or arguments, that is not an entry file,
+not matched by `ignore`, not a symbolic link, and, on Unix, has an executable
+bit. Its first character MUST be an ASCII letter or digit; the remaining
+characters MUST be ASCII letters, digits, `.`, `_`, or `-`.
 
 A level-2 heading whose text equals a key of `events` starts that event's
 section. Text before the first event heading is the preamble. Each event's text
@@ -1453,11 +1458,11 @@ state how far the output for each client and kind is verified.
 
 This section describes the expected output per client: which files an
 implementation writes for each item kind, and how SSOT frontmatter maps onto
-each client's frontmatter shape. Command items have no `add` output and no
-subsection here; `pack` writes them as described in §3.9. This section, §7, is
-informational; client conventions may change independently of this
-specification. Implementations SHOULD verify output against actual client
-behavior.
+each client's frontmatter shape. Command items and hook items have no `add`
+output and no subsection here; `pack` writes them as described in §3.9 and
+§3.10. This section, §7, is informational; client conventions may change
+independently of this specification. Implementations SHOULD verify output
+against actual client behavior.
 
 This section is deliberately scoped to "what file and frontmatter each client
 reads". Adjacent behavior — bridging files, IDE configuration mutation,

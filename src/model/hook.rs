@@ -273,6 +273,16 @@ mod tests {
     }
 
     #[test]
+    fn matcher_map_refuses_a_repeated_client_key() {
+        let err = serde_yaml_ng::from_str::<Matcher>("{ claude: a, claude: b }").unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("duplicate matcher client `claude`"),
+            "{err}"
+        );
+    }
+
+    #[test]
     fn hook_refuses_an_unknown_field() {
         let err =
             serde_yaml_ng::from_str::<Hook>("description: d\nevents: {}\naudience: [claude]\n")

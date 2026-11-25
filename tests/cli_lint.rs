@@ -27,6 +27,16 @@ const UNFORMATTED_SKILL_MD: &str = concat!(
     "* two\n",
 );
 
+/// Write a script file with the executable bit that a hook `run` file needs.
+fn write_script(path: &Path) {
+    write(path, "exit 0\n");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+}
+
 fn write(path: &Path, contents: &str) {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).unwrap();
@@ -323,7 +333,7 @@ fn lint_excludes_a_command_only_directory_from_name_collision() {
 }
 
 /// Counterpart of the test above: a skill directory that has a bundle's name
-/// is still reported, so the exclusion is limited to command items.
+/// is still reported, so the exclusion is limited to command and hook items.
 #[test]
 fn lint_still_reports_a_skill_directory_that_collides_with_a_bundle_next_to_a_command() {
     let tmp = tempfile::tempdir().unwrap();
@@ -686,7 +696,7 @@ fn lint_hook_case(
         &format!("---\nschema: 1\ndescription: Test hook\n{extra}events:\n{events}---\n\n{body}"),
     );
     if script {
-        write(&dir.join("check.sh"), "exit 0\n");
+        write_script(&dir.join("check.sh"));
     }
     let assert = common::upskill_cmd(&home)
         .current_dir(tmp.path())
@@ -841,18 +851,76 @@ fn lint_flags_a_timeout_without_run() {
 }
 
 #[test]
-fn lint_flags_a_matcher_on_prompt_submit() {
+fn lint_flags_a_matcher_on_a_context_hook_of_prompt_submit_and_stop() {
+    for event in ["prompt-submit", "stop"] {
+        lint_hook_case(
+            "guard",
+            "",
+            &format!("  {event}: {{ matcher: edit }}\n"),
+            "Text.\n",
+            false,
+            Some((
+                "[hook-event]",
+                &format!("a context hook on `{event}` cannot have a `matcher`"),
+            )),
+        );
+    }
+}
+
+#[test]
+fn lint_accepts_a_matcher_on_a_command_hook_of_stop() {
     lint_hook_case(
         "guard",
         "",
-        "  prompt-submit: { matcher: edit }\n",
-        "Text.\n",
-        false,
-        Some((
-            "[hook-event]",
-            "event `prompt-submit` cannot have a `matcher`",
-        )),
+        "  stop: { matcher: edit, run: check.sh }\n",
+        "Checks the file.\n",
+        true,
+        None,
     );
+}
+
+#[test]
+#[cfg(unix)]
+fn lint_flags_a_run_file_without_an_executable_bit() {
+    use std::os::unix::fs::PermissionsExt;
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let dir = source.join("guard");
+    write(
+        &dir.join("HOOK.md"),
+        "---\nschema: 1\ndescription: Test hook\nevents:\n  post-tool: { run: check.sh }\n---\n\n",
+    );
+    write_script(&dir.join("check.sh"));
+    fs::set_permissions(dir.join("check.sh"), fs::Permissions::from_mode(0o644)).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict"])
+        .arg(&source)
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("[hook-run]"))
+        .stdout(predicates::str::contains(
+            "run file `check.sh` is not executable",
+        ));
+}
+
+#[test]
+fn lint_names_an_unnamed_hook_after_its_directory_when_run_inside_it() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let dir = tmp.path().join("guard");
+    write(
+        &dir.join("HOOK.md"),
+        "---\nschema: 1\ndescription: Test hook\nevents:\n  session-start:\n---\n\nText.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(&dir)
+        .args(["lint", "--strict", "."])
+        .assert()
+        .success();
 }
 
 #[test]

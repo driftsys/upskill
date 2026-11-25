@@ -1111,6 +1111,16 @@ impl Fixture {
     }
 }
 
+/// Write a command-hook script with the executable bit that `pack` requires.
+fn write_script(path: &Path) {
+    fs::write(path, "#!/bin/sh\nexit 0\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+}
+
 fn read_json(path: &Path) -> serde_json::Value {
     serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
 }
@@ -1168,16 +1178,16 @@ fn pack_writes_one_context_file_for_each_distinct_matcher() {
         "events:\n  post-tool: { matcher: shell }",
         "After a shell command.",
     );
-    f.hook_bundle("twogroups", "after-edit, after-shell", "");
+    f.hook_bundle("twogroups", "after-shell, after-edit", "");
     f.command_for_clients("twogroups").assert().success();
     for client in ["claude", "copilot"] {
         assert_eq!(
             f.context_text("twogroups", client, "post-tool"),
-            "After an edit."
+            "After a shell command."
         );
         assert_eq!(
             f.context_text("twogroups", client, "post-tool-2"),
-            "After a shell command."
+            "After an edit."
         );
         let hooks = f.hook_json("twogroups", client);
         let event = if client == "claude" {
@@ -1186,8 +1196,8 @@ fn pack_writes_one_context_file_for_each_distinct_matcher() {
             "postToolUse"
         };
         let entries = &hooks["hooks"][event];
-        assert_eq!(entries[0]["matcher"], "edit");
-        assert_eq!(entries[1]["matcher"], "shell");
+        assert_eq!(entries[0]["matcher"], "shell");
+        assert_eq!(entries[1]["matcher"], "edit");
         if client == "claude" {
             assert_eq!(
                 entries[1]["hooks"][0]["command"],
@@ -1453,11 +1463,7 @@ fn pack_orders_notice_then_context_then_command_hooks() {
         "events:\n  session-start: { run: start.sh }",
         "Starts the session.",
     );
-    fs::write(
-        f.registry.join("items/starter/start.sh"),
-        "#!/bin/sh\nexit 0\n",
-    )
-    .unwrap();
+    write_script(&f.registry.join("items/starter/start.sh"));
     f.hook_bundle("ordered", "starter", "requires:\n  - name: hookdemo");
     f.command_for_clients("ordered").assert().success();
     let claude = f.hook_json("ordered", "claude");
@@ -1504,11 +1510,7 @@ fn pack_of_a_bundle_with_only_a_command_hook_writes_a_hook_file() {
         "events:\n  session-start: { run: start.sh }",
         "Starts the session.",
     );
-    fs::write(
-        f.registry.join("items/starter/start.sh"),
-        "#!/bin/sh\nexit 0\n",
-    )
-    .unwrap();
+    write_script(&f.registry.join("items/starter/start.sh"));
     f.hook_bundle("commandonly", "starter", "");
     f.command_for_clients("commandonly").assert().success();
     for (client, event) in [("claude", "SessionStart"), ("copilot", "sessionStart")] {
@@ -1550,7 +1552,7 @@ fn pack_copies_neither_an_entry_file_nor_an_ignored_file_of_a_command_hook() {
     )
     .unwrap();
     fs::write(dir.join("draft.md"), "Draft.\n").unwrap();
-    fs::write(dir.join("go.sh"), "#!/bin/sh\nexit 0\n").unwrap();
+    write_script(&dir.join("go.sh"));
     f.hook_bundle("commandonly", "tool", "");
     f.command_for_clients("commandonly").assert().success();
     for client in ["claude", "copilot"] {
@@ -1569,15 +1571,14 @@ fn pack_refuses_a_run_file_matched_by_ignore() {
         "ignore: [go.sh]\nevents:\n  post-tool: { run: go.sh }",
         "Checks the file.",
     );
-    fs::write(f.registry.join("items/tool/go.sh"), "#!/bin/sh\nexit 0\n").unwrap();
+    write_script(&f.registry.join("items/tool/go.sh"));
     f.hook_bundle("commandonly", "tool", "");
-    let message = concat!(
-        "event `post-tool`: `run: go.sh` names no copied file of the item directory ",
-        "(it is missing, an entry file, matched by `ignore`, or a symbolic link)"
-    );
     f.hook_error(
         "commandonly",
-        &["hook `tool` of bundle `commandonly`", message],
+        &[
+            "hook `tool` of bundle `commandonly`",
+            "event `post-tool`: run file `go.sh` is not copied by pack: it matches `ignore`",
+        ],
     );
 }
 
@@ -1606,7 +1607,7 @@ fn pack_writes_a_command_hook_only_for_the_client_of_its_map_matcher() {
         "events:\n  post-tool: { matcher: { copilot: edit }, run: go.sh }",
         "Checks the file.",
     );
-    fs::write(f.registry.join("items/tool/go.sh"), "#!/bin/sh\nexit 0\n").unwrap();
+    write_script(&f.registry.join("items/tool/go.sh"));
     f.hook_bundle("commandonly", "tool", "");
     f.command_for_clients("commandonly").assert().success();
     let copilot = f.hook_json("commandonly", "copilot");
@@ -1618,7 +1619,15 @@ fn pack_writes_a_command_hook_only_for_the_client_of_its_map_matcher() {
 
 #[test]
 fn pack_refuses_an_uncopied_run_file_even_for_an_excluded_client() {
-    for (run, ignored) in [("missing.sh", false), ("HOOK.md", false), ("go.sh", true)] {
+    for (run, ignored, message) in [
+        (
+            "missing.sh",
+            false,
+            "`run: missing.sh` names no file in the item directory",
+        ),
+        ("HOOK.md", false, "run file `HOOK.md` is not copied by pack"),
+        ("go.sh", true, "run file `go.sh` is not copied by pack"),
+    ] {
         for client in ["--claude", "--copilot"] {
             let f = Fixture::new();
             let matcher = if client == "--claude" {
@@ -1634,7 +1643,7 @@ fn pack_refuses_an_uncopied_run_file_even_for_an_excluded_client() {
                 ),
                 "Checks the file.",
             );
-            fs::write(f.registry.join("items/tool/go.sh"), "#!/bin/sh\nexit 0\n").unwrap();
+            write_script(&f.registry.join("items/tool/go.sh"));
             f.hook_bundle("commandonly", "tool", "");
             f.command_for_clients("commandonly")
                 .arg(client)
@@ -1643,9 +1652,7 @@ fn pack_refuses_an_uncopied_run_file_even_for_an_excluded_client() {
                 .stderr(predicates::str::contains(
                     "hook `tool` of bundle `commandonly`",
                 ))
-                .stderr(predicates::str::contains(format!(
-                    "`run: {run}` names no copied file"
-                )));
+                .stderr(predicates::str::contains(message));
             assert!(!f.out.exists());
         }
     }
@@ -1701,4 +1708,195 @@ fn pack_reads_a_hook_of_a_bundle_from_a_git_source() {
             "Read the guide."
         );
     }
+}
+
+#[test]
+fn pack_orders_the_command_hooks_of_one_event_by_the_bundle_list() {
+    let f = Fixture::new();
+    for name in ["zeta", "alpha"] {
+        f.hook(
+            name,
+            "events:\n  post-tool: { run: go.sh }",
+            "Checks the file.",
+        );
+        write_script(&f.registry.join(format!("items/{name}/go.sh")));
+    }
+    f.hook_bundle("listorder", "zeta, alpha", "");
+    f.command_for_clients("listorder").assert().success();
+    let claude = f.hook_json("listorder", "claude");
+    let entries = claude["hooks"]["PostToolUse"].as_array().unwrap();
+    assert_eq!(entries.len(), 2);
+    assert!(
+        entries[0]["hooks"][0]["command"]
+            .as_str()
+            .unwrap()
+            .contains("hooks/zeta/go.sh")
+    );
+    assert!(
+        entries[1]["hooks"][0]["command"]
+            .as_str()
+            .unwrap()
+            .contains("hooks/alpha/go.sh")
+    );
+    let copilot = f.hook_json("listorder", "copilot");
+    let entries = copilot["hooks"]["postToolUse"].as_array().unwrap();
+    assert!(entries[0]["bash"].as_str().unwrap().contains("hooks/zeta/"));
+    assert!(
+        entries[1]["bash"]
+            .as_str()
+            .unwrap()
+            .contains("hooks/alpha/")
+    );
+}
+
+#[test]
+fn pack_writes_one_entry_for_each_command_event_of_a_hook() {
+    let f = Fixture::new();
+    f.hook(
+        "multi",
+        "events:\n  session-start: { run: start.sh }\n  stop: { run: end.sh }",
+        "Runs two scripts.",
+    );
+    write_script(&f.registry.join("items/multi/start.sh"));
+    write_script(&f.registry.join("items/multi/end.sh"));
+    f.hook_bundle("twoevents", "multi", "");
+    f.command_for_clients("twoevents").assert().success();
+    for (client, start, stop) in [
+        ("claude", "SessionStart", "Stop"),
+        ("copilot", "sessionStart", "agentStop"),
+    ] {
+        let hooks = f.hook_json("twoevents", client);
+        assert_eq!(hooks["hooks"][start].as_array().unwrap().len(), 1);
+        assert_eq!(hooks["hooks"][stop].as_array().unwrap().len(), 1);
+        let dir = f.out.join(format!("twoevents-{client}/hooks/multi"));
+        assert!(dir.join("start.sh").is_file());
+        assert!(dir.join("end.sh").is_file());
+    }
+}
+
+#[test]
+#[cfg(unix)]
+fn pack_refuses_a_run_file_without_an_executable_bit() {
+    use std::os::unix::fs::PermissionsExt;
+    let f = Fixture::new();
+    f.hook(
+        "tool",
+        "events:\n  post-tool: { run: go.sh }",
+        "Checks the file.",
+    );
+    let script = f.registry.join("items/tool/go.sh");
+    write_script(&script);
+    fs::set_permissions(&script, fs::Permissions::from_mode(0o644)).unwrap();
+    f.hook_bundle("commandonly", "tool", "");
+    f.hook_error(
+        "commandonly",
+        &[
+            "hook `tool` of bundle `commandonly`",
+            "run file `go.sh` is not executable",
+        ],
+    );
+}
+
+#[test]
+#[cfg(unix)]
+fn pack_refuses_a_symbolic_link_as_a_run_file() {
+    let f = Fixture::new();
+    f.hook(
+        "tool",
+        "events:\n  post-tool: { run: go.sh }",
+        "Checks the file.",
+    );
+    let real = f._tmp.path().join("real.sh");
+    write_script(&real);
+    std::os::unix::fs::symlink(&real, f.registry.join("items/tool/go.sh")).unwrap();
+    f.hook_bundle("commandonly", "tool", "");
+    f.hook_error(
+        "commandonly",
+        &[
+            "hook `tool` of bundle `commandonly`",
+            "run file `go.sh` is a symbolic link; pack does not copy it",
+        ],
+    );
+}
+
+#[test]
+fn pack_refuses_a_run_value_with_a_path() {
+    let f = Fixture::new();
+    f.hook(
+        "tool",
+        "events:\n  post-tool: { run: ../go.sh }",
+        "Checks the file.",
+    );
+    f.hook_bundle("commandonly", "tool", "");
+    f.hook_error(
+        "commandonly",
+        &[
+            "hook `tool` of bundle `commandonly`",
+            "`run: ../go.sh` must be the name of one file in the item directory",
+        ],
+    );
+}
+
+#[test]
+fn pack_reports_every_problem_of_a_hook_one_per_line() {
+    let f = Fixture::new();
+    f.hook(
+        "tool",
+        "events:\n  post-tool: { run: missing.sh }\n  stop: { matcher: edit }",
+        "Checks the file.",
+    );
+    f.hook_bundle("commandonly", "tool", "");
+    let assertion = f.command_for_clients("commandonly").assert().code(1);
+    let stderr = String::from_utf8(assertion.get_output().stderr.clone()).unwrap();
+    let lines: Vec<_> = stderr.lines().collect();
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("`run: missing.sh` names no file in the item directory")),
+        "{stderr}"
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("a context hook on `stop` cannot have a `matcher`")),
+        "{stderr}"
+    );
+    assert!(
+        lines
+            .iter()
+            .all(|line| !(line.contains("missing.sh") && line.contains("`stop`"))),
+        "{stderr}"
+    );
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_keeps_the_notice_apart_from_a_context_entry_with_the_same_matcher() {
+    let f = Fixture::new();
+    f.hook(
+        "starter",
+        "events:\n  session-start: { matcher: startup }",
+        "Starts the session.",
+    );
+    f.hook_bundle("samematcher", "starter", "requires:\n  - name: hookdemo");
+    f.command_for_clients("samematcher").assert().success();
+    let claude = f.hook_json("samematcher", "claude");
+    let entries = claude["hooks"]["SessionStart"].as_array().unwrap();
+    let startup: Vec<_> = entries
+        .iter()
+        .filter(|entry| entry["matcher"] == "startup")
+        .collect();
+    assert_eq!(startup.len(), 2, "{entries:?}");
+    assert!(
+        startup[0]["hooks"][0]["command"]
+            .as_str()
+            .unwrap()
+            .contains("upskill update --notice")
+    );
+    assert!(
+        startup[1]["hooks"][0]["command"]
+            .as_str()
+            .unwrap()
+            .starts_with("cat ")
+    );
 }

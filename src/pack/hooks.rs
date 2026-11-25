@@ -46,29 +46,12 @@ pub(super) fn read_pack_hooks(hooks: &[BundleHook]) -> Result<Vec<PackHook>> {
         .map(|declared| {
             let read = || {
                 let source = read_hook(&declared.root, &declared.name)?;
-                // Validate copied run files before client filtering and lint errors.
-                for (event, settings) in &source.hook.events {
-                    let Some(run) = settings.as_ref().and_then(|settings| settings.run.as_ref())
-                    else {
-                        continue;
-                    };
-                    let copied = source
-                        .resources
-                        .iter()
-                        .any(|resource| resource.rel == std::path::Path::new(run));
-                    if crate::model::hook::is_run_file_name(run) && !copied {
-                        let causes = concat!(
-                            "it is missing, an entry file, ",
-                            "matched by `ignore`, or a symbolic link"
-                        );
-                        bail!(
-                            "event `{event}`: `run: {run}` names no copied file \
-                             of the item directory ({causes})"
-                        );
-                    }
-                }
-                if let Some(problem) = check_hook(&source.hook, &source.body, &source.dir).first() {
-                    bail!("{}: {}", source.path.display(), problem.message);
+                let problems: Vec<_> = check_hook(&source.hook, &source.body, &source.dir)
+                    .into_iter()
+                    .map(|problem| format!("{}: {}", source.path.display(), problem.message))
+                    .collect();
+                if !problems.is_empty() {
+                    bail!("{}", problems.join("\n"));
                 }
                 // `check_hook` leaves errors of the whole body to lint. Check
                 // them here before any client filtering skips an event.
