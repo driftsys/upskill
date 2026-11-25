@@ -413,7 +413,7 @@ servers (`.mcp.json`) and LSP servers (`.lsp.json` for Claude Code, `lsp.json`
 for Copilot CLI) of the bundle closure. The bundle's `lsps` map declares LSP
 servers. The plugin does not install the server binary; `add` and `update` do
 not configure LSP servers. They report their count in the same stderr skip line
-as command items, unless `--quiet` or a kind restriction applies. The user calls
+as command and hook items, unless `--quiet` or a kind restriction applies. The user calls
 a command as `/<plugin>:<name>`. When rules of the closure target the client,
 init is written at `skills/init/SKILL.md`; call it as `/<plugin>:init` in an
 interactive session. It runs `add --kind rule --project` for that client.

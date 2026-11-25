@@ -60,15 +60,21 @@ pub struct Bundle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PackOnlyKind {
     Command,
+    Hook,
     LspServer,
 }
 
 impl PackOnlyKind {
-    pub const ALL: [PackOnlyKind; 2] = [PackOnlyKind::Command, PackOnlyKind::LspServer];
+    pub const ALL: [PackOnlyKind; 3] = [
+        PackOnlyKind::Command,
+        PackOnlyKind::Hook,
+        PackOnlyKind::LspServer,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
             Self::Command => "command item(s)",
+            Self::Hook => "hook item(s)",
             Self::LspServer => "LSP server(s)",
         }
     }
@@ -79,6 +85,7 @@ impl Bundle {
     pub fn pack_only(&self, kind: PackOnlyKind) -> Vec<&str> {
         match kind {
             PackOnlyKind::Command => self.items.commands.iter().map(String::as_str).collect(),
+            PackOnlyKind::Hook => self.items.hooks.iter().map(String::as_str).collect(),
             PackOnlyKind::LspServer => self.lsps.keys().map(String::as_str).collect(),
         }
     }
@@ -447,10 +454,31 @@ mod tests {
         );
         assert_eq!(
             PackOnlyKind::ALL,
-            [PackOnlyKind::Command, PackOnlyKind::LspServer]
+            [
+                PackOnlyKind::Command,
+                PackOnlyKind::Hook,
+                PackOnlyKind::LspServer
+            ]
         );
         assert_eq!(PackOnlyKind::Command.label(), "command item(s)");
         assert_eq!(PackOnlyKind::LspServer.label(), "LSP server(s)");
+    }
+
+    #[test]
+    fn pack_only_items_lists_hooks_between_commands_and_lsp_servers() {
+        let bundle: Bundle = serde_yaml_ng::from_str(
+            "schema: 1\nname: demo\ndescription: Test\nitems:\n  commands: [c]\n  hooks: [h]\nlsps:\n  l:\n    command: l\n    extensions: { .rs: rust }\n",
+        )
+        .unwrap();
+        assert_eq!(
+            pack_only_items(&[bundle]),
+            vec![
+                (PackOnlyKind::Command, "c".into()),
+                (PackOnlyKind::Hook, "h".into()),
+                (PackOnlyKind::LspServer, "l".into()),
+            ]
+        );
+        assert_eq!(PackOnlyKind::Hook.label(), "hook item(s)");
     }
 
     fn lsp_bundle(entry: &str) -> Bundle {

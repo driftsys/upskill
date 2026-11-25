@@ -1,5 +1,5 @@
-//! ATDD tests for the command items and LSP servers that `add` and `update`
-//! skip.
+//! ATDD tests for the command items, hook items and LSP servers that `add`
+//! and `update` skip.
 
 mod common;
 
@@ -43,6 +43,17 @@ impl Fixture {
             )
             .unwrap();
         }
+        for (folder, name) in [("guard", "guard"), ("checks", "edit-checks")] {
+            let dir = registry.join("skills").join(folder);
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(
+                dir.join("HOOK.md"),
+                format!(
+                    "---\nschema: 1\nname: {name}\ndescription: Test hook\nevents:\n  session-start:\n---\n\nRead the guide.\n"
+                ),
+            )
+            .unwrap();
+        }
         let f = Self {
             _tmp: tmp,
             registry,
@@ -53,6 +64,11 @@ impl Fixture {
             "team",
             "  skills: [alpha]\n  rules: [style]\n  commands: [release-notes, standup]\n",
             "",
+        );
+        f.bundle(
+            "hooked",
+            "  skills: [alpha]\n  commands: [standup]\n  hooks: [guard]\n",
+            "lsps:\n  ra:\n    command: ra\n    extensions: { .rs: rust }\n",
         );
         f
     }
@@ -313,6 +329,7 @@ fn add_kind_command_is_a_usage_error() {
 fn add_of_a_whole_source_ignores_command_directories() {
     let f = Fixture::new();
     fs::remove_file(f.registry.join("skills/team.bundle.yaml")).unwrap();
+    fs::remove_file(f.registry.join("skills/hooked.bundle.yaml")).unwrap();
     f.add(&["--claude"])
         .success()
         .stderr(predicate::str::contains("command item").not());
@@ -432,6 +449,108 @@ fn add_of_a_name_that_is_a_bundle_and_a_command_item_installs_the_bundle() {
 }
 
 #[test]
+const HOOK_LINE: &str =
+    "skipped 1 command item(s), 1 hook item(s), 1 LSP server(s): only `upskill pack` writes them";
+
+#[test]
+fn add_reports_skipped_hook_items_between_commands_and_lsp_servers() {
+    let f = Fixture::new();
+    let result = f.add(&["hooked", "--claude"]).success();
+    let stderr = String::from_utf8_lossy(&result.get_output().stderr);
+    assert_eq!(
+        stderr
+            .lines()
+            .filter(|line| line.starts_with("skipped "))
+            .collect::<Vec<_>>(),
+        [HOOK_LINE]
+    );
+    assert!(f.consumer.join(".claude/skills/alpha/SKILL.md").is_file());
+    assert!(
+        paths_below(&f.consumer)
+            .iter()
+            .all(|path| { !path.components().any(|part| part.as_os_str() == "guard") })
+    );
+    assert_not_installed(&f, &["guard", "standup", "ra"]);
+    assert_no_lsp_files(&f);
+}
+
+#[test]
+fn add_reports_only_hook_items_when_the_bundle_has_no_other_pack_only_kind() {
+    let f = Fixture::new();
+    f.bundle("hookonly", "  skills: [alpha]\n  hooks: [guard]\n", "");
+    f.add(&["hookonly", "--claude"])
+        .success()
+        .stderr(predicate::str::contains(
+            "skipped 1 hook item(s): only `upskill pack` writes them",
+        ));
+    assert_not_installed(&f, &["guard"]);
+}
+
+#[test]
+fn add_of_a_named_hook_item_is_an_error_that_names_pack() {
+    let f = Fixture::new();
+    f.add(&["guard", "--claude"])
+        .code(1)
+        .stderr(predicate::str::contains(
+            "`guard` is a hook item; `upskill add` does not install hook items. Use `upskill pack` to build a plugin that holds it",
+        ));
+    assert!(!f.consumer.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_of_a_hook_by_its_frontmatter_name_is_an_error_that_names_pack() {
+    let f = Fixture::new();
+    f.add(&["edit-checks", "--claude"])
+        .code(1)
+        .stderr(predicate::str::contains(
+            "`edit-checks` is a hook item; `upskill add` does not install hook items. Use `upskill pack` to build a plugin that holds it",
+        ));
+    assert!(!f.consumer.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_of_a_skill_and_a_hook_by_name_fails_before_any_write() {
+    let f = Fixture::new();
+    f.add(&["alpha", "guard", "--claude"])
+        .code(1)
+        .stderr(predicate::str::contains("`guard` is a hook item"));
+    assert!(!f.consumer.join(".claude").exists());
+    assert!(!f.consumer.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_of_a_hook_item_directory_as_source_is_an_error_that_names_pack() {
+    let f = Fixture::new();
+    f.command("add")
+        .arg(f.registry.join("skills/guard"))
+        .arg("--claude")
+        .assert()
+        .code(1)
+        .stderr(predicate::str::contains(
+            "is a hook item directory (it holds HOOK.md)",
+        ))
+        .stderr(predicate::str::contains("upskill pack"));
+    assert!(!f.consumer.join(".upskill-lock.json").exists());
+}
+
+#[test]
+fn add_kind_hook_is_a_usage_error() {
+    let f = Fixture::new();
+    f.add(&["hooked", "--kind", "hook"])
+        .code(2)
+        .stderr(predicate::str::contains("unknown item kind: hook"));
+}
+
+#[test]
+fn add_with_a_kind_restriction_prints_no_hook_count() {
+    let f = Fixture::new();
+    f.add(&["hooked", "--claude", "--kind", "skill"])
+        .success()
+        .stderr(predicate::str::contains("hook item").not());
+    assert!(f.consumer.join(".claude/skills/alpha/SKILL.md").is_file());
+}
+
+#[test]
 fn add_of_a_name_that_matches_a_scanned_skill_and_a_command_file_installs_the_skill() {
     let f = Fixture::new();
     // A directory that holds both entry files is a skill for `add`; the
@@ -511,4 +630,19 @@ fn update_counts_a_command_that_two_sources_list_once() {
         .assert()
         .success()
         .stderr(predicate::str::contains(LINE));
+}
+
+#[test]
+fn update_reports_the_skipped_hook_items_of_a_recorded_bundle() {
+    let f = Fixture::new();
+    f.add(&["hooked", "--claude"]).success();
+    for args in [vec![], vec!["--dry-run"]] {
+        f.command("update")
+            .args(args)
+            .assert()
+            .success()
+            .stderr(predicate::str::contains(HOOK_LINE));
+        assert_not_installed(&f, &["guard", "standup", "ra"]);
+    }
+    assert_no_lsp_files(&f);
 }

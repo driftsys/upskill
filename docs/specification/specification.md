@@ -493,10 +493,11 @@ field of that entry changes and none of its files is written. When every source
 is skipped, nothing is adopted. When a later step fails after a source was
 skipped, the line of the skipped source is still printed, before the error.
 
-`update` reports the command items and LSP servers of every bundle it prepares
-in the same skip line as `add`, each name counted once per kind across the run,
-including sources that are not applied and runs with `--dry-run`. No skip line
-is printed with `--quiet` or for a source under a kind restriction.
+`update` reports the command items (`items.commands`), hook items
+(`items.hooks`) and LSP servers of every bundle it prepares in the same skip
+line as `add`, each name counted once per kind across the run, including sources
+that are not applied and runs with `--dry-run`. No skip line is printed with
+`--quiet` or for a source under a kind restriction.
 
 Known limits: the plugin and MCP steps of a bundle source run when the source is
 applied without a kind restriction. `update` skips both steps for a source under
@@ -890,29 +891,33 @@ behaviour:
 
 - **Items.** Every entry in `items.rules`, `items.skills`, `items.agents` is
   resolved against the same source repository and installed. Entries of
-  `items.commands` are not installed. Each distinct command name of the resolved
-  bundles is counted on stderr in the line
-  ``skipped N command item(s): only `upskill pack` writes them``. LSP servers
-  declared in `lsps` are counted in the same line as `N LSP server(s)`, after
-  commands when both are present. No line is printed with `--quiet` or any
-  `--kind` restriction. A whole-source install without a resolved bundle ignores
-  command directories without a line. A positional name that matches only a
-  command item, when the source is a directory, fails with exit code 1 before
-  any write and names `upskill pack`. A source that is a `*.bundle.yaml` file
-  does not check positional names, and a name that matches both a bundle and a
-  command item resolves as the bundle. A source that is a command item directory
-  also fails with exit code 1 and names `upskill pack`. `--kind` still accepts
-  only `rule`, `skill` and `agent`; excluding only a command name is an unknown
-  exclude (exit code 2). Unresolved installable names error out before any
-  write. The source of a bundle file is the registry root found upward from it:
-  the first directory, starting at the directory of the bundle file, that holds
-  an item in a child or grandchild directory, or the directory of the bundle
-  file when no such directory exists. When bundle discovery from that root
-  cannot reach the file (a directory between them starts with a dot), the source
-  is the directory that holds its `bundles` directory, or the directory of the
-  bundle file when that directory is not named `bundles`. A bundle that selects
-  no item and only declares `requires:` is valid also when that source holds no
-  item.
+  `items.commands` and `items.hooks` are not installed. Each distinct name per
+  kind of the resolved bundles is counted on stderr, for example:
+
+  ```text
+  skipped N command item(s), M hook item(s): only `upskill pack` writes them
+  ```
+
+  LSP servers declared in `lsps` are counted in the same line as
+  `N LSP server(s)`, after commands and hooks when present. No line is printed
+  with `--quiet` or any `--kind` restriction. A whole-source install without a
+  resolved bundle ignores command and hook directories without a line. A
+  positional name that matches only a command or hook item, when the source is a
+  directory, fails with exit code 1 before any write and names `upskill pack`. A
+  source that is a `*.bundle.yaml` file does not check positional names, and a
+  name that matches both a bundle and a command or hook item resolves as the
+  bundle. A source that is a command or hook item directory also fails with exit
+  code 1 and names `upskill pack`. `--kind` still accepts only `rule`, `skill`
+  and `agent`; `--kind hook` and excluding only a command or hook name are usage
+  errors (exit code 2). Unresolved installable names error out before any write.
+  The source of a bundle file is the registry root found upward from it: the
+  first directory, starting at the directory of the bundle file, that holds an
+  item in a child or grandchild directory, or the directory of the bundle file
+  when no such directory exists. When bundle discovery from that root cannot
+  reach the file (a directory between them starts with a dot), the source is the
+  directory that holds its `bundles` directory, or the directory of the bundle
+  file when that directory is not named `bundles`. A bundle that selects no item
+  and only declares `requires:` is valid also when that source holds no item.
 - **Transitive `requires:`.** When the bundle declares `requires:`, every bundle
   in the transitive closure is installed. A bare `{ name }` entry is resolved
   against the same source; a `{ name, source }` entry is resolved cross-source
@@ -1021,8 +1026,8 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
-They report their count in the same stderr skip line as command items, unless
-`--quiet` or a kind restriction applies.
+They report their count in the same stderr skip line as command and hook items,
+unless `--quiet` or a kind restriction applies.
 
 All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force`

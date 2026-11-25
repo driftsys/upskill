@@ -206,10 +206,10 @@ Bundles are flat YAML manifest files, not directories:
 ### 2.3 Client-specific bodies
 
 There are no per-client body files. Each item has one body: the body of its
-canonical entrypoint (`SKILL.md`, `RULE.md`, `AGENT.md` or `COMMAND.md`). A file
-such as `SKILL.claude.md` or `RULE.copilot.md` has no special meaning; it is an
-ordinary supporting resource and is copied with the item's other resources
-(§2.4) for every client.
+canonical entrypoint (`SKILL.md`, `RULE.md`, `AGENT.md`, `COMMAND.md` or
+`HOOK.md`). A file such as `SKILL.claude.md` or `RULE.copilot.md` has no special
+meaning; it is an ordinary supporting resource and is copied with the item's
+other resources (§2.4) for every client.
 
 Authors express client differences in one of two ways:
 
@@ -1015,9 +1015,9 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
-They report their count in the same stderr skip line as command items, unless
-`--quiet` or a kind restriction applies. `upskill doctor` does not check LSP
-servers.
+They report their count in the same stderr skip line as command and hook items,
+unless `--quiet` or a kind restriction applies. `upskill doctor` does not check
+LSP servers.
 
 #### Item `requires` resolution
 
