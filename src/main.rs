@@ -2590,7 +2590,11 @@ fn run_pack(args: &PackArgs) -> i32 {
             .map(|catalog| catalog.render(&plugins, args.all))
             .transpose()?
             .unwrap_or_default();
-        for (target, count) in pack::write_plugin_dirs(&args.out, &directories, args.force)? {
+        // With a catalog, write to the normalized path that `source` uses.
+        let out = catalog
+            .as_ref()
+            .map_or(args.out.as_path(), |catalog| catalog.out_dir());
+        for (target, count) in pack::write_plugin_dirs(out, &directories, args.force)? {
             if !style::is_quiet() {
                 println!("Wrote {} ({} files)", target.display(), count);
             }

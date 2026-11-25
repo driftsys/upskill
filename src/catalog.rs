@@ -54,6 +54,7 @@ pub struct CatalogUpdate {
 
 /// The checked paths and parsed marketplace files of one run.
 pub struct Catalog {
+    out_abs: PathBuf,
     out_rel: Vec<String>,
     files: Vec<CatalogFile>,
 }
@@ -84,6 +85,14 @@ struct Marketplace {
 }
 
 impl Catalog {
+    /// The normalized absolute output directory that `source` is computed from.
+    ///
+    /// The plugin directories must be written here, so that they land in the
+    /// same tree as the marketplace files.
+    pub fn out_dir(&self) -> &Path {
+        &self.out_abs
+    }
+
     /// Check the output location and read only the selected clients' files.
     pub fn open(
         cwd: &Path,
@@ -164,7 +173,11 @@ impl Catalog {
                 entries,
             });
         }
-        Ok(Catalog { out_rel, files })
+        Ok(Catalog {
+            out_abs,
+            out_rel,
+            files,
+        })
     }
 
     /// Merge packed entries and render every file before any output is written.
@@ -352,7 +365,7 @@ mod tests {
     }
 
     #[test]
-    fn source_is_inside_out_follows_plan_decision_14() {
+    fn source_is_inside_requires_a_relative_path_below_out_without_parent_components() {
         for (source, out, expected) in [
             ("./plugins/a", vec!["plugins"], true),
             ("plugins/a", vec!["plugins"], true),
@@ -494,5 +507,121 @@ mod tests {
             fs::read(cwd.join("other/market/.claude-plugin/marketplace.json")).unwrap(),
             br#"{"name":"far","owner":{"name":"o"},"plugins":[]}"#
         );
+    }
+
+    fn plugin(client: PackClient, dir_name: &str) -> PackedPlugin {
+        PackedPlugin {
+            client,
+            name: "demo".into(),
+            description: "Demo".into(),
+            dir_name: dir_name.into(),
+        }
+    }
+
+    fn open_with(tmp: &Path, existing: &str, out: &str, clients: &[PackClient]) -> Catalog {
+        let path = tmp.join("market/.claude-plugin/marketplace.json");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, existing).unwrap();
+        Catalog::open(tmp, Path::new("market"), Path::new(out), clients, header()).unwrap()
+    }
+
+    fn names_of(update: &CatalogUpdate) -> Vec<String> {
+        let value: Value = serde_json::from_slice(&update.bytes).unwrap();
+        value["plugins"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|entry| entry["name"].as_str().unwrap().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn prune_keeps_an_entry_that_points_at_a_packed_directory_under_another_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let catalog = open_with(
+            tmp.path(),
+            r#"{"plugins":[
+                {"name":"alias","source":"./plugins/demo-claude"},
+                {"name":"stale","source":"./plugins/old"}]}"#,
+            "market/plugins",
+            &[PackClient::Claude],
+        );
+        let updates = catalog
+            .render(&[plugin(PackClient::Claude, "demo-claude")], true)
+            .unwrap();
+        assert_eq!(updates[0].removed, ["stale"]);
+        assert_eq!(names_of(&updates[0]), ["alias", "demo"]);
+    }
+
+    #[test]
+    fn prune_uses_only_the_packed_directories_of_the_same_client() {
+        let tmp = tempfile::tempdir().unwrap();
+        let catalog = open_with(
+            tmp.path(),
+            r#"{"plugins":[{"name":"other","source":"./plugins/demo-copilot"}]}"#,
+            "market/plugins",
+            &[PackClient::Claude, PackClient::Copilot],
+        );
+        let updates = catalog
+            .render(
+                &[
+                    plugin(PackClient::Claude, "demo-claude"),
+                    plugin(PackClient::Copilot, "demo-copilot"),
+                ],
+                true,
+            )
+            .unwrap();
+        assert!(updates[0].path.ends_with(".claude-plugin/marketplace.json"));
+        assert_eq!(updates[0].removed, ["other"]);
+    }
+
+    #[test]
+    fn source_follows_the_normalized_out_below_the_catalog_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        for (out, expected) in [
+            ("market/./plugins/../plugins", "./plugins/demo-claude"),
+            ("market", "./demo-claude"),
+            ("./market/", "./demo-claude"),
+        ] {
+            let catalog = open_with(tmp.path(), "{}", out, &[PackClient::Claude]);
+            let updates = catalog
+                .render(&[plugin(PackClient::Claude, "demo-claude")], false)
+                .unwrap();
+            let value: Value = serde_json::from_slice(&updates[0].bytes).unwrap();
+            assert_eq!(value["plugins"][0]["source"], expected, "{out}");
+        }
+    }
+
+    #[test]
+    fn write_update_removes_the_temporary_file_after_a_failed_rename() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("marketplace.json");
+        fs::create_dir_all(path.join("inner")).unwrap();
+        let update = CatalogUpdate {
+            path: path.clone(),
+            bytes: b"new".to_vec(),
+            removed: Vec::new(),
+        };
+        let error = write_update(&update).unwrap_err();
+        assert!(format!("{error:#}").contains("renaming"), "{error:#}");
+        assert!(fs::symlink_metadata(tmp.path().join("marketplace.json.tmp")).is_err());
+        assert!(path.join("inner").is_dir());
+    }
+
+    #[test]
+    fn write_update_replaces_a_directory_at_the_temporary_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("marketplace.json");
+        let tmp_path = tmp.path().join("marketplace.json.tmp");
+        fs::create_dir_all(tmp_path.join("inner")).unwrap();
+        fs::write(tmp_path.join("inner/file"), "x").unwrap();
+        let update = CatalogUpdate {
+            path: path.clone(),
+            bytes: b"new".to_vec(),
+            removed: Vec::new(),
+        };
+        write_update(&update).unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"new");
+        assert!(!tmp_path.exists());
     }
 }

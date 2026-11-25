@@ -1358,10 +1358,10 @@ source. `--out` is required. With no client flag, both outputs are written for
 each bundle; `--claude` or `--copilot` selects one client, and both flags select
 both. `--quiet` suppresses the result lines.
 
-Every bundle is built and every selected directory is checked before any
-directory is written. An unknown name fails with exit code 1 before any write.
 `--all` in a registry without bundles fails with exit code 1. `--all` together
-with a bundle name is a usage error (exit code 2).
+with a bundle name is a usage error (exit code 2). Two bundle files that declare
+one name fail the run with exit code 1, with a bundle name or with `--all`, even
+when neither is named.
 
 ```bash
 upskill pack my-bundle --source owner/repo@v1 --out dist
@@ -1521,18 +1521,19 @@ All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force`
 replaces that directory, including removal of files from an earlier run. A file
 or symbolic link at the client directory path is refused even with `--force`. An
-unknown bundle fails with exit code 1. Each client directory is first written in
-full to a staging directory next to it, `.<bundle>-<client>.upskill-stage`. When
-all are written, each existing client directory is renamed to
-`.<bundle>-<client>.upskill-old`, its staging directory is renamed into place,
-and `pack` then tries to remove the `.upskill-old` directories; one that cannot
-be removed is left in place. A failure while writing or renaming tries to undo
-the renames already made, so every client directory keeps its earlier content,
-and tries to remove the staging directories. If an undo rename also fails, the
-earlier content is at the `.upskill-old` path; the next `pack` run of that
-bundle deletes it, so copy it away first. A file, directory or link left at a
-staging or `.upskill-old` path by an earlier run is removed. An existing empty
-client directory is replaced by a new one, also without `--force`.
+unknown bundle fails with exit code 1 before any write. Each client directory is
+first written in full to a staging directory next to it,
+`.<bundle>-<client>.upskill-stage`. When all are written, each existing client
+directory is renamed to `.<bundle>-<client>.upskill-old`, its staging directory
+is renamed into place, and `pack` then tries to remove the `.upskill-old`
+directories; one that cannot be removed is left in place. A failure while
+writing or renaming tries to undo the renames already made, so every client
+directory keeps its earlier content, and tries to remove the staging
+directories. If an undo rename also fails, the earlier content is at the
+`.upskill-old` path; the next `pack` run of that bundle deletes it, so copy it
+away first. A file, directory or link left at a staging or `.upskill-old` path
+by an earlier run is removed. An existing empty client directory is replaced by
+a new one, also without `--force`.
 
 `--source` must parse as an install source, must not start with a hyphen and
 must contain only ASCII letters, digits and `/ @ : . _ - ~ +`. Whitespace and
@@ -1546,8 +1547,12 @@ With `--catalog <root>`, `pack` writes the marketplace files
 `<root>/.claude-plugin/marketplace.json` for Claude Code and
 `<root>/.github/plugin/marketplace.json` for Copilot CLI, one file for each
 selected client. An excluded client's file is not read or changed. `--out` must
-equal `<root>` or be below it, else exit code 2. The paths are compared as
-written, removing `.` and `..` without following symbolic links.
+equal `<root>` or be below it, else exit code 2. Both paths are made absolute
+and normalized by removing `.` and `..` components without following symbolic
+links, so a `..` after a symbolic link names the parent of the link. The plugin
+directories are written to the normalized `--out`, the same path that `source`
+is computed from, so the plugin directories and the marketplace files are always
+in one tree.
 
 Each packed entry holds `name` (the bundle name), `source` (the path from the
 catalog root to the plugin directory, prefixed with `./`, with `/` separators)
@@ -1560,9 +1565,12 @@ removal prints `Removed <name> from <path>`. A source is inside `--out` when,
 after ignoring empty and `.` components, it starts with the components of
 `--out` relative to the root and has at least one more component. Absolute
 paths, sources containing `..` and object sources are kept. When `--out` equals
-`--catalog`, `--all` removes every entry with such a relative-path source that
-is not packed in the run. No plugin directory is deleted by catalog pruning.
-Keep hand-written plugins outside `--out` if their entries must stay.
+`--catalog`, `--all` removes every entry whose `source` is a string that is not
+an absolute path, has no `..` component and has at least one component other
+than `.`; that includes string shorthand such as `owner/repo` and URL sources
+such as `https://example.com/owner/repo`, unless the run packs it. No plugin
+directory is deleted by catalog pruning. Keep hand-written plugins outside
+`--out` if their entries must stay.
 
 A new file needs both `--catalog-name` and `--catalog-owner`, which set `name`
 and `owner.name`; a missing flag is a usage error (exit code 2). Both flags need

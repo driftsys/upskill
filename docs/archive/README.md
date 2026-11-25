@@ -1380,9 +1380,8 @@ output line. The plan names the last function `write_updates`; the code has
 each file.
 
 Implementation: the pull request of branch `feat/pack-catalog`. Completion
-evidence: `just verify`, `just sanity` and
-`cargo +1.85 check --all-targets
---locked` passed on commit `8bc9859`.
+evidence: the CI checks of pull request #646 (Quality, MSRV (Rust 1.85), Test on
+ubuntu, macos and windows, Documentation and CI).
 
 Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions
 13 and 14; [specification §2.8](../specification/specification.md); the

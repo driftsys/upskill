@@ -268,9 +268,14 @@ upskill pack --all --force --source owner/repo@v1 --out packed --catalog .
 
 `--out` must be inside `--catalog`. The packed plugins are below `packed/`.
 `--all` removes a marketplace entry whose source is inside `--out` and names no
-packed directory, so `packed/` holds only packed plugin directories. A
-hand-written plugin that must stay in the catalog has its directory outside
-`--out`, for example below `plugins/`, and keeps its entry.
+packed directory. `pack` deletes no plugin directory, so remove the directories
+of bundles that left the registry yourself. A hand-written plugin that must stay
+in the catalog has its directory outside `--out`, for example below `plugins/`,
+and keeps its entry.
+
+If the write of the second marketplace file fails in CI, the first file and the
+plugin directories stay as written. Rerun the same command with `--force` to
+repair the run.
 
 Configure publication in that repository. upskill does not install, register or
 publish these plugins. Add README and LICENSE files yourself if needed;

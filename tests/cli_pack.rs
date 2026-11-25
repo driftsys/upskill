@@ -2419,3 +2419,147 @@ fn pack_catalog_reports_the_first_file_before_a_later_write_fails() {
     drop(result);
     assert!(claude.is_file());
 }
+
+#[cfg(unix)]
+#[test]
+fn pack_catalog_writes_plugins_and_marketplace_to_one_tree_for_a_link_and_parent_component() {
+    let f = Fixture::new_catalog();
+    let base = f._tmp.path();
+    fs::create_dir_all(base.join("other/subdir")).unwrap();
+    fs::create_dir_all(base.join("work")).unwrap();
+    std::os::unix::fs::symlink(base.join("other/subdir"), base.join("work/link")).unwrap();
+    let root = base.join("work/link/../market");
+    common::upskill_cmd(&f.home)
+        .current_dir(&f.registry)
+        .args(["pack", "demo", "--claude", "--source", "driftsys/demo@v1"])
+        .arg("--out")
+        .arg(root.join("plugins"))
+        .arg("--catalog")
+        .arg(&root)
+        .args(NEW_CATALOG)
+        .assert()
+        .success();
+    // The operating system resolves `link/..` to `other`; the catalog does not.
+    assert!(!base.join("other/market").exists());
+    let tree_root = base.join("work/market");
+    let marketplace = read_json(&tree_root.join(".claude-plugin/marketplace.json"));
+    let source = marketplace["plugins"][0]["source"].as_str().unwrap();
+    assert_eq!(source, "./plugins/demo-claude");
+    assert!(tree_root.join(source).join(".claude-plugin").is_dir());
+}
+
+#[test]
+fn pack_catalog_writes_no_marketplace_file_when_a_plugin_directory_fails() {
+    let f = Fixture::new_catalog();
+    let busy = f.market.join("plugins/demo-claude/keep");
+    fs::create_dir_all(busy.parent().unwrap()).unwrap();
+    fs::write(&busy, "keep").unwrap();
+    f.catalog(&[&["demo", "--claude"][..], NEW_CATALOG].concat())
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("is not empty"));
+    assert!(!f.market.join(".claude-plugin").exists());
+    let path = existing_catalog(&f, &catalog_golden("existing-claude.json"));
+    f.catalog(&["demo", "--claude"]).assert().code(1);
+    assert_eq!(
+        fs::read(path).unwrap(),
+        catalog_golden("existing-claude.json")
+    );
+}
+
+#[test]
+fn pack_catalog_keeps_the_fields_and_foreign_entries_of_an_existing_copilot_file() {
+    let f = Fixture::new_catalog();
+    let path = f.market.join(".github/plugin/marketplace.json");
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let existing = serde_json::json!({
+        "name": "copilot-market",
+        "owner": {"name": "keeper"},
+        "metadata": {"description": "Hand-written"},
+        "plugins": [{"name": "foreign", "source": "./vendor/foreign", "description": "F"}]
+    });
+    fs::write(&path, serde_json::to_vec(&existing).unwrap()).unwrap();
+    f.catalog(&[&["demo", "--copilot"][..], NEW_CATALOG].concat())
+        .assert()
+        .success();
+    let value = read_json(&path);
+    assert_eq!(value["name"], "copilot-market");
+    assert_eq!(value["owner"], serde_json::json!({"name": "keeper"}));
+    assert_eq!(value["metadata"], existing["metadata"]);
+    let names: Vec<_> = value["plugins"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|entry| entry["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["demo", "foreign"]);
+}
+
+fn stale_catalog(f: &Fixture) -> PathBuf {
+    existing_catalog(
+        f,
+        br#"{"name":"m","owner":{"name":"o"},"plugins":[
+            {"name":"zeta","source":"./plugins/zeta-old"},
+            {"name":"alpha","source":"./plugins/alpha-old"},
+            {"name":"bare","source":"./vendor/bare"},
+            {"name":"nosource"}
+        ]}"#,
+    )
+}
+
+#[test]
+fn pack_catalog_all_reports_removals_in_name_order_before_the_write_line() {
+    let f = Fixture::new_catalog();
+    let path = stale_catalog(&f);
+    let output = f.catalog(&["--all", "--claude"]).assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let lines: Vec<_> = stdout.lines().collect();
+    let tail = &lines[lines.len() - 3..];
+    assert_eq!(
+        tail,
+        [
+            format!("Removed alpha from {}", path.display()),
+            format!("Removed zeta from {}", path.display()),
+            format!("Wrote {}", path.display()),
+        ]
+    );
+}
+
+#[test]
+fn pack_catalog_keeps_the_absent_fields_of_a_kept_entry_absent() {
+    let f = Fixture::new_catalog();
+    let path = stale_catalog(&f);
+    f.catalog(&["--all", "--claude"]).assert().success();
+    let value = read_json(&path);
+    let entries = value["plugins"].as_array().unwrap();
+    let bare = entries.iter().find(|e| e["name"] == "bare").unwrap();
+    assert_eq!(
+        bare,
+        &serde_json::json!({"name":"bare","source":"./vendor/bare"})
+    );
+    let nosource = entries.iter().find(|e| e["name"] == "nosource").unwrap();
+    assert_eq!(nosource, &serde_json::json!({"name":"nosource"}));
+}
+
+#[test]
+fn pack_catalog_quiet_prints_no_removed_and_no_wrote_line() {
+    let f = Fixture::new_catalog();
+    let path = stale_catalog(&f);
+    f.catalog(&["--all", "--claude", "--quiet"])
+        .assert()
+        .success()
+        .stdout("");
+    assert!(!fs::read_to_string(path).unwrap().contains("zeta"));
+}
+
+#[test]
+fn pack_catalog_refuses_an_empty_catalog_name_or_owner() {
+    for flags in [
+        &["--catalog-name", "", "--catalog-owner", "o"][..],
+        &["--catalog-name", "m", "--catalog-owner", ""][..],
+    ] {
+        let f = Fixture::new_catalog();
+        f.catalog(&[&["demo"][..], flags].concat()).assert().code(2);
+        assert!(!f.market.exists());
+    }
+}
