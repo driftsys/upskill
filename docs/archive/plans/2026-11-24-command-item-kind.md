@@ -24,7 +24,7 @@ function and renders them with a new `generate::render_command`.
 **Tech stack:** Rust 2024, `serde`, `serde_yaml_ng`, `anyhow`; integration tests
 with `assert_cmd` through `common::upskill_cmd`.
 
-**Spec:** [plugin MVP design](../specs/2026-11-24-plugin-mvp-design.md),
+**Spec:** [plugin MVP design](../../wip/specs/2026-11-24-plugin-mvp-design.md),
 sections 1 (the `add`/`update` skip and the kind lists), 2, 3 and "Left to the
 builder"; [AD-0046](../../adr/0046-plugin-mvp-components.md), Decisions 1, 2, 8
 and 11.

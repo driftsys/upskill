@@ -1188,6 +1188,30 @@ Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions
 [command guide](../book/commands.md#upskill-pack-bundle---source-source---out-dir);
 the [recipe](../book/recipes.md#publish-a-bundle-as-client-plugins).
 
+## Command item kind in lint, fmt, new and `pack` output
+
+Source path: `docs/wip/plans/2026-11-24-command-item-kind.md`. The raw
+[plan](plans/2026-11-24-command-item-kind.md) is retained unchanged, except that
+its link to the plugin MVP design now points to `docs/wip/specs/`. It is the
+plan of story [#632](https://github.com/driftsys/upskill/issues/632), one of the
+seven stories of the
+[plugin MVP design](../wip/specs/2026-11-24-plugin-mvp-design.md). That design
+is not archived: the stories #631 and #635 to #637 are not implemented.
+
+The same pull request also delivered the stderr report of the LSP servers that
+`add` and `update` skip. That report is the last criterion of story
+[#634](https://github.com/driftsys/upskill/issues/634); the
+[LSP servers entry](#lsp-servers-in-pack-output) records the move.
+
+Implementation: the pull request of branch `feat/pack-commands`. Completion
+evidence: `just verify` and `just sanity` passed on commit `5748408`.
+
+Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions
+2, 8 and 11; [content format](../topics/0001-content-format.md);
+[format spec](../specification/format-spec.md);
+[specification §2.8](../specification/specification.md); the
+[command guide](../book/commands.md); the [conventions](../book/conventions.md).
+
 ## Triage of 2026-11-23
 
 Issue [#536](https://github.com/driftsys/upskill/issues/536). The 36 documents
