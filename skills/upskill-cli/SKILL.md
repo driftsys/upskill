@@ -20,8 +20,8 @@ side you are on.
 
 - **Source registry** — the repo where SSOT content is authored. Holds a
   `skills/` directory with item subfolders (`skills/<name>/SKILL.md`, `RULE.md`,
-  `AGENT.md`, `COMMAND.md`) and bundle manifests (`skills/<name>.bundle.yaml`).
-  The layout is documented in
+  `AGENT.md`, `COMMAND.md`, `HOOK.md`) and bundle manifests
+  (`skills/<name>.bundle.yaml`). The layout is documented in
   [Conventions](https://driftsys.github.io/upskill/conventions.html). Author
   commands: `new`, `fmt`, `lint`, `pack`.
 - **Consumer project** — a downstream repo that installs from one or more source
@@ -272,7 +272,8 @@ than from this skill.
 ### Source side vs consumer side
 
 - **Source registry**: holds `skills/<name>/SKILL.md`, `RULE.md`, `AGENT.md`,
-  `COMMAND.md`, and `skills/<name>.bundle.yaml`. Author here; commit here.
+  `COMMAND.md`, `HOOK.md`, and `skills/<name>.bundle.yaml`. Author here; commit
+  here.
 - **Consumer project**: holds generated `.claude/`, `.github/`, `.opencode/`
   content plus `.upskill-lock.json`. Generated files are produced by
   `upskill add` / `upskill update`. **Never hand-edit generated files** —

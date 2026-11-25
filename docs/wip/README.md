@@ -13,8 +13,9 @@ and their implementation plans in `plans/`.
   output), [#634](https://github.com/driftsys/upskill/issues/634) (LSP servers
   in `pack` output), and [#631](https://github.com/driftsys/upskill/issues/631)
   (hook items) are implemented. `add` and `update` report skipped command items,
-  hook items and LSP servers in one line. Plans for #632, #633 and #634 are
-  archived:
+  hook items and LSP servers in one line. Plans for #631, #632, #633 and #634
+  are archived:
+  [#631](../archive/README.md#hook-item-kind-in-lint-fmt-new-and-pack-output),
   [#632](../archive/README.md#command-item-kind-in-lint-fmt-new-and-pack-output),
   [#633](../archive/README.md#mcp-servers-in-pack-output) and
   [#634](../archive/README.md#lsp-servers-in-pack-output). The design stays here
@@ -23,11 +24,6 @@ and their implementation plans in `plans/`.
   decisions are in [AD-0046](../adr/0046-plugin-mvp-components.md). It replaced
   the hook item kind draft, which is in the
   [archive](../archive/README.md#hook-item-kind-draft).
-
-- [Hook item kind plan](plans/2026-11-25-hook-item-kind.md). Story
-  [#631](https://github.com/driftsys/upskill/issues/631) is implemented. The
-  plan remains active here until it is gardened into durable records and
-  archived.
 
 The triage of 2026-11-23
 ([#536](https://github.com/driftsys/upskill/issues/536)) moved the 36 other

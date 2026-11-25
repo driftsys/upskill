@@ -91,9 +91,9 @@ metadata: # optional — freeform
 | Filename stem = `name:` field | `my-bundle.bundle.yaml` → `name: my-bundle` |
 | No collision with item names  | Bundle `foo` + skill `foo/` → lint error    |
 
-A command-only directory (`COMMAND.md` with no `SKILL.md`, `RULE.md` or
-`AGENT.md`) is excluded from this check, so a bundle may share its name with a
-command.
+A command-only or hook-only directory (`COMMAND.md` or `HOOK.md` with no
+`SKILL.md`, `RULE.md` or `AGENT.md`) is excluded from this check, so a bundle
+may share its name with a command or a hook.
 
 **Name collision prevention:** If your bundle is called `prompt-engineering`,
 don't have a skill directory also called `prompt-engineering/`. Use a distinct
@@ -256,7 +256,7 @@ upskill lint <registry-dir> --strict
 Common findings:
 
 - `name-collision` — bundle name matches an item directory name (a directory
-  that holds only `COMMAND.md` is excluded)
+  that holds only `COMMAND.md` or only `HOOK.md` is excluded)
 - `command-with-skill` — one directory holds both `COMMAND.md` and `SKILL.md`
 - Schema parse error — missing required field or invalid YAML
 - Filename/name mismatch — stem doesn't match `name:` field

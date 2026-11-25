@@ -488,8 +488,8 @@ Implementations map these fields to each client's agent definition format:
 ### 3.5 Client-specific passthrough blocks
 
 Items MAY include top-level blocks named after specific clients for fields that
-have no neutral equivalent. `COMMAND.md` does not accept them: its frontmatter
-rejects unknown fields (§3.9).
+have no neutral equivalent. `COMMAND.md` and `HOOK.md` do not accept them: their
+frontmatter rejects unknown fields (§3.9, §3.10).
 
 ```yaml
 copilot:
@@ -1553,7 +1553,7 @@ Current version: **1**.
   within the same schema version. Implementations MUST ignore unknown fields
   they don't support. There are two exceptions: an entry of the bundle `lsps`
   map rejects unknown fields (see the `lsps` map in §3.7), and so does the
-  frontmatter of a `COMMAND.md` (§3.9).
+  frontmatter of a `COMMAND.md` (§3.9) and of a `HOOK.md` (§3.10).
 - BREAKING changes (removed fields, renamed fields, changed semantics of
   existing fields, new required fields) MUST increment the schema version.
 - Each published schema version MUST have a stable reference document with a
@@ -1567,8 +1567,8 @@ An implementation is conformant with this specification if:
 
 1. It correctly parses all frontmatter fields defined in §3, accepting unknown
    fields within `metadata` and client passthrough blocks without error. The
-   exception is `COMMAND.md`, whose frontmatter rejects unknown fields and
-   accepts no client passthrough blocks (§3.9).
+   exceptions are `COMMAND.md` and `HOOK.md`, whose frontmatter rejects unknown
+   fields and accepts no client passthrough blocks (§3.9, §3.10).
 2. It validates `name` against §2.1 constraints and rejects non-conforming names
    with a clear error.
 3. It rejects files with unsupported `schema` versions per §8.

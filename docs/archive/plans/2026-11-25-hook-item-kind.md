@@ -27,13 +27,13 @@ notice-only hook file keeps its exact bytes.
 `pulldown-cmark` 0.11 (already a dependency), `anyhow`; integration tests with
 `assert_cmd` through `common::upskill_cmd`.
 
-**Spec:** [plugin MVP design](../specs/2026-11-24-plugin-mvp-design.md), section
-1, "Left to the builder" and "Not verified";
+**Spec:** [plugin MVP design](../../wip/specs/2026-11-24-plugin-mvp-design.md),
+section 1, "Left to the builder" and "Not verified";
 [AD-0046](../../adr/0046-plugin-mvp-components.md), Decisions 1, 3 to 7, 11 and
 12, and the amendment of AD-0044 Decision 5; the source convention of the
-[hook item kind draft](../../archive/specs/2026-11-18-hook-item-kind-design.md),
-sections 1 to 4;
-[technote T4](../../technotes/t4-copilot-plugin-component-trials.md), trial 5.
+[hook item kind draft](../specs/2026-11-18-hook-item-kind-design.md), sections 1
+to 4; [technote T4](../../technotes/t4-copilot-plugin-component-trials.md),
+trial 5.
 
 **Starting point:** stories #633 and #634 and the three tasks of the
 [command item kind plan](2026-11-24-command-item-kind.md) are merged. This plan
