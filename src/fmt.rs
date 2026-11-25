@@ -742,6 +742,24 @@ mod tests {
     }
 
     #[test]
+    fn canonicalise_formats_a_command_body() {
+        let raw = concat!(
+            "---\n",
+            "schema: 1\n",
+            "name: standup\n",
+            "description: Write the notes.\n",
+            "---\n",
+            "\n",
+            "* one\n",
+        );
+        let out = canonicalise(raw, Path::new("standup/COMMAND.md")).unwrap();
+        assert!(
+            out.ends_with("---\n\n- one\n"),
+            "command body not formatted canonically:\n{out}"
+        );
+    }
+
+    #[test]
     fn canonicalise_formats_body() {
         // `*` bullets become `-`, extra blank lines collapse, and the
         // single blank-line separator after the frontmatter is kept.

@@ -256,6 +256,28 @@ fn add_of_a_command_item_directory_as_source_is_an_error_that_names_pack() {
     assert!(!f.consumer.join(".upskill-lock.json").exists());
 }
 
+/// A directory that holds `COMMAND.md` and also `RULE.md` is refused as an
+/// ordinary item directory source, not as a command item directory.
+#[test]
+fn add_of_a_directory_with_a_rule_and_a_command_entry_is_refused_as_a_rule_directory() {
+    let f = Fixture::new();
+    let source = f.registry.join("skills/style");
+    fs::write(
+        source.join("COMMAND.md"),
+        "---\nschema: 1\nname: style\ndescription: Test item\n---\n\nTest body.\n",
+    )
+    .unwrap();
+    f.command("add")
+        .arg(&source)
+        .arg("--claude")
+        .assert()
+        .code(1)
+        .stderr(predicate::str::contains(
+            "is an item directory (it holds RULE.md)",
+        ))
+        .stderr(predicate::str::contains("is a command item directory").not());
+}
+
 #[test]
 fn add_kind_command_is_a_usage_error() {
     let f = Fixture::new();
@@ -406,8 +428,13 @@ fn add_of_a_name_that_matches_a_scanned_skill_and_a_command_file_installs_the_sk
     assert!(f.consumer.join(".claude/skills/dual/SKILL.md").is_file());
 }
 
+/// A recorded skill that the source turned into a command is a recorded
+/// item that the source no longer lists, so `update` fails with the general
+/// "no matching items" error (the same as for a deleted skill), not with the
+/// command-item error of `add`. Nothing is removed or rewritten.
 #[test]
-fn update_does_not_stop_for_a_recorded_skill_that_the_source_turned_into_a_command() {
+fn update_of_a_recorded_skill_that_the_source_turned_into_a_command_keeps_it_and_names_no_command_error()
+ {
     let f = Fixture::new();
     f.add(&["alpha", "--claude"]).success();
     fs::remove_file(f.registry.join("skills/alpha/SKILL.md")).unwrap();
@@ -418,7 +445,14 @@ fn update_does_not_stop_for_a_recorded_skill_that_the_source_turned_into_a_comma
     .unwrap();
     f.command("update")
         .assert()
-        .stderr(predicate::str::contains("is a command item;").not());
+        .code(1)
+        .stderr(predicate::str::contains("is a command item;").not())
+        .stderr(predicate::str::contains(
+            "no matching items or bundles in source for: alpha",
+        ));
+    assert!(f.consumer.join(".claude/skills/alpha/SKILL.md").is_file());
+    let lock = fs::read_to_string(f.consumer.join(".upskill-lock.json")).unwrap();
+    assert!(lock.contains("\"name\": \"alpha\""), "{lock}");
 }
 
 #[test]

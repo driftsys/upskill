@@ -232,7 +232,7 @@ fn holds_bundle_file(dir: &Path) -> bool {
 }
 
 /// Remove `.` and `..` components without reading the file system.
-fn normalize_lexically(path: &Path) -> PathBuf {
+pub(crate) fn normalize_lexically(path: &Path) -> PathBuf {
     use std::path::Component;
     let mut out = PathBuf::new();
     for component in path.components() {

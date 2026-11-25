@@ -301,6 +301,26 @@ fn lint_flags_bundle_item_name_collision() {
 }
 
 #[test]
+fn lint_excludes_a_command_only_directory_from_name_collision() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("standup/COMMAND.md"),
+        "---\nschema: 1\nname: standup\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    write(
+        &tmp.path().join("standup.bundle.yaml"),
+        "schema: 1\nname: standup\ndescription: a bundle\nitems:\n  commands:\n    - standup\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict"])
+        .assert()
+        .stdout(predicates::str::contains("name-collision").not());
+}
+
+#[test]
 fn lint_accepts_items_without_schema_field() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
@@ -484,6 +504,48 @@ fn lint_flags_a_skill_name_mismatch_from_a_bare_relative_path() {
     }
 }
 
+#[test]
+fn lint_flags_a_skill_name_mismatch_through_a_parent_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("foo/SKILL.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    fs::create_dir_all(tmp.path().join("foo/sub")).unwrap();
+    for arg in ["..", "../SKILL.md"] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path().join("foo/sub"))
+            .args(["lint", "--strict", arg])
+            .assert()
+            .code(1)
+            .stdout(predicates::str::contains(
+                "skill `name: bar` must equal directory `foo`",
+            ));
+    }
+}
+
+#[test]
+fn lint_flags_a_command_name_mismatch_through_a_parent_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("foo/COMMAND.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    fs::create_dir_all(tmp.path().join("foo/sub")).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path().join("foo/sub"))
+        .args(["lint", "--strict", "../COMMAND.md"])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains(
+            "command `name: bar` must equal directory `foo`",
+        ));
+}
+
 /// A symbolic link to a skill directory is compared by the name that the
 /// path has as written, not by the name of the link target.
 #[cfg(unix)]
@@ -508,6 +570,20 @@ fn lint_compares_a_skill_through_a_symlinked_directory_by_the_link_name() {
         .assert()
         .success()
         .stdout(predicates::str::contains("must equal directory").not());
+    // The same directory under another link name does not match `linked`.
+    std::os::unix::fs::symlink(
+        tmp.path().join("store/target"),
+        tmp.path().join("skills/other"),
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "skills/other/SKILL.md"])
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains(
+            "skill `name: linked` must equal directory `other`",
+        ));
 }
 
 #[test]

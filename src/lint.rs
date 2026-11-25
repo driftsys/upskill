@@ -33,6 +33,7 @@ use crate::generate::Client;
 use crate::generate::directives;
 use crate::model::{Agent, Command, Rule, Skill};
 use crate::parse::frontmatter;
+use crate::pipeline::normalize_lexically;
 
 /// Severity of a [`Finding`]. `--strict` promotes every `Warning` to
 /// `Error` at the report level.
@@ -374,12 +375,14 @@ fn parse_kind(raw: &str, kind: FileKind) -> Result<(Option<String>, &str)> {
 }
 
 /// Name of the directory that holds an entrypoint file. The path is made
-/// absolute first (without following symbolic links), because the parent of a bare relative path such as
-/// `COMMAND.md` has no file name.
+/// absolute and then normalized lexically (`.` removed, `..` resolved against
+/// the previous component), because the parent of a bare relative path such
+/// as `COMMAND.md` or `..` has no usable file name. Neither step reads the
+/// disk or follows symbolic links, so a symlinked item directory is compared
+/// by the name it has in the path as written.
 fn item_dir_name(file: &Path) -> Option<String> {
-    // `absolute` does not resolve symbolic links, so a symlinked item
-    // directory is compared by the name it has in the path as written.
     let abs = std::path::absolute(file).unwrap_or_else(|_| file.to_path_buf());
+    let abs = normalize_lexically(&abs);
     abs.parent()?.file_name()?.to_str().map(str::to_owned)
 }
 

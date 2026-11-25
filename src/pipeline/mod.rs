@@ -54,6 +54,7 @@ pub use bundle_plan::{
 pub use check::{
     CheckedSource, GitRemote, LookupError, RemoteLookup, ScopedCheck, SourceStatus, check_scopes,
 };
+pub(crate) use discovery::normalize_lexically;
 pub use git::{FetchedSource, fetch_ssot, install_from_git_url, install_from_source};
 pub(crate) use hash::hash_item_dir;
 pub use install::install_from_local_path;

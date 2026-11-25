@@ -478,7 +478,8 @@ Implementations map these fields to each client's agent definition format:
 ### 3.5 Client-specific passthrough blocks
 
 Items MAY include top-level blocks named after specific clients for fields that
-have no neutral equivalent:
+have no neutral equivalent. `COMMAND.md` does not accept them: its frontmatter
+rejects unknown fields (§3.9).
 
 ```yaml
 copilot:
@@ -1341,9 +1342,10 @@ state how far the output for each client and kind is verified.
 
 This section describes the expected output per client: which files an
 implementation writes for each item kind, and how SSOT frontmatter maps onto
-each client's frontmatter shape. It is informational; client conventions may
-change independently of this specification. Implementations SHOULD verify output
-against actual client behavior.
+each client's frontmatter shape. Command items have no `add` output and no
+subsection here; `pack` writes them as described in §3.9. It is informational;
+client conventions may change independently of this specification.
+Implementations SHOULD verify output against actual client behavior.
 
 This section is deliberately scoped to "what file and frontmatter each client
 reads". Adjacent behavior — bridging files, IDE configuration mutation,
@@ -1452,7 +1454,9 @@ Current version: **1**.
 An implementation is conformant with this specification if:
 
 1. It correctly parses all frontmatter fields defined in §3, accepting unknown
-   fields within `metadata` and client passthrough blocks without error.
+   fields within `metadata` and client passthrough blocks without error. The
+   exception is `COMMAND.md`, whose frontmatter rejects unknown fields and
+   accepts no client passthrough blocks (§3.9).
 2. It validates `name` against §2.1 constraints and rejects non-conforming names
    with a clear error.
 3. It rejects files with unsupported `schema` versions per §8.
