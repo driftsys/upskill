@@ -2,7 +2,7 @@
 
 mod hooks;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
@@ -49,6 +49,17 @@ pub fn select_bundles(
     all: bool,
 ) -> Result<Vec<SelectedBundle>> {
     let bundles = crate::parse::bundle::discover(registry_root)?;
+    let mut paths: BTreeMap<&str, &Path> = BTreeMap::new();
+    for (path, bundle) in &bundles {
+        if let Some(first) = paths.insert(&bundle.name, path) {
+            bail!(
+                "two bundle files declare the name '{}': {} and {}",
+                bundle.name,
+                first.display(),
+                path.display()
+            );
+        }
+    }
     if all {
         if bundles.is_empty() {
             bail!("no bundle in {}", registry_root.display());
@@ -446,6 +457,14 @@ pub fn write_plugin_dirs(
     dirs: &[PluginDir],
     force: bool,
 ) -> Result<Vec<(PathBuf, usize)>> {
+    let mut names = BTreeSet::new();
+    for directory in dirs {
+        anyhow::ensure!(
+            names.insert(directory.dir_name.as_str()),
+            "two plugin directories have the name {}",
+            directory.dir_name
+        );
+    }
     for directory in dirs {
         let target = out.join(&directory.dir_name);
         match std::fs::symlink_metadata(&target) {
@@ -565,6 +584,25 @@ fn write_stage(stage: &Path, directory: &PluginDir) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn write_plugin_dirs_refuses_two_directories_with_one_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = || PluginDir {
+            dir_name: "x-claude".into(),
+            files: vec![PackFile {
+                rel: "a".into(),
+                bytes: b"a".to_vec(),
+                mode: None,
+            }],
+        };
+        let error = write_plugin_dirs(tmp.path(), &[dir(), dir()], true).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "two plugin directories have the name x-claude"
+        );
+        assert!(std::fs::read_dir(tmp.path()).unwrap().next().is_none());
+    }
 
     #[test]
     fn select_bundles_sorts_and_removes_repeated_names() {

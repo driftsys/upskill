@@ -146,6 +146,43 @@ fn pack_all_writes_every_bundle_of_the_registry() {
 }
 
 #[test]
+fn pack_refuses_two_bundle_files_with_one_name_and_keeps_the_output() {
+    let f = Fixture::new();
+    for dir in ["a", "b"] {
+        let path = f.registry.join(dir);
+        fs::create_dir_all(&path).unwrap();
+        fs::write(
+            path.join("twin.bundle.yaml"),
+            "schema: 1\nname: twin\ndescription: Twin\nitems:\n  skills: [alpha]\n",
+        )
+        .unwrap();
+    }
+    let kept = f.out.join("twin-claude");
+    fs::create_dir_all(&kept).unwrap();
+    fs::write(kept.join("keep"), "earlier").unwrap();
+    for args in [vec!["--all"], vec!["twin"]] {
+        let mut cmd = common::upskill_cmd(&f.home);
+        cmd.current_dir(&f.registry)
+            .arg("pack")
+            .args(&args)
+            .args([
+                "--source",
+                "driftsys/demo@v1",
+                "--claude",
+                "--force",
+                "--out",
+            ])
+            .arg(&f.out)
+            .assert()
+            .code(1)
+            .stderr(predicates::str::contains(
+                "two bundle files declare the name 'twin'",
+            ));
+        assert_eq!(fs::read_to_string(kept.join("keep")).unwrap(), "earlier");
+    }
+}
+
+#[test]
 fn pack_of_a_repeated_bundle_name_writes_it_once() {
     let f = Fixture::new();
     let output = f.pack(&["demo", "demo", "--claude"]).assert().success();
