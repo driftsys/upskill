@@ -1,11 +1,13 @@
 //! Hook body sections and validation shared by author commands.
 
 use crate::generate::{Client, directives};
+use crate::lint::ENTRYPOINTS;
 use crate::model::hook::is_run_file_name;
 use crate::model::{Hook, HookEvent, Matcher};
+use crate::pipeline::filter_ignored;
 use pulldown_cmark::{Event, HeadingLevel, Parser, Tag, TagEnd};
 use std::collections::BTreeSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct HookSection {
@@ -104,6 +106,10 @@ pub fn split_hook_body(body: &str, events: &[&str]) -> HookBody {
     }
 }
 
+/// Message for the hook name `context`, shared by lint and `upskill new hook`.
+pub const RESERVED_CONTEXT_NAME_MESSAGE: &str =
+    "the hook name `context` is reserved: `pack` writes the context files to hooks/context/";
+
 #[derive(Debug)]
 pub struct HookProblem {
     pub rule_id: &'static str,
@@ -194,7 +200,7 @@ pub fn check_hook(hook: &Hook, body: &str, dir: &Path) -> Vec<HookProblem> {
         );
     }
     if name == "context" {
-        push("hook-name", None, "the hook name `context` is reserved: `pack` writes the context files to hooks/context/".into());
+        push("hook-name", None, RESERVED_CONTEXT_NAME_MESSAGE.into());
     }
     let events: Vec<_> = hook.events.keys().map(String::as_str).collect();
     let sections = split_hook_body(body, &events);
@@ -247,6 +253,22 @@ pub fn check_hook(hook: &Hook, body: &str, dir: &Path) -> Vec<HookProblem> {
                         "`run: {run}` must be the name of one file in the item directory, without a path or arguments"
                     ),
                 );
+            } else if ENTRYPOINTS.contains(&run) {
+                push(
+                    "hook-run",
+                    None,
+                    format!(
+                        "event `{key}`: run file `{run}` is not copied by pack: it is an entry file"
+                    ),
+                );
+            } else if filter_ignored(vec![PathBuf::from(run)], &hook.ignore).is_empty() {
+                push(
+                    "hook-run",
+                    None,
+                    format!(
+                        "event `{key}`: run file `{run}` is not copied by pack: it matches `ignore`"
+                    ),
+                );
             } else if !dir.join(run).is_file() {
                 push(
                     "hook-run",
@@ -264,7 +286,13 @@ pub fn check_hook(hook: &Hook, body: &str, dir: &Path) -> Vec<HookProblem> {
             .filter(|key| HookEvent::parse(key).is_some())
         {
             if let Err(error) = directives::process(&sections.text(key), Client::Claude) {
-                push("directive", None, format!("event `{key}`: {error:#}"));
+                push(
+                    "directive",
+                    None,
+                    format!(
+                        "event `{key}`: {error:#} (line numbers count from the first line of the text of this event, not of the file)"
+                    ),
+                );
             }
         }
     }
@@ -428,7 +456,7 @@ mod tests {
                 "## session-start\n\n<!-- @client:claude -->\nA.\n\n## prompt-submit\n\nB.\n<!-- @endclient -->\n",
                 "directive",
                 None,
-                "event `session-start`: unclosed `@client:` directive opened at line 1",
+                "event `session-start`: unclosed `@client:` directive opened at line 1 (line numbers count from the first line of the text of this event, not of the file)",
             ),
         ];
         for (events, body, rule_id, line, message) in cases {
@@ -450,10 +478,7 @@ mod tests {
                 "Upper",
                 "hook name `Upper` must consist of lowercase letters, digits and hyphens, without a hyphen at the start or end, and with at most 64 characters (format-spec §2.1)",
             ),
-            (
-                "context",
-                "the hook name `context` is reserved: `pack` writes the context files to hooks/context/",
-            ),
+            ("context", RESERVED_CONTEXT_NAME_MESSAGE),
         ] {
             let hook: Hook = serde_yaml_ng::from_str(&format!(
                 "name: {name}\ndescription: d\nevents: {{ session-start: }}\n"
@@ -462,6 +487,35 @@ mod tests {
             let problems = check_hook(&hook, "Text.", &dir);
             assert_eq!(problems.len(), 1);
             assert_eq!(problems[0].rule_id, "hook-name");
+            assert_eq!(problems[0].message, message);
+        }
+    }
+
+    #[test]
+    fn check_hook_refuses_a_run_file_that_pack_does_not_copy() {
+        let tmp = tempfile::tempdir().unwrap();
+        for file in ["HOOK.md", "skip.sh"] {
+            std::fs::write(tmp.path().join(file), "x").unwrap();
+        }
+        for (run, ignore, message) in [
+            (
+                "HOOK.md",
+                "[]",
+                "event `session-start`: run file `HOOK.md` is not copied by pack: it is an entry file",
+            ),
+            (
+                "skip.sh",
+                "[\"*.sh\"]",
+                "event `session-start`: run file `skip.sh` is not copied by pack: it matches `ignore`",
+            ),
+        ] {
+            let hook: Hook = serde_yaml_ng::from_str(&format!(
+                "name: guard\ndescription: d\nevents: {{ session-start: {{ run: {run} }} }}\nignore: {ignore}\n"
+            ))
+            .unwrap();
+            let problems = check_hook(&hook, "", tmp.path());
+            assert_eq!(problems.len(), 1, "{problems:?}");
+            assert_eq!(problems[0].rule_id, "hook-run");
             assert_eq!(problems[0].message, message);
         }
     }

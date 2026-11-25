@@ -216,7 +216,8 @@ pub(crate) fn discover(root: &Path) -> Result<Vec<PathBuf>> {
     Ok(out)
 }
 
-const ENTRYPOINTS: [&str; 5] = ["RULE.md", "SKILL.md", "AGENT.md", "COMMAND.md", "HOOK.md"];
+pub(crate) const ENTRYPOINTS: [&str; 5] =
+    ["RULE.md", "SKILL.md", "AGENT.md", "COMMAND.md", "HOOK.md"];
 
 /// Collect entrypoint files (`RULE.md`, `SKILL.md`, `AGENT.md`,
 /// `COMMAND.md`, `HOOK.md`) that exist directly inside `dir`. This also handles

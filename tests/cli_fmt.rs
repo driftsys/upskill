@@ -375,3 +375,24 @@ fn fmt_orders_hook_keys_canonically() {
         .success();
     assert_eq!(fs::read_to_string(&path).unwrap(), after);
 }
+
+#[test]
+fn fmt_formats_the_body_of_a_hook() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let path = tmp.path().join("guard/HOOK.md");
+    write(
+        &path,
+        "---\nschema: 1\nname: guard\ndescription: Test hook\nevents:\n  session-start:\n---\n\n* one\n* two\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "---\nschema: 1\nname: guard\ndescription: Test hook\nevents:\n  session-start:\n---\n\n- one\n- two\n"
+    );
+}

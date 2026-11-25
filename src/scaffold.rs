@@ -31,6 +31,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use std::path::{Path, PathBuf};
 
 use crate::lint::is_consumer_project;
+use crate::parse::hook::RESERVED_CONTEXT_NAME_MESSAGE;
 
 /// Item kind to scaffold. Maps 1:1 to format-spec entrypoint files.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -97,6 +98,9 @@ pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport
         ));
     }
     validate_name(name)?;
+    if kind == NewKind::Hook && name == "context" {
+        bail!("{RESERVED_CONTEXT_NAME_MESSAGE}");
+    }
 
     let item_dir = root.join(name);
     let entry_path = item_dir.join(kind.entry());

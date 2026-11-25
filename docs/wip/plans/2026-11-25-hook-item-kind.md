@@ -1118,6 +1118,9 @@ same texts, pretty-printed.
 
 - [ ] **Step 6: Update the documentation**
 
+  - Add to §3.10 of `docs/topics/0001-content-format.md` the sentence "A client
+    without a key gets no hook for that event." (it describes `pack` output; it
+    was removed from Task 1).
   - `docs/book/commands.md` (section `upskill pack`) and §2.8 of
     `docs/specification/specification.md`, which hold the same text: the row
     "Notice hook, when rules target this client" becomes "Hook file, when rules

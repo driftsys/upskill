@@ -117,11 +117,59 @@ pub struct HookSettings {
     pub timeout: Option<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum Matcher {
     All(String),
     PerClient(ClientMatcher),
+}
+
+impl<'de> Deserialize<'de> for Matcher {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct MatcherVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for MatcherVisitor {
+            type Value = Matcher;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a matcher string or a map with `claude` or `copilot`")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Matcher, E> {
+                Ok(Matcher::All(value.to_string()))
+            }
+
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<Matcher, A::Error> {
+                let mut matcher = ClientMatcher {
+                    claude: None,
+                    copilot: None,
+                };
+                while let Some(key) = map.next_key::<String>()? {
+                    let slot = match key.as_str() {
+                        "claude" => &mut matcher.claude,
+                        "copilot" => &mut matcher.copilot,
+                        other => {
+                            return Err(serde::de::Error::custom(format!(
+                                "unknown matcher client `{other}`; expected `claude` or `copilot`"
+                            )));
+                        }
+                    };
+                    if slot.is_some() {
+                        return Err(serde::de::Error::custom(format!(
+                            "duplicate matcher client `{key}`"
+                        )));
+                    }
+                    *slot = Some(map.next_value()?);
+                }
+                Ok(Matcher::PerClient(matcher))
+            }
+        }
+
+        deserializer.deserialize_any(MatcherVisitor)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -216,7 +264,12 @@ mod tests {
 
     #[test]
     fn matcher_map_refuses_an_unknown_client_key() {
-        assert!(serde_yaml_ng::from_str::<Matcher>("{ codex: x }").is_err());
+        let err = serde_yaml_ng::from_str::<Matcher>("{ codex: x }").unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("unknown matcher client `codex`; expected `claude` or `copilot`"),
+            "{err}"
+        );
     }
 
     #[test]

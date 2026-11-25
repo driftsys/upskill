@@ -320,3 +320,17 @@ fn new_hook_colocates_with_a_skill() {
     assert!(tmp.path().join("x/SKILL.md").is_file());
     assert!(tmp.path().join("x/HOOK.md").is_file());
 }
+
+#[test]
+fn new_hook_refuses_the_reserved_name_context() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", "hook", "context"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("hook name `context` is reserved"));
+    assert!(!tmp.path().join("context").exists());
+}

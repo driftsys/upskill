@@ -38,6 +38,7 @@ mod discovery;
 mod git;
 mod hash;
 mod ignore;
+pub(crate) use ignore::filter_ignored;
 mod install;
 mod lifecycle;
 mod output;

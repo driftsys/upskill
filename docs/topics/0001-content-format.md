@@ -1069,7 +1069,7 @@ original relative order):
 | Skill   | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
 | Agent   | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
 | Command | `schema`, `name`, `description`, `argument-hint`, `license`, `metadata`, `ignore`                                                                                               |
-| Hook    | schema, name, description, events, license, metadata, ignore                                                                                                                    |
+| Hook    | `schema`, `name`, `description`, `events`, `license`, `metadata`, `ignore`                                                                                                      |
 | Bundle  | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `lsps`, `metadata`, `extras`                                                                |
 
 **Comment preservation.** Canonicalisation:
@@ -1171,9 +1171,8 @@ Each event value is empty or a map with these settings:
 | `timeout` | integer       | Seconds; allowed only with `run`.    |
 
 A matcher string applies to both clients. A matcher map accepts only `claude`
-and `copilot`, and MUST contain at least one of them. A client without a key
-gets no hook for that event. `matcher` is not allowed on `prompt-submit` or
-`stop`.
+and `copilot`, and MUST contain at least one of them. `matcher` is not allowed
+on `prompt-submit` or `stop`.
 
 The ten portable event names are `session-start`, `session-end`,
 `prompt-submit`, `pre-tool`, `post-tool`, `permission-request`, `stop`,
