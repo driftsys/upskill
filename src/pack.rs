@@ -1,5 +1,7 @@
 //! Build and write Claude Code and GitHub Copilot CLI plugin directories from a source bundle.
 
+mod hooks;
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -308,24 +310,14 @@ pub fn build(
     source: &str,
     client: PackClient,
 ) -> Result<PluginDir> {
-    let (generator, suffix, manifest_path, hook_path, hook) = match client {
-        PackClient::Claude => (
-            Client::Claude,
-            "claude",
-            ".claude-plugin/plugin.json",
-            "hooks/hooks.json",
-            include_str!("../plugins/upskill-claude/hooks/hooks.json"),
-        ),
-        PackClient::Copilot => (
-            Client::Copilot,
-            "copilot",
-            "plugin.json",
-            "hooks.json",
-            include_str!("../plugins/upskill-copilot/hooks.json"),
-        ),
+    let (generator, suffix, manifest_path) = match client {
+        PackClient::Claude => (Client::Claude, "claude", ".claude-plugin/plugin.json"),
+        PackClient::Copilot => (Client::Copilot, "copilot", "plugin.json"),
     };
     let output = plan_bundle_output(registry_root, bundle, generator)?;
     check_command_names(&output.bundles)?;
+    hooks::check_hook_names(&output.bundles)?;
+    let hooks = hooks::read_pack_hooks(&output.hooks)?;
     let entry = output
         .bundles
         .last()
@@ -377,12 +369,8 @@ pub fn build(
             &[],
             generator,
         )?);
-        files.push(PackFile {
-            rel: hook_path.into(),
-            bytes: hook.as_bytes().to_vec(),
-            mode: None,
-        });
     }
+    files.extend(hooks::hook_files(&hooks, !output.rules.is_empty(), client)?);
     Ok(PluginDir {
         dir_name: format!("{bundle}-{suffix}"),
         files,

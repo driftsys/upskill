@@ -60,15 +60,21 @@ pub struct Bundle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PackOnlyKind {
     Command,
+    Hook,
     LspServer,
 }
 
 impl PackOnlyKind {
-    pub const ALL: [PackOnlyKind; 2] = [PackOnlyKind::Command, PackOnlyKind::LspServer];
+    pub const ALL: [PackOnlyKind; 3] = [
+        PackOnlyKind::Command,
+        PackOnlyKind::Hook,
+        PackOnlyKind::LspServer,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
             Self::Command => "command item(s)",
+            Self::Hook => "hook item(s)",
             Self::LspServer => "LSP server(s)",
         }
     }
@@ -79,6 +85,7 @@ impl Bundle {
     pub fn pack_only(&self, kind: PackOnlyKind) -> Vec<&str> {
         match kind {
             PackOnlyKind::Command => self.items.commands.iter().map(String::as_str).collect(),
+            PackOnlyKind::Hook => self.items.hooks.iter().map(String::as_str).collect(),
             PackOnlyKind::LspServer => self.lsps.keys().map(String::as_str).collect(),
         }
     }
@@ -114,15 +121,18 @@ pub struct BundleItems {
     pub agents: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub commands: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hooks: Vec<String>,
 }
 
 impl BundleItems {
-    /// True when no rule, skill, agent, or command is named.
+    /// True when no rule, skill, agent, command, or hook is named.
     pub fn is_empty(&self) -> bool {
         self.rules.is_empty()
             && self.skills.is_empty()
             && self.agents.is_empty()
             && self.commands.is_empty()
+            && self.hooks.is_empty()
     }
 }
 
@@ -444,10 +454,32 @@ mod tests {
         );
         assert_eq!(
             PackOnlyKind::ALL,
-            [PackOnlyKind::Command, PackOnlyKind::LspServer]
+            [
+                PackOnlyKind::Command,
+                PackOnlyKind::Hook,
+                PackOnlyKind::LspServer
+            ]
         );
         assert_eq!(PackOnlyKind::Command.label(), "command item(s)");
         assert_eq!(PackOnlyKind::LspServer.label(), "LSP server(s)");
+    }
+
+    #[test]
+    fn pack_only_items_lists_hooks_between_commands_and_lsp_servers() {
+        let bundle: Bundle = serde_yaml_ng::from_str(
+            "schema: 1\nname: demo\ndescription: Test\nitems:\n  commands: [c]\n  hooks: [h2, h1]\nlsps:\n  l:\n    command: l\n    extensions: { .rs: rust }\n",
+        )
+        .unwrap();
+        assert_eq!(
+            pack_only_items(&[bundle]),
+            vec![
+                (PackOnlyKind::Command, "c".into()),
+                (PackOnlyKind::Hook, "h1".into()),
+                (PackOnlyKind::Hook, "h2".into()),
+                (PackOnlyKind::LspServer, "l".into()),
+            ]
+        );
+        assert_eq!(PackOnlyKind::Hook.label(), "hook item(s)");
     }
 
     fn lsp_bundle(entry: &str) -> Bundle {

@@ -99,8 +99,8 @@ pub struct InstallReport {
     /// source that a whole-source install did not take. An item in
     /// `removed_excluded` or `kept_excluded` is not listed here.
     pub excluded: Vec<(ItemKind, String)>,
-    /// Commands and LSP servers of the prepared bundles, each once. Empty
-    /// for a kind-restricted run.
+    /// Commands, hooks and LSP servers of the prepared bundles, each once.
+    /// Empty for a kind-restricted run.
     pub pack_only_skipped: Vec<(PackOnlyKind, String)>,
 }
 
@@ -686,8 +686,8 @@ pub struct UpdateReport {
     /// Items that an exclude kept out of the run, each once, over all
     /// sources. Also set by a dry run.
     pub excluded: Vec<(ItemKind, String)>,
-    /// Commands and LSP servers of the prepared bundles, each once. Empty
-    /// for a kind-restricted run; also set by an update dry run.
+    /// Commands, hooks and LSP servers of the prepared bundles, each once.
+    /// Empty for a kind-restricted run; also set by an update dry run.
     pub pack_only_skipped: Vec<(PackOnlyKind, String)>,
     /// Paths recorded when `update` adopted a `schema: 1` lockfile, sorted
     /// and without duplicates; `None` when no adoption happened.

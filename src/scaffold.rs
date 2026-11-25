@@ -4,13 +4,14 @@
 //! tree. Writes one file at `<cwd>/<name>/<KIND>.md` (per format-spec
 //! §2.1 and [ADR-0006](../../docs/adr/0006-flat-item-layout.md)) with
 //! the minimum frontmatter the spec requires plus kind-specific
-//! defaults: `mode: subagent` / `model: sonnet` for agents.
+//! defaults: `mode: subagent` / `model: sonnet` for agents, and a
+//! `session-start` context event for hooks.
 //!
 //! When `<cwd>/<name>/` already exists with a different kind's
 //! entrypoint, the command adds the requested kind as a co-located
 //! sibling (format-spec §2.1) provided every existing **skill or command**
 //! entrypoint's explicit `name:` matches `<name>` (§2.1).
-//! Rule and agent co-locatees may carry a divergent `name:` and do
+//! Rule, agent and hook co-locatees may carry a divergent `name:` and do
 //! not block co-location. The user keeps a single item directory
 //! expressing one capability across multiple kinds. A command and a skill
 //! cannot share a directory.
@@ -30,6 +31,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use std::path::{Path, PathBuf};
 
 use crate::lint::is_consumer_project;
+use crate::parse::hook::RESERVED_CONTEXT_NAME_MESSAGE;
 
 /// Item kind to scaffold. Maps 1:1 to format-spec entrypoint files.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,17 +40,21 @@ pub enum NewKind {
     Skill,
     Agent,
     Command,
+    Hook,
 }
 
 impl NewKind {
-    /// Parse the CLI value (`rule` / `skill` / `agent` / `command`).
+    /// Parse the CLI value (`rule` / `skill` / `agent` / `command` / `hook`).
     pub fn parse(s: &str) -> Result<Self> {
         match s {
             "rule" => Ok(Self::Rule),
             "skill" => Ok(Self::Skill),
             "agent" => Ok(Self::Agent),
             "command" => Ok(Self::Command),
-            other => bail!("unknown kind `{other}` — expected one of: rule, skill, agent, command"),
+            "hook" => Ok(Self::Hook),
+            other => {
+                bail!("unknown kind `{other}` — expected one of: rule, skill, agent, command, hook")
+            }
         }
     }
 
@@ -58,6 +64,7 @@ impl NewKind {
             Self::Skill => "SKILL.md",
             Self::Agent => "AGENT.md",
             Self::Command => "COMMAND.md",
+            Self::Hook => "HOOK.md",
         }
     }
 }
@@ -79,7 +86,7 @@ pub struct ScaffoldReport {
 /// `<root>/<name>/` already exists as a co-locatable item directory,
 /// the new entrypoint is added as a sibling provided no existing
 /// **skill or command** entrypoint has a `name:` that diverges from `<name>`.
-/// Rule and agent co-locatees may carry divergent names without
+/// Rule, agent and hook co-locatees may carry divergent names without
 /// blocking the operation. Refuses if the directory has no recognised
 /// entrypoints at all.
 pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport> {
@@ -91,6 +98,9 @@ pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport
         ));
     }
     validate_name(name)?;
+    if kind == NewKind::Hook && name == "context" {
+        bail!("{RESERVED_CONTEXT_NAME_MESSAGE}");
+    }
 
     let item_dir = root.join(name);
     let entry_path = item_dir.join(kind.entry());
@@ -129,21 +139,22 @@ pub fn scaffold(root: &Path, kind: NewKind, name: &str) -> Result<ScaffoldReport
 /// `name == dir` (§2.1).
 ///
 /// Skill / Command: MUST match the directory name (§2.1).
-/// Rule / Agent: MAY diverge — no check performed, mirroring
+/// Rule / Agent / Hook: MAY diverge — no check performed, mirroring
 /// `lint.rs::check_name_matches_dir`.
 const ENTRYPOINT_SKILL_MATCH: &[(&str, bool)] = &[
     ("RULE.md", false),
     ("SKILL.md", true),
     ("AGENT.md", false),
     ("COMMAND.md", true),
+    ("HOOK.md", false),
 ];
 
 /// Verify that `dir` is a co-locatable item directory for `name`: it
 /// contains at least one recognised entrypoint, and every skill or command
 /// entrypoint it contains has no explicit `name:` that differs from `name`.
 ///
-/// Rule and agent entrypoints are exempt from the name-equality check
-/// because format-spec §2.1 (Slice 1) allows rule/agent `name` to
+/// Rule, agent and hook entrypoints are exempt from the name-equality check
+/// because format-spec §2.1 (Slice 1) allows rule/agent/hook `name` to
 /// diverge from the folder. This mirrors the identity rule in
 /// `lint.rs::check_name_matches_dir`.
 fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str, kind: NewKind) -> Result<()> {
@@ -164,7 +175,7 @@ fn validate_existing_item_dir_for_coloc(dir: &Path, name: &str, kind: NewKind) -
         }
         saw_entrypoint = true;
         if !must_match_dir {
-            // Rule / Agent: name may diverge from the folder — no check.
+            // Rule / Agent / Hook: name may diverge from the folder — no check.
             continue;
         }
         let raw =
@@ -262,6 +273,9 @@ fn render(kind: NewKind, name: &str) -> String {
              ## Overview\n\
              \n\
              TODO write the command body. Replace this scaffold before publishing.\n",
+        ),
+        NewKind::Hook => format!(
+            "---\nschema: 1\nname: {name}\ndescription: TODO describe the text that this hook adds to each session.\nevents:\n  session-start:\n---\n\n## session-start\n\nTODO write the text that the model receives at the start of each session.\n",
         ),
         NewKind::Agent => format!(
             "---\n\

@@ -7,9 +7,9 @@
 ## Abstract
 
 This specification defines a portable, tool-agnostic format for authoring rules,
-skills, agents, and commands targeting AI coding assistants. It also defines a
-bundle manifest format for distributing curated sets of these items. The format
-is inspired by and compatible with the Agent Skills open standard
+skills, agents, commands, and hooks targeting AI coding assistants. It also
+defines a bundle manifest format for distributing curated sets of these items.
+The format is inspired by and compatible with the Agent Skills open standard
 (agentskills.io) and extends it to cover always-on rules and agent definitions,
 which the open standard does not address.
 
@@ -20,9 +20,9 @@ body conventions, and conditional directives.
 
 ## Audience
 
-Authors of AI-assistance content (rules, skills, agents, commands) targeting
-multiple AI coding clients from a single source. Implementers of tools that
-consume this format to generate client-specific outputs. Maintainers of CI
+Authors of AI-assistance content (rules, skills, agents, commands, hooks)
+targeting multiple AI coding clients from a single source. Implementers of tools
+that consume this format to generate client-specific outputs. Maintainers of CI
 pipelines that validate content against this specification.
 
 ## Conformance keywords
@@ -45,8 +45,8 @@ upskill generates no output for Codex.
 
 ## 1. Terminology
 
-**Item**: a rule, skill, agent, or command. The four kinds share common fields
-and differ in semantic role and kind-specific fields.
+**Item**: a rule, skill, agent, command, or hook. The five kinds share common
+fields and differ in semantic role and kind-specific fields.
 
 **Rule**: always-on behavioral guidance, loaded into every session of compatible
 clients. Rules constrain behavior ("never do X", "always check Y").
@@ -61,6 +61,10 @@ establish identity and role ("you are a security reviewer; when invoked, do X").
 
 **Command**: a procedure that the user calls by name. `upskill add` and
 `upskill update` do not install command items. Only `pack` renders a command.
+
+**Hook**: text for the model's context or a script, run on a client event.
+`upskill add` and `upskill update` do not install hook items. Only
+`upskill pack` renders a hook item.
 
 **Bundle**: a manifest file grouping items (and optionally other bundles) by
 reference for distribution. Bundles contain no content themselves.
@@ -105,6 +109,8 @@ determined by the entrypoint filename:
 │   └── AGENT.md
 ├── <name-command>/
 │   └── COMMAND.md
+├── <name-hook>/
+│   └── HOOK.md
 └── <name-d>/                # optional co-location: multiple kinds in one item directory
     ├── SKILL.md             # name omitted or name: <name-d> (skill must match the directory)
     └── RULE.md              # name: <name-d> or a divergent name (rule/agent name MAY differ)
@@ -113,7 +119,7 @@ determined by the entrypoint filename:
 Constraints:
 
 - An item directory MUST contain at least one entrypoint file (`RULE.md`,
-  `SKILL.md`, `AGENT.md`, or `COMMAND.md`).
+  `SKILL.md`, `AGENT.md`, `COMMAND.md`, or `HOOK.md`).
 - An item directory MAY contain more than one entrypoint when the kinds
   represent a tightly-coupled set for one capability (for example, a skill
   paired with its enforcing rule, or an agent paired with a skill it preloads).
@@ -129,6 +135,8 @@ Constraints:
     name (the Agent Skills standard mandate). When absent, the skill's effective
     name is the directory name.
   - A **command** MUST declare `name:`, and it MUST equal the directory name.
+  - A **hook** `name:` is optional and MAY differ from the directory name. When
+    absent, the effective name is the directory name.
   - A **rule** or **agent** `name:` comes from frontmatter and MAY differ from
     the directory name. When absent, the effective name is the directory name. A
     divergent rule/agent name is legal and is not a diagnostic.
@@ -142,9 +150,9 @@ Constraints:
 - The **effective name** MUST NOT start or end with a hyphen.
 - The **effective name** MUST be at most 64 characters.
 - Kind is determined by the entrypoint filename: `RULE.md` for a rule,
-  `SKILL.md` for a skill, `AGENT.md` for an agent, and `COMMAND.md` for a
-  command. Implementations MUST NOT infer kind from any other source (parent
-  directory name, frontmatter field, etc.).
+  `SKILL.md` for a skill, `AGENT.md` for an agent, `COMMAND.md` for a command,
+  and `HOOK.md` for a hook. Implementations MUST NOT infer kind from any other
+  source (parent directory name, frontmatter field, etc.).
 - `<item-root>` is the SSOT path within a **source registry** repository. SSOT
   items live only in source registries; consumer projects (where developers run
   `upskill add`) only ever hold generated, client-specific outputs and never
@@ -199,10 +207,10 @@ Bundles are flat YAML manifest files, not directories:
 ### 2.3 Client-specific bodies
 
 There are no per-client body files. Each item has one body: the body of its
-canonical entrypoint (`SKILL.md`, `RULE.md`, `AGENT.md` or `COMMAND.md`). A file
-such as `SKILL.claude.md` or `RULE.copilot.md` has no special meaning; it is an
-ordinary supporting resource and is copied with the item's other resources
-(§2.4) for every client.
+canonical entrypoint (`SKILL.md`, `RULE.md`, `AGENT.md`, `COMMAND.md` or
+`HOOK.md`). A file such as `SKILL.claude.md` or `RULE.copilot.md` has no special
+meaning; it is an ordinary supporting resource and is copied with the item's
+other resources (§2.4) for every client.
 
 Authors express client differences in one of two ways:
 
@@ -271,7 +279,9 @@ Items MAY contain supporting files in their directory:
   markdown relative links.
 - Implementations MUST preserve supporting files and their directory structure
   during generation (copy them alongside the generated entrypoint into the
-  client-expected location).
+  client-expected location). A hook item copies its supporting files only for a
+  command hook, into `hooks/<name>/`; a hook item with only context hooks copies
+  none, so a file that its text links to is not available in the output.
 - An item MAY declare an `ignore` list (§3.1) to scope which supporting files
   are copied. The list is `.gitignore`-style and **subtractive only** — there is
   no `include`/allowlist form. A file matching any `ignore` pattern is not
@@ -286,15 +296,17 @@ Items MAY contain supporting files in their directory:
 
 ## 3. Frontmatter schema
 
-Item entrypoint files (`RULE.md`, `SKILL.md`, `AGENT.md`, `COMMAND.md`) begin
-with YAML frontmatter delimited by `---` markers, followed by a blank line and
-then markdown body content. Bundle manifests (`*.bundle.yaml`, §2.2) are pure
-YAML: the file content is the YAML, with no `---` wrapping and no body.
+Item entrypoint files (`RULE.md`, `SKILL.md`, `AGENT.md`, `COMMAND.md`,
+`HOOK.md`) begin with YAML frontmatter delimited by `---` markers, followed by a
+blank line and then markdown body content. Bundle manifests (`*.bundle.yaml`,
+§2.2) are pure YAML: the file content is the YAML, with no `---` wrapping and no
+body.
 
 ### 3.1 Common fields (all kinds and bundles)
 
 Commands require `name` and accept only the fields listed in §3.9. They reject
-`audience` and `requires`.
+`audience` and `requires`. Hooks also reject these fields and accept only the
+fields listed in §3.10.
 
 | Field         | Type     | Required | Description                                                                                                                                                                                                |
 | ------------- | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -325,14 +337,14 @@ Field semantics:
 
 - `schema`: implementations MUST reject files with `schema` greater than the
   highest version they support and SHOULD report a clear upgrade message. See §8
-  for evolution rules. An item (rule, skill, agent, or command) without a
+  for evolution rules. An item (rule, skill, agent, command, or hook) without a
   `schema` field is read as `schema: 1`, so a standard Agent Skills file with
   only `name` and `description` is accepted. A bundle MUST declare `schema`.
 - `name`: the effective name (§2.1) is used as the `/slash-command` name in
   clients that support it and as the identifier in bundle manifests. When `name`
-  is omitted on a rule, skill, or agent, the directory name is the effective
-  name; a rule or agent `name` MAY differ from its directory. A command MUST
-  declare `name`, equal to its directory name.
+  is omitted on a rule, skill, agent, or hook, the directory name is the
+  effective name; a rule, agent, or hook `name` MAY differ from its directory. A
+  command MUST declare `name`, equal to its directory name.
 - `description`: for skills, this is the activation hint — the model reads it
   during discovery and decides whether to load the full body. For rules and
   agents, it serves as documentation. Front-load the key use case. Convention:
@@ -478,8 +490,8 @@ Implementations map these fields to each client's agent definition format:
 ### 3.5 Client-specific passthrough blocks
 
 Items MAY include top-level blocks named after specific clients for fields that
-have no neutral equivalent. `COMMAND.md` does not accept them: its frontmatter
-rejects unknown fields (§3.9).
+have no neutral equivalent. `COMMAND.md` and `HOOK.md` do not accept them: their
+frontmatter rejects unknown fields (§3.9, §3.10).
 
 ```yaml
 copilot:
@@ -576,6 +588,7 @@ human-readable documentation; the parser ignores it (§2.2).
 | `items.skills`   | string[] | no       | Skill names.                         |
 | `items.agents`   | string[] | no       | Agent names.                         |
 | `items.commands` | string[] | no       | Command names (§3.9).                |
+| `items.hooks`    | string[] | no       | Hook names (§3.10).                  |
 | `requires`       | array    | no       | Bundle dependencies. See below.      |
 | `plugins`        | map      | no       | Client-native plugins. See below.    |
 | `mcps`           | map      | no       | MCP server descriptors. See below.   |
@@ -1005,9 +1018,9 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
-They report their count in the same stderr skip line as command items, unless
-`--quiet` or a kind restriction applies. `upskill doctor` does not check LSP
-servers.
+They report their count in the same stderr skip line as command and hook items,
+unless `--quiet` or a kind restriction applies. `upskill doctor` does not check
+LSP servers.
 
 #### Item `requires` resolution
 
@@ -1059,6 +1072,7 @@ original relative order):
 | Skill   | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
 | Agent   | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
 | Command | `schema`, `name`, `description`, `argument-hint`, `license`, `metadata`, `ignore`                                                                                               |
+| Hook    | `schema`, `name`, `description`, `events`, `license`, `metadata`, `ignore`                                                                                                      |
 | Bundle  | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `lsps`, `metadata`, `extras`                                                                |
 
 **Comment preservation.** Canonicalisation:
@@ -1110,6 +1124,108 @@ Copilot CLI, it writes the same path with `name`, `description`, and
 resources beside `SKILL.md`, honour `ignore`, and process client directives in
 the body. The user calls a command as `/<plugin>:<name>`. Commands have no
 opencode output.
+
+### 3.10 Hook-specific fields
+
+```markdown
+---
+schema: 1
+name: edit-checks
+description: Add session guidance and check edited files.
+events:
+  session-start:
+  post-tool:
+    matcher:
+      claude: Edit|Write
+      copilot: edit
+    run: check.sh
+    timeout: 10
+---
+
+## session-start
+
+Read the team guide before editing files.
+
+## post-tool
+
+The script checks the edited file.
+```
+
+A bundle lists effective hook names under `items.hooks`.
+
+| Field         | Type   | Required | Meaning                                         |
+| ------------- | ------ | -------- | ----------------------------------------------- |
+| `name`        | string | no       | Effective name; defaults to the directory name. |
+| `description` | string | YES      | Purpose of the hook.                            |
+| `events`      | map    | YES      | At least one portable event and its settings.   |
+
+Hooks accept the common fields `schema`, `license`, `metadata`, and `ignore`.
+Any other field is an error, including `audience`, `requires`, and
+client-specific passthrough blocks. The effective name follows §2.1: lowercase
+letters, digits and hyphens, no leading or trailing hyphen, at most 64
+characters. The name `context` is reserved.
+
+Each event value is empty or a map with these settings:
+
+| Setting   | Type          | Meaning                              |
+| --------- | ------------- | ------------------------------------ |
+| `matcher` | string or map | Client event filter; see below.      |
+| `run`     | string        | One file name in the item directory. |
+| `timeout` | integer       | Seconds; allowed only with `run`.    |
+
+A matcher string applies to both clients. A matcher map accepts only `claude`
+and `copilot`, and MUST contain at least one of them. A client without a key
+gets no hook for that event. A context hook (an event without `run`) cannot have
+a `matcher` on `prompt-submit` or `stop`: Claude Code ignores a matcher on these
+events, so the texts of several hooks would have no defined order. A command
+hook on these events may have a matcher.
+
+The ten portable events map to these client event names. An unknown event is an
+error.
+
+| Portable             | Claude Code         | Copilot CLI           |
+| -------------------- | ------------------- | --------------------- |
+| `session-start`      | `SessionStart`      | `sessionStart`        |
+| `session-end`        | `SessionEnd`        | `sessionEnd`          |
+| `prompt-submit`      | `UserPromptSubmit`  | `userPromptSubmitted` |
+| `pre-tool`           | `PreToolUse`        | `preToolUse`          |
+| `post-tool`          | `PostToolUse`       | `postToolUse`         |
+| `permission-request` | `PermissionRequest` | `permissionRequest`   |
+| `stop`               | `Stop`              | `agentStop`           |
+| `subagent-start`     | `SubagentStart`     | `subagentStart`       |
+| `subagent-stop`      | `SubagentStop`      | `subagentStop`        |
+| `pre-compact`        | `PreCompact`        | `preCompact`          |
+
+An event without `run` is a **context hook**. It requires text and is valid only
+on `session-start`, `prompt-submit`, `post-tool`, and `subagent-start`. An event
+with `run` is a **command hook**; its body text is documentation. `run` MUST
+name an existing file, without a path or arguments, that is not an entry file,
+not matched by `ignore`, not a symbolic link, and, on Unix, has an executable
+bit. Its first character MUST be an ASCII letter or digit; the remaining
+characters MUST be ASCII letters, digits, `.`, `_`, or `-`.
+
+A level-2 heading whose text equals a key of `events` starts that event's
+section. Text before the first event heading is the preamble. Each event's text
+is its trimmed preamble and trimmed section, joined with one blank line; either
+part may be empty. Without event headings, the whole body is the text for every
+event. A repeated event heading is an error.
+
+Level-3 headings are content. A level-2 heading that is not an event is an error
+when the body has event sections; use a level-3 heading for content. Headings
+inside code fences are content, and a setext level-2 heading starts a section.
+Each event text MUST have balanced `@client` blocks (§6.3), including when the
+whole body is balanced.
+
+Only `upskill pack` renders hook items. For context hooks, it merges
+client-processed text for each event and distinct matcher in closure order into
+ASCII-only static JSON files. A `session-start` context hook without a matcher
+gets `startup|clear|compact` in Claude Code and no matcher in Copilot CLI. The
+generated entries print the files without calling `upskill`. For command hooks,
+`pack` copies the item resources with their modes to `hooks/<name>/`, excluding
+entry files and `ignore` matches, and writes entries that set `UPSKILL_CLIENT`
+and run the script. See
+[the pack specification](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#28-pack)
+for output paths, JSON formats, commands, notice ordering and known limits.
 
 ---
 
@@ -1342,11 +1458,11 @@ state how far the output for each client and kind is verified.
 
 This section describes the expected output per client: which files an
 implementation writes for each item kind, and how SSOT frontmatter maps onto
-each client's frontmatter shape. Command items have no `add` output and no
-subsection here; `pack` writes them as described in §3.9. This section, §7, is
-informational; client conventions may change independently of this
-specification. Implementations SHOULD verify output against actual client
-behavior.
+each client's frontmatter shape. Command items and hook items have no `add`
+output and no subsection here; `pack` writes them as described in §3.9 and
+§3.10. This section, §7, is informational; client conventions may change
+independently of this specification. Implementations SHOULD verify output
+against actual client behavior.
 
 This section is deliberately scoped to "what file and frontmatter each client
 reads". Adjacent behavior — bridging files, IDE configuration mutation,
@@ -1430,9 +1546,9 @@ Current version: **1**.
   version and suggesting an upgrade of the implementing tool.
 - MUST accept files with `schema` equal to or less than the highest supported
   version.
-- MUST read an item (rule, skill, agent, or command) without a `schema` field as
-  `schema: 1`. Bundle discovery skips a bundle file without `schema`; an
-  explicit-path load or lint of that file fails with a parse error (§2.2).
+- MUST read an item (rule, skill, agent, command, or hook) without a `schema`
+  field as `schema: 1`. Bundle discovery skips a bundle file without `schema`;
+  an explicit-path load or lint of that file fails with a parse error (§2.2).
 - When processing older schema versions, MUST NOT silently apply newer defaults
   that would change the file's meaning.
 
@@ -1442,7 +1558,7 @@ Current version: **1**.
   within the same schema version. Implementations MUST ignore unknown fields
   they don't support. There are two exceptions: an entry of the bundle `lsps`
   map rejects unknown fields (see the `lsps` map in §3.7), and so does the
-  frontmatter of a `COMMAND.md` (§3.9).
+  frontmatter of a `COMMAND.md` (§3.9) and of a `HOOK.md` (§3.10).
 - BREAKING changes (removed fields, renamed fields, changed semantics of
   existing fields, new required fields) MUST increment the schema version.
 - Each published schema version MUST have a stable reference document with a
@@ -1456,8 +1572,8 @@ An implementation is conformant with this specification if:
 
 1. It correctly parses all frontmatter fields defined in §3, accepting unknown
    fields within `metadata` and client passthrough blocks without error. The
-   exception is `COMMAND.md`, whose frontmatter rejects unknown fields and
-   accepts no client passthrough blocks (§3.9).
+   exceptions are `COMMAND.md` and `HOOK.md`, whose frontmatter rejects unknown
+   fields and accepts no client passthrough blocks (§3.9, §3.10).
 2. It validates `name` against §2.1 constraints and rejects non-conforming names
    with a clear error.
 3. It rejects files with unsupported `schema` versions per §8.

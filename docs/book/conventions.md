@@ -33,6 +33,8 @@ files sit together under it, flat:
     │   └── SKILL.md
     ├── security-reviewer/               # agent item
     │   └── AGENT.md
+    ├── team-reminder/                   # hook item
+    │   └── HOOK.md
     └── api-handler/                     # co-located rule + skill
         ├── RULE.md
         └── SKILL.md
@@ -46,10 +48,10 @@ Why this shape:
   `requires:` and `items:` lists are visually adjacent to their targets.
 - **Matches `upskill new`.** Running `upskill new <kind> <name>` from inside
   `skills/` produces `skills/<name>/<KIND>.md` with no follow-up moves.
-- **Holds all four kinds.** Despite the directory name, `skills/` carries rules,
-  agents, and commands as well. Kind is determined by the entrypoint filename
-  ([format-spec §2.1](format-spec.md#21-item-directory-structure)), not by the
-  parent directory.
+- **Holds all five kinds.** Despite the directory name, `skills/` carries rules,
+  agents, commands, and hooks as well. Kind is determined by the entrypoint
+  filename ([format-spec §2.1](format-spec.md#21-item-directory-structure)), not
+  by the parent directory.
 
 Keep the registry root outside every client directory (such as `.claude/` or
 `~/.claude`): upskill does not support a source that is rooted in a client

@@ -36,7 +36,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::lint::{discover, is_consumer_project};
-use crate::model::{Agent, Bundle, Command, Rule, Skill};
+use crate::model::{Agent, Bundle, Command, Hook, Rule, Skill};
 use crate::parse::frontmatter;
 
 // ── Canonical key-order tables (mirror struct field declarations) ────
@@ -52,6 +52,16 @@ const BUNDLE_KEY_ORDER: &[&str] = &[
     "mcps",
     "lsps",
     "metadata",
+];
+
+const HOOK_KEY_ORDER: &[&str] = &[
+    "schema",
+    "name",
+    "description",
+    "events",
+    "license",
+    "metadata",
+    "ignore",
 ];
 
 const COMMAND_KEY_ORDER: &[&str] = &[
@@ -178,8 +188,9 @@ fn format_file(path: &Path) -> Result<bool> {
 /// Produce the canonical form of `raw` for the kind inferred from
 /// `path`'s filename. Pure function — no I/O, no mutation.
 ///
-/// Items (Skill/Rule/Agent/Command) are frontmatter+body — the frontmatter
-/// keys are reordered and the body is formatted by `canonical_body`. Bundles are pure YAML (§2.2, ADR-0007), so the file
+/// Items (Skill/Rule/Agent/Command/Hook) are frontmatter+body — the frontmatter
+/// keys are reordered and the body is formatted by `canonical_body`. Bundles
+/// are pure YAML (§2.2, ADR-0007), so the file
 /// content is the canonical YAML verbatim, no `---` wrapping.
 fn canonicalise(raw: &str, path: &Path) -> Result<String> {
     let kind = file_kind(path)
@@ -196,6 +207,7 @@ fn canonicalise(raw: &str, path: &Path) -> Result<String> {
         EntryKind::Rule => canonicalise_item::<Rule>(raw, path, RULE_KEY_ORDER),
         EntryKind::Agent => canonicalise_item::<Agent>(raw, path, AGENT_KEY_ORDER),
         EntryKind::Command => canonicalise_item::<Command>(raw, path, COMMAND_KEY_ORDER),
+        EntryKind::Hook => canonicalise_item::<Hook>(raw, path, HOOK_KEY_ORDER),
     }
 }
 
@@ -511,6 +523,7 @@ enum EntryKind {
     Rule,
     Agent,
     Command,
+    Hook,
     Bundle,
 }
 
@@ -520,6 +533,7 @@ fn file_kind(path: &Path) -> Option<EntryKind> {
         "RULE.md" => Some(EntryKind::Rule),
         "AGENT.md" => Some(EntryKind::Agent),
         "COMMAND.md" => Some(EntryKind::Command),
+        "HOOK.md" => Some(EntryKind::Hook),
         n if n.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) => Some(EntryKind::Bundle),
         _ => None,
     }

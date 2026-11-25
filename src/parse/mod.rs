@@ -2,3 +2,4 @@
 
 pub mod bundle;
 pub mod frontmatter;
+pub mod hook;

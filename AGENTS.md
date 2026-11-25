@@ -69,8 +69,9 @@ src/
 ├── lib.rs               Module declarations and re-exports
 │
 ├── model/               SSOT data model:
-│                        Rule, Skill, Agent, Command, Bundle + common
+│                        Rule, Skill, Agent, Command, Hook, Bundle + common
 ├── parse/               SSOT parsing: YAML frontmatter + bundle loader/discovery
+│                        + HOOK.md body sections
 ├── generate/            SSOT → per-client rendering:
 │                        Client enum + claude/copilot/opencode + directives + dprint
 │
@@ -84,6 +85,7 @@ src/
 ├── target.rs            Stable identities for client configuration surfaces
 ├── conflict.rs          Item conflict detection for `upskill add`
 ├── pack.rs              Build Claude Code and Copilot CLI plugin output from a bundle
+├── pack/hooks.rs        Hook file, context files and command-hook resources
 ├── plugin.rs            Client CLI shell-out for plugin installation
 ├── mcp.rs               Client-native MCP server configuration
 ├── style.rs             Output styling and the color disable chain

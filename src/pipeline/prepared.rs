@@ -144,6 +144,15 @@ pub(super) fn prepare_install(
                      Use `upskill pack` to build a plugin that holds it"
                 );
             }
+            if !scanned_items.iter().any(|(_, scanned)| scanned == name)
+                && discovery::find_bundle_by_name(&local_source, name).is_none()
+                && discovery::find_hook_dir(&local_source, name)?.is_some()
+            {
+                anyhow::bail!(
+                    "`{name}` is a hook item; `upskill add` does not install hook items. \
+                     Use `upskill pack` to build a plugin that holds it"
+                );
+            }
         }
     }
 
@@ -497,7 +506,7 @@ pub(super) fn prepare_install(
 }
 
 impl PreparedInstall {
-    /// Each skipped command or LSP server once, unless kinds restrict the run.
+    /// Each skipped command, hook or LSP server once, unless kinds restrict the run.
     pub fn pack_only_skipped(&self) -> Vec<(PackOnlyKind, String)> {
         if !self.options.kinds.is_empty() {
             return Vec::new();

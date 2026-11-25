@@ -347,3 +347,52 @@ fn fmt_refuses_a_command_with_an_unknown_field_or_a_client_block() {
         assert_eq!(fs::read_to_string(&path).unwrap(), raw);
     }
 }
+
+#[test]
+fn fmt_orders_hook_keys_canonically() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let path = tmp.path().join("guard/HOOK.md");
+    write(
+        &path,
+        "---\nignore:\n  - draft.md\nmetadata:\n  version: \"1.0\"\nlicense: MIT\nevents:\n  session-start:\n  prompt-submit:\ndescription: Test hook\nname: guard\nschema: 1\n---\n\nText.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    let after = fs::read_to_string(&path).unwrap();
+    assert_eq!(
+        after,
+        "---\nschema: 1\nname: guard\ndescription: Test hook\nevents:\n  session-start:\n  prompt-submit:\nlicense: MIT\nmetadata:\n  version: \"1.0\"\nignore:\n  - draft.md\n---\n\nText.\n"
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    assert_eq!(fs::read_to_string(&path).unwrap(), after);
+}
+
+#[test]
+fn fmt_formats_the_body_of_a_hook() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let path = tmp.path().join("guard/HOOK.md");
+    write(
+        &path,
+        "---\nschema: 1\nname: guard\ndescription: Test hook\nevents:\n  session-start:\n---\n\n* one\n* two\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        "---\nschema: 1\nname: guard\ndescription: Test hook\nevents:\n  session-start:\n---\n\n- one\n- two\n"
+    );
+}

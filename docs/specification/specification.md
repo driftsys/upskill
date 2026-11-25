@@ -22,12 +22,13 @@ pipeline.
 
 ### 1.1 Item kinds
 
-| Kind    | Purpose                                    | Entrypoint file |
-| ------- | ------------------------------------------ | --------------- |
-| Rule    | Always-on behavioural guidance.            | `RULE.md`       |
-| Skill   | On-demand procedural content.              | `SKILL.md`      |
-| Agent   | Persona definition with tool scope.        | `AGENT.md`      |
-| Command | A named procedure. Only `pack` renders it. | `COMMAND.md`    |
+| Kind    | Purpose                                          | Entrypoint file |
+| ------- | ------------------------------------------------ | --------------- |
+| Rule    | Always-on behavioural guidance.                  | `RULE.md`       |
+| Skill   | On-demand procedural content.                    | `SKILL.md`      |
+| Agent   | Persona definition with tool scope.              | `AGENT.md`      |
+| Command | A named procedure. Only `pack` renders it.       | `COMMAND.md`    |
+| Hook    | Event context or script. Only `pack` renders it. | `HOOK.md`       |
 
 The on-disk contract is defined by the
 [portable format spec](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md).
@@ -47,8 +48,8 @@ of the `HOME` environment variable, or of `USERPROFILE` when `HOME` is not set.
 ### 1.3 Two roles
 
 - **Source registry** — repository where SSOT items are authored. Holds the
-  canonical `RULE.md` / `SKILL.md` / `AGENT.md` / `COMMAND.md` files and
-  `*.bundle.yaml` manifests. Author commands (`new`, `lint`, `fmt`, `pack`)
+  canonical `RULE.md` / `SKILL.md` / `AGENT.md` / `COMMAND.md` / `HOOK.md` files
+  and `*.bundle.yaml` manifests. Author commands (`new`, `lint`, `fmt`, `pack`)
   operate here.
 - **Consumer project** — repository where generated outputs are installed for
   use by AI clients. Holds only generated per-client files. Consumer commands
@@ -70,7 +71,7 @@ No overlap between verbs.
 | `doctor` | Consumer | Verify installation consistency.                      |
 | `search` | Consumer | Look up skills via the public registry.               |
 | `index`  | Consumer | Build or manage the local registry index cache.       |
-| `new`    | Author   | Scaffold a rule, skill, agent, or command.            |
+| `new`    | Author   | Scaffold a rule, skill, agent, command, or hook.      |
 | `lint`   | Author   | Validate SSOT files against the format spec.          |
 | `pack`   | Author   | Build Claude Code and Copilot CLI plugin directories. |
 | `fmt`    | Author   | Canonicalise YAML frontmatter (key order, quoting).   |
@@ -152,6 +153,11 @@ A directory that holds `COMMAND.md` and none of `SKILL.md`, `RULE.md` and
 `add` then writes nothing, exits with code 1, and prints an error that names the
 source, says that it is a command item directory, and names `upskill pack`
 instead of a command to run.
+
+A directory that holds `HOOK.md` and none of `SKILL.md`, `RULE.md`, `AGENT.md`
+and `COMMAND.md` is refused in the same way: `add` writes nothing, exits with
+code 1, and prints an error that names the source, says that it is a hook item
+directory, and names `upskill pack` instead of a command to run.
 
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a scope flag uses the project scope.
@@ -492,10 +498,11 @@ field of that entry changes and none of its files is written. When every source
 is skipped, nothing is adopted. When a later step fails after a source was
 skipped, the line of the skipped source is still printed, before the error.
 
-`update` reports the command items and LSP servers of every bundle it prepares
-in the same skip line as `add`, each name counted once per kind across the run,
-including sources that are not applied and runs with `--dry-run`. No skip line
-is printed with `--quiet` or for a source under a kind restriction.
+`update` reports the command items (`items.commands`), hook items
+(`items.hooks`) and LSP servers of every bundle it prepares in the same skip
+line as `add`, each name counted once per kind across the run, including sources
+that are not applied and runs with `--dry-run`. No skip line is printed with
+`--quiet` or for a source under a kind restriction.
 
 Known limits: the plugin and MCP steps of a bundle source run when the source is
 applied without a kind restriction. `update` skips both steps for a source under
@@ -871,7 +878,7 @@ the check above refuses it.
 Author commands. Run inside a source-registry working tree.
 
 - `new <kind> <name>` — scaffold a new SSOT item directory (`<kind>` is one of
-  `rule`, `skill`, `agent`, `command`).
+  `rule`, `skill`, `agent`, `command`, `hook`).
 - `lint [paths...] [--strict]` — validate SSOT files. `--strict` is the CI mode
   (warnings become errors).
 - `fmt [paths...]` — canonicalise YAML frontmatter only. Markdown body
@@ -889,29 +896,33 @@ behaviour:
 
 - **Items.** Every entry in `items.rules`, `items.skills`, `items.agents` is
   resolved against the same source repository and installed. Entries of
-  `items.commands` are not installed. Each distinct command name of the resolved
-  bundles is counted on stderr in the line
-  ``skipped N command item(s): only `upskill pack` writes them``. LSP servers
-  declared in `lsps` are counted in the same line as `N LSP server(s)`, after
-  commands when both are present. No line is printed with `--quiet` or any
-  `--kind` restriction. A whole-source install without a resolved bundle ignores
-  command directories without a line. A positional name that matches only a
-  command item, when the source is a directory, fails with exit code 1 before
-  any write and names `upskill pack`. A source that is a `*.bundle.yaml` file
-  does not check positional names, and a name that matches both a bundle and a
-  command item resolves as the bundle. A source that is a command item directory
-  also fails with exit code 1 and names `upskill pack`. `--kind` still accepts
-  only `rule`, `skill` and `agent`; excluding only a command name is an unknown
-  exclude (exit code 2). Unresolved installable names error out before any
-  write. The source of a bundle file is the registry root found upward from it:
-  the first directory, starting at the directory of the bundle file, that holds
-  an item in a child or grandchild directory, or the directory of the bundle
-  file when no such directory exists. When bundle discovery from that root
-  cannot reach the file (a directory between them starts with a dot), the source
-  is the directory that holds its `bundles` directory, or the directory of the
-  bundle file when that directory is not named `bundles`. A bundle that selects
-  no item and only declares `requires:` is valid also when that source holds no
-  item.
+  `items.commands` and `items.hooks` are not installed. Each distinct name per
+  kind of the resolved bundles is counted on stderr, for example:
+
+  ```text
+  skipped N command item(s), M hook item(s): only `upskill pack` writes them
+  ```
+
+  LSP servers declared in `lsps` are counted in the same line as
+  `N LSP server(s)`, after commands and hooks when present. No line is printed
+  with `--quiet` or any `--kind` restriction. A whole-source install without a
+  resolved bundle ignores command and hook directories without a line. A
+  positional name that matches only a command or hook item, when the source is a
+  directory, fails with exit code 1 before any write and names `upskill pack`. A
+  source that is a `*.bundle.yaml` file does not check positional names, and a
+  name that matches both a bundle and a command or hook item resolves as the
+  bundle. A source that is a command or hook item directory also fails with exit
+  code 1 and names `upskill pack`. `--kind` still accepts only `rule`, `skill`
+  and `agent`; `--kind hook` and excluding only a command or hook name are usage
+  errors (exit code 2). Unresolved installable names error out before any write.
+  The source of a bundle file is the registry root found upward from it: the
+  first directory, starting at the directory of the bundle file, that holds an
+  item in a child or grandchild directory, or the directory of the bundle file
+  when no such directory exists. When bundle discovery from that root cannot
+  reach the file (a directory between them starts with a dot), the source is the
+  directory that holds its `bundles` directory, or the directory of the bundle
+  file when that directory is not named `bundles`. A bundle that selects no item
+  and only declares `requires:` is valid also when that source holds no item.
 - **Transitive `requires:`.** When the bundle declares `requires:`, every bundle
   in the transitive closure is installed. A bare `{ name }` entry is resolved
   against the same source; a `{ name, source }` entry is resolved cross-source
@@ -946,17 +957,19 @@ result lines.
 upskill pack my-bundle --source owner/repo@v1 --out dist
 ```
 
-| Content      | Claude Code output           | Copilot CLI output        |
-| ------------ | ---------------------------- | ------------------------- |
-| Directory    | `<out>/<bundle>-claude/`     | `<out>/<bundle>-copilot/` |
-| Manifest     | `.claude-plugin/plugin.json` | `plugin.json`             |
-| Skills       | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`  |
-| Commands     | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`  |
-| Agents       | `agents/<name>.md`           | `agents/<name>.agent.md`  |
-| MCP servers  | `.mcp.json`                  | `.mcp.json`               |
-| LSP servers  | `.lsp.json`                  | `lsp.json`                |
-| Init (rules) | `skills/init/SKILL.md`       | `skills/init/SKILL.md`    |
-| Hook (rules) | `hooks/hooks.json`           | `hooks.json`              |
+| Content              | Claude Code output           | Copilot CLI output           |
+| -------------------- | ---------------------------- | ---------------------------- |
+| Directory            | `<out>/<bundle>-claude/`     | `<out>/<bundle>-copilot/`    |
+| Manifest             | `.claude-plugin/plugin.json` | `plugin.json`                |
+| Skills               | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`     |
+| Commands             | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`     |
+| Agents               | `agents/<name>.md`           | `agents/<name>.agent.md`     |
+| MCP servers          | `.mcp.json`                  | `.mcp.json`                  |
+| LSP servers          | `.lsp.json`                  | `lsp.json`                   |
+| Init (rules)         | `skills/init/SKILL.md`       | `skills/init/SKILL.md`       |
+| Hook file            | `hooks/hooks.json`           | `hooks.json`                 |
+| Context hook texts   | `hooks/context/<event>.json` | `hooks/context/<event>.json` |
+| Command hook scripts | `hooks/<name>/`              | `hooks/<name>/`              |
 
 `pack` renders every command in `items.commands` from the bundle's `requires`
 closure as `skills/<name>/SKILL.md`, with its resources beside it. Claude Code
@@ -980,6 +993,76 @@ checks cover the whole closure, regardless of the selected client:
 Command reading errors identify the command and its bundle. Duplicate command
 errors identify both bundles. `pack` is the only command that renders
 `items.commands`.
+
+`pack` renders the hook items in the bundle's `requires` closure. For context
+hooks, it writes static JSON files. The
+[content format, §3.10](format-spec.md#310-hook-specific-fields) maps portable
+event names to client event names. For each context event and each distinct
+resolved matcher, it processes `@client` directives, trims each text and joins
+nonempty texts in closure order with one blank line. Required bundles come
+first, followed by each bundle's `items.hooks` order. The first matcher group
+writes `hooks/context/<event>.json`; later groups write `<event>-2.json`,
+`<event>-3.json`, and so on, in creation order for that client. Empty text
+produces no entry or context file.
+
+Claude Code context JSON contains `hookSpecificOutput.hookEventName` and
+`hookSpecificOutput.additionalContext`. Copilot CLI context JSON contains only
+`additionalContext`. Every non-ASCII character in these files is escaped as
+lowercase `\uXXXX` UTF-16 units, with a surrogate pair above U+FFFF; each
+context file is ASCII only. A generated context hook prints this static file and
+does not call `upskill`.
+
+The Claude Code entry runs `cat "${CLAUDE_PLUGIN_ROOT}/hooks/context/<file>"`.
+The Copilot CLI entry sets `bash` to `cat hooks/context/<file>` and `powershell`
+to `Get-Content -Raw -Encoding UTF8 -LiteralPath hooks/context/<file>`. The
+Copilot paths are relative to the plugin directory, which was the working
+directory of a plugin hook in one local-install observation (technote T4, trial
+5).
+
+A matcher string applies unchanged to both clients. A context hook on
+`prompt-submit` or `stop` cannot have a matcher, because Claude Code ignores a
+matcher on these events; a command hook on them may have one. A matcher map
+selects the `claude` and `copilot` values; a client without a key gets no hook
+for that event. A `session-start` context hook without a matcher gets
+`startup|clear|compact` in Claude Code and no matcher in Copilot CLI. Other
+context events without a matcher get no matcher in either client. Each event
+array holds the notice entry first, when rules target the client, then context
+entries in matcher-group creation order, then command entries in closure order.
+The notice remains a separate entry even if a context entry has the same
+matcher.
+
+For each hook item with a command event (`run`), `pack` copies the item
+resources to `hooks/<name>/`, excluding entry files and `ignore` matches and
+preserving file modes. It copies the directory only into the output of a client
+that gets at least one command entry for that item. Each command event writes
+one entry, in closure order, after the context entries. Events of one item are
+sorted by portable event name.
+
+The Claude Code command is
+`UPSKILL_CLIENT=claude "${CLAUDE_PLUGIN_ROOT}/hooks/<name>/<run>"`. The Copilot
+CLI `bash` command is `UPSKILL_CLIENT=copilot ./hooks/<name>/<run>`; it has no
+`powershell` command. The shell prefix sets `UPSKILL_CLIENT` to `claude` or
+`copilot`. `timeout` is written as `timeout` in Claude Code and `timeoutSec` in
+Copilot CLI, in seconds. A command hook has no default matcher, including on
+`session-start`.
+
+Every `run` must name a copied resource. A missing file, an entry file, an
+`ignore` match, a symbolic link, or (on Unix) a file without an executable bit
+fails with exit code 1 before any output is written, even when a matcher
+excludes the selected client. The error identifies the hook and its bundle and
+lists the problems that the hook check finds, one per line. It checks the
+directives of the whole hook body only when it found no other problem.
+
+A hook file is written when rules target the client or hook items produce an
+entry. Without either, no hook file is written. With rules and no hook items,
+its bytes equal the corresponding notice plugin file unchanged. Two bundles that
+list one hook name fail with exit code 1 and identify both bundles. A listed
+hook without a directory holding `HOOK.md`, an unreadable or invalid `HOOK.md`,
+or any hook validation problem also fails with exit code 1 before any output is
+written. Reading and validation errors identify the hook and its bundle;
+validation errors include the source path of each problem. Hook validation
+includes the effective name rule, the reserved name `context`, event settings,
+body sections, text and client directives.
 
 Skills and agents include the bundle's `requires` closure and use the existing
 client generators. Skill and command resources are copied beside their
@@ -1020,8 +1103,8 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
-They report their count in the same stderr skip line as command items, unless
-`--quiet` or a kind restriction applies.
+They report their count in the same stderr skip line as command and hook items,
+unless `--quiet` or a kind restriction applies.
 
 All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force`
@@ -1064,19 +1147,42 @@ failure it reports the error and runs no substitute command. It lists declared
 plugins for that client (with its `install_url` or manual `instructions_url`
 when present, otherwise by name) from the closure for the user, without
 installing them. An output with no rules for its client has neither init nor the
-notice hook. The hook is copied unchanged from the corresponding upskill notice
-plugin and runs `upskill update --notice`; it is silent when the upskill binary
-is absent.
+notice entry; it can still have context or command hooks. The notice entry comes
+from the corresponding upskill notice plugin and runs `upskill update --notice`;
+it is silent when the upskill binary is absent.
 
 Known limits: the init skill has `disable-model-invocation: true` and cannot be
 started in Copilot CLI prompt mode (`-p`), which does not process slash commands
 (technote T4, trial 1). The user starts it in an interactive session. Init and
-the hook need the upskill binary on the host; installing the same skills with
-both a plugin and `add` exposes duplicates; references by short skill name are
-not verified to resolve to `<plugin>:<skill>`. When both outputs are published
-together, check that Copilot does not also load the Claude directory. Codex,
-OpenCode, VS Code, general hook authoring, third-party plugin packaging, and
-duplicate detection are outside this command's scope.
+the notice hook need the upskill binary on the host; installing the same skills
+with both a plugin and `add` exposes duplicates; references by short skill name
+are not verified to resolve to `<plugin>:<skill>`. When both outputs are
+published together, check that Copilot does not also load the Claude directory.
+Codex, OpenCode, VS Code, hooks outside a plugin, third-party plugin packaging,
+and duplicate detection are outside this command's scope.
+
+Command hook limits:
+
+- A script must be executable, read `UPSKILL_CLIENT` and handle each client's
+  input and output format. `pack` does not translate hook input or output.
+- A command hook does not run in PowerShell in Copilot CLI.
+- Claude Code on Windows requires Git Bash for command hooks, according to the
+  Claude Code documentation; this has not been tested.
+
+Context hook limits:
+
+- The Claude Code documentation states a limit of 10,000 characters for the
+  context text of a hook; no trial has checked it; no limit is known for Copilot
+  CLI.
+- Copilot CLI documents `matcher` only for `notification`, `permissionRequest`,
+  `postToolUse`, `preCompact`, `preToolUse` and `subagentStart`; no trial has
+  used it.
+- The PowerShell command and a new `sessionStart` after compaction in Copilot
+  CLI are not verified.
+- The text of a `subagent-start` hook reaches the subagent only: for Copilot CLI
+  from technote T4, trial 5; for Claude Code from its documentation.
+- A user who installs the plugins of a bundle and of a bundle that it requires
+  gets the context text two times (AD-0046, Consequences).
 
 ## 3. Generation pipeline
 

@@ -106,6 +106,12 @@ reference rather than this compatibility page.
 
 [command-fields]: ../topics/0001-content-format.md#39-command-specific-fields
 
+<a id="310-hook-specific-fields"></a>
+
+- [3.10 Hook-specific fields][hook-fields]
+
+[hook-fields]: ../topics/0001-content-format.md#310-hook-specific-fields
+
 <a id="4-capability-level-tool-vocabulary"></a>
 
 - [4. Capability-level tool vocabulary](../topics/0001-content-format.md#4-capability-level-tool-vocabulary)

@@ -1,7 +1,7 @@
 # Plugin MVP design
 
-Date: 2026-11-24. Status: **approved by the user on 2026-11-24; stories #632,
-#633 and #634 implemented, #631 and #635 to #637 planned**. Decision record:
+Date: 2026-11-24. Status: **approved by the user on 2026-11-24; stories #631,
+#632, #633 and #634 implemented, #635 to #637 planned**. Decision record:
 [AD-0046](../../adr/0046-plugin-mvp-components.md). Task:
 [#623](https://github.com/driftsys/upskill/issues/623). Epic:
 [#291](https://github.com/driftsys/upskill/issues/291).

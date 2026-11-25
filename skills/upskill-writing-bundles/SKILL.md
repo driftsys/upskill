@@ -47,6 +47,8 @@ items: # required — may be empty {} for meta-bundles
     - agent-one
   commands: # optional — only upskill pack renders them
     - release-notes
+  hooks: # optional — only upskill pack renders them
+    - guard
 
 requires: # optional — dependencies on other bundles
   - name: other-bundle
@@ -89,9 +91,9 @@ metadata: # optional — freeform
 | Filename stem = `name:` field | `my-bundle.bundle.yaml` → `name: my-bundle` |
 | No collision with item names  | Bundle `foo` + skill `foo/` → lint error    |
 
-A command-only directory (`COMMAND.md` with no `SKILL.md`, `RULE.md` or
-`AGENT.md`) is excluded from this check, so a bundle may share its name with a
-command.
+A command-only or hook-only directory (`COMMAND.md` or `HOOK.md` with no
+`SKILL.md`, `RULE.md` or `AGENT.md`) is excluded from this check, so a bundle
+may share its name with a command or a hook.
 
 **Name collision prevention:** If your bundle is called `prompt-engineering`,
 don't have a skill directory also called `prompt-engineering/`. Use a distinct
@@ -219,8 +221,8 @@ LSP server `<name>` is declared with different content by the bundles `<first>` 
 
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers or record them in the lockfile.
-They report their count in the same stderr skip line as command items, unless
-`--quiet` or a kind restriction applies.
+They report their count in the same stderr skip line as command and hook items,
+unless `--quiet` or a kind restriction applies.
 
 ## The `requires` Dependency Graph
 
@@ -254,7 +256,7 @@ upskill lint <registry-dir> --strict
 Common findings:
 
 - `name-collision` — bundle name matches an item directory name (a directory
-  that holds only `COMMAND.md` is excluded)
+  that holds only `COMMAND.md` or only `HOOK.md` is excluded)
 - `command-with-skill` — one directory holds both `COMMAND.md` and `SKILL.md`
 - Schema parse error — missing required field or invalid YAML
 - Filename/name mismatch — stem doesn't match `name:` field
@@ -267,7 +269,7 @@ Common findings:
    registry
 2. **Create the file** — `skills/<name>.bundle.yaml`
 3. **Fill required fields** — `schema: 1`, `name`, `description`, `items`
-4. **Add items** — list skill/rule/agent/command names that exist in the
+4. **Add items** — list skill/rule/agent/command/hook names that exist in the
    registry
 5. **Add plugins** (if any) — declare per-client plugin dependencies
 6. **Add requires** (if any) — declare bundle dependencies

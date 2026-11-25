@@ -1,0 +1,6 @@
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": "Follow the team conventions.\n\nRead `CONVENTIONS.md` before you edit a file.\n\nRun the checks before you commit."
+  }
+}

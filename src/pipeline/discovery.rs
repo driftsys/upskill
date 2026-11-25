@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use super::ItemKind;
 use crate::parse::frontmatter;
 
-const ENTRYPOINTS: [&str; 4] = ["RULE.md", "SKILL.md", "AGENT.md", "COMMAND.md"];
+const ENTRYPOINTS: [&str; 5] = ["RULE.md", "SKILL.md", "AGENT.md", "COMMAND.md", "HOOK.md"];
 
 /// Effective identity name for an item (§2.1). Skills always take the
 /// folder name (Agent Skills standard mandates name == dir); rules/agents
@@ -52,7 +52,7 @@ pub(super) fn probe_effective_name(entry_path: &Path, kind: ItemKind, folder: &s
 }
 
 /// Returns true when the directory contains at least one SSOT entrypoint
-/// file (`RULE.md`, `SKILL.md`, `AGENT.md`, or `COMMAND.md`).
+/// file (`RULE.md`, `SKILL.md`, `AGENT.md`, `COMMAND.md`, or `HOOK.md`).
 pub(super) fn is_item_dir(path: &Path) -> bool {
     ENTRYPOINTS.iter().any(|entry| path.join(entry).is_file())
 }
@@ -106,6 +106,16 @@ pub(super) fn refuse_item_dir_source(
         anyhow::bail!(
             "source {shown} is a command item directory (it holds COMMAND.md); \
              `upskill add` does not install command items. Use `upskill pack` to build a plugin that holds it"
+        );
+    }
+    if source.join("HOOK.md").is_file()
+        && !["RULE.md", "SKILL.md", "AGENT.md", "COMMAND.md"]
+            .iter()
+            .any(|entry| source.join(entry).is_file())
+    {
+        anyhow::bail!(
+            "source {shown} is a hook item directory (it holds HOOK.md); \
+             `upskill add` does not install hook items. Use `upskill pack` to build a plugin that holds it"
         );
     }
     let (entry, kind) = if source.join("SKILL.md").is_file() {
@@ -401,7 +411,7 @@ pub(super) fn scan_source_items(source: &Path) -> Result<Vec<(ItemKind, String)>
 /// Walk up from `bundle_path`'s parent until a directory is found that
 /// looks like an SSOT root — a directory whose direct children include
 /// at least one item directory (containing `RULE.md`, `SKILL.md`, `AGENT.md`,
-/// or `COMMAND.md`) or another bundle file. Falls back to the bundle's
+/// `COMMAND.md`, or `HOOK.md`) or another bundle file. Falls back to the bundle's
 /// parent directory if no such ancestor exists, so a flat layout
 /// (bundle and items in the same dir) still works. The walk fails, instead
 /// of continuing, when a directory on it holds a kind directory that cannot
@@ -559,9 +569,22 @@ pub(super) fn find_command_dir(root: &Path, name: &str) -> Result<Option<PathBuf
         .map(|(_, dir)| dir))
 }
 
+/// The first item directory whose effective hook name is `name` and that
+/// holds a `HOOK.md`. Hooks use the same optional name rule as rules.
+pub(super) fn find_hook_dir(root: &Path, name: &str) -> Result<Option<PathBuf>> {
+    Ok(iter_item_dirs(root)?
+        .into_iter()
+        .find(|(folder, dir)| {
+            let entry = dir.join("HOOK.md");
+            entry.is_file() && probe_effective_name(&entry, ItemKind::Rule, folder) == name
+        })
+        .map(|(_, dir)| dir))
+}
+
 /// Relative paths (from `dir`) of every file under an item directory that
-/// is not an entrypoint (`SKILL.md`/`RULE.md`/`AGENT.md`/`COMMAND.md`). A file
-/// such as `SKILL.claude.md` is an ordinary resource (format-spec §2.3).
+/// is not an entrypoint (`SKILL.md`, `RULE.md`, `AGENT.md`, `COMMAND.md`, or
+/// `HOOK.md`). A file such as `SKILL.claude.md` is an ordinary resource
+/// (format-spec §2.3).
 /// Recursive; sub-directory structure is preserved in the returned relative paths.
 /// Sorted for deterministic output.
 pub(super) fn iter_item_resources(dir: &Path) -> Vec<PathBuf> {
@@ -614,7 +637,7 @@ fn walk_files_into(dir: &Path, out: &mut Vec<PathBuf>) {
 }
 
 /// True when `fname` is one of the entrypoint file names
-/// (`SKILL.md`, `RULE.md`, `AGENT.md`, `COMMAND.md`).
+/// (`SKILL.md`, `RULE.md`, `AGENT.md`, `COMMAND.md`, `HOOK.md`).
 fn is_entrypoint(fname: &str) -> bool {
     ENTRYPOINTS.contains(&fname)
 }
@@ -622,6 +645,71 @@ fn is_entrypoint(fname: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn find_hook_dir_matches_the_frontmatter_name_or_the_folder() {
+        let tmp = tempfile::tempdir().unwrap();
+        for rel in ["flat", "category/nested"] {
+            let dir = tmp.path().join(rel);
+            fs::create_dir_all(&dir).unwrap();
+            let folder = dir.file_name().unwrap().to_str().unwrap().to_owned();
+            fs::write(
+                dir.join("HOOK.md"),
+                "---\ndescription: Test hook\nevents: { session-start: null }\n---\nText.\n",
+            )
+            .unwrap();
+            assert_eq!(
+                find_hook_dir(tmp.path(), &folder).unwrap(),
+                Some(dir.clone())
+            );
+            let effective = format!("other-{folder}");
+            fs::write(
+                dir.join("HOOK.md"),
+                format!("---\nname: {effective}\ndescription: Test hook\nevents: {{ session-start: null }}\n---\nText.\n"),
+            )
+            .unwrap();
+            assert_eq!(find_hook_dir(tmp.path(), &effective).unwrap(), Some(dir));
+            assert_eq!(find_hook_dir(tmp.path(), &folder).unwrap(), None);
+        }
+        let skill = tmp.path().join("skill");
+        fs::create_dir_all(&skill).unwrap();
+        fs::write(skill.join("SKILL.md"), "Skill").unwrap();
+        assert_eq!(find_hook_dir(tmp.path(), "skill").unwrap(), None);
+        assert_eq!(find_hook_dir(tmp.path(), "missing").unwrap(), None);
+        let broken = tmp.path().join("broken");
+        fs::create_dir_all(&broken).unwrap();
+        fs::write(broken.join("HOOK.md"), "---\nname: [\n---\n").unwrap();
+        assert_eq!(
+            find_hook_dir(tmp.path(), "broken").unwrap(),
+            Some(broken.clone())
+        );
+        fs::write(broken.join("HOOK.md"), [0xff]).unwrap();
+        assert_eq!(find_hook_dir(tmp.path(), "broken").unwrap(), Some(broken));
+    }
+
+    #[test]
+    fn is_item_dir_is_true_for_a_hook_only_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(!is_item_dir(tmp.path()));
+        fs::write(tmp.path().join("HOOK.md"), "Hook").unwrap();
+        assert!(is_item_dir(tmp.path()));
+    }
+
+    #[test]
+    fn iter_item_resources_excludes_hook_md() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("nested")).unwrap();
+        for name in ["HOOK.md", "SKILL.md", "template.md", "nested/HOOK.md"] {
+            fs::write(tmp.path().join(name), "Content").unwrap();
+        }
+        assert_eq!(
+            iter_item_resources(tmp.path()),
+            vec![
+                PathBuf::from("nested/HOOK.md"),
+                PathBuf::from("template.md")
+            ]
+        );
+    }
 
     #[test]
     fn find_command_dir_finds_flat_and_category_layouts() {

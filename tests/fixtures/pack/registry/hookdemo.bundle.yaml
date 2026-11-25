@@ -1,0 +1,8 @@
+schema: 1
+name: hookdemo
+description: Hook demo bundle
+items:
+  rules: [style]
+  hooks: [edit-checks]
+requires:
+  - name: hookbase

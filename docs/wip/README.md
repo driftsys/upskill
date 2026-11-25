@@ -10,15 +10,17 @@ and their implementation plans in `plans/`.
   2026-11-24. Stories [#632](https://github.com/driftsys/upskill/issues/632)
   (command items and user-only init),
   [#633](https://github.com/driftsys/upskill/issues/633) (MCP servers in `pack`
-  output), and [#634](https://github.com/driftsys/upskill/issues/634) (LSP
-  servers in `pack` output) are implemented. `add` and `update` report skipped
-  commands and LSP servers in one line. Plans for #632, #633 and #634 are
-  archived:
+  output), [#634](https://github.com/driftsys/upskill/issues/634) (LSP servers
+  in `pack` output), and [#631](https://github.com/driftsys/upskill/issues/631)
+  (hook items) are implemented. `add` and `update` report skipped command items,
+  hook items and LSP servers in one line. Plans for #631, #632, #633 and #634
+  are archived:
+  [#631](../archive/README.md#hook-item-kind-in-lint-fmt-new-and-pack-output),
   [#632](../archive/README.md#command-item-kind-in-lint-fmt-new-and-pack-output),
   [#633](../archive/README.md#mcp-servers-in-pack-output) and
   [#634](../archive/README.md#lsp-servers-in-pack-output). The design stays here
-  because four stories remain planned work: #631, #635, #636 and #637, in stage
-  2 of the [roadmap](../roadmap.md#stage-2--finish-plugin-distribution). Its
+  because three stories remain planned work: #635, #636 and #637, in stage 2 of
+  the [roadmap](../roadmap.md#stage-2--finish-plugin-distribution). Its
   decisions are in [AD-0046](../adr/0046-plugin-mvp-components.md). It replaced
   the hook item kind draft, which is in the
   [archive](../archive/README.md#hook-item-kind-draft).

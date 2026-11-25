@@ -259,15 +259,18 @@ call `/<plugin>:init` in an interactive session in each project to install only
 rules through `add --kind rule --project` for that client. Init reports
 third-party plugins for separate setup. The plugin holds the command items of
 the bundle closure as user-only skills at `skills/<name>/SKILL.md`, with their
-resources beside them. Call them as `/<plugin>:<name>`. It also holds the MCP
-servers in `.mcp.json` and its LSP servers in `.lsp.json` for Claude Code or
-`lsp.json` for Copilot CLI. Declare LSP servers in the bundle's
+resources beside them. Call them as `/<plugin>:<name>`. The plugin also holds
+the context hooks of the hook items in the bundle closure as static JSON files
+and entries that print them, plus command hook scripts and entries that set
+`UPSKILL_CLIENT` and run them. It also holds the MCP servers in `.mcp.json` and
+its LSP servers in `.lsp.json` for Claude Code or `lsp.json` for Copilot CLI.
+Declare LSP servers in the bundle's
 [`lsps` map](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#lsps-map).
 The plugin does not install the server binary. `upskill add` and
 `upskill update` do not configure LSP servers. They report their count in the
-same stderr skip line as command items, unless `--quiet` or a kind restriction
-applies. Run `upskill update` in the project to update the rules that init
-installed; the client marketplace manages plugin content.
+same stderr skip line as command and hook items, unless `--quiet` or a kind
+restriction applies. Run `upskill update` in the project to update the rules
+that init installed; the client marketplace manages plugin content.
 
 Plugin output is experimental until a smoke test with a hosted git marketplace
 passes in both clients. The local-marketplace smoke test of 2026-11-19 ran the

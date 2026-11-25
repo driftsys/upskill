@@ -1331,3 +1331,31 @@ of ADR-0003 and corrected the lint rule table of the command guide. The redirect
 pages at the `docs/` root, the pages of `docs/design/` and topics 0005 to 0008
 stay in place: `docs/compatibility.json` and the book depend on their paths. The
 part of the inventory named "Not covered by the sweep" is still not covered.
+
+## Hook item kind in lint, fmt, new and `pack` output
+
+Source path: `docs/wip/plans/2026-11-25-hook-item-kind.md`. The raw
+[plan](plans/2026-11-25-hook-item-kind.md) is retained unchanged, except that
+its link to the plugin MVP design now points to `docs/wip/specs/` and its link
+to the hook item kind draft points to `docs/archive/specs/`. It is the plan of
+story [#631](https://github.com/driftsys/upskill/issues/631), one of the seven
+stories of the
+[plugin MVP design](../wip/specs/2026-11-24-plugin-mvp-design.md). That design
+is not archived: the stories #635 to #637 are not implemented.
+
+A Fable reviewer checked the decisions of the plan before implementation. The
+orchestrator then added decision 21 (context files contain only ASCII
+characters) and the restriction that a context hook (a hook event without `run`)
+is not allowed to have a matcher on the `prompt-submit` and `stop` events.
+
+Implementation: pull request
+[#645](https://github.com/driftsys/upskill/pull/645) of branch
+`feat/pack-hooks`. Completion evidence: the CI checks of that pull request
+(Quality, Documentation, MSRV (Rust 1.85), and Test on ubuntu-latest,
+macos-latest and windows-latest).
+
+Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions 3
+to 7, 11 and 12; [content format](../topics/0001-content-format.md);
+[format spec](../specification/format-spec.md);
+[specification §2.8](../specification/specification.md); the
+[command guide](../book/commands.md); the [conventions](../book/conventions.md).

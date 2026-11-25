@@ -258,7 +258,7 @@ fn new_refuses_a_directory_whose_command_declares_another_name() {
 }
 
 #[test]
-fn new_rejects_an_unknown_kind_and_lists_four_kinds() {
+fn new_rejects_an_unknown_kind_and_lists_five_kinds() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -268,6 +268,88 @@ fn new_rejects_an_unknown_kind_and_lists_four_kinds() {
         .assert()
         .code(2)
         .stderr(predicates::str::contains(
-            "expected one of: rule, skill, agent, command",
+            "expected one of: rule, skill, agent, command, hook",
         ));
+}
+
+#[test]
+fn new_hook_creates_hook_md() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", "hook", "team-reminder"])
+        .assert()
+        .success();
+    let path = tmp.path().join("team-reminder/HOOK.md");
+    let before = fs::read_to_string(&path).unwrap();
+    for text in [
+        "\nschema: 1\n",
+        "\nname: team-reminder\n",
+        "\nevents:\n  session-start:\n",
+        "\n## session-start\n",
+    ] {
+        assert!(before.contains(text), "{before}");
+    }
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "team-reminder"])
+        .assert()
+        .success();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "team-reminder"])
+        .assert()
+        .success();
+    assert_eq!(fs::read_to_string(&path).unwrap(), before);
+}
+
+#[test]
+fn new_hook_colocates_with_a_skill() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    for kind in ["skill", "hook"] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["new", kind, "x"])
+            .assert()
+            .success();
+    }
+    assert!(tmp.path().join("x/SKILL.md").is_file());
+    assert!(tmp.path().join("x/HOOK.md").is_file());
+}
+
+#[test]
+fn new_skill_colocates_with_a_hook_whose_name_differs_from_the_directory() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(tmp.path().join("x")).unwrap();
+    fs::create_dir_all(&home).unwrap();
+    fs::write(
+        tmp.path().join("x/HOOK.md"),
+        "---\nschema: 1\nname: other\ndescription: Test hook\nevents:\n  session-start:\n---\n\nText.\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", "skill", "x"])
+        .assert()
+        .success();
+    assert!(tmp.path().join("x/SKILL.md").is_file());
+}
+
+#[test]
+fn new_hook_refuses_the_reserved_name_context() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["new", "hook", "context"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("hook name `context` is reserved"));
+    assert!(!tmp.path().join("context").exists());
 }

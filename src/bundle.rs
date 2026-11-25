@@ -207,6 +207,7 @@ mod tests {
             skills: skills.iter().map(|s| s.to_string()).collect(),
             agents: agents.iter().map(|s| s.to_string()).collect(),
             commands: vec![],
+            hooks: vec![],
         }
     }
 
