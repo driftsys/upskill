@@ -29,7 +29,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn command_parses_the_three_fields() {
+    fn command_parses_name_description_and_argument_hint() {
         let command: Command = serde_yaml_ng::from_str(
             "name: release-notes\ndescription: Write the notes\nargument-hint: '[version]'\n",
         )

@@ -723,6 +723,29 @@ fn pack_renders_a_command_as_a_user_only_skill_for_both_clients() {
     }
 }
 
+#[cfg(unix)]
+#[test]
+fn pack_preserves_command_resource_permissions() {
+    use std::os::unix::fs::PermissionsExt;
+    let f = Fixture::new();
+    fs::set_permissions(
+        f.registry.join("items/release-notes/template.md"),
+        fs::Permissions::from_mode(0o755),
+    )
+    .unwrap();
+    f.command_for_clients("demo").assert().success();
+    for client in ["claude", "copilot"] {
+        let path = f
+            .out
+            .join(format!("demo-{client}/skills/release-notes/template.md"));
+        assert_eq!(
+            fs::metadata(path).unwrap().permissions().mode() & 0o777,
+            0o755,
+            "{client}"
+        );
+    }
+}
+
 #[test]
 fn pack_writes_no_commands_directory() {
     let f = Fixture::new();
@@ -977,7 +1000,7 @@ fn pack_reads_a_command_of_a_bundle_from_a_git_source() {
     fs::create_dir_all(upstream.join("items/release-notes")).unwrap();
     fs::write(
         upstream.join("items/release-notes/COMMAND.md"),
-        "---\nname: release-notes\ndescription: Test command\n---\n\nWrite notes.\n",
+        "---\nname: release-notes\ndescription: Command held by the git source\n---\n\nWrite notes from the git source.\n",
     )
     .unwrap();
     fs::write(
@@ -1014,9 +1037,14 @@ fn pack_reads_a_command_of_a_bundle_from_a_git_source() {
         .env("GIT_TERMINAL_PROMPT", "0")
         .assert()
         .success();
+    let rendered =
+        fs::read_to_string(f.out.join("entry-claude/skills/release-notes/SKILL.md")).unwrap();
     assert!(
-        f.out
-            .join("entry-claude/skills/release-notes/SKILL.md")
-            .is_file()
+        rendered.contains("Command held by the git source"),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("Write notes from the git source."),
+        "{rendered}"
     );
 }

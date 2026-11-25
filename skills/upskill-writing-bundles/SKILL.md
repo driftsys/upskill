@@ -89,6 +89,10 @@ metadata: # optional — freeform
 | Filename stem = `name:` field | `my-bundle.bundle.yaml` → `name: my-bundle` |
 | No collision with item names  | Bundle `foo` + skill `foo/` → lint error    |
 
+A command-only directory (`COMMAND.md` with no `SKILL.md`, `RULE.md` or
+`AGENT.md`) is excluded from this check, so a bundle may share its name with a
+command.
+
 **Name collision prevention:** If your bundle is called `prompt-engineering`,
 don't have a skill directory also called `prompt-engineering/`. Use a distinct
 name for one of them (e.g., rename the skill to `upskill-prompt-design`).
@@ -113,7 +117,9 @@ Rules of thumb:
   project name over a long topic name (`upskill-`, not `prompt-engineering-`).
 - Co-located entrypoints keep one prefixed base name and differ only by kind
   (`upskill-writing-rules` skill + rule) — the resolver allows same `name`
-  across different kinds.
+  across different kinds. A command is the exception: a command and a skill
+  cannot share a name in one bundle closure, and one directory cannot hold both
+  `COMMAND.md` and `SKILL.md` (`lint` reports `command-with-skill`).
 - Pre-1.0, if a second bundle later collides on a descriptor, just rename one.
   No migration path needed.
 
@@ -234,6 +240,8 @@ requires:
 - Missing requirements are a hard error
 - Item conflicts (two bundles declaring same `(kind, name)`) are a hard error
 - Same name in different kinds is allowed (rule `shared` + skill `shared`)
+- A command and a skill with the same name in one closure are a hard error for
+  `pack`: both would be written to `skills/<name>/SKILL.md`
 
 ## Validation Workflow
 
@@ -245,7 +253,9 @@ upskill lint <registry-dir> --strict
 
 Common findings:
 
-- `name-collision` — bundle name matches an item directory name
+- `name-collision` — bundle name matches an item directory name (a directory
+  that holds only `COMMAND.md` is excluded)
+- `command-with-skill` — one directory holds both `COMMAND.md` and `SKILL.md`
 - Schema parse error — missing required field or invalid YAML
 - Filename/name mismatch — stem doesn't match `name:` field
 

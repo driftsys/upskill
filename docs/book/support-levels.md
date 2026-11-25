@@ -203,12 +203,11 @@ Code 2.1.308, Copilot CLI 1.0.112, macOS): skill and agent visibility, init
 execution and the session notice for an available update
 ([technote](https://github.com/driftsys/upskill/blob/main/docs/technotes/t3-pack-marketplace-smoke.md)).
 It ran the earlier `commands/init.md` layout, which the model could start. The
-current layout, with `init` as a skill that only the user calls, is not yet
-smoke-tested (the hosted smoke test of #637 covers it). The test used a local
-marketplace directory; a hosted git marketplace, other platforms and a plugin
-update through the client were not tested. `doctor` gains no row for plugin
-output; the item support levels above do not qualify marketplace-installed
-plugins.
+current layout, with `init` as a skill that only the user calls, has not passed
+a smoke test yet. The test used a local marketplace directory; a hosted git
+marketplace, other platforms and a plugin update through the client were not
+tested. `doctor` gains no row for plugin output; the item support levels above
+do not qualify marketplace-installed plugins.
 
 Command items are rendered only by `pack`, as user-only skills. They share the
 experimental status of plugin output and have no row in the support table or in

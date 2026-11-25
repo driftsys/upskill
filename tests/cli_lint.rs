@@ -8,6 +8,7 @@
 
 mod common;
 
+use predicates::prelude::PredicateBooleanExt;
 use std::fs;
 use std::path::Path;
 
@@ -460,6 +461,53 @@ fn lint_flags_a_command_name_mismatch_from_a_bare_relative_path() {
                 "command `name: bar` must equal directory `foo`",
             ));
     }
+}
+
+#[test]
+fn lint_flags_a_skill_name_mismatch_from_a_bare_relative_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("foo/SKILL.md"),
+        "---\nschema: 1\nname: bar\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    for arg in ["SKILL.md", "."] {
+        common::upskill_cmd(&home)
+            .current_dir(tmp.path().join("foo"))
+            .args(["lint", "--strict", arg])
+            .assert()
+            .code(1)
+            .stdout(predicates::str::contains(
+                "skill `name: bar` must equal directory `foo`",
+            ));
+    }
+}
+
+/// A symbolic link to a skill directory is compared by the name that the
+/// path has as written, not by the name of the link target.
+#[cfg(unix)]
+#[test]
+fn lint_compares_a_skill_through_a_symlinked_directory_by_the_link_name() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("store/target/SKILL.md"),
+        "---\nschema: 1\nname: linked\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    fs::create_dir_all(tmp.path().join("skills")).unwrap();
+    std::os::unix::fs::symlink(
+        tmp.path().join("store/target"),
+        tmp.path().join("skills/linked"),
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict", "skills/linked/SKILL.md"])
+        .assert()
+        .success()
+        .stdout(predicates::str::contains("must equal directory").not());
 }
 
 #[test]

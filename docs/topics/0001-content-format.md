@@ -1245,6 +1245,9 @@ every client, wrap it in a matching-client directive block (§6). Items that
 target only one client end-to-end MAY instead be marked single-client via
 `audience` (§3.1).
 
+The exception is the body of a command (§3.9): it MAY hold `$ARGUMENTS`, and the
+renderer keeps `$ARGUMENTS` unchanged in every output.
+
 ---
 
 ## 6. Conditional content directives
@@ -1434,8 +1437,9 @@ Current version: **1**.
 
 - MINOR additions (new optional fields, new optional top-level blocks) MAY occur
   within the same schema version. Implementations MUST ignore unknown fields
-  they don't support. The one exception is an entry of the bundle `lsps` map,
-  which rejects unknown fields (see the `lsps` map in §3.7).
+  they don't support. There are two exceptions: an entry of the bundle `lsps`
+  map rejects unknown fields (see the `lsps` map in §3.7), and so does the
+  frontmatter of a `COMMAND.md` (§3.9).
 - BREAKING changes (removed fields, renamed fields, changed semantics of
   existing fields, new required fields) MUST increment the schema version.
 - Each published schema version MUST have a stable reference document with a

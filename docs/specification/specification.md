@@ -147,6 +147,12 @@ error that says there are no matching items or bundles, not with the command to
 use instead. This check applies to `add` only: `update` and the sources of
 `requires` entries are not checked. `.` alone is a local path, the same as `./`.
 
+A directory that holds `COMMAND.md` and none of `SKILL.md`, `RULE.md` and
+`AGENT.md` is refused in the same cases, for a local path and for a git source.
+`add` then writes nothing, exits with code 1, and prints an error that names the
+source, says that it is a command item directory, and names `upskill pack`
+instead of a command to run.
+
 `--project` writes into the current directory; `--global` writes under `$HOME`.
 Inside a git repository, `add` without a scope flag uses the project scope.
 Outside a git repository, `add` without a scope flag writes nothing and stops
@@ -1047,8 +1053,8 @@ outputs into a marketplace repository and install through the client. Plugin
 output is experimental until a smoke test with a hosted git marketplace passes
 in both clients. The local-marketplace smoke test of 2026-11-19 covered the
 earlier `commands/init.md` layout; the current layout, with `init` as a skill
-that only the user calls, is not yet smoke-tested (the hosted smoke test of #637
-covers it). `doctor` gains no row.
+that only the user calls, has not passed a smoke test yet. `doctor` gains no
+row.
 
 No rule file is included. Init is a user-only skill at `skills/init/SKILL.md`,
 rendered by the command renderer. It instructs the model to run

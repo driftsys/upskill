@@ -270,8 +270,9 @@ applies. Run `upskill update` in the project to update the rules that init
 installed; the client marketplace manages plugin content.
 
 Plugin output is experimental until a smoke test with a hosted git marketplace
-passes in both clients (the local-marketplace smoke test of 2026-11-19 passed).
-Check for duplicate skills from an existing `add` install and check that Copilot
-does not also load the Claude directory. See
+passes in both clients. The local-marketplace smoke test of 2026-11-19 ran the
+earlier `commands/init.md` layout; the current layout has not passed a smoke
+test yet. Check for duplicate skills from an existing `add` install and check
+that Copilot does not also load the Claude directory. See
 [pack](commands.md#upskill-pack-bundle---source-source---out-dir) for the output
 layout and limits.

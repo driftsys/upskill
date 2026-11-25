@@ -146,7 +146,7 @@ pub(crate) fn is_consumer_project(root: &Path) -> bool {
 
 /// Inputs to [`check_file`] — the kind drives both the dir-name
 /// validator and the frontmatter parser to use.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FileKind {
     Skill,
     Rule,
@@ -288,25 +288,17 @@ fn check_file(file: &Path, out: &mut Vec<Finding>) -> Result<()> {
         .and_then(FileKind::from_filename)
         .ok_or_else(|| anyhow!("{}: unknown entrypoint filename", file.display()))?;
 
-    if let FileKind::Command = kind {
-        if let Some(parent) = file.parent().filter(|dir| dir.join("SKILL.md").is_file()) {
-            let dir = item_dir_name(file).unwrap_or_else(|| {
-                parent
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .into_owned()
-            });
-            out.push(Finding {
-                rule_id: "command-with-skill",
-                severity: Severity::Error,
-                path: file.to_path_buf(),
-                line: None,
-                message: format!(
-                    "a COMMAND.md and a SKILL.md cannot share the directory `{dir}`: both take its name"
-                ),
-            });
-        }
+    if kind == FileKind::Command && file.with_file_name("SKILL.md").is_file() {
+        let dir = item_dir_name(file).unwrap_or_default();
+        out.push(Finding {
+            rule_id: "command-with-skill",
+            severity: Severity::Error,
+            path: file.to_path_buf(),
+            line: None,
+            message: format!(
+                "a COMMAND.md and a SKILL.md cannot share the directory `{dir}`: both take its name"
+            ),
+        });
     }
 
     let body = match parse_kind(&raw, kind) {
@@ -382,10 +374,12 @@ fn parse_kind(raw: &str, kind: FileKind) -> Result<(Option<String>, &str)> {
 }
 
 /// Name of the directory that holds an entrypoint file. The path is made
-/// absolute first, because the parent of a bare relative path such as
+/// absolute first (without following symbolic links), because the parent of a bare relative path such as
 /// `COMMAND.md` has no file name.
 fn item_dir_name(file: &Path) -> Option<String> {
-    let abs = std::fs::canonicalize(file).ok()?;
+    // `absolute` does not resolve symbolic links, so a symlinked item
+    // directory is compared by the name it has in the path as written.
+    let abs = std::path::absolute(file).unwrap_or_else(|_| file.to_path_buf());
     abs.parent()?.file_name()?.to_str().map(str::to_owned)
 }
 

@@ -288,3 +288,40 @@ fn fmt_orders_command_keys_canonically() {
         .success();
     assert_eq!(fs::read_to_string(&path).unwrap(), after);
 }
+
+#[test]
+fn fmt_orders_every_command_key_canonically() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let path = tmp.path().join("release-notes/COMMAND.md");
+    write(
+        &path,
+        "---\nignore: [\"*.tmp\"]\nmetadata: {team: docs}\nlicense: MIT\nargument-hint: \"[version]\"\ndescription: Write the notes\nname: release-notes\nschema: 1\n---\n\nWrite the notes.\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["fmt", "."])
+        .assert()
+        .success();
+    let after = fs::read_to_string(&path).unwrap();
+    let keys: Vec<_> = after
+        .lines()
+        .skip(1)
+        .take_while(|line| *line != "---")
+        .map(|line| line.split(':').next().unwrap().to_string())
+        .collect();
+    assert_eq!(
+        keys,
+        [
+            "schema",
+            "name",
+            "description",
+            "argument-hint",
+            "license",
+            "metadata",
+            "ignore"
+        ],
+        "{after}"
+    );
+}

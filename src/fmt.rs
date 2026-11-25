@@ -178,8 +178,8 @@ fn format_file(path: &Path) -> Result<bool> {
 /// Produce the canonical form of `raw` for the kind inferred from
 /// `path`'s filename. Pure function — no I/O, no mutation.
 ///
-/// Items (Skill/Rule/Agent/Command) are frontmatter+body — body is preserved
-/// byte-for-byte. Bundles are pure YAML (§2.2, ADR-0007), so the file
+/// Items (Skill/Rule/Agent/Command) are frontmatter+body — the frontmatter
+/// keys are reordered and the body is formatted by `canonical_body`. Bundles are pure YAML (§2.2, ADR-0007), so the file
 /// content is the canonical YAML verbatim, no `---` wrapping.
 fn canonicalise(raw: &str, path: &Path) -> Result<String> {
     let kind = file_kind(path)
