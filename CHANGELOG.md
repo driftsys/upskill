@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.9.4] (2026-11-25)
+
+### Bug Fixes
+
+- **add:** keep required_by links when an exclude removes an item ([#613])
+  ([#627]) ([69b0ce2])
+
+### Features
+
+- **pack:** build several bundles and write the marketplace files with --catalog
+  ([#635]) ([#646]) ([5252b86])
+- add the hook item kind and write context and command hooks in pack ([#631])
+  ([#645]) ([310feb9])
+- add the command item kind and render commands and init as skills in pack
+  ([#632]) ([#643]) ([2a522a0])
+- **pack:** add the bundle key lsps and write LSP servers into the plugin
+  ([#634]) ([#641]) ([7bcc5dd])
+- **pack:** write the MCP servers of a bundle into its plugin ([#633]) ([#639])
+  ([924e0fe])
+
+### Documentation
+
+- **adr:** accept ADR-0046 for the plugin MVP ([#623]) ([#638]) ([5295372])
+- finalize the roadmap and triage the working documents ([#536]) ([#620])
+  ([b5d4590]), refs [#536], [#536], [#536], [#536]
+
+[0.9.4]: https://github.com/driftsys/upskill/compare/v0.9.3...v0.9.4
+[69b0ce2]: https://github.com/driftsys/upskill/commit/69b0ce2
+[#613]: https://github.com/driftsys/upskill/issues/613
+[#627]: https://github.com/driftsys/upskill/issues/627
+[5252b86]: https://github.com/driftsys/upskill/commit/5252b86
+[#635]: https://github.com/driftsys/upskill/issues/635
+[#646]: https://github.com/driftsys/upskill/issues/646
+[310feb9]: https://github.com/driftsys/upskill/commit/310feb9
+[#631]: https://github.com/driftsys/upskill/issues/631
+[#645]: https://github.com/driftsys/upskill/issues/645
+[2a522a0]: https://github.com/driftsys/upskill/commit/2a522a0
+[#632]: https://github.com/driftsys/upskill/issues/632
+[#643]: https://github.com/driftsys/upskill/issues/643
+[7bcc5dd]: https://github.com/driftsys/upskill/commit/7bcc5dd
+[#634]: https://github.com/driftsys/upskill/issues/634
+[#641]: https://github.com/driftsys/upskill/issues/641
+[924e0fe]: https://github.com/driftsys/upskill/commit/924e0fe
+[#633]: https://github.com/driftsys/upskill/issues/633
+[#639]: https://github.com/driftsys/upskill/issues/639
+[5295372]: https://github.com/driftsys/upskill/commit/5295372
+[#623]: https://github.com/driftsys/upskill/issues/623
+[#638]: https://github.com/driftsys/upskill/issues/638
+[b5d4590]: https://github.com/driftsys/upskill/commit/b5d4590
+[#536]: https://github.com/driftsys/upskill/issues/536
+[#620]: https://github.com/driftsys/upskill/issues/620
+
 ## [0.9.3] (2026-11-23)
 
 ### Documentation
