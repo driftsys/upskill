@@ -195,6 +195,7 @@ mod tests {
                 .collect(),
             plugins: Default::default(),
             mcps: Default::default(),
+            lsps: Default::default(),
             metadata: None,
             extra: Default::default(),
         }

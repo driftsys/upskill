@@ -1,0 +1,8 @@
+{
+  "base-lsp": {
+    "command": "base-lsp-command",
+    "extensionToLanguage": {
+      ".base": "base"
+    }
+  }
+}

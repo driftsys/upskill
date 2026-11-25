@@ -64,6 +64,15 @@ plugins: # optional — client-native plugin deps
       module: superpowers
       install_url: https://github.com/obra/superpowers
 
+lsps: # optional — LSP servers included by pack
+  rust-analyzer:
+    command: rust-analyzer
+    args: [--stdio]
+    env:
+      RA_LOG: info
+    extensions:
+      .rs: rust
+
 metadata: # optional — freeform
   version: 0.1.0
   author: your-org
@@ -176,6 +185,32 @@ informational.
 When a plugin's CLI is not found, `upskill add` records it in the lockfile with
 `"status": "skipped"`. Pre-existing lockfiles without a `status` field default
 to `"installed"`.
+
+## LSP Server Declarations
+
+The optional `lsps` map declares servers for `upskill pack`. Each server
+requires `command` and a non-empty `extensions` map from file extensions (a dot
+followed by at least one character) to language identifiers. Commands and
+language identifiers must contain non-whitespace text. `args` (a list of
+strings) and `env` (a map of strings) are optional. Unknown fields in an LSP
+entry are errors, unlike in an `mcps` entry. The bundle parser applies these
+rules, so `add`, `update` and `lint` also refuse an invalid entry.
+
+Claude Code output uses `.lsp.json`, one top-level key per server, and
+`extensionToLanguage` for the extensions map. Copilot CLI output uses
+`lsp.json`, servers below `lspServers`, and `fileExtensions` for the same map.
+Empty `args` and `env` are omitted. An output without servers has no LSP file.
+
+Equal declarations of one server name in the bundle closure produce one entry.
+Different `command`, `args`, `env` or `extensions` values make `pack` fail with
+exit code 1 before writing output:
+
+```text
+LSP server `<name>` is declared with different content by the bundles `<first>` and `<second>`
+```
+
+The plugin does not install the server binary. `upskill add` and
+`upskill update` do not configure LSP servers or record them in the lockfile.
 
 ## The `requires` Dependency Graph
 

@@ -343,3 +343,38 @@ fn summary_counts_an_item_named_with_its_bundle_once() {
         );
     }
 }
+
+/// A bundle whose `lsps` entry is invalid is refused before any file is
+/// written.
+#[test]
+fn add_refuses_a_bundle_with_an_invalid_lsp_entry() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let registry = tmp.path().join("reg");
+    fs::create_dir_all(registry.join("s1")).unwrap();
+    fs::write(
+        registry.join("s1").join("SKILL.md"),
+        "---\nschema: 1\nname: s1\ndescription: Use for s1\n---\nBody.\n",
+    )
+    .unwrap();
+    fs::write(
+        registry.join("pack.bundle.yaml"),
+        "schema: 1\nname: pack\ndescription: One skill\nlicense: MIT\n\nitems:\n  skills:\n    - s1\n\nlsps:\n  ra:\n    command: rust-analyzer\n    extensions: { rs: rust }\n",
+    )
+    .unwrap();
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["add", "./reg", "pack", "--project", "--claude"])
+        .assert()
+        .failure();
+
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("extension `rs` must start with a dot"),
+        "stderr: {stderr}"
+    );
+    assert!(!tmp.path().join(".claude").exists());
+}

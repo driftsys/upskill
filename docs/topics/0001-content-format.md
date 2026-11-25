@@ -565,6 +565,7 @@ human-readable documentation; the parser ignores it (§2.2).
 | `requires`     | array    | no       | Bundle dependencies. See below.      |
 | `plugins`      | map      | no       | Client-native plugins. See below.    |
 | `mcps`         | map      | no       | MCP server descriptors. See below.   |
+| `lsps`         | map      | no       | LSP server descriptors for `pack`.   |
 | `metadata`     | map      | no       | Same as §3.6.                        |
 
 `requires` entries are maps. Each entry references another bundle by `name`,
@@ -941,6 +942,57 @@ Implementations:
   or is skipped.
 - MUST NOT expand `${VAR}` references in header or env values.
 
+#### `lsps` map
+
+The optional `lsps` map declares LSP (Language Server Protocol) servers for
+`upskill pack`. Each key is a server name:
+
+```yaml
+lsps:
+  rust-analyzer:
+    command: rust-analyzer
+    args: [--stdio]
+    env:
+      RA_LOG: info
+    extensions:
+      .rs: rust
+```
+
+| Field        | Type           | Required | Description                                       |
+| ------------ | -------------- | -------- | ------------------------------------------------- |
+| `command`    | string         | YES      | Server command; must contain non-whitespace text. |
+| `args`       | string[]       | no       | Arguments passed to the command.                  |
+| `env`        | map of strings | no       | Environment variables passed through unchanged.   |
+| `extensions` | map of strings | YES      | Non-empty map from file extension to language.    |
+
+Each extension key MUST start with a dot and have at least one character after
+the dot. Each language identifier MUST contain non-whitespace text. Unknown
+fields in an LSP entry are rejected, including a misspelled `extension` key.
+This is stricter than the MCP descriptors, which accept unknown fields. An
+absent `lsps` map defaults to empty and is omitted when the bundle is
+serialized.
+
+`pack` writes `.lsp.json` at the Claude Code plugin root, with one top-level key
+per server and `extensionToLanguage` for the extensions map. It writes
+`lsp.json` at the Copilot CLI plugin root, with the servers below `lspServers`
+and `fileExtensions` for the same map. Both formats also contain `command`,
+`args` and `env`; empty `args` and `env` are omitted. JSON is pretty-printed
+with one trailing newline. An output without LSP servers has no LSP file. An
+output with LSP servers and no rules has an LSP file but no init command or
+notice hook.
+
+Equal declarations of one server name in the bundle closure produce one entry.
+If their `command`, `args`, `env` or `extensions` differ, `pack` fails with exit
+code 1 before writing output:
+
+```text
+LSP server `<name>` is declared with different content by the bundles `<first>` and `<second>`
+```
+
+The plugin does not install the server binary. `upskill add` and
+`upskill update` do not configure LSP servers or record them in the lockfile.
+`upskill doctor` does not check LSP servers.
+
 #### Item `requires` resolution
 
 Items (rules, skills, agents) MAY declare directed dependencies in their
@@ -990,7 +1042,7 @@ original relative order):
 | Rule   | `schema`, `name`, `description`, `audience`, `license`, `scope`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                                    |
 | Skill  | `schema`, `name`, `description`, `audience`, `license`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras`                  |
 | Agent  | `schema`, `name`, `description`, `audience`, `license`, `mode`, `model`, `tools`, `preload-skills`, `metadata`, `requires`, `ignore`, `claude`, `copilot`, `opencode`, `extras` |
-| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `metadata`, `extras`                                                                        |
+| Bundle | `schema`, `name`, `description`, `license`, `items`, `requires`, `plugins`, `mcps`, `lsps`, `metadata`, `extras`                                                                |
 
 **Comment preservation.** Canonicalisation:
 
@@ -1334,7 +1386,8 @@ Current version: **1**.
 
 - MINOR additions (new optional fields, new optional top-level blocks) MAY occur
   within the same schema version. Implementations MUST ignore unknown fields
-  they don't support.
+  they don't support. The one exception is an entry of the bundle `lsps` map,
+  which rejects unknown fields (see the `lsps` map in §3.7).
 - BREAKING changes (removed fields, renamed fields, changed semantics of
   existing fields, new required fields) MUST increment the schema version.
 - Each published schema version MUST have a stable reference document with a

@@ -109,8 +109,9 @@ record,
 covers all items below and amends
 [ADR-0044](https://github.com/driftsys/upskill/blob/main/docs/adr/0044-plugin-output-of-a-bundle.md),
 which limited the plugin content to skills, resources and agents, and whose
-`init` command listed the MCP servers of the bundle without installing them.
-Only the item "MCP servers in the plugin" is implemented (#633).
+`init` command listed the MCP servers of the bundle without installing them. MCP
+servers in `pack` are implemented in #633; LSP servers in `pack` are implemented
+in #634.
 
 - **Hook item kind (`HOOK.md`).** One file in an item directory holds all hook
   events of that directory, one `## <event>` section for each event. An event
@@ -131,7 +132,9 @@ Only the item "MCP servers in the plugin" is implemented (#633).
   root, and `init` no longer lists them.
 - **LSP servers in the plugin.** `pack` writes the LSP servers that a bundle
   declares into the plugin. Both clients load LSP servers from a plugin
-  (`.lsp.json` in Claude Code, `lsp.json` in Copilot CLI).
+  (`.lsp.json` in Claude Code, `lsp.json` in Copilot CLI). Implemented in #634
+  for `pack`, using the bundle key `lsps`. `add` and `update` do not configure
+  LSP servers.
 - **Catalog generation.** Write the marketplace manifests
   (`.claude-plugin/marketplace.json`, `.github/plugin/marketplace.json`) from
   the bundles of a registry, so they match the packed plugins.

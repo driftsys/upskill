@@ -261,7 +261,7 @@ fn pack_without_a_client_flag_writes_both_directories() {
         .assert()
         .success()
         .stdout(format!(
-            "Wrote {} (8 files)\nWrote {} (8 files)\n",
+            "Wrote {} (9 files)\nWrote {} (9 files)\n",
             f.target().display(),
             f.out.join("demo-copilot").display()
         ));
@@ -548,4 +548,99 @@ fn pack_accepts_one_server_name_with_equal_content_in_the_closure() {
             );
         }
     }
+}
+
+#[test]
+fn pack_writes_the_lsp_file_of_each_client() {
+    let f = Fixture::new();
+    f.command_for_clients("demo").assert().success();
+    for (client, file, other, expected) in [
+        (
+            "claude",
+            ".lsp.json",
+            "lsp.json",
+            serde_json::json!({
+                "base-lsp": {"command": "base-lsp-command", "extensionToLanguage": {".base": "base"}}
+            }),
+        ),
+        (
+            "copilot",
+            "lsp.json",
+            ".lsp.json",
+            serde_json::json!({
+                "lspServers": {"base-lsp": {"command": "base-lsp-command", "fileExtensions": {".base": "base"}}}
+            }),
+        ),
+    ] {
+        let target = f.out.join(format!("demo-{client}"));
+        let doc: serde_json::Value =
+            serde_json::from_slice(&fs::read(target.join(file)).unwrap()).unwrap();
+        assert_eq!(doc, expected);
+        assert!(!target.join(other).exists());
+    }
+}
+
+#[test]
+fn pack_of_a_bundle_without_lsp_servers_writes_no_lsp_file() {
+    let f = Fixture::new();
+    f.command_for_clients("norules").assert().success();
+    for client in ["claude", "copilot"] {
+        let target = f.out.join(format!("norules-{client}"));
+        assert!(target.is_dir());
+        assert!(!target.join(".lsp.json").exists());
+        assert!(!target.join("lsp.json").exists());
+    }
+}
+
+#[test]
+fn pack_of_a_bundle_with_lsp_servers_and_no_rules_writes_no_init() {
+    let f = Fixture::new();
+    let bundle = f.registry.join("norules.bundle.yaml");
+    let text = fs::read_to_string(&bundle).unwrap();
+    fs::write(
+        bundle,
+        format!(
+            "{text}lsps:\n  ra:\n    command: rust-analyzer\n    extensions: {{ .rs: rust }}\n"
+        ),
+    )
+    .unwrap();
+    f.command_for_clients("norules").assert().success();
+    for (client, file) in [("claude", ".lsp.json"), ("copilot", "lsp.json")] {
+        let target = f.out.join(format!("norules-{client}"));
+        assert!(target.join(file).is_file());
+        assert!(!target.join("commands").exists());
+        assert!(!target.join("hooks").exists());
+        assert!(!target.join("hooks.json").exists());
+    }
+}
+
+#[test]
+fn pack_refuses_one_lsp_server_name_with_different_content_in_the_closure() {
+    let f = Fixture::new();
+    let bundle = f.registry.join("demo.bundle.yaml");
+    let text = fs::read_to_string(&bundle).unwrap();
+    fs::write(bundle, format!("{text}lsps:\n  base-lsp:\n    command: other-command\n    extensions: {{ .base: base }}\n")).unwrap();
+    f.command_for_clients("demo").assert().code(1).stderr(predicates::str::contains(
+        "LSP server `base-lsp` is declared with different content by the bundles `base` and `demo`"
+    ));
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_refuses_a_bundle_with_an_invalid_lsp_entry() {
+    let f = Fixture::new();
+    let bundle = f.registry.join("norules.bundle.yaml");
+    let text = fs::read_to_string(&bundle).unwrap();
+    fs::write(
+        bundle,
+        format!("{text}lsps:\n  ra:\n    command: rust-analyzer\n    extensions: {{ rs: rust }}\n"),
+    )
+    .unwrap();
+    f.command_for_clients("norules")
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(
+            "lsp `ra`: extension `rs` must start with a dot",
+        ));
+    assert!(!f.out.exists());
 }

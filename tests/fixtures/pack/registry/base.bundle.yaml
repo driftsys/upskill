@@ -18,3 +18,8 @@ mcps:
   base-server:
     local:
       command: base-command
+lsps:
+  base-lsp:
+    command: base-lsp-command
+    extensions:
+      .base: base
