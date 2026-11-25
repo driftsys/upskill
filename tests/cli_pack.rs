@@ -2222,10 +2222,14 @@ fn pack_catalog_of_a_new_file_needs_name_and_owner() {
 
 #[test]
 fn pack_catalog_name_and_owner_require_catalog() {
-    let f = Fixture::new_catalog();
-    f.pack(&["demo", "--catalog-name", "m", "--catalog-owner", "o"])
-        .assert()
-        .code(2);
+    for flags in [
+        &["--catalog-name", "m"][..],
+        &["--catalog-owner", "o"][..],
+        &["--catalog-name", "m", "--catalog-owner", "o"][..],
+    ] {
+        let f = Fixture::new_catalog();
+        f.pack(&[&["demo"][..], flags].concat()).assert().code(2);
+    }
 }
 
 #[test]
@@ -2389,4 +2393,29 @@ fn pack_catalog_of_an_unknown_bundle_writes_no_file() {
         .assert()
         .code(1);
     assert!(!f.market.exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn pack_catalog_reports_the_first_file_before_a_later_write_fails() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let f = Fixture::new_catalog();
+    let locked = f.market.join(".github/plugin");
+    fs::create_dir_all(&locked).unwrap();
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o555)).unwrap();
+    let claude = f.market.join(".claude-plugin/marketplace.json");
+    let result = f
+        .catalog(&[&["demo"][..], NEW_CATALOG].concat())
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("marketplace.json.tmp"))
+        .stdout(predicates::str::contains(format!(
+            "Wrote {}",
+            claude.display()
+        )))
+        .try_success();
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+    drop(result);
+    assert!(claude.is_file());
 }

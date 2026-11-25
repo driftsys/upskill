@@ -2595,10 +2595,10 @@ fn run_pack(args: &PackArgs) -> i32 {
                 println!("Wrote {} ({} files)", target.display(), count);
             }
         }
-        catalog::write_updates(&updates)?;
-        if !style::is_quiet() {
-            for update in updates {
-                for name in update.removed {
+        for update in updates {
+            catalog::write_update(&update)?;
+            if !style::is_quiet() {
+                for name in &update.removed {
                     println!("Removed {} from {}", name, update.path.display());
                 }
                 println!("Wrote {}", update.path.display());

@@ -421,8 +421,10 @@ upskill pack --all       --source <src> --out <dir> [--catalog <root>]
 ### 7. Build location
 
 - `driftsys/metapowers` commits the packed plugins and the marketplace files.
-- Its CI runs `upskill pack --all --force --catalog .` with a released upskill
-  and fails when `git status --porcelain` reports a changed or untracked file.
+- Its CI runs
+  `upskill pack --all --force --source <source> --out <dir> --catalog .` with a
+  released upskill and fails when `git status --porcelain` reports a changed or
+  untracked file. `<dir>` holds only packed plugin directories.
 
 ### 8. Hosted-marketplace smoke test
 

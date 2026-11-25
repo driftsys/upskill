@@ -2,6 +2,7 @@
 
 use std::collections::BTreeSet;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
@@ -109,8 +110,8 @@ impl Catalog {
             if !clients.contains(&client) {
                 continue;
             }
-            let path = root.join(marketplace_path(client));
-            let bytes = match fs::read(root_abs.join(marketplace_path(client))) {
+            let path = root_abs.join(marketplace_path(client));
+            let bytes = match fs::read(&path) {
                 Ok(bytes) => Some(bytes),
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
                 Err(error) => {
@@ -260,27 +261,41 @@ fn source_is_inside(source: &str, out_rel: &[String]) -> bool {
     })
 }
 
-/// Write each marketplace file through a temporary file in the same directory.
-pub fn write_updates(updates: &[CatalogUpdate]) -> Result<()> {
-    for update in updates {
-        let path = &update.path;
-        let parent = path
-            .parent()
-            .context("marketplace file has no parent directory")?;
-        fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
-        let tmp = path.with_extension("json.tmp");
-        let result = (|| -> Result<()> {
-            fs::write(&tmp, &update.bytes).with_context(|| format!("writing {}", tmp.display()))?;
-            fs::rename(&tmp, path)
-                .with_context(|| format!("renaming {} to {}", tmp.display(), path.display()))?;
-            Ok(())
-        })();
-        if result.is_err() {
-            let _ = fs::remove_file(&tmp);
+/// Write one marketplace file through a temporary file in the same directory.
+///
+/// An existing entry at the temporary path is removed without following links,
+/// and the temporary file is created exclusively.
+pub fn write_update(update: &CatalogUpdate) -> Result<()> {
+    let path = &update.path;
+    let parent = path
+        .parent()
+        .context("marketplace file has no parent directory")?;
+    fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
+    let tmp = path.with_extension("json.tmp");
+    let result = (|| -> Result<()> {
+        match fs::symlink_metadata(&tmp) {
+            Ok(metadata) if metadata.is_dir() => fs::remove_dir_all(&tmp),
+            Ok(_) => fs::remove_file(&tmp),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error),
         }
-        result?;
+        .with_context(|| format!("removing {}", tmp.display()))?;
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)
+            .with_context(|| format!("writing {}", tmp.display()))?;
+        file.write_all(&update.bytes)
+            .with_context(|| format!("writing {}", tmp.display()))?;
+        drop(file);
+        fs::rename(&tmp, path)
+            .with_context(|| format!("renaming {} to {}", tmp.display(), path.display()))?;
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&tmp);
     }
-    Ok(())
+    result
 }
 
 #[cfg(test)]
@@ -418,6 +433,66 @@ mod tests {
         assert_eq!(
             serde_json::from_slice::<serde_json::Value>(&updates[0].bytes).unwrap(),
             json!({"name":"m", "owner":{"name":"o"}, "plugins":[{"name":"demo", "source":"./plugins/demo-claude", "description":"Demo"}]})
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_update_replaces_a_symbolic_link_at_the_temporary_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("marketplace.json");
+        fs::write(&path, b"live").unwrap();
+        std::os::unix::fs::symlink(&path, tmp.path().join("marketplace.json.tmp")).unwrap();
+        let update = CatalogUpdate {
+            path: path.clone(),
+            bytes: b"new".to_vec(),
+            removed: Vec::new(),
+        };
+        write_update(&update).unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"new");
+        assert!(
+            !fs::symlink_metadata(&path)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert!(!tmp.path().join("marketplace.json.tmp").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn open_reads_the_normalized_path_that_the_write_uses() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cwd = tmp.path();
+        fs::create_dir_all(cwd.join("other/subdir")).unwrap();
+        fs::create_dir_all(cwd.join("work")).unwrap();
+        std::os::unix::fs::symlink(cwd.join("other/subdir"), cwd.join("work/link")).unwrap();
+        let existing = cwd.join("other/market/.claude-plugin");
+        fs::create_dir_all(&existing).unwrap();
+        fs::write(
+            existing.join("marketplace.json"),
+            br#"{"name":"far","owner":{"name":"o"},"plugins":[]}"#,
+        )
+        .unwrap();
+        let root = cwd.join("work/link/../market");
+        let catalog = Catalog::open(
+            cwd,
+            &root,
+            &root.join("plugins"),
+            &[PackClient::Claude],
+            header(),
+        )
+        .unwrap();
+        let updates = catalog.render(&[], false).unwrap();
+        assert_eq!(
+            updates[0].path,
+            cwd.join("work/market/.claude-plugin/marketplace.json")
+        );
+        write_update(&updates[0]).unwrap();
+        assert!(updates[0].path.is_file());
+        assert_eq!(
+            fs::read(cwd.join("other/market/.claude-plugin/marketplace.json")).unwrap(),
+            br#"{"name":"far","owner":{"name":"o"},"plugins":[]}"#
         );
     }
 }
