@@ -1,4 +1,4 @@
-//! Hook files and static context files for plugin output.
+//! Hook files, static context files and command scripts for plugin output.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -46,6 +46,17 @@ pub(super) fn read_pack_hooks(hooks: &[BundleHook]) -> Result<Vec<PackHook>> {
         .map(|declared| {
             let read = || {
                 let source = read_hook(&declared.root, &declared.name)?;
+                // Validate copied run files before client filtering and lint errors.
+                for (event, settings) in &source.hook.events {
+                    if let Some(run) = settings.as_ref().and_then(|settings| settings.run.as_ref())
+                        && crate::model::hook::is_run_file_name(run)
+                        && !source.resources.iter().any(|resource| resource.rel == std::path::Path::new(run))
+                    {
+                        bail!(
+                            "event `{event}`: `run: {run}` names no copied file of the item directory (it is missing, an entry file, or matched by `ignore`)"
+                        );
+                    }
+                }
                 if let Some(problem) =
                     check_hook(&source.hook, &source.body, &source.dir).first()
                 {
@@ -55,16 +66,6 @@ pub(super) fn read_pack_hooks(hooks: &[BundleHook]) -> Result<Vec<PackHook>> {
                 // them here before any client filtering skips an event.
                 if let Err(error) = directives::process(&source.body, Client::Claude) {
                     bail!("{}: {error:#}", source.path.display());
-                }
-                for (event, settings) in &source.hook.events {
-                    if settings
-                        .as_ref()
-                        .is_some_and(|settings| settings.run.is_some())
-                    {
-                        bail!(
-                            "event `{event}` has `run`: this version of `pack` does not write command hooks"
-                        );
-                    }
                 }
                 let events: Vec<_> = source.hook.events.keys().map(String::as_str).collect();
                 let body = split_hook_body(&source.body, &events);
@@ -149,7 +150,7 @@ struct ContextGroup {
     texts: Vec<String>,
 }
 
-/// Write context files followed by a hook file, or no files without entries.
+/// Write context files, command resources and a hook file when entries exist.
 pub(super) fn hook_files(
     hooks: &[PackHook],
     notice: bool,
@@ -165,6 +166,9 @@ pub(super) fn hook_files(
             let event = HookEvent::parse(key)
                 .with_context(|| format!("unknown event `{key}` of hook `{}`", hook.name))?;
             let settings = settings.clone().unwrap_or_default();
+            if settings.run.is_some() {
+                continue;
+            }
             let Some(matcher) = resolve_matcher(&settings, event, true, client) else {
                 continue;
             };
@@ -265,6 +269,44 @@ pub(super) fn hook_files(
             mode: None,
         });
     }
+    for hook in hooks {
+        let mut copied = false;
+        for (key, settings) in &hook.source.hook.events {
+            let settings = settings.clone().unwrap_or_default();
+            let Some(run) = &settings.run else {
+                continue;
+            };
+            let event = HookEvent::parse(key)
+                .with_context(|| format!("unknown event `{key}` of hook `{}`", hook.name))?;
+            let Some(matcher) = resolve_matcher(&settings, event, false, client) else {
+                continue;
+            };
+            match command_entry(&hook.name, run, matcher, settings.timeout, client) {
+                CommandEntry::Claude(entry) => claude
+                    .hooks
+                    .entry(event.claude_name().to_string())
+                    .or_default()
+                    .push(entry),
+                CommandEntry::Copilot(entry) => copilot
+                    .hooks
+                    .entry(event.copilot_name().to_string())
+                    .or_default()
+                    .push(entry),
+            }
+            copied = true;
+        }
+        if copied {
+            for resource in &hook.source.resources {
+                files.push(PackFile {
+                    rel: std::path::Path::new("hooks")
+                        .join(&hook.name)
+                        .join(&resource.rel),
+                    bytes: resource.bytes.clone(),
+                    mode: resource.mode,
+                });
+            }
+        }
+    }
     let hook_file = match client {
         PackClient::Claude if !claude.hooks.is_empty() => {
             Some(("hooks/hooks.json", json_bytes(&claude)?))
@@ -282,6 +324,39 @@ pub(super) fn hook_files(
         });
     }
     Ok(files)
+}
+
+enum CommandEntry {
+    Claude(ClaudeGroup),
+    Copilot(CopilotCommand),
+}
+
+fn command_entry(
+    name: &str,
+    run: &str,
+    matcher: Option<String>,
+    timeout: Option<u32>,
+    client: PackClient,
+) -> CommandEntry {
+    match client {
+        PackClient::Claude => CommandEntry::Claude(ClaudeGroup {
+            matcher,
+            hooks: vec![ClaudeCommand {
+                r#type: "command".into(),
+                command: format!(
+                    "UPSKILL_CLIENT=claude \"${{CLAUDE_PLUGIN_ROOT}}/hooks/{name}/{run}\""
+                ),
+                timeout,
+            }],
+        }),
+        PackClient::Copilot => CommandEntry::Copilot(CopilotCommand {
+            r#type: "command".into(),
+            matcher,
+            bash: format!("UPSKILL_CLIENT=copilot ./hooks/{name}/{run}"),
+            powershell: None,
+            timeout_sec: timeout,
+        }),
+    }
 }
 
 /// None skips this client; Some(None) writes an entry without a matcher.
@@ -426,6 +501,7 @@ mod tests {
                 path: PathBuf::from("test/HOOK.md"),
                 dir: PathBuf::from("test"),
                 body: text.into(),
+                resources: Vec::new(),
             },
             body,
         }];

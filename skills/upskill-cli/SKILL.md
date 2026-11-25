@@ -412,7 +412,9 @@ The plugin carries skills, agents, command items as user-only skills, MCP
 servers (`.mcp.json`) and LSP servers (`.lsp.json` for Claude Code, `lsp.json`
 for Copilot CLI) of the bundle closure. The bundle's `lsps` map declares LSP
 servers. The plugin also carries the context hooks of hook items as static JSON
-files and entries that print them. The plugin does not install the server binary; `add` and `update` do
+files and entries that print them, plus command hook scripts and entries that
+set `UPSKILL_CLIENT` and run them. The plugin does not install the server
+binary; `add` and `update` do
 not configure LSP servers. They report their count in the same stderr skip line
 as command and hook items, unless `--quiet` or a kind restriction applies. The user calls
 a command as `/<plugin>:<name>`. When rules of the closure target the client,

@@ -213,6 +213,6 @@ Command items are rendered only by `pack`, as user-only skills. They share the
 experimental status of plugin output and have no row in the support table or in
 `doctor`.
 
-The context hooks of hook items are written only by `pack`. They share the
-experimental status of plugin output and have no row in the support table or in
-`doctor`. No smoke test has observed a generated context hook yet.
+Context hooks and command hooks of hook items are written only by `pack`. They
+share the experimental status of plugin output and have no row in the support
+table or in `doctor`. No smoke test has observed a generated hook yet.

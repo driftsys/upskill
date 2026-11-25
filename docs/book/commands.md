@@ -1355,18 +1355,19 @@ result lines.
 upskill pack my-bundle --source owner/repo@v1 --out dist
 ```
 
-| Content            | Claude Code output           | Copilot CLI output           |
-| ------------------ | ---------------------------- | ---------------------------- |
-| Directory          | `<out>/<bundle>-claude/`     | `<out>/<bundle>-copilot/`    |
-| Manifest           | `.claude-plugin/plugin.json` | `plugin.json`                |
-| Skills             | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`     |
-| Commands           | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`     |
-| Agents             | `agents/<name>.md`           | `agents/<name>.agent.md`     |
-| MCP servers        | `.mcp.json`                  | `.mcp.json`                  |
-| LSP servers        | `.lsp.json`                  | `lsp.json`                   |
-| Init (rules)       | `skills/init/SKILL.md`       | `skills/init/SKILL.md`       |
-| Hook file          | `hooks/hooks.json`           | `hooks.json`                 |
-| Context hook texts | `hooks/context/<event>.json` | `hooks/context/<event>.json` |
+| Content              | Claude Code output           | Copilot CLI output           |
+| -------------------- | ---------------------------- | ---------------------------- |
+| Directory            | `<out>/<bundle>-claude/`     | `<out>/<bundle>-copilot/`    |
+| Manifest             | `.claude-plugin/plugin.json` | `plugin.json`                |
+| Skills               | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`     |
+| Commands             | `skills/<name>/SKILL.md`     | `skills/<name>/SKILL.md`     |
+| Agents               | `agents/<name>.md`           | `agents/<name>.agent.md`     |
+| MCP servers          | `.mcp.json`                  | `.mcp.json`                  |
+| LSP servers          | `.lsp.json`                  | `lsp.json`                   |
+| Init (rules)         | `skills/init/SKILL.md`       | `skills/init/SKILL.md`       |
+| Hook file            | `hooks/hooks.json`           | `hooks.json`                 |
+| Context hook texts   | `hooks/context/<event>.json` | `hooks/context/<event>.json` |
+| Command hook scripts | `hooks/<name>/`              | `hooks/<name>/`              |
 
 `pack` renders every command in `items.commands` from the bundle's `requires`
 closure as `skills/<name>/SKILL.md`, with its resources beside it. Claude Code
@@ -1391,13 +1392,14 @@ Command reading errors identify the command and its bundle. Duplicate command
 errors identify both bundles. `pack` is the only command that renders
 `items.commands`.
 
-`pack` writes the context hooks of the hook items in the bundle's `requires`
-closure. The [content format, §3.10](format-spec.md#310-hook-specific-fields)
-maps portable event names to client event names. For each event and each
-distinct resolved matcher, it processes `@client` directives, trims each text
-and joins nonempty texts in closure order with one blank line. Required bundles
-come first, followed by each bundle's `items.hooks` order. The first matcher
-group writes `hooks/context/<event>.json`; later groups write `<event>-2.json`,
+`pack` renders the hook items in the bundle's `requires` closure. For context
+hooks, it writes static JSON files. The
+[content format, §3.10](format-spec.md#310-hook-specific-fields) maps portable
+event names to client event names. For each context event and each distinct
+resolved matcher, it processes `@client` directives, trims each text and joins
+nonempty texts in closure order with one blank line. Required bundles come
+first, followed by each bundle's `items.hooks` order. The first matcher group
+writes `hooks/context/<event>.json`; later groups write `<event>-2.json`,
 `<event>-3.json`, and so on, in creation order for that client. Empty text
 produces no entry or context file.
 
@@ -1421,8 +1423,29 @@ event. A `session-start` context hook without a matcher gets
 `startup|clear|compact` in Claude Code and no matcher in Copilot CLI. Other
 context events without a matcher get no matcher in either client. Each event
 array holds the notice entry first, when rules target the client, then context
-entries in matcher-group creation order. The notice remains a separate entry
-even if a context entry has the same matcher.
+entries in matcher-group creation order, then command entries in closure order.
+The notice remains a separate entry even if a context entry has the same
+matcher.
+
+For each hook item with a command event (`run`), `pack` copies the item
+resources to `hooks/<name>/`, excluding entry files and `ignore` matches and
+preserving file modes. It copies the directory only into the output of a client
+that gets at least one command entry for that item. Each command event writes
+one entry, in closure order, after the context entries. Events of one item are
+sorted by portable event name.
+
+The Claude Code command is
+`UPSKILL_CLIENT=claude "${CLAUDE_PLUGIN_ROOT}/hooks/<name>/<run>"`. The Copilot
+CLI `bash` command is `UPSKILL_CLIENT=copilot ./hooks/<name>/<run>`; it has no
+`powershell` command. The shell prefix sets `UPSKILL_CLIENT` to `claude` or
+`copilot`. `timeout` is written as `timeout` in Claude Code and `timeoutSec` in
+Copilot CLI, in seconds. A command hook has no default matcher, including on
+`session-start`.
+
+Every `run` must name a copied resource. A missing file, an entry file, or an
+`ignore` match fails with exit code 1 before any output is written, even when a
+matcher excludes the selected client. The error identifies the hook and its
+bundle and reports that `run` names no copied file of the item directory.
 
 A hook file is written when rules target the client or hook items produce an
 entry. Without either, no hook file is written. With rules and no hook items,
@@ -1518,9 +1541,9 @@ failure it reports the error and runs no substitute command. It lists declared
 plugins for that client (with its `install_url` or manual `instructions_url`
 when present, otherwise by name) from the closure for the user, without
 installing them. An output with no rules for its client has neither init nor the
-notice entry; it can still have context hooks. The notice entry comes from the
-corresponding upskill notice plugin and runs `upskill update --notice`; it is
-silent when the upskill binary is absent.
+notice entry; it can still have context or command hooks. The notice entry comes
+from the corresponding upskill notice plugin and runs `upskill update --notice`;
+it is silent when the upskill binary is absent.
 
 Known limits: the init skill has `disable-model-invocation: true` and cannot be
 started in Copilot CLI prompt mode (`-p`), which does not process slash commands
@@ -1531,6 +1554,14 @@ are not verified to resolve to `<plugin>:<skill>`. When both outputs are
 published together, check that Copilot does not also load the Claude directory.
 Codex, OpenCode, VS Code, hooks outside a plugin, third-party plugin packaging,
 and duplicate detection are outside this command's scope.
+
+Command hook limits:
+
+- A script must be executable, read `UPSKILL_CLIENT` and handle each client's
+  input and output format. `pack` does not translate hook input or output.
+- A command hook does not run in PowerShell in Copilot CLI.
+- Claude Code on Windows requires Git Bash for command hooks, according to the
+  Claude Code documentation; this has not been tested.
 
 Context hook limits:
 

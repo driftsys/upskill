@@ -261,7 +261,8 @@ third-party plugins for separate setup. The plugin holds the command items of
 the bundle closure as user-only skills at `skills/<name>/SKILL.md`, with their
 resources beside them. Call them as `/<plugin>:<name>`. The plugin also holds
 the context hooks of the hook items in the bundle closure as static JSON files
-and entries that print them. It also holds the MCP servers in `.mcp.json` and
+and entries that print them, plus command hook scripts and entries that set
+`UPSKILL_CLIENT` and run them. It also holds the MCP servers in `.mcp.json` and
 its LSP servers in `.lsp.json` for Claude Code or `lsp.json` for Copilot CLI.
 Declare LSP servers in the bundle's
 [`lsps` map](https://github.com/driftsys/upskill/blob/main/docs/topics/0001-content-format.md#lsps-map).

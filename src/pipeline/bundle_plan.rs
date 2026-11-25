@@ -35,7 +35,7 @@ pub struct BundleCommand {
     pub source: CommandSource,
 }
 
-/// A resource relative to the command directory.
+/// A resource file of a command or hook item directory.
 pub struct CommandResource {
     pub rel: PathBuf,
     pub bytes: Vec<u8>,
@@ -91,9 +91,10 @@ pub struct BundleHook {
     pub root: PathBuf,
 }
 
-/// A parsed hook and its source paths and body.
+/// A parsed hook, its source paths, body and resources kept by its ignore list.
 pub struct HookSource {
     pub hook: Hook,
+    pub resources: Vec<CommandResource>,
     pub path: PathBuf,
     pub dir: PathBuf,
     pub body: String,
@@ -112,8 +113,18 @@ pub fn read_hook(root: &Path, name: &str) -> Result<HookSource> {
         std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
     let (hook, body) =
         frontmatter::parse::<Hook>(&raw).with_context(|| format!("reading {}", path.display()))?;
+    let mut resources = Vec::new();
+    for rel in filter_ignored(iter_item_resources(&dir), &hook.ignore) {
+        let from = dir.join(&rel);
+        resources.push(CommandResource {
+            rel,
+            bytes: std::fs::read(&from).with_context(|| format!("read {}", from.display()))?,
+            mode: source_mode(&from)?,
+        });
+    }
     Ok(HookSource {
         hook,
+        resources,
         path,
         dir,
         body: body.to_string(),

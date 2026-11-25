@@ -1,6 +1,14 @@
 {
   "version": 1,
   "hooks": {
+    "postToolUse": [
+      {
+        "type": "command",
+        "matcher": "edit",
+        "bash": "UPSKILL_CLIENT=copilot ./hooks/edit-checks/check.sh",
+        "timeoutSec": 10
+      }
+    ],
     "sessionStart": [
       {
         "type": "command",

@@ -64,7 +64,7 @@ establish identity and role ("you are a security reviewer; when invoked, do X").
 
 **Hook**: text for the model's context or a script, run on a client event.
 `upskill add` and `upskill update` do not install hook items. Only
-`upskill pack` writes the context hooks of a hook item.
+`upskill pack` renders a hook item.
 
 **Bundle**: a manifest file grouping items (and optionally other bundles) by
 reference for distribution. Bundles contain no content themselves.
@@ -1211,11 +1211,14 @@ inside code fences are content, and a setext level-2 heading starts a section.
 Each event text MUST have balanced `@client` blocks (§6.3), including when the
 whole body is balanced.
 
-Only `upskill pack` writes the context hooks of hook items. It merges
+Only `upskill pack` renders hook items. For context hooks, it merges
 client-processed text for each event and distinct matcher in closure order into
 ASCII-only static JSON files. A `session-start` context hook without a matcher
 gets `startup|clear|compact` in Claude Code and no matcher in Copilot CLI. The
-generated entries print the files without calling `upskill`. See
+generated entries print the files without calling `upskill`. For command hooks,
+`pack` copies the item resources with their modes to `hooks/<name>/`, excluding
+entry files and `ignore` matches, and writes entries that set `UPSKILL_CLIENT`
+and run the script. See
 [the pack specification](https://github.com/driftsys/upskill/blob/main/docs/specification/specification.md#28-pack)
 for output paths, JSON formats, commands, notice ordering and known limits.
 
