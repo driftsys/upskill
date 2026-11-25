@@ -9,6 +9,7 @@
 
 pub mod ancillary;
 pub mod bundle;
+pub mod catalog;
 pub mod cli;
 pub mod config;
 pub mod conflict;

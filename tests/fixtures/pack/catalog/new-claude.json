@@ -1,0 +1,18 @@
+{
+  "name": "demo-market",
+  "owner": {
+    "name": "driftsys"
+  },
+  "plugins": [
+    {
+      "name": "demo",
+      "source": "./plugins/demo-claude",
+      "description": "Demo bundle"
+    },
+    {
+      "name": "norules",
+      "source": "./plugins/norules-claude",
+      "description": "Bundle without rules"
+    }
+  ]
+}

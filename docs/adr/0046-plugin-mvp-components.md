@@ -102,9 +102,10 @@ implemented.
     deletes no plugin directory. A new file needs `--catalog-name` and
     `--catalog-owner`; without them `pack` stops with a usage error (exit 2).
 14. **Build location.** `driftsys/metapowers` commits the packed plugins and the
-    marketplace files. Its CI runs `upskill pack --all --force --catalog .` with
+    marketplace files. Its CI runs
+    `upskill pack --all --force --source <source> --out <dir> --catalog .` with
     a released upskill and fails when `git status --porcelain` reports a changed
-    or untracked file.
+    or untracked file. `<dir>` holds only packed plugin directories.
 15. **Experimental status.** Plugin output stays experimental until a smoke test
     with a hosted git marketplace passes in both clients, with one component of
     each type, the `init` command and a generated catalog. The check of a

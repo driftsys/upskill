@@ -6,7 +6,7 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use upskill::cli::{Cli, Commands};
+use upskill::cli::{Cli, Commands, PackArgs};
 use upskill::config;
 use upskill::fmt::{FmtReport, fmt};
 use upskill::index;
@@ -157,14 +157,7 @@ fn main() {
             registry,
             kind,
         } => run_search(&query, limit, registry.as_deref(), kind.as_deref()),
-        Commands::Pack {
-            bundle,
-            source,
-            out,
-            force,
-            claude,
-            copilot,
-        } => run_pack(&bundle, &source, &out, force, claude, copilot),
+        Commands::Pack(args) => run_pack(&args),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
         Commands::New { kind, name } => run_new(&kind, &name),
@@ -2540,34 +2533,79 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
     }
 }
 
-fn run_pack(
-    bundle: &str,
-    source: &str,
-    out: &std::path::Path,
-    force: bool,
-    claude: bool,
-    copilot: bool,
-) -> i32 {
+fn run_pack(args: &PackArgs) -> i32 {
+    use upskill::catalog::{self, Catalog, CatalogUsageError, Header, PackedPlugin};
     use upskill::pack::{self, PackClient};
 
-    if let Err(error) =
-        pack::validate_source(source).and_then(|()| pack::validate_bundle_name(bundle))
-    {
+    if let Err(error) = pack::validate_source(&args.source).and_then(|()| {
+        args.bundles
+            .iter()
+            .try_for_each(|name| pack::validate_bundle_name(name))
+    }) {
         print_error(format!("{error:#}"));
         return EXIT_USAGE;
     }
     let result = (|| -> anyhow::Result<()> {
         let root = std::env::current_dir()?;
+        let mut clients = Vec::new();
+        if args.claude || !args.copilot {
+            clients.push(PackClient::Claude);
+        }
+        if args.copilot || !args.claude {
+            clients.push(PackClient::Copilot);
+        }
+        let catalog = args
+            .catalog
+            .as_ref()
+            .map(|catalog_root| {
+                Catalog::open(
+                    &root,
+                    catalog_root,
+                    &args.out,
+                    &clients,
+                    Header {
+                        name: args.catalog_name.as_deref(),
+                        owner: args.catalog_owner.as_deref(),
+                    },
+                )
+            })
+            .transpose()?;
+        let bundles = pack::select_bundles(&root, &args.bundles, args.all)?;
         let mut directories = Vec::new();
-        if claude || !copilot {
-            directories.push(pack::build(&root, bundle, source, PackClient::Claude)?);
+        let mut plugins = Vec::new();
+        for bundle in bundles {
+            for &client in &clients {
+                let directory = pack::build(&root, &bundle.name, &args.source, client)?;
+                plugins.push(PackedPlugin {
+                    client,
+                    name: bundle.name.clone(),
+                    description: bundle.description.clone(),
+                    dir_name: directory.dir_name.clone(),
+                });
+                directories.push(directory);
+            }
         }
-        if copilot || !claude {
-            directories.push(pack::build(&root, bundle, source, PackClient::Copilot)?);
-        }
-        for (target, count) in pack::write_plugin_dirs(out, &directories, force)? {
+        let updates = catalog
+            .as_ref()
+            .map(|catalog| catalog.render(&plugins, args.all))
+            .transpose()?
+            .unwrap_or_default();
+        // With a catalog, write to the normalized path that `source` uses.
+        let out = catalog
+            .as_ref()
+            .map_or(args.out.as_path(), |catalog| catalog.out_dir());
+        for (target, count) in pack::write_plugin_dirs(out, &directories, args.force)? {
             if !style::is_quiet() {
                 println!("Wrote {} ({} files)", target.display(), count);
+            }
+        }
+        for update in updates {
+            catalog::write_update(&update)?;
+            if !style::is_quiet() {
+                for name in &update.removed {
+                    println!("Removed {} from {}", name, update.path.display());
+                }
+                println!("Wrote {}", update.path.display());
             }
         }
         Ok(())
@@ -2575,8 +2613,13 @@ fn run_pack(
     match result {
         Ok(()) => EXIT_SUCCESS,
         Err(error) => {
+            let code = if error.downcast_ref::<CatalogUsageError>().is_some() {
+                EXIT_USAGE
+            } else {
+                EXIT_ERROR
+            };
             print_error(format!("{error:#}"));
-            EXIT_ERROR
+            code
         }
     }
 }

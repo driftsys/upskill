@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "description": "Hand-written"
+  },
+  "name": "market",
+  "owner": {
+    "email": "maintainer@example.com",
+    "name": "driftsys"
+  },
+  "plugins": [
+    {
+      "name": "demo",
+      "source": "./plugins/demo-claude",
+      "description": "Demo bundle"
+    },
+    {
+      "name": "remote",
+      "source": {
+        "repo": "example/remote",
+        "source": "github"
+      },
+      "description": "Remote plugin"
+    },
+    {
+      "name": "tool",
+      "source": "./vendor/tool",
+      "description": "Vendored tool"
+    },
+    {
+      "name": "upskill",
+      "source": "./plugins/upskill-claude",
+      "description": "Notice plugin",
+      "version": "1.0.0"
+    }
+  ]
+}

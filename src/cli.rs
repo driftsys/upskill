@@ -38,29 +38,49 @@ pub struct Cli {
     pub command: Commands,
 }
 
+#[derive(clap::Args, Debug)]
+pub struct PackArgs {
+    /// Bundles to build. Repeated names are built once.
+    #[arg(required_unless_present = "all", conflicts_with = "all")]
+    pub bundles: Vec<String>,
+    /// Build every bundle of the source registry in the current directory.
+    #[arg(long)]
+    pub all: bool,
+    #[arg(long)]
+    pub source: String,
+    #[arg(long)]
+    pub out: PathBuf,
+    #[arg(long)]
+    pub force: bool,
+    /// Write the Claude Code plugin directory.
+    #[arg(long)]
+    pub claude: bool,
+    /// Write the GitHub Copilot CLI plugin directory.
+    #[arg(long)]
+    pub copilot: bool,
+    /// Write the marketplace files below this root directory. `--out` must be
+    /// inside it.
+    #[arg(long, value_name = "ROOT")]
+    pub catalog: Option<PathBuf>,
+    /// The `name` of a marketplace file that does not exist yet.
+    #[arg(long, value_name = "NAME", requires = "catalog",
+        value_parser = clap::builder::NonEmptyStringValueParser::new())]
+    pub catalog_name: Option<String>,
+    /// The `owner.name` of a marketplace file that does not exist yet.
+    #[arg(long, value_name = "NAME", requires = "catalog",
+        value_parser = clap::builder::NonEmptyStringValueParser::new())]
+    pub catalog_owner: Option<String>,
+}
+
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Build a bundle as a client plugin directory.
+    /// Build bundles as client plugin directories.
     ///
     /// Author command: reads the source registry in the current directory.
     /// Without a client flag, writes both directories.
     /// A `requires` entry with a `source` is fetched from that source.
     #[command(display_order = 13)]
-    Pack {
-        bundle: String,
-        #[arg(long)]
-        source: String,
-        #[arg(long)]
-        out: PathBuf,
-        #[arg(long)]
-        force: bool,
-        /// Write the Claude Code plugin directory.
-        #[arg(long)]
-        claude: bool,
-        /// Write the GitHub Copilot CLI plugin directory.
-        #[arg(long)]
-        copilot: bool,
-    },
+    Pack(PackArgs),
     /// Install rules, skills, or agents from a git repo or local path.
     ///
     /// Parses each item from the source, renders per-client output, and

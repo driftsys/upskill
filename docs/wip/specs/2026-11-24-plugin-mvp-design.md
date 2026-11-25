@@ -1,7 +1,7 @@
 # Plugin MVP design
 
-Date: 2026-11-24. Status: **approved by the user on 2026-11-24; stories #631,
-#632, #633 and #634 implemented, #635 to #637 planned**. Decision record:
+Date: 2026-11-24. Status: **approved by the user on 2026-11-24; stories #631 to
+#635 implemented, #636 and #637 planned**. Decision record:
 [AD-0046](../../adr/0046-plugin-mvp-components.md). Task:
 [#623](https://github.com/driftsys/upskill/issues/623). Epic:
 [#291](https://github.com/driftsys/upskill/issues/291).
@@ -421,8 +421,10 @@ upskill pack --all       --source <src> --out <dir> [--catalog <root>]
 ### 7. Build location
 
 - `driftsys/metapowers` commits the packed plugins and the marketplace files.
-- Its CI runs `upskill pack --all --force --catalog .` with a released upskill
-  and fails when `git status --porcelain` reports a changed or untracked file.
+- Its CI runs
+  `upskill pack --all --force --source <source> --out <dir> --catalog .` with a
+  released upskill and fails when `git status --porcelain` reports a changed or
+  untracked file. `<dir>` holds only packed plugin directories.
 
 ### 8. Hosted-marketplace smoke test
 

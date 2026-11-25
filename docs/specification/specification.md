@@ -945,16 +945,24 @@ behaviour:
 
 ### 2.8 `pack`
 
-Build plugin directories from a named bundle in the current source registry.
-`--source` is required and is written unchanged into init; it does not select or
-fetch the registry to pack. The entry bundle is resolved in the current
-directory; a `requires` entry with a `source` is fetched from that source.
-`--out` is required. With no client flag, both outputs are written; `--claude`
-or `--copilot` selects one, and both flags select both. `--quiet` suppresses the
-result lines.
+Build plugin directories from one or more named bundles of the current source
+registry, or with `--all` from every bundle of it. Bundles are built in name
+order, and a repeated name is built once. `--source` is required: the same value
+is written unchanged into the init command of every bundle that has one. It does
+not select or fetch the registry to pack. Each entry bundle is resolved in the
+current directory; a `requires` entry with a `source` is fetched from that
+source. `--out` is required. With no client flag, both outputs are written for
+each bundle; `--claude` or `--copilot` selects one client, and both flags select
+both. `--quiet` suppresses the result lines.
+
+`--all` in a registry without bundles fails with exit code 1. `--all` together
+with a bundle name is a usage error (exit code 2). Two bundle files that declare
+one name fail the run with exit code 1, with a bundle name or with `--all`, even
+when neither is named.
 
 ```bash
 upskill pack my-bundle --source owner/repo@v1 --out dist
+upskill pack --all --source owner/repo@v1 --out dist
 ```
 
 | Content              | Claude Code output           | Copilot CLI output           |
@@ -1110,34 +1118,93 @@ All selected output directories are checked before writing. A non-empty client
 directory is refused with exit code 1 unless `--force` is set. `--force`
 replaces that directory, including removal of files from an earlier run. A file
 or symbolic link at the client directory path is refused even with `--force`. An
-unknown bundle fails with exit code 1. Each client directory is first written in
-full to a staging directory next to it, `.<bundle>-<client>.upskill-stage`. When
-all are written, each existing client directory is renamed to
-`.<bundle>-<client>.upskill-old`, its staging directory is renamed into place,
-and `pack` then tries to remove the `.upskill-old` directories; one that cannot
-be removed is left in place. A failure while writing or renaming tries to undo
-the renames already made, so every client directory keeps its earlier content,
-and tries to remove the staging directories. If an undo rename also fails, the
-earlier content is at the `.upskill-old` path; the next `pack` run of that
-bundle deletes it, so copy it away first. A file, directory or link left at a
-staging or `.upskill-old` path by an earlier run is removed. An existing empty
-client directory is replaced by a new one, also without `--force`.
+unknown bundle fails with exit code 1 before any write. Each client directory is
+first written in full to a staging directory next to it,
+`.<bundle>-<client>.upskill-stage`. When all are written, each existing client
+directory is renamed to `.<bundle>-<client>.upskill-old`, its staging directory
+is renamed into place, and `pack` then tries to remove the `.upskill-old`
+directories; one that cannot be removed is left in place. A failure while
+writing or renaming tries to undo the renames already made, so every client
+directory keeps its earlier content, and tries to remove the staging
+directories. If an undo rename also fails, the earlier content is at the
+`.upskill-old` path; the next `pack` run of that bundle deletes it, so copy it
+away first. A file, directory or link left at a staging or `.upskill-old` path
+by an earlier run is removed. An existing empty client directory is replaced by
+a new one, also without `--force`.
 
 `--source` must parse as an install source, must not start with a hyphen and
 must contain only ASCII letters, digits and `/ @ : . _ - ~ +`. Whitespace and
 shell metacharacters are refused with exit code 2. The bundle name must be
 nonempty, must not start with a hyphen and may contain only ASCII letters,
-digits and `- _ .`.
+digits and `- _ .`. A name selected by `--all` that fails this rule stops the
+run with exit code 1; an invalid name given on the command line is a usage error
+(exit code 2).
 
-`pack` reads no lockfile and writes only below `--out`. It does not install or
-register the plugin, write a marketplace manifest, or publish it. The bundle
-schema adds the optional `lsps` map without changing its version. Copy the
-outputs into a marketplace repository and install through the client. Plugin
-output is experimental until a smoke test with a hosted git marketplace passes
-in both clients. The local-marketplace smoke test of 2026-11-19 covered the
-earlier `commands/init.md` layout; the current layout, with `init` as a skill
-that only the user calls, has not passed a smoke test yet. `doctor` gains no
-row.
+With `--catalog <root>`, `pack` writes the marketplace files
+`<root>/.claude-plugin/marketplace.json` for Claude Code and
+`<root>/.github/plugin/marketplace.json` for Copilot CLI, one file for each
+selected client. An excluded client's file is not read or changed. `--out` must
+equal `<root>` or be below it, else exit code 2. Both paths are made absolute
+and normalized by removing `.` and `..` components without following symbolic
+links, so a `..` after a symbolic link names the parent of the link. The plugin
+directories are written to the normalized `--out`, the same path that `source`
+is computed from, so the plugin directories and the marketplace files are always
+in one tree. The `Wrote` line of a plugin directory then prints that normalized
+absolute path, also when `--out` is relative.
+
+Each packed entry holds `name` (the bundle name), `source` (the path from the
+catalog root to the plugin directory, prefixed with `./`, with `/` separators)
+and `description` (the bundle description), with no `version`. Entries are
+sorted by name. An existing file keeps its top-level fields and entries of other
+names; a packed bundle replaces its whole earlier entry, including any
+`version`. With `--all`, an entry whose string `source` is inside `--out` and
+names no plugin directory of that client packed in the run is removed. Each
+removal prints `Removed <name> from <path>`. A source is inside `--out` when,
+after ignoring empty and `.` components, it starts with the components of
+`--out` relative to the root and has at least one more component. Absolute
+paths, sources containing `..` and object sources are kept. When `--out` equals
+`--catalog`, `--all` removes every entry whose `source` is a string that is not
+an absolute path, has no `..` component and has at least one component other
+than `.`; that includes string shorthand such as `owner/repo` and URL sources
+such as `https://example.com/owner/repo`, unless the run packs it. No plugin
+directory is deleted by catalog pruning. Keep hand-written plugins outside
+`--out` if their entries must stay.
+
+A new file needs both `--catalog-name` and `--catalog-owner`, which set `name`
+and `owner.name`; a missing flag is a usage error (exit code 2). Both flags need
+`--catalog` and non-empty values. They do not change an existing file's header.
+An invalid existing file fails with exit code 1 before any write: it must be a
+JSON object, `plugins`, if present, must be an array, and each entry must have a
+string `name`. A file without `plugins` starts with an empty list.
+
+Marketplace bytes are computed before any write. The files are written after all
+plugin directories are in place and their `Wrote` lines have been printed. Each
+marketplace file is written through `marketplace.json.tmp` in its own directory
+and renamed into place; a failure removes the temporary file, exits with code 1
+and leaves the plugin directories in place. Marketplace updates need no
+`--force`. After successful writes, each file's removal lines in name order
+precede its `Wrote <path>` line, Claude Code first. `--quiet` suppresses these
+lines.
+
+Top-level keys other than `plugins` are written in sorted order, followed by
+`plugins`. Each entry has `name`, `source`, `description`, then any other keys
+in sorted order; absent fields of kept entries stay absent. Nested object keys
+are sorted. JSON uses two-space indentation and one trailing newline.
+
+```bash
+upskill pack --all --source owner/repo@v1 --out market/plugins \
+  --catalog market --catalog-name my-market --catalog-owner my-org
+```
+
+`pack` reads no lockfile and writes plugin directories below `--out`, plus the
+selected marketplace files below `--catalog` when given. It does not install,
+register or publish the plugin. The bundle schema adds the optional `lsps` map
+without changing its version. Build the outputs in a marketplace repository and
+install through the client. Plugin output is experimental until a smoke test
+with a hosted git marketplace passes in both clients. The local-marketplace
+smoke test of 2026-11-19 covered the earlier `commands/init.md` layout; the
+current layout, with `init` as a skill that only the user calls, has not passed
+a smoke test yet. `doctor` gains no row.
 
 No rule file is included. Init is a user-only skill at `skills/init/SKILL.md`,
 rendered by the command renderer. It instructs the model to run

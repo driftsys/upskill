@@ -2,7 +2,7 @@
 
 mod hooks;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
@@ -33,6 +33,68 @@ pub struct PackFile {
 pub struct PluginDir {
     pub dir_name: String,
     pub files: Vec<PackFile>,
+}
+
+/// A bundle that `pack` builds, with the description of its manifest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectedBundle {
+    pub name: String,
+    pub description: String,
+}
+
+/// Select named bundles once in name order, or every bundle of the registry.
+pub fn select_bundles(
+    registry_root: &Path,
+    names: &[String],
+    all: bool,
+) -> Result<Vec<SelectedBundle>> {
+    let bundles = crate::parse::bundle::discover(registry_root)?;
+    let mut paths: BTreeMap<&str, &Path> = BTreeMap::new();
+    for (path, bundle) in &bundles {
+        if let Some(first) = paths.insert(&bundle.name, path) {
+            bail!(
+                "two bundle files declare the name '{}': {} and {}",
+                bundle.name,
+                first.display(),
+                path.display()
+            );
+        }
+    }
+    if all {
+        if bundles.is_empty() {
+            bail!("no bundle in {}", registry_root.display());
+        }
+        return bundles
+            .into_iter()
+            .map(|(_, bundle)| {
+                validate_bundle_name(&bundle.name)
+                    .with_context(|| format!("bundle '{}'", bundle.name))?;
+                Ok(SelectedBundle {
+                    name: bundle.name,
+                    description: bundle.description,
+                })
+            })
+            .collect();
+    }
+
+    let mut names = names.to_vec();
+    names.sort();
+    names.dedup();
+    names
+        .into_iter()
+        .map(|name| {
+            let (_, bundle) = bundles
+                .iter()
+                .find(|(_, bundle)| bundle.name == name)
+                .with_context(|| {
+                    format!("no bundle named '{name}' in {}", registry_root.display())
+                })?;
+            Ok(SelectedBundle {
+                name: bundle.name.clone(),
+                description: bundle.description.clone(),
+            })
+        })
+        .collect()
 }
 
 /// Validate a source for use as an argument in the init command.
@@ -395,6 +457,14 @@ pub fn write_plugin_dirs(
     dirs: &[PluginDir],
     force: bool,
 ) -> Result<Vec<(PathBuf, usize)>> {
+    let mut names = BTreeSet::new();
+    for directory in dirs {
+        anyhow::ensure!(
+            names.insert(directory.dir_name.as_str()),
+            "two plugin directories have the name {}",
+            directory.dir_name
+        );
+    }
     for directory in dirs {
         let target = out.join(&directory.dir_name);
         match std::fs::symlink_metadata(&target) {
@@ -514,6 +584,52 @@ fn write_stage(stage: &Path, directory: &PluginDir) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn write_plugin_dirs_refuses_two_directories_with_one_name() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = || PluginDir {
+            dir_name: "x-claude".into(),
+            files: vec![PackFile {
+                rel: "a".into(),
+                bytes: b"a".to_vec(),
+                mode: None,
+            }],
+        };
+        let error = write_plugin_dirs(tmp.path(), &[dir(), dir()], true).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "two plugin directories have the name x-claude"
+        );
+        assert!(std::fs::read_dir(tmp.path()).unwrap().next().is_none());
+    }
+
+    #[test]
+    fn select_bundles_sorts_and_removes_repeated_names() {
+        let tmp = tempfile::tempdir().unwrap();
+        for (name, description) in [("b", "B"), ("a", "A")] {
+            std::fs::write(
+                tmp.path().join(format!("{name}.bundle.yaml")),
+                format!("schema: 1\nname: {name}\ndescription: {description}\nitems: {{}}\n"),
+            )
+            .unwrap();
+        }
+        let expected = vec![
+            SelectedBundle {
+                name: "a".into(),
+                description: "A".into(),
+            },
+            SelectedBundle {
+                name: "b".into(),
+                description: "B".into(),
+            },
+        ];
+        assert_eq!(
+            select_bundles(tmp.path(), &["b".into(), "a".into(), "b".into()], false).unwrap(),
+            expected
+        );
+        assert_eq!(select_bundles(tmp.path(), &[], true).unwrap(), expected);
+    }
 
     thread_local! {
         /// The index of the directory whose rename into place fails.

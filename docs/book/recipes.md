@@ -248,9 +248,37 @@ From the source registry, build both client directories:
 upskill pack my-bundle --source owner/repo@v1 --out dist
 ```
 
-Copy `dist/my-bundle-claude` and `dist/my-bundle-copilot` into your marketplace
-repository and configure publication there. upskill does not install, register
-or publish these plugins. Add README and LICENSE files yourself if needed;
+Several bundle names can be given in one run; `--all` builds every bundle of the
+current source registry.
+
+Use one repository as both the source registry and the marketplace. Run every
+command below from the root of that repository. The first run creates the
+marketplace files, so it needs a name and an owner:
+
+```bash
+upskill pack --all --source owner/repo@v1 --out packed \
+  --catalog . --catalog-name my-market --catalog-owner my-org
+```
+
+Later runs rebuild the packed plugins and update the marketplace files:
+
+```bash
+upskill pack --all --force --source owner/repo@v1 --out packed --catalog .
+```
+
+`--out` must be inside `--catalog`. The packed plugins are below `packed/`.
+`--all` removes a marketplace entry whose source is inside `--out` and names no
+packed directory. `pack` deletes no plugin directory, so remove the directories
+of bundles that left the registry yourself. A hand-written plugin that must stay
+in the catalog has its directory outside `--out`, for example below `plugins/`,
+and keeps its entry.
+
+If the write of the second marketplace file fails in CI, the first file and the
+plugin directories stay as written. Rerun the same command with `--force` to
+repair the run.
+
+Configure publication in that repository. upskill does not install, register or
+publish these plugins. Add README and LICENSE files yourself if needed;
 `pack --force` replaces the selected output directories, so files that you add
 there are deleted.
 
