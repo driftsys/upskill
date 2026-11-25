@@ -25,7 +25,7 @@ new dependency.
 `preserve_order` feature), `thiserror`, `anyhow`; integration tests with
 `assert_cmd` through `common::upskill_cmd`.
 
-**Spec:** [plugin MVP design](../specs/2026-11-24-plugin-mvp-design.md),
+**Spec:** [plugin MVP design](../../wip/specs/2026-11-24-plugin-mvp-design.md),
 sections 6 and 7 and "Left to the builder";
 [AD-0046](../../adr/0046-plugin-mvp-components.md), Decisions 13 and 14 and the
 amendments to AD-0044 Decisions 1 and 8;

@@ -1359,3 +1359,32 @@ to 7, 11 and 12; [content format](../topics/0001-content-format.md);
 [format spec](../specification/format-spec.md);
 [specification §2.8](../specification/specification.md); the
 [command guide](../book/commands.md); the [conventions](../book/conventions.md).
+
+## Several bundles and catalog generation in `pack`
+
+Source path: `docs/wip/plans/2026-11-25-pack-catalog.md`. The raw
+[plan](plans/2026-11-25-pack-catalog.md) is retained unchanged, except that its
+link to the plugin MVP design now points to `docs/wip/specs/`. It is the plan of
+story [#635](https://github.com/driftsys/upskill/issues/635), one of the seven
+stories of the
+[plugin MVP design](../wip/specs/2026-11-24-plugin-mvp-design.md). That design
+is not archived: the stories #636 and #637 are planned. They need a release and
+the owner of the catalog repository.
+
+A Fable reviewer checked the decisions of the plan before implementation. The
+task reviews then added four changes: `pack` refuses two bundle files with one
+name, one normalized path serves reading and writing a marketplace file, the
+temporary file is created exclusively, and each marketplace file prints its own
+output line. The plan names the last function `write_updates`; the code has
+`write_update` in `src/catalog.rs`, which writes one file and is called once for
+each file.
+
+Implementation: the pull request of branch `feat/pack-catalog`. Completion
+evidence: `just verify`, `just sanity` and
+`cargo +1.85 check --all-targets
+--locked` passed on commit `8bc9859`.
+
+Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions
+13 and 14; [specification §2.8](../specification/specification.md); the
+[command guide](../book/commands.md); the
+[recipe](../book/recipes.md#publish-a-bundle-as-client-plugins).
