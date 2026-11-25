@@ -22,13 +22,13 @@ pub(super) fn check_hook_names(bundles: &[Bundle]) -> Result<()> {
     let mut names = BTreeMap::new();
     for bundle in bundles {
         for name in &bundle.items.hooks {
-            if let Some(first) = names.insert(name, &bundle.name)
-                && first != &bundle.name
-            {
-                bail!(
-                    "hook `{name}` is named by both bundles `{first}` and `{}`",
-                    bundle.name
-                );
+            if let Some(first) = names.insert(name, &bundle.name) {
+                if first != &bundle.name {
+                    bail!(
+                        "hook `{name}` is named by both bundles `{first}` and `{}`",
+                        bundle.name
+                    );
+                }
             }
         }
     }
