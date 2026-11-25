@@ -414,18 +414,17 @@ for Copilot CLI) of the bundle closure. The bundle's `lsps` map declares LSP
 servers. The plugin also carries the context hooks of hook items as static JSON
 files and entries that print them, plus command hook scripts and entries that
 set `UPSKILL_CLIENT` and run them. The plugin does not install the server
-binary; `add` and `update` do
-not configure LSP servers. They report their count in the same stderr skip line
-as command and hook items, unless `--quiet` or a kind restriction applies. The user calls
-a command as `/<plugin>:<name>`. When rules of the closure target the client,
-init is written at `skills/init/SKILL.md`; call it as `/<plugin>:init` in an
-interactive session. It runs `add --kind rule --project` for that client.
-`add --kind` is repeatable for `rule`, `skill` and `agent`; it skips plugin and
-MCP steps. Bundle lockfile entries record the selected `kinds`. `update` uses
-their union only when every recorded bundle of the source has recorded kinds;
-one unrestricted bundle leaves that source unrestricted. Every entry of that
-source whose kind is outside the restriction stays unchanged; reinstall it
-explicitly to update it.
+binary; `add` and `update` do not configure LSP servers. They report their count
+in the same stderr skip line as command and hook items, unless `--quiet` or a
+kind restriction applies. The user calls a command as `/<plugin>:<name>`. When
+rules of the closure target the client, init is written at
+`skills/init/SKILL.md`; call it as `/<plugin>:init` in an interactive session.
+It runs `add --kind rule --project` for that client. `add --kind` is repeatable
+for `rule`, `skill` and `agent`; it skips plugin and MCP steps. Bundle lockfile
+entries record the selected `kinds`. `update` uses their union only when every
+recorded bundle of the source has recorded kinds; one unrestricted bundle leaves
+that source unrestricted. Every entry of that source whose kind is outside the
+restriction stays unchanged; reinstall it explicitly to update it.
 
 The embedded notice hook calls `update --notice`. Runs sharing a cache use
 `notice.lock`: a lock younger than 60 seconds makes another run exit silently. A

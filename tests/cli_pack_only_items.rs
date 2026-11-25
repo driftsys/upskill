@@ -452,7 +452,6 @@ fn add_of_a_name_that_is_a_bundle_and_a_command_item_installs_the_bundle() {
     assert!(f.consumer.join(".claude/skills/alpha/SKILL.md").is_file());
 }
 
-#[test]
 const HOOK_LINE: &str =
     "skipped 1 command item(s), 1 hook item(s), 1 LSP server(s): only `upskill pack` writes them";
 
