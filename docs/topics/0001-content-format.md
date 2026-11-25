@@ -1343,9 +1343,10 @@ state how far the output for each client and kind is verified.
 This section describes the expected output per client: which files an
 implementation writes for each item kind, and how SSOT frontmatter maps onto
 each client's frontmatter shape. Command items have no `add` output and no
-subsection here; `pack` writes them as described in §3.9. It is informational;
-client conventions may change independently of this specification.
-Implementations SHOULD verify output against actual client behavior.
+subsection here; `pack` writes them as described in §3.9. This section, §7, is
+informational; client conventions may change independently of this
+specification. Implementations SHOULD verify output against actual client
+behavior.
 
 This section is deliberately scoped to "what file and frontmatter each client
 reads". Adjacent behavior — bridging files, IDE configuration mutation,

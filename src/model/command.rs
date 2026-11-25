@@ -51,4 +51,16 @@ mod tests {
             "{error}"
         );
     }
+
+    #[test]
+    fn command_refuses_a_client_block() {
+        let error = serde_yaml_ng::from_str::<Command>(
+            "name: release-notes\ndescription: Write the notes\ncopilot: {}\n",
+        )
+        .unwrap_err();
+        assert!(
+            error.to_string().contains("unknown field `copilot`"),
+            "{error}"
+        );
+    }
 }

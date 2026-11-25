@@ -317,7 +317,42 @@ fn lint_excludes_a_command_only_directory_from_name_collision() {
         .current_dir(tmp.path())
         .args(["lint", "--strict"])
         .assert()
-        .stdout(predicates::str::contains("name-collision").not());
+        .success()
+        .stdout(predicates::str::contains("name-collision").not())
+        .stdout(predicates::str::contains("0 findings"));
+}
+
+/// Counterpart of the test above: a skill directory that has a bundle's name
+/// is still reported, so the exclusion is limited to command items.
+#[test]
+fn lint_still_reports_a_skill_directory_that_collides_with_a_bundle_next_to_a_command() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    write(
+        &tmp.path().join("standup/COMMAND.md"),
+        "---\nschema: 1\nname: standup\ndescription: Write the notes\n---\n\nWrite the notes.\n",
+    );
+    write(
+        &tmp.path().join("standup.bundle.yaml"),
+        "schema: 1\nname: standup\ndescription: a bundle\nitems:\n  commands:\n    - standup\n",
+    );
+    write(
+        &tmp.path().join("baseline/SKILL.md"),
+        "---\nschema: 1\nname: baseline\ndescription: A skill\n---\n\nBody.\n",
+    );
+    write(
+        &tmp.path().join("baseline.bundle.yaml"),
+        "schema: 1\nname: baseline\ndescription: a bundle\nitems:\n  skills:\n    - baseline\n",
+    );
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(["lint", "--strict"])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains("name-collision"))
+        .stdout(predicates::str::contains("baseline"))
+        .stdout(predicates::str::contains("standup.bundle.yaml").not());
 }
 
 #[test]

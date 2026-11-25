@@ -325,3 +325,25 @@ fn fmt_orders_every_command_key_canonically() {
         "{after}"
     );
 }
+
+#[test]
+fn fmt_refuses_a_command_with_an_unknown_field_or_a_client_block() {
+    for (extra, field) in [("audience: [x]\n", "audience"), ("claude: {}\n", "claude")] {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path().join("home");
+        fs::create_dir_all(&home).unwrap();
+        let path = tmp.path().join("release-notes/COMMAND.md");
+        let raw = format!(
+            "---\nschema: 1\nname: release-notes\ndescription: Write the notes\n{extra}---\n\nWrite the notes.\n"
+        );
+        write(&path, &raw);
+        let assert = common::upskill_cmd(&home)
+            .current_dir(tmp.path())
+            .args(["fmt", "."])
+            .assert()
+            .failure();
+        let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+        assert!(stderr.contains(field), "{field}: {stderr}");
+        assert_eq!(fs::read_to_string(&path).unwrap(), raw);
+    }
+}

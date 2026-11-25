@@ -278,6 +278,29 @@ fn add_of_a_directory_with_a_rule_and_a_command_entry_is_refused_as_a_rule_direc
         .stderr(predicate::str::contains("is a command item directory").not());
 }
 
+/// The same refusal holds for a `SKILL.md` or an `AGENT.md` that sits beside
+/// a `COMMAND.md`: the directory is an ordinary item directory.
+#[test]
+fn add_of_a_directory_with_a_skill_or_agent_and_a_command_entry_is_refused_as_that_directory() {
+    for entry in ["SKILL.md", "AGENT.md"] {
+        let f = Fixture::new();
+        let source = f.registry.join("skills/mixed");
+        fs::create_dir_all(&source).unwrap();
+        let body = "---\nschema: 1\nname: mixed\ndescription: Test item\n---\n\nTest body.\n";
+        fs::write(source.join(entry), body).unwrap();
+        fs::write(source.join("COMMAND.md"), body).unwrap();
+        f.command("add")
+            .arg(&source)
+            .arg("--claude")
+            .assert()
+            .code(1)
+            .stderr(predicate::str::contains(format!(
+                "is an item directory (it holds {entry})"
+            )))
+            .stderr(predicate::str::contains("is a command item directory").not());
+    }
+}
+
 #[test]
 fn add_kind_command_is_a_usage_error() {
     let f = Fixture::new();
@@ -443,6 +466,10 @@ fn update_of_a_recorded_skill_that_the_source_turned_into_a_command_keeps_it_and
         "---\nschema: 1\nname: alpha\ndescription: Test item\n---\n\nTest body.\n",
     )
     .unwrap();
+    let lock_path = f.consumer.join(".upskill-lock.json");
+    let skill_path = f.consumer.join(".claude/skills/alpha/SKILL.md");
+    let lock_before = fs::read(&lock_path).unwrap();
+    let skill_before = fs::read(&skill_path).unwrap();
     f.command("update")
         .assert()
         .code(1)
@@ -450,8 +477,9 @@ fn update_of_a_recorded_skill_that_the_source_turned_into_a_command_keeps_it_and
         .stderr(predicate::str::contains(
             "no matching items or bundles in source for: alpha",
         ));
-    assert!(f.consumer.join(".claude/skills/alpha/SKILL.md").is_file());
-    let lock = fs::read_to_string(f.consumer.join(".upskill-lock.json")).unwrap();
+    assert_eq!(fs::read(&skill_path).unwrap(), skill_before);
+    assert_eq!(fs::read(&lock_path).unwrap(), lock_before);
+    let lock = String::from_utf8(lock_before).unwrap();
     assert!(lock.contains("\"name\": \"alpha\""), "{lock}");
 }
 
