@@ -2511,9 +2511,10 @@ fn pack_catalog_with_a_relative_out_prints_the_normalized_absolute_plugin_path()
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout).into_owned();
-    let line = stdout.lines().next().unwrap();
-    assert!(line.starts_with("Wrote /"), "{stdout}");
-    assert!(line.contains("/market/plugins/demo-claude ("), "{stdout}");
+    let line = stdout.lines().next().unwrap().replace('\\', "/");
+    let path = line.strip_prefix("Wrote ").unwrap();
+    assert!(Path::new(path.split(" (").next().unwrap()).is_absolute() || path.starts_with('/'));
+    assert!(path.contains("/market/plugins/demo-claude ("), "{stdout}");
     assert!(!line.contains(".."), "{stdout}");
     assert!(f.market.join("plugins/demo-claude").is_dir());
     assert!(!f.market.join("x").exists());
