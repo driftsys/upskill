@@ -1366,6 +1366,40 @@ fn pack_refuses_one_hook_named_by_two_bundles() {
 }
 
 #[test]
+fn pack_refuses_an_unclosed_directive_of_a_hook_skipped_for_one_client() {
+    let f = Fixture::new();
+    f.hook(
+        "edits",
+        "events:\n  post-tool:\n    matcher:\n      claude: Edit",
+        "<!-- @client:claude -->\n\nText.",
+    );
+    f.hook_bundle("baddirective", "edits", "");
+    f.command_for_clients("baddirective")
+        .arg("--copilot")
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(
+            "hook `edits` of bundle `baddirective`",
+        ))
+        .stderr(predicates::str::contains("@client"));
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_merges_a_hook_listed_twice_in_one_bundle_once() {
+    let f = Fixture::new();
+    f.hook("again", "events:\n  session-start:", "Once only.");
+    f.hook_bundle("twice", "again, again", "");
+    f.command_for_clients("twice").assert().success();
+    for client in ["claude", "copilot"] {
+        assert_eq!(
+            f.context_text("twice", client, "session-start"),
+            "Once only."
+        );
+    }
+}
+
+#[test]
 fn pack_refuses_a_hook_named_context() {
     let f = Fixture::new();
     f.hook("context", "events:\n  session-start:", "Text.");

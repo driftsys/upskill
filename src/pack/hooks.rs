@@ -1,6 +1,6 @@
 //! Hook files and static context files for plugin output.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
@@ -36,9 +36,13 @@ pub(super) fn check_hook_names(bundles: &[Bundle]) -> Result<()> {
 }
 
 /// Read and validate every hook, with the declaration attached to each error.
+/// A name listed twice in one bundle counts once; `check_hook_names` already
+/// refused a name that two bundles list.
 pub(super) fn read_pack_hooks(hooks: &[BundleHook]) -> Result<Vec<PackHook>> {
+    let mut seen = BTreeSet::new();
     hooks
         .iter()
+        .filter(|declared| seen.insert(declared.name.as_str()))
         .map(|declared| {
             let read = || {
                 let source = read_hook(&declared.root, &declared.name)?;
@@ -46,6 +50,11 @@ pub(super) fn read_pack_hooks(hooks: &[BundleHook]) -> Result<Vec<PackHook>> {
                     check_hook(&source.hook, &source.body, &source.dir).first()
                 {
                     bail!("{}: {}", source.path.display(), problem.message);
+                }
+                // `check_hook` leaves errors of the whole body to lint. Check
+                // them here before any client filtering skips an event.
+                if let Err(error) = directives::process(&source.body, Client::Claude) {
+                    bail!("{}: {error:#}", source.path.display());
                 }
                 for (event, settings) in &source.hook.events {
                     if settings
