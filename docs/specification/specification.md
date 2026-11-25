@@ -1149,7 +1149,8 @@ and normalized by removing `.` and `..` components without following symbolic
 links, so a `..` after a symbolic link names the parent of the link. The plugin
 directories are written to the normalized `--out`, the same path that `source`
 is computed from, so the plugin directories and the marketplace files are always
-in one tree.
+in one tree. The `Wrote` line of a plugin directory then prints that normalized
+absolute path, also when `--out` is relative.
 
 Each packed entry holds `name` (the bundle name), `source` (the path from the
 catalog root to the plugin directory, prefixed with `./`, with `/` separators)

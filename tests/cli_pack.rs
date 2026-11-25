@@ -185,7 +185,7 @@ fn pack_refuses_two_bundle_files_with_one_name_and_keeps_the_output() {
     let kept = f.out.join("twin-claude");
     fs::create_dir_all(&kept).unwrap();
     fs::write(kept.join("keep"), "earlier").unwrap();
-    for args in [vec!["--all"], vec!["twin"]] {
+    for args in [vec!["--all"], vec!["twin"], vec!["demo"]] {
         let mut cmd = common::upskill_cmd(&f.home);
         cmd.current_dir(&f.registry)
             .arg("pack")
@@ -2405,8 +2405,9 @@ fn pack_catalog_reports_the_first_file_before_a_later_write_fails() {
     fs::create_dir_all(&locked).unwrap();
     fs::set_permissions(&locked, fs::Permissions::from_mode(0o555)).unwrap();
     let claude = f.market.join(".claude-plugin/marketplace.json");
+    let args = [&["demo"][..], NEW_CATALOG].concat();
     let result = f
-        .catalog(&[&["demo"][..], NEW_CATALOG].concat())
+        .catalog(&args)
         .assert()
         .code(1)
         .stderr(predicates::str::contains("marketplace.json.tmp"))
@@ -2418,6 +2419,17 @@ fn pack_catalog_reports_the_first_file_before_a_later_write_fails() {
     fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
     drop(result);
     assert!(claude.is_file());
+    // The plugin directories stay as written.
+    for client in ["claude", "copilot"] {
+        assert!(f.market.join(format!("plugins/demo-{client}")).is_dir());
+    }
+    let copilot = f.market.join(".github/plugin/marketplace.json");
+    assert!(!copilot.exists());
+    // A rerun with `--force` repairs the run.
+    f.catalog(&[&args[..], &["--force"]].concat())
+        .assert()
+        .success();
+    assert!(copilot.is_file());
 }
 
 #[cfg(unix)]
@@ -2446,6 +2458,65 @@ fn pack_catalog_writes_plugins_and_marketplace_to_one_tree_for_a_link_and_parent
     let source = marketplace["plugins"][0]["source"].as_str().unwrap();
     assert_eq!(source, "./plugins/demo-claude");
     assert!(tree_root.join(source).join(".claude-plugin").is_dir());
+}
+
+#[test]
+fn pack_catalog_with_out_equal_to_the_catalog_removes_shorthand_and_url_sources() {
+    let f = Fixture::new_catalog();
+    let path = existing_catalog(
+        &f,
+        br#"{"name":"m","owner":{"name":"o"},"plugins":[
+            {"name":"shorthand","source":"owner/repo"},
+            {"name":"url","source":"https://example.com/owner/repo"},
+            {"name":"object","source":{"source":"github","repo":"owner/repo"}},
+            {"name":"absolute","source":"/opt/plugin"}]}"#,
+    );
+    common::upskill_cmd(&f.home)
+        .current_dir(&f.registry)
+        .args(["pack", "--all", "--claude", "--source", "driftsys/demo@v1"])
+        .arg("--out")
+        .arg(&f.market)
+        .arg("--catalog")
+        .arg(&f.market)
+        .assert()
+        .success()
+        .stdout(predicates::str::contains(format!(
+            "Removed shorthand from {}",
+            path.display()
+        )))
+        .stdout(predicates::str::contains(format!(
+            "Removed url from {}",
+            path.display()
+        )));
+    let names: Vec<String> = read_json(&path)["plugins"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|entry| entry["name"].as_str().unwrap().to_string())
+        .collect();
+    assert!(names.contains(&"object".to_string()), "{names:?}");
+    assert!(names.contains(&"absolute".to_string()), "{names:?}");
+    assert!(!names.contains(&"shorthand".to_string()), "{names:?}");
+    assert!(!names.contains(&"url".to_string()), "{names:?}");
+}
+
+#[test]
+fn pack_catalog_with_a_relative_out_prints_the_normalized_absolute_plugin_path() {
+    let f = Fixture::new_catalog();
+    let output = common::upskill_cmd(&f.home)
+        .current_dir(&f.registry)
+        .args(["pack", "demo", "--claude", "--source", "driftsys/demo@v1"])
+        .args(["--out", "../market/x/../plugins", "--catalog", "../market"])
+        .args(NEW_CATALOG)
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout).into_owned();
+    let line = stdout.lines().next().unwrap();
+    assert!(line.starts_with("Wrote /"), "{stdout}");
+    assert!(line.contains("/market/plugins/demo-claude ("), "{stdout}");
+    assert!(!line.contains(".."), "{stdout}");
+    assert!(f.market.join("plugins/demo-claude").is_dir());
+    assert!(!f.market.join("x").exists());
 }
 
 #[test]

@@ -1372,16 +1372,15 @@ is not archived: the stories #636 and #637 are planned. They need a release and
 the owner of the catalog repository.
 
 A Fable reviewer checked the decisions of the plan before implementation. The
-task reviews then added four changes: `pack` refuses two bundle files with one
+task reviews then added five changes: `pack` refuses two bundle files with one
 name, one normalized path serves reading and writing a marketplace file, the
-temporary file is created exclusively, and each marketplace file prints its own
-output line. The plan names the last function `write_updates`; the code has
-`write_update` in `src/catalog.rs`, which writes one file and is called once for
-each file.
+temporary file is created exclusively, each marketplace file prints its own
+output line, and the plugin directories are written to the normalized `--out`.
+The plan names the last function `write_updates`; the code has `write_update` in
+`src/catalog.rs`, which writes one file and is called once for each file.
 
 Implementation: the pull request of branch `feat/pack-catalog`. Completion
-evidence: the CI checks of pull request #646 (Quality, MSRV (Rust 1.85), Test on
-ubuntu, macos and windows, Documentation and CI).
+evidence: the CI checks of pull request #646.
 
 Durable successors: [AD-0046](../adr/0046-plugin-mvp-components.md), Decisions
 13 and 14; [specification §2.8](../specification/specification.md); the

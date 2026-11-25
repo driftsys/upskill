@@ -24,7 +24,7 @@ pub fn marketplace_path(client: PackClient) -> &'static str {
 #[derive(Debug, thiserror::Error)]
 pub enum CatalogUsageError {
     #[error(
-        "--out {out} is not inside --catalog {root}; the paths are compared as written, without following symbolic links"
+        "--out {out} is not inside --catalog {root}; both paths are made absolute and normalized from their text, without following symbolic links"
     )]
     OutsideRoot { out: String, root: String },
     #[error("{path} does not exist: pass --catalog-name and --catalog-owner to create it")]
@@ -556,12 +556,33 @@ mod tests {
     #[test]
     fn prune_uses_only_the_packed_directories_of_the_same_client() {
         let tmp = tempfile::tempdir().unwrap();
-        let catalog = open_with(
+        let claude = tmp.path().join("market/.claude-plugin/marketplace.json");
+        let copilot = tmp.path().join("market/.github/plugin/marketplace.json");
+        for (path, entries) in [
+            (
+                &claude,
+                r#"{"plugins":[
+                    {"name":"other","source":"./plugins/demo-copilot"},
+                    {"name":"mine","source":"./plugins/demo-claude"}]}"#,
+            ),
+            (
+                &copilot,
+                r#"{"plugins":[
+                    {"name":"other","source":"./plugins/demo-claude"},
+                    {"name":"mine","source":"./plugins/demo-copilot"}]}"#,
+            ),
+        ] {
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, entries).unwrap();
+        }
+        let catalog = Catalog::open(
             tmp.path(),
-            r#"{"plugins":[{"name":"other","source":"./plugins/demo-copilot"}]}"#,
-            "market/plugins",
+            Path::new("market"),
+            Path::new("market/plugins"),
             &[PackClient::Claude, PackClient::Copilot],
-        );
+            header(),
+        )
+        .unwrap();
         let updates = catalog
             .render(
                 &[
@@ -573,6 +594,22 @@ mod tests {
             .unwrap();
         assert!(updates[0].path.ends_with(".claude-plugin/marketplace.json"));
         assert_eq!(updates[0].removed, ["other"]);
+        assert!(updates[1].path.ends_with(".github/plugin/marketplace.json"));
+        assert_eq!(updates[1].removed, ["other"]);
+    }
+
+    #[test]
+    fn out_dir_is_the_normalized_absolute_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let catalog = Catalog::open(
+            tmp.path(),
+            Path::new("market"),
+            Path::new("market/x/../plugins"),
+            &[PackClient::Claude],
+            header(),
+        )
+        .unwrap();
+        assert_eq!(catalog.out_dir(), tmp.path().join("market/plugins"));
     }
 
     #[test]
