@@ -171,13 +171,13 @@ fn check_command_names(bundles: &[Bundle]) -> Result<()> {
     let mut commands = BTreeMap::new();
     for bundle in bundles {
         for name in &bundle.items.commands {
-            if let Some(first) = commands.insert(name, &bundle.name)
-                && first != &bundle.name
-            {
-                bail!(
-                    "command `{name}` is named by both bundles `{first}` and `{}`",
-                    bundle.name
-                );
+            if let Some(first) = commands.insert(name, &bundle.name) {
+                if first != &bundle.name {
+                    bail!(
+                        "command `{name}` is named by both bundles `{first}` and `{}`",
+                        bundle.name
+                    );
+                }
             }
         }
     }

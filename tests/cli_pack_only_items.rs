@@ -242,7 +242,7 @@ fn add_of_a_skill_and_a_command_by_name_fails_before_any_write() {
 #[test]
 fn add_of_a_command_item_directory_as_source_is_an_error_that_names_pack() {
     let f = Fixture::new();
-    let source = f.registry.join("skills/release-notes");
+    let source = f.registry.join("skills").join("release-notes");
     f.command("add")
         .arg(&source)
         .arg("--claude")
