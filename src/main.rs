@@ -6,7 +6,7 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use upskill::cli::{Cli, Commands};
+use upskill::cli::{Cli, Commands, PackArgs};
 use upskill::config;
 use upskill::fmt::{FmtReport, fmt};
 use upskill::index;
@@ -157,14 +157,7 @@ fn main() {
             registry,
             kind,
         } => run_search(&query, limit, registry.as_deref(), kind.as_deref()),
-        Commands::Pack {
-            bundle,
-            source,
-            out,
-            force,
-            claude,
-            copilot,
-        } => run_pack(&bundle, &source, &out, force, claude, copilot),
+        Commands::Pack(args) => run_pack(&args),
         Commands::Lint { paths, strict } => run_lint(&paths, strict),
         Commands::Fmt { paths } => run_fmt(&paths),
         Commands::New { kind, name } => run_new(&kind, &name),
@@ -2540,32 +2533,40 @@ fn print_list_bundles(bundles: &[ListedBundle]) {
     }
 }
 
-fn run_pack(
-    bundle: &str,
-    source: &str,
-    out: &std::path::Path,
-    force: bool,
-    claude: bool,
-    copilot: bool,
-) -> i32 {
+fn run_pack(args: &PackArgs) -> i32 {
     use upskill::pack::{self, PackClient};
 
-    if let Err(error) =
-        pack::validate_source(source).and_then(|()| pack::validate_bundle_name(bundle))
-    {
+    if let Err(error) = pack::validate_source(&args.source).and_then(|()| {
+        args.bundles
+            .iter()
+            .try_for_each(|name| pack::validate_bundle_name(name))
+    }) {
         print_error(format!("{error:#}"));
         return EXIT_USAGE;
     }
     let result = (|| -> anyhow::Result<()> {
         let root = std::env::current_dir()?;
+        let bundles = pack::select_bundles(&root, &args.bundles, args.all)?;
         let mut directories = Vec::new();
-        if claude || !copilot {
-            directories.push(pack::build(&root, bundle, source, PackClient::Claude)?);
+        for bundle in bundles {
+            if args.claude || !args.copilot {
+                directories.push(pack::build(
+                    &root,
+                    &bundle.name,
+                    &args.source,
+                    PackClient::Claude,
+                )?);
+            }
+            if args.copilot || !args.claude {
+                directories.push(pack::build(
+                    &root,
+                    &bundle.name,
+                    &args.source,
+                    PackClient::Copilot,
+                )?);
+            }
         }
-        if copilot || !claude {
-            directories.push(pack::build(&root, bundle, source, PackClient::Copilot)?);
-        }
-        for (target, count) in pack::write_plugin_dirs(out, &directories, force)? {
+        for (target, count) in pack::write_plugin_dirs(&args.out, &directories, args.force)? {
             if !style::is_quiet() {
                 println!("Wrote {} ({} files)", target.display(), count);
             }

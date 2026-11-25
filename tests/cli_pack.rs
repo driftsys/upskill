@@ -60,6 +60,16 @@ impl Fixture {
         cmd
     }
 
+    fn pack(&self, args: &[&str]) -> assert_cmd::Command {
+        let mut cmd = common::upskill_cmd(&self.home);
+        cmd.current_dir(&self.registry)
+            .arg("pack")
+            .args(args)
+            .args(["--source", "driftsys/demo@v1", "--out"])
+            .arg(&self.out);
+        cmd
+    }
+
     fn command_for_clients(&self, bundle: &str) -> assert_cmd::Command {
         let mut cmd = common::upskill_cmd(&self.home);
         cmd.current_dir(&self.registry)
@@ -78,6 +88,158 @@ impl Fixture {
             tree(Path::new("tests/fixtures/pack/expected/demo-claude"))
         );
     }
+}
+
+#[test]
+fn pack_of_several_bundles_writes_every_directory_in_name_order() {
+    let f = Fixture::new();
+    let output = f.pack(&["norules", "demo"]).assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    let lines: Vec<_> = stdout.lines().collect();
+    assert_eq!(lines.len(), 4);
+    for (line, name) in lines.iter().zip([
+        "demo-claude",
+        "demo-copilot",
+        "norules-claude",
+        "norules-copilot",
+    ]) {
+        assert!(line.starts_with(&format!("Wrote {} (", f.out.join(name).display())));
+    }
+    for name in ["demo-claude", "demo-copilot"] {
+        assert_eq!(
+            tree(&f.out.join(name)),
+            tree(&Path::new("tests/fixtures/pack/expected").join(name))
+        );
+    }
+    assert!(
+        f.out
+            .join("norules-claude/.claude-plugin/plugin.json")
+            .is_file()
+    );
+    assert!(f.out.join("norules-copilot/plugin.json").is_file());
+}
+
+#[test]
+fn pack_all_writes_every_bundle_of_the_registry() {
+    let f = Fixture::new();
+    f.pack(&["--all"]).assert().success();
+    let mut names: Vec<_> = fs::read_dir(&f.out)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect();
+    names.sort();
+    assert_eq!(
+        names,
+        [
+            "base-claude",
+            "base-copilot",
+            "demo-claude",
+            "demo-copilot",
+            "hookbase-claude",
+            "hookbase-copilot",
+            "hookdemo-claude",
+            "hookdemo-copilot",
+            "norules-claude",
+            "norules-copilot",
+        ]
+    );
+}
+
+#[test]
+fn pack_of_a_repeated_bundle_name_writes_it_once() {
+    let f = Fixture::new();
+    let output = f.pack(&["demo", "demo", "--claude"]).assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert_eq!(stdout.lines().count(), 1);
+    assert!(stdout.starts_with(&format!("Wrote {} (", f.target().display())));
+}
+
+#[test]
+fn pack_of_several_bundles_writes_nothing_when_one_is_unknown() {
+    let f = Fixture::new();
+    f.pack(&["demo", "nope"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("no bundle named 'nope'"));
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_of_several_bundles_checks_every_directory_before_it_writes_one() {
+    let f = Fixture::new();
+    let target = f.out.join("norules-copilot");
+    fs::create_dir_all(&target).unwrap();
+    fs::write(target.join("keep"), "unchanged").unwrap();
+    let before = tree(&f.out);
+    f.pack(&["demo", "norules"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains(target.to_str().unwrap()))
+        .stderr(predicates::str::contains("--force"));
+    assert!(!f.target().exists());
+    assert_eq!(tree(&f.out), before);
+}
+
+#[test]
+fn pack_refuses_all_with_a_bundle_name_and_requires_one_of_them() {
+    let f = Fixture::new();
+    f.pack(&["--all", "demo"]).assert().code(2);
+    f.pack(&[]).assert().code(2);
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_refuses_an_unsafe_name_among_several_bundles() {
+    let f = Fixture::new();
+    f.pack(&["demo", "a;b"]).assert().code(2);
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_all_of_a_directory_without_bundles_fails() {
+    let f = Fixture::new();
+    let empty = f._tmp.path().join("empty");
+    fs::create_dir(&empty).unwrap();
+    f.pack(&["--all"])
+        .current_dir(&empty)
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("no bundle in"));
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_all_refuses_a_registry_bundle_with_an_unsafe_name() {
+    let f = Fixture::new();
+    fs::write(
+        f.registry.join("bad name.bundle.yaml"),
+        "schema: 1\nname: bad name\ndescription: d\nitems: {}\n",
+    )
+    .unwrap();
+    f.pack(&["--all"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("bundle 'bad name'"))
+        .stderr(predicates::str::contains("bundle name must be nonempty"));
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_all_below_the_registry_twice_writes_equal_bytes() {
+    let f = Fixture::new();
+    let mut cmd = common::upskill_cmd(&f.home);
+    cmd.current_dir(&f.registry).args([
+        "pack",
+        "--all",
+        "--source",
+        "driftsys/demo@v1",
+        "--out",
+        "plugins",
+    ]);
+    cmd.assert().success();
+    let before = tree(&f.registry.join("plugins"));
+    cmd.arg("--force").assert().success();
+    assert_eq!(tree(&f.registry.join("plugins")), before);
 }
 
 #[test]

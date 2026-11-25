@@ -399,15 +399,16 @@ agent makes correct workflow decisions in both cases.
 
 ## Bundle plugin output and project rules
 
-`upskill pack <bundle> --source <source> --out <dir>` builds Claude Code and
-Copilot CLI plugin directories from the current registry. With no client flag it
-writes both; `--claude` and `--copilot` select clients. It reads no lockfile and
-does not install or publish the output. A non-empty client directory needs
-`--force`, which replaces it; the new content is written in full before any
-client directory changes. Plugin output remains experimental until a smoke test
-with a hosted git marketplace passes in both clients. The local-marketplace
-smoke test of 2026-11-19 ran the earlier `commands/init.md` layout; the current
-layout has not passed a smoke test yet.
+`upskill pack <bundle>... --source <source> --out <dir>` builds Claude Code and
+Copilot CLI plugin directories from the current registry. Several bundle names
+can be given in one run; `--all` builds every bundle of the registry. With no
+client flag it writes both; `--claude` and `--copilot` select clients. It reads
+no lockfile and does not install or publish the output. A non-empty client
+directory needs `--force`, which replaces it; the new content is written in full
+before any client directory changes. Plugin output remains experimental until a
+smoke test with a hosted git marketplace passes in both clients. The
+local-marketplace smoke test of 2026-11-19 ran the earlier `commands/init.md`
+layout; the current layout has not passed a smoke test yet.
 
 The plugin carries skills, agents, command items as user-only skills, MCP
 servers (`.mcp.json`) and LSP servers (`.lsp.json` for Claude Code, `lsp.json`

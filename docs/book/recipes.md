@@ -248,6 +248,9 @@ From the source registry, build both client directories:
 upskill pack my-bundle --source owner/repo@v1 --out dist
 ```
 
+Several bundle names can be given in one run; `--all` builds every bundle of the
+current source registry.
+
 Copy `dist/my-bundle-claude` and `dist/my-bundle-copilot` into your marketplace
 repository and configure publication there. upskill does not install, register
 or publish these plugins. Add README and LICENSE files yourself if needed;

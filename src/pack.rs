@@ -35,6 +35,57 @@ pub struct PluginDir {
     pub files: Vec<PackFile>,
 }
 
+/// A bundle that `pack` builds, with the description of its manifest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectedBundle {
+    pub name: String,
+    pub description: String,
+}
+
+/// Select named bundles once in name order, or every bundle of the registry.
+pub fn select_bundles(
+    registry_root: &Path,
+    names: &[String],
+    all: bool,
+) -> Result<Vec<SelectedBundle>> {
+    let bundles = crate::parse::bundle::discover(registry_root)?;
+    if all {
+        if bundles.is_empty() {
+            bail!("no bundle in {}", registry_root.display());
+        }
+        return bundles
+            .into_iter()
+            .map(|(_, bundle)| {
+                validate_bundle_name(&bundle.name)
+                    .with_context(|| format!("bundle '{}'", bundle.name))?;
+                Ok(SelectedBundle {
+                    name: bundle.name,
+                    description: bundle.description,
+                })
+            })
+            .collect();
+    }
+
+    let mut names = names.to_vec();
+    names.sort();
+    names.dedup();
+    names
+        .into_iter()
+        .map(|name| {
+            let (_, bundle) = bundles
+                .iter()
+                .find(|(_, bundle)| bundle.name == name)
+                .with_context(|| {
+                    format!("no bundle named '{name}' in {}", registry_root.display())
+                })?;
+            Ok(SelectedBundle {
+                name: bundle.name.clone(),
+                description: bundle.description.clone(),
+            })
+        })
+        .collect()
+}
+
 /// Validate a source for use as an argument in the init command.
 pub fn validate_source(source: &str) -> Result<()> {
     if source.starts_with('-') {
@@ -514,6 +565,33 @@ fn write_stage(stage: &Path, directory: &PluginDir) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn select_bundles_sorts_and_removes_repeated_names() {
+        let tmp = tempfile::tempdir().unwrap();
+        for (name, description) in [("b", "B"), ("a", "A")] {
+            std::fs::write(
+                tmp.path().join(format!("{name}.bundle.yaml")),
+                format!("schema: 1\nname: {name}\ndescription: {description}\nitems: {{}}\n"),
+            )
+            .unwrap();
+        }
+        let expected = vec![
+            SelectedBundle {
+                name: "a".into(),
+                description: "A".into(),
+            },
+            SelectedBundle {
+                name: "b".into(),
+                description: "B".into(),
+            },
+        ];
+        assert_eq!(
+            select_bundles(tmp.path(), &["b".into(), "a".into(), "b".into()], false).unwrap(),
+            expected
+        );
+        assert_eq!(select_bundles(tmp.path(), &[], true).unwrap(), expected);
+    }
 
     thread_local! {
         /// The index of the directory whose rename into place fails.

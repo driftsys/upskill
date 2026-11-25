@@ -945,16 +945,24 @@ behaviour:
 
 ### 2.8 `pack`
 
-Build plugin directories from a named bundle in the current source registry.
-`--source` is required and is written unchanged into init; it does not select or
-fetch the registry to pack. The entry bundle is resolved in the current
-directory; a `requires` entry with a `source` is fetched from that source.
-`--out` is required. With no client flag, both outputs are written; `--claude`
-or `--copilot` selects one, and both flags select both. `--quiet` suppresses the
-result lines.
+Build plugin directories from one or more named bundles of the current source
+registry, or with `--all` from every bundle of it. Bundles are built in name
+order, and a repeated name is built once. `--source` is required: the same value
+is written unchanged into the init command of every bundle that has one. It does
+not select or fetch the registry to pack. Each entry bundle is resolved in the
+current directory; a `requires` entry with a `source` is fetched from that
+source. `--out` is required. With no client flag, both outputs are written for
+each bundle; `--claude` or `--copilot` selects one client, and both flags select
+both. `--quiet` suppresses the result lines.
+
+Every bundle is built and every selected directory is checked before any
+directory is written. An unknown name fails with exit code 1 before any write.
+`--all` in a registry without bundles fails with exit code 1. `--all` together
+with a bundle name is a usage error (exit code 2).
 
 ```bash
 upskill pack my-bundle --source owner/repo@v1 --out dist
+upskill pack --all --source owner/repo@v1 --out dist
 ```
 
 | Content              | Claude Code output           | Copilot CLI output           |
@@ -1127,7 +1135,9 @@ client directory is replaced by a new one, also without `--force`.
 must contain only ASCII letters, digits and `/ @ : . _ - ~ +`. Whitespace and
 shell metacharacters are refused with exit code 2. The bundle name must be
 nonempty, must not start with a hyphen and may contain only ASCII letters,
-digits and `- _ .`.
+digits and `- _ .`. A name selected by `--all` that fails this rule stops the
+run with exit code 1; an invalid name given on the command line is a usage error
+(exit code 2).
 
 `pack` reads no lockfile and writes only below `--out`. It does not install or
 register the plugin, write a marketplace manifest, or publish it. The bundle
