@@ -889,9 +889,10 @@ The command is quiet by design:
 - It also checks for a newer upskill release. At most once in 24 hours, it runs
   one `git ls-remote --tags` against `https://github.com/driftsys/upskill` with
   a time limit of 3 seconds, separate from the limit of the source lookups, and
-  stores the latest `vX.Y.Z` tag under the key `release` of `notice.json`. It
-  prints one line, once for each version, when that version is greater than the
-  running one (with `--repeat`, at every run):
+  stores the latest `vX.Y.Z` tag under the key `release` of `notice.json`. A
+  failed lookup keeps the stored tag, and the next attempt waits for the 24
+  hours. It prints one line, once for each version, when that version is greater
+  than the running one (with `--repeat`, at every run):
 
   ```text
   upskill 0.10.0 is available (you have 0.9.4): curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh

@@ -33,7 +33,8 @@ the name of a second program.
    with a 3-second limit. It prints one line with the `install.sh` command once
    for each latest version, or at every run with `--repeat`.
    `UPSKILL_NO_UPDATE_CHECK` set to a nonempty value skips the check. A failure
-   prints nothing. `update --check` does not include it.
+   prints nothing, and the next attempt waits for the 24 hours. `update --check`
+   does not include it.
 5. **Skill rename.** The skill `upskill-cli` is renamed
    `upskill-managing-content`. No alias and no migration exist (pre-1.0).
 6. **Installer.** `install.sh` prints on stderr, after the version line, the

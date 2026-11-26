@@ -1558,7 +1558,9 @@ fn release_check_network_failure_is_silent() {
     assert_eq!(out.status.code(), Some(0));
     assert_eq!(stdout(&out), "");
     assert_eq!(stderr(&out), "");
-    assert_eq!(release_checked_at(&e), 0);
+    // A failed lookup still counts as the check of the day, so an offline
+    // machine does not wait for the time limit at every session start.
+    assert_ne!(release_checked_at(&e), 0);
 }
 
 #[test]

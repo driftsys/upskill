@@ -253,8 +253,11 @@ pub fn refresh_release(cache: &mut NoticeCache, now: u64) {
     let latest = crate::fetch::ls_remote_tags(RELEASE_URL, deadline)
         .ok()
         .and_then(|tags| latest_tag(&tags));
-    if let Some(latest) = latest {
-        record_release(cache, latest, now);
+    match latest {
+        Some(latest) => record_release(cache, latest, now),
+        // Record the attempt, so a failed lookup is not repeated before the
+        // next period; the last known `latest` is kept.
+        None => cache.release.checked_at = now,
     }
 }
 
