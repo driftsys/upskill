@@ -1,0 +1,10 @@
+#:schema https://driftsys.github.io/git-std/schemas/v1/git-std.schema.json
+
+# Version files updated by `git std bump`, in addition to Cargo.toml.
+#
+# `upskill pack` copies `metadata.version` of the bundle into the `version`
+# field of the plugin manifests. Clients compare that field to detect plugin
+# updates, so it takes the release version at each bump (issue #659).
+[[version_files]]
+path = "skills/upskill.bundle.yaml"
+regex = '\n  version: (\S+)'
