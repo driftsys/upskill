@@ -348,22 +348,14 @@ fn update_keeps_a_direct_item_of_another_kind_beside_a_kind_restricted_bundle() 
     );
 }
 
+/// A recorded bundle that left the source is dropped and its items are
+/// removed as no longer in source (issue #649).
 #[test]
-fn update_fails_before_any_write_when_a_recorded_bundle_left_the_source() {
+fn update_removes_the_items_of_a_recorded_bundle_that_left_the_source() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     setup_kind_registry(registry.path());
     add_named_bundle(consumer.path(), registry.path(), &[]);
-    let paths = [
-        ".claude/skills/a/SKILL.md",
-        ".claude/rules/r.md",
-        ".upskill-lock.json",
-        "CLAUDE.md",
-    ];
-    let before: Vec<_> = paths
-        .iter()
-        .map(|path| fs::read(consumer.path().join(path)).unwrap())
-        .collect();
     fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
     write(
         &registry.path().join("a/SKILL.md"),
@@ -373,15 +365,19 @@ fn update_fails_before_any_write_when_a_recorded_bundle_left_the_source() {
         .current_dir(consumer.path())
         .args(["update", "--yes", "--project"])
         .assert()
-        .code(1)
-        .stderr(predicates::str::contains("bun"));
-    for (path, contents) in paths.iter().zip(before) {
-        assert_eq!(
-            fs::read(consumer.path().join(path)).unwrap(),
-            contents,
-            "{path} changed"
-        );
-    }
+        .success()
+        .stdout(predicates::str::contains("no longer in source"));
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(!consumer.path().join(".claude/rules/r.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(
+        lock["bundles"].as_array().is_none_or(|b| b.is_empty()),
+        "{lock}"
+    );
+    assert!(
+        lock["items"].as_array().is_none_or(|i| i.is_empty()),
+        "{lock}"
+    );
 }
 
 fn read_update_lock(consumer: &Path) -> serde_json::Value {
@@ -587,36 +583,28 @@ fn update_resolves_cross_source_bundles_beside_direct_items() {
     assert!(consumer.path().join(".claude/skills/b/SKILL.md").exists());
 }
 
+/// Recorded bundle names resolve only as bundles: an item that took the
+/// name of a recorded bundle is not installed, and the bundle is dropped
+/// (issue #649).
 #[test]
-fn update_refuses_an_item_in_place_of_a_recorded_bundle_before_any_write() {
+fn update_does_not_install_an_item_in_place_of_a_recorded_bundle() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     setup_kind_registry(registry.path());
     add_named_bundle(consumer.path(), registry.path(), &[]);
-    let paths = [
-        ".upskill-lock.json",
-        ".claude/skills/a/SKILL.md",
-        ".claude/rules/r.md",
-        "CLAUDE.md",
-    ];
-    let before: Vec<_> = paths
-        .iter()
-        .map(|p| fs::read(consumer.path().join(p)).unwrap())
-        .collect();
     fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
     write_skill(registry.path(), "bun");
     common::upskill_cmd(&fake_home(consumer.path()))
         .current_dir(consumer.path())
         .args(["update", "--yes", "--project"])
         .assert()
-        .code(1)
-        .stderr(predicates::str::contains(
-            "bundle 'bun' is no longer in source",
-        ));
-    for (path, bytes) in paths.iter().zip(before) {
-        assert_eq!(fs::read(consumer.path().join(path)).unwrap(), bytes);
-    }
+        .success();
     assert!(!consumer.path().join(".claude/skills/bun").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(
+        lock["bundles"].as_array().is_none_or(|b| b.is_empty()),
+        "{lock}"
+    );
 }
 
 #[test]
@@ -2125,4 +2113,63 @@ fn an_item_of_a_dropped_dependency_keeps_the_provenance_of_its_installer() {
         "{out}"
     );
     assert_eq!(recorded_bundles(consumer.path()), vec!["top"]);
+}
+
+/// A recorded bundle that the source renamed (`old` to `new`, same items):
+/// `update` drops the old bundle record, removes its items as no longer in
+/// source and installs nothing of the new bundle (issue #649).
+#[test]
+fn update_removes_a_bundle_that_the_source_renamed() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "alpha");
+    write_skill(registry.path(), "beta");
+    let old = registry.path().join("old.bundle.yaml");
+    write(
+        &old,
+        "schema: 1\nname: old\ndescription: bundle that the test renames.\nitems:\n  skills:\n    - alpha\n    - beta\n",
+    );
+    fs::create_dir_all(consumer.path().join(".git")).unwrap();
+    let home = fake_home(consumer.path());
+    common::upskill_cmd(&home)
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "old",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let lock_path = consumer.path().join(".upskill-lock.json");
+    assert!(fs::read_to_string(&lock_path).unwrap().contains("\"old\""));
+    fs::remove_file(&old).unwrap();
+    write(
+        &registry.path().join("new.bundle.yaml"),
+        "schema: 1\nname: new\ndescription: bundle that the test renames.\nitems:\n  skills:\n    - alpha\n    - beta\n",
+    );
+
+    let out = common::upskill_cmd(&home)
+        .current_dir(consumer.path())
+        .args(["update", "--project", "--yes"])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{out:?}");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    for name in ["alpha", "beta"] {
+        assert!(
+            stdout
+                .lines()
+                .any(|l| l.contains(name) && l.contains("no longer in source")),
+            "{stdout}"
+        );
+        assert!(!consumer.path().join(".claude/skills").join(name).exists());
+    }
+    let lock: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&lock_path).unwrap()).unwrap();
+    let bundles = lock["bundles"].as_array().cloned().unwrap_or_default();
+    assert!(bundles.is_empty(), "{lock}");
+    let items = lock["items"].as_array().cloned().unwrap_or_default();
+    assert!(items.is_empty(), "{lock}");
 }

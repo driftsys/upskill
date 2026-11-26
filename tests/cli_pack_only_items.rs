@@ -574,11 +574,11 @@ fn add_of_a_name_that_matches_a_scanned_skill_and_a_command_file_installs_the_sk
 }
 
 /// A recorded skill that the source turned into a command is a recorded
-/// item that the source no longer lists, so `update` fails with the general
-/// "no matching items" error (the same as for a deleted skill), not with the
-/// command-item error of `add`. Nothing is removed or rewritten.
+/// item that the source no longer lists, so `update` removes it as no
+/// longer in source (the same as for a deleted skill, issue #649), without
+/// the command-item error of `add`.
 #[test]
-fn update_of_a_recorded_skill_that_the_source_turned_into_a_command_keeps_it_and_names_no_command_error()
+fn update_of_a_recorded_skill_that_the_source_turned_into_a_command_removes_it_and_names_no_command_error()
  {
     let f = Fixture::new();
     f.add(&["alpha", "--claude"]).success();
@@ -590,19 +590,14 @@ fn update_of_a_recorded_skill_that_the_source_turned_into_a_command_keeps_it_and
     .unwrap();
     let lock_path = f.consumer.join(".upskill-lock.json");
     let skill_path = f.consumer.join(".claude/skills/alpha/SKILL.md");
-    let lock_before = fs::read(&lock_path).unwrap();
-    let skill_before = fs::read(&skill_path).unwrap();
     f.command("update")
         .assert()
-        .code(1)
+        .success()
         .stderr(predicate::str::contains("is a command item;").not())
-        .stderr(predicate::str::contains(
-            "no matching items or bundles in source for: alpha",
-        ));
-    assert_eq!(fs::read(&skill_path).unwrap(), skill_before);
-    assert_eq!(fs::read(&lock_path).unwrap(), lock_before);
-    let lock = String::from_utf8(lock_before).unwrap();
-    assert!(lock.contains("\"name\": \"alpha\""), "{lock}");
+        .stdout(predicate::str::contains("no longer in source"));
+    assert!(!skill_path.exists());
+    let lock = fs::read_to_string(&lock_path).unwrap();
+    assert!(!lock.contains("\"name\": \"alpha\""), "{lock}");
 }
 
 #[test]

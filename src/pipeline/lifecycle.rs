@@ -2029,7 +2029,11 @@ pub fn update(
                 .filter(|e| !dependency_keys.contains(&(e.kind, e.name.clone())))
                 .cloned()
                 .collect();
-            guard_against_empty_source(&new_hashes, &own_entries, &source_label)?;
+            // A source that still has items, but none of the recorded names,
+            // removes the recorded entries (issue #649).
+            if !prepared.some_vanished() {
+                guard_against_empty_source(&new_hashes, &own_entries, &source_label)?;
+            }
             // The bundles that the lockfile records for this source, as the
             // fetched source declares them now: the plugin repair below
             // installs from them (issue #229). A source under a kind
@@ -2190,7 +2194,16 @@ pub fn update(
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
             let requirers = prepared.resolved_requirers();
+            let vanished_bundles = prepared.vanished_bundles().to_vec();
             let install_report = prepared.commit(target, plugin_scope)?;
+            // A recorded bundle that the source no longer has is dropped; its
+            // items are removed below as no longer in source (issue #649).
+            if !vanished_bundles.is_empty() {
+                let mut lock = crate::lockfile::Lockfile::load(target)?;
+                lock.bundles
+                    .retain(|b| b.source != source_label || !vanished_bundles.contains(&b.name));
+                lock.save(target)?;
+            }
             applied_sources.insert(source_label.clone());
             update_dependency_records(
                 target,

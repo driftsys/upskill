@@ -648,14 +648,18 @@ is skipped later because it requires an item of a skipped source. To update such
 an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
 reinstalled as a whole. Each reinstalled entry gets the commit of its own
 source, unless its update is skipped, and any other entry keeps its commit. If a
-recorded root bundle is missing from the source, update fails before any write
-with `bundle '<name>' is no longer in source <label>`, even if an item has that
-name; remove the bundle's items with `upskill remove` or restore the bundle. A
-dependency bundle that a full update resolves through its roots is not looked up
-by name (see below). For a source that is not applied, only a changed commit
-value, or a changed `required_by` value, causes a lockfile write. This write is
-not a change: it does not count in the output above, and `update --dry-run` and
-a declined source record no commit.
+recorded root bundle is missing from the source, update drops its record, even
+if an item has that name, and removes its items as `no longer in source`, unless
+the run installs them another way; its plugin and MCP records are kept. If none
+of the recorded items and bundles of a source remains in it (for example after
+the source renamed its only item), and the source still has items, update
+installs nothing from that source and removes its recorded items as
+`no longer in source`. An unchanged file is deleted and a modified file is kept
+with a note, as for any removed item. A dependency bundle that a full update
+resolves through its roots is not looked up by name (see below). For a source
+that is not applied, only a changed commit value, or a changed `required_by`
+value, causes a lockfile write. This write is not a change: it does not count in
+the output above, and `update --dry-run` and a declined source record no commit.
 
 **Dependency bundles.** `add` records in the lockfile, for each bundle that a
 bundle's `requires:` reached, the requiring bundles (`required_by`). A bundle
@@ -784,8 +788,10 @@ symbolic link above a recorded path, or a recorded path that cannot be
 inspected) fails before the install of that source is written. This applies also
 with `--force`. For `update`, two other cases also fail a source before any file
 of that source is written, in every mode: a source that resolves to no items
-while the lockfile records items from it, and a hand-shake file that cannot be
-updated (for example an `opencode.json` whose `instructions` is not an array).
+while the lockfile records items from it (a source that still has items but none
+of the recorded names is not such a case: its recorded items are removed), and a
+hand-shake file that cannot be updated (for example an `opencode.json` whose
+`instructions` is not an array).
 
 Older installations may record `gitlab:org/repo` or
 `gitlab+gitlab.example.com:org/team/repo:skills/team.bundle.yaml` source labels.
