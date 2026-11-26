@@ -181,16 +181,21 @@ pub(super) fn prepare_install(
     // whole source).
     let present_items: Vec<String>;
     let mut nothing_left = false;
+    // The `(kind, name)` pairs that only this recovery requests; for a name
+    // that the caller did not request, only these kinds are installed.
+    let recovered: BTreeSet<(ItemKind, String)> = vanished_bundles
+        .iter()
+        .filter_map(|bundle| options.bundle_members.get(bundle))
+        .flatten()
+        .chain(&options.direct_requests)
+        .cloned()
+        .collect();
+    let original_names: BTreeSet<String> = items.iter().cloned().collect();
     let items: &[String] = if options.allow_vanished && !discovery::is_bundle_file(&local_source) {
         let mut seen = BTreeSet::new();
         let wanted: Vec<String> = items
             .iter()
-            .chain(
-                vanished_bundles
-                    .iter()
-                    .filter_map(|bundle| options.bundle_members.get(bundle))
-                    .flatten(),
-            )
+            .chain(recovered.iter().map(|(_, name)| name))
             .filter(|name| seen.insert(name.as_str()))
             .cloned()
             .collect();
@@ -262,6 +267,11 @@ pub(super) fn prepare_install(
                 kinds.is_empty() || kinds.contains(kind)
             })
             .filter(|(_, n)| items.is_empty() || items.contains(n))
+            .filter(|(kind, n)| {
+                original_names.contains(n)
+                    || !recovered.iter().any(|(_, name)| name == n)
+                    || recovered.contains(&(*kind, n.clone()))
+            })
             .filter(|(kind, name)| seen.insert((*kind, name.clone())))
             .map(|(kind, name)| (*kind, name.clone()))
             .collect()
@@ -370,6 +380,10 @@ pub(super) fn prepare_install(
                 discovery::iter_item_dirs_strict(root)?;
             }
         }
+    } else if options.allow_vanished && local_source.is_dir() {
+        // The name resolution reads the entry source without a closure:
+        // walk it strictly as well.
+        discovery::iter_item_dirs_strict(&local_source)?;
     }
 
     // Installed names of entry-source items. The first mapping given for
@@ -929,6 +943,9 @@ impl PreparedInstall {
             let added_here = !self.options.allow_vanished
                 && item.source == self.label
                 && (named || whole_directory_source);
+            // The lockfile keys an item by `(kind, name)`; the recorded source
+            // can still have a legacy spelling that `update` rewrites, so the
+            // source is not compared.
             let recorded = lock
                 .items
                 .iter()

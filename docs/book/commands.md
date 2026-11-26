@@ -657,12 +657,17 @@ rename, `update` drops its record, even if an item has that name, and reports
 installed when you also added it by name (the lockfile marks it `direct`), when
 another recorded bundle that stays lists it, or when an installed item requires
 it; every other member is removed (`removed — no longer in source`). The record
-goes at once, also for `update <name>` of one member. Add the renamed bundle
-again with `upskill add <source> <bundle>`. The run reads every directory that
-its walk reaches (the source root and the directories one and two levels below
-it, also hidden ones; every bundle file anywhere below the root; every root of
-the dependency sources) and stops before any write when one cannot be inspected
-or when an entry file of a rule or agent cannot be read or parsed; it does not
+goes once every member is reconciled: `update <name>` of one member keeps the
+record while another member that nothing explains stays installed, and the next
+full `update` removes that member and drops the record. A lockfile entry written
+before upskill recorded `direct` is never direct, so an item that you added by
+name before that change is removed when its bundle vanishes; run
+`upskill add <source> <item>` again to keep it. Add the renamed bundle again
+with `upskill add <source> <bundle>`. The run reads every directory that its
+walk reaches (the source root and the directories one and two levels below it,
+also hidden ones; every bundle file anywhere below the root; every root of the
+dependency sources) and stops before any write when one cannot be inspected or
+when an entry file of a rule or agent cannot be read or parsed; it does not
 remove an item that it could not look up. A dependency bundle that a full update
 resolves through its roots is not looked up by name (see below). For a source
 that is not applied, only a changed commit value, or a changed `required_by`
@@ -681,8 +686,10 @@ its plugin entries as `remove` does (an opencode plugin also leaves
 `opencode.json`; MCP entries are kept for `remove-mcp`), and removes each of its
 items that no remaining bundle provides (`removed — no longer in source`). An
 item that another bundle still provides is kept, and an item outside the kind
-restriction is kept unchanged. An item that you also installed directly is
-removed with the dependency, because the lockfile does not record that; run
+restriction is kept unchanged. An item that you also added by name (the lockfile
+marks it `direct`) stays when the dependency is dropped. A lockfile entry
+written before upskill recorded `direct` is never direct, so an item that you
+added by name before that change is removed with the dependency; run
 `upskill add <source> <item>` again to keep it. `update <name>` resolves a
 dependency bundle from its own record and drops nothing.
 

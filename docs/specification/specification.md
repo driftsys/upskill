@@ -488,22 +488,26 @@ changes.
   stays installed when it is `direct` (§4) and the source still holds it, when
   another recorded bundle that stays lists it, or when an installed item still
   requires it; every other member is removed as an item that is no longer in
-  source. `update <name>` drops the record of a vanished bundle that lists
-  `<name>` in the same way. The source must still hold an item or a
-  `.bundle.yaml` file; otherwise the update fails before any write (below).
-  Before it decides that anything is no longer in source, `update` walks the
-  source root and the directories one and two levels below it (hidden ones
-  included), every directory for bundle files, and every root of the dependency
-  sources, and reads the entry file of every rule and agent it scans; an error
-  other than not-found, or an entry file that does not parse, stops the run
-  before any write. A dependency bundle that the run resolves through its roots
-  is not looked up by name: when no root reaches it any more, its record is
-  dropped (§2.6). Each reinstalled entry gets the commit of its own source (an
-  entry from another source gets that source's commit), unless its update is
-  skipped, and any other entry keeps its recorded commit. The lockfile is saved
-  only when a value differs. This write is not a change of the source (see the
-  preview above) and does not count in the output. A dry run, a declined source
-  and a stopped run record no commit.
+  source. The record is dropped when no member is left that only the bundle
+  explains: `update <name>` of one member keeps the record while another such
+  member stays installed, and the next full `update` removes that member and
+  drops the record. An entry written before the field `direct` existed is never
+  direct. An entry that another prepared source's plan provides (a dependency of
+  an item of that source) is refreshed through that source and not removed. The
+  source must still hold an item or a `.bundle.yaml` file; otherwise the update
+  fails before any write (below). Before it decides that anything is no longer
+  in source, `update` walks the source root and the directories one and two
+  levels below it (hidden ones included), every directory for bundle files, and
+  every root of the dependency sources, and reads the entry file of every rule
+  and agent it scans; an error other than not-found, or an entry file that does
+  not parse, stops the run before any write. A dependency bundle that the run
+  resolves through its roots is not looked up by name: when no root reaches it
+  any more, its record is dropped (§2.6). Each reinstalled entry gets the commit
+  of its own source (an entry from another source gets that source's commit),
+  unless its update is skipped, and any other entry keeps its recorded commit.
+  The lockfile is saved only when a value differs. This write is not a change of
+  the source (see the preview above) and does not count in the output. A dry
+  run, a declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`

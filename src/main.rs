@@ -359,6 +359,7 @@ fn run_add(args: AddArgs) -> i32 {
         bundles: Vec::new(),
         allow_vanished: false,
         bundle_members: Default::default(),
+        direct_requests: Vec::new(),
         kinds,
         source_kinds: Default::default(),
         item_clients: Default::default(),
