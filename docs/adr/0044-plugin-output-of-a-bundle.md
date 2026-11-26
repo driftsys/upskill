@@ -159,8 +159,11 @@ directory source without names) and the source still holds it, when another
 recorded bundle that stays lists it, or when an installed item requires it.
 Every other member is removed as `no longer in source`. The new optional field
 `direct` of an item entry records the first case; `update` keeps it and only
-`remove` clears it. No member stays because of the vanished bundle alone, so the
-record is always dropped. A source that holds no item and no bundle file still
-stops the run before any write (issue #196). Before it decides that an item is
-no longer in the source, `update` inspects every directory that its walk
-reaches, and an inspection error other than not-found stops the run.
+`remove` clears it. The record is dropped when no member is left that only the
+vanished bundle explains. `update <name>` of one member keeps the record while
+another such member stays installed, and the next full `update` removes that
+member and drops the record. A removal that fails stops the run before the
+record is dropped, so the record is kept. A source that holds no item and no
+bundle file still stops the run before any write (issue #196). Before it decides
+that an item is no longer in the source, `update` inspects every directory that
+its walk reaches, and an inspection error other than not-found stops the run.

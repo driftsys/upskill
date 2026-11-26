@@ -683,15 +683,17 @@ source that resolves them. When a bundle stops requiring a dependency bundle,
 `update` drops the record of that dependency once every one of its root sources
 was applied (the sources of the bundles that you named and that reach it), drops
 its plugin entries as `remove` does (an opencode plugin also leaves
-`opencode.json`; MCP entries are kept for `remove-mcp`), and removes each of its
-items that no remaining bundle provides (`removed — no longer in source`). An
-item that another bundle still provides is kept, and an item outside the kind
-restriction is kept unchanged. An item that you also added by name (the lockfile
-marks it `direct`) stays when the dependency is dropped. A lockfile entry
-written before upskill recorded `direct` is never direct, so an item that you
-added by name before that change is removed with the dependency; run
-`upskill add <source> <item>` again to keep it. `update <name>` resolves a
-dependency bundle from its own record and drops nothing.
+`opencode.json`, unless an installed opencode plugin record of a bundle that
+stays references the same entry; MCP entries are kept for `remove-mcp`), and
+removes each of its items that no remaining bundle provides
+(`removed — no longer in source`). An item that another bundle still provides is
+kept, and an item outside the kind restriction is kept unchanged. An item that
+you also added by name (the lockfile marks it `direct`) stays when the
+dependency is dropped. A lockfile entry written before upskill recorded `direct`
+is never direct, so an item that you added by name before that change is removed
+with the dependency; run `upskill add <source> <item>` again to keep it.
+`update <name>` resolves a dependency bundle from its own record and drops
+nothing.
 
 A lockfile written before upskill recorded `required_by` treats every bundle as
 a root, so `update` keeps a dependency that its root no longer requires. To drop
@@ -1026,9 +1028,10 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched, except that removing
 an item of a bundle, or the source of a bundle with `--source`, deletes the
 installed opencode plugin entry of that bundle from the `plugin` and `plugins`
-arrays of the `opencode.json` of the scope. In the global scope, removing a rule
-that is installed for opencode also deletes its `instructions` entry from the
-global opencode config.
+arrays of the `opencode.json` of the scope. The entry stays when an installed
+opencode plugin record of a bundle that stays references the same entry. In the
+global scope, removing a rule that is installed for opencode also deletes its
+`instructions` entry from the global opencode config.
 
 Without a scope flag, `remove` uses the project scope inside a git repository
 and the global scope outside one. When the current directory is the home

@@ -800,9 +800,10 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched, except that removing
 an item of a bundle, or the source of a bundle with `--source`, deletes the
 installed opencode plugin entry of that bundle from the `plugin` and `plugins`
-arrays of the `opencode.json` of the scope. In the global scope, removing a rule
-that is installed for opencode also deletes its `instructions` entry from the
-global opencode config.
+arrays of the `opencode.json` of the scope. The entry stays when an installed
+opencode plugin record of a bundle that stays references the same entry. In the
+global scope, removing a rule that is installed for opencode also deletes its
+`instructions` entry from the global opencode config.
 
 `remove` deletes only files listed in the item's `files` or `pending` record
 (§4). A recorded file is **owned** when it is a regular file with the recorded
@@ -992,23 +993,26 @@ behaviour:
   leaves the `required_by` of that bundle, and a dependency bundle that no
   resolution of the run reaches is dropped from the lockfile once every one of
   its root sources is applied. Its plugin entries are dropped with it, as
-  `remove` drops them; its MCP entries are kept. Each of its items that no
-  resolution provides is removed, reported as `removed — no longer in source`;
-  an item that another root still reaches is kept. The lockfile records no
-  marker for an item that was installed directly: an item that is also a member
-  of a dropped dependency bundle is removed with it, and
-  `upskill add <source> <item>` installs it again. An item outside the kind
-  restriction of the source that resolves it is kept unchanged. When a root
-  source is skipped, the items of its dependency bundles are kept and reported
-  as skipped, unless another resolution of the run provides them. A root bundle
-  that lists no item can drop its `requires:`; its former dependency items are
-  then removed. A root source resolves with the kinds of its root bundles when
-  each of them has recorded kinds, together with the kinds of the dependency
-  bundles that they reach (the union of the recorded kinds of the roots of each
-  dependency bundle); a dependency bundle without kinds adds none. A lockfile
-  written before `required_by` existed records every bundle as a root, so
-  `update` keeps a dependency that its root no longer requires. To drop such a
-  dependency once, run `upskill remove <item>...` with the items of the
+  `remove` drops them: the opencode config entry of such a plugin stays when an
+  installed opencode plugin record of a bundle that stays references it. Its MCP
+  entries are kept. Each of its items that no resolution provides is removed,
+  reported as `removed — no longer in source`; an item that another root still
+  reaches is kept. An item that the lockfile marks `direct` (§4) is kept when a
+  dependency bundle that lists it is dropped, as long as its source still holds
+  it. An entry written before the field `direct` existed is never direct: when
+  such an item is also a member of a dropped dependency bundle, it is removed
+  with that bundle, and `upskill add <source> <item>` installs it again. An item
+  outside the kind restriction of the source that resolves it is kept unchanged.
+  When a root source is skipped, the items of its dependency bundles are kept
+  and reported as skipped, unless another resolution of the run provides them. A
+  root bundle that lists no item can drop its `requires:`; its former dependency
+  items are then removed. A root source resolves with the kinds of its root
+  bundles when each of them has recorded kinds, together with the kinds of the
+  dependency bundles that they reach (the union of the recorded kinds of the
+  roots of each dependency bundle); a dependency bundle without kinds adds none.
+  A lockfile written before `required_by` existed records every bundle as a
+  root, so `update` keeps a dependency that its root no longer requires. To drop
+  such a dependency once, run `upskill remove <item>...` with the items of the
   dependency bundle: removing an item also drops each bundle record that lists
   it. There is no `remove <bundle-name>` form. Removing and adding the root
   bundle again does not repair the record, because a bundle recorded without
@@ -1449,8 +1453,10 @@ for every item of a directory source that is installed without names; it is
 `false`, and omitted on write, for an item that was installed only as a bundle
 member or as a `requires` dependency, and for an entry written before the field
 existed. A later `add` that names the item sets it, and only `remove` clears it;
-`update` keeps the recorded value and never sets it. `update` uses it when a
-recorded bundle is no longer in its source (§2.2).
+`update` keeps the recorded value and never sets it. `update` keeps a `direct`
+item that its source still holds in two cases: when a recorded bundle that lists
+it is no longer in its source (§2.2), and when a dependency bundle that lists it
+is dropped (§2.6).
 
 Bundle entries in `.upskill-lock.json` have an optional `kinds` array, for
 example `"kinds": ["rule"]`, recording the restriction from `add --kind`. Absent

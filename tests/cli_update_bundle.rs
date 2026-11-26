@@ -837,6 +837,72 @@ fn add_records_the_direct_flag_for_named_and_whole_source_installs() {
     assert!(direct(&read_update_lock(consumer.path()), "w"));
 }
 
+/// A cross-source `requires` dependency of an item of a whole directory
+/// source installed without names is not recorded `direct`; the item of that
+/// source is.
+#[test]
+fn add_of_a_whole_directory_source_does_not_record_a_cross_source_dependency_direct() {
+    let consumer = tempfile::tempdir().unwrap();
+    let whole = tempfile::tempdir().unwrap();
+    let dep = tempfile::tempdir().unwrap();
+    write_skill(dep.path(), "a");
+    write(
+        &whole.path().join("c/SKILL.md"),
+        &format!(
+            "---\nschema: 1\nname: c\ndescription: Requires a.\nrequires:\n  skills: [{{ name: a, source: {} }}]\n---\nBody.\n",
+            dep.path().display()
+        ),
+    );
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            whole.path().to_str().unwrap(),
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let lock = read_update_lock(consumer.path());
+    let direct = |name: &str| -> bool {
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap_or_else(|| panic!("{name} not installed: {lock}"))
+            .get("direct")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+    };
+    assert!(direct("c"), "{lock}");
+    assert!(!direct("a"), "{lock}");
+}
+
+/// A direct member of a vanished bundle that also left the source is
+/// removed as no longer in source, and the run succeeds: the name that the
+/// recovery requests is dropped from the request when the source no longer
+/// holds it.
+#[test]
+fn update_removes_a_direct_member_that_left_the_source_with_its_vanished_bundle() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "r");
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    fs::remove_dir_all(registry.path().join("a")).unwrap();
+
+    let out = update_output(consumer.path());
+
+    assert!(removed_line(&out, " a "), "{out}");
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(consumer.path().join(".claude/rules/r.md").exists());
+    assert_eq!(recorded_items(consumer.path()), ["r"]);
+    assert!(recorded_bundles(consumer.path()).is_empty());
+}
+
 /// An item of the vanished bundle's source that another source requires:
 /// the source of `c` is processed first and refreshes `a`; the source of the
 /// vanished bundle must not delete `a` afterwards.
@@ -2004,12 +2070,15 @@ fn update_keeps_a_recorded_bundle_beside_a_vanished_one() {
 }
 
 /// `--dry-run` announces the removal of the record of a vanished bundle,
-/// does not call the block `up to date`, and writes nothing.
+/// does not call the block `up to date`, and writes nothing. Every member is
+/// direct and unchanged, so the bundle line is the only change of the block.
 #[test]
 fn update_dry_run_reports_a_vanished_bundle_and_writes_nothing() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     setup_kind_registry(registry.path());
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "r");
     add_named_bundle(consumer.path(), registry.path(), &[]);
     let tracked = [
         ".upskill-lock.json",
@@ -2041,6 +2110,37 @@ fn update_dry_run_reports_a_vanished_bundle_and_writes_nothing() {
         .map(|p| fs::read(consumer.path().join(p)).ok())
         .collect();
     assert_eq!(after, snapshot);
+}
+
+/// `update --yes` whose only change is the dropped record of a vanished
+/// bundle (every member is direct and unchanged) reports the dropped record
+/// and does not say that there was nothing to do.
+#[test]
+fn update_yes_reports_a_dropped_bundle_record_as_the_only_change() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "r");
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+
+    let out = update_output(consumer.path());
+
+    assert!(
+        out.lines().any(|l| {
+            l.split_whitespace()
+                .take(3)
+                .eq(["bundle", "bun", "removed"])
+                && l.contains("no longer in source")
+        }),
+        "{out}"
+    );
+    assert!(!out.contains("nothing to do"), "{out}");
+    assert!(!removed_line(&out, "skill"), "{out}");
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+    assert!(consumer.path().join(".claude/rules/r.md").exists());
+    assert!(recorded_bundles(consumer.path()).is_empty());
 }
 
 #[test]

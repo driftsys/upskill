@@ -338,6 +338,105 @@ fn update_removes_the_plugin_uri_of_a_vanished_bundle_that_no_other_record_uses(
     );
 }
 
+/// Write the skill `name` into `registry`.
+fn write_registry_skill(registry: &std::path::Path, name: &str) {
+    let skill = registry.join(name).join("SKILL.md");
+    fs::create_dir_all(skill.parent().unwrap()).unwrap();
+    fs::write(
+        &skill,
+        format!("---\nschema: 1\nname: {name}\ndescription: skill {name}.\n---\n\nText.\n"),
+    )
+    .unwrap();
+}
+
+/// `remove` of the item of one bundle drops the plugin records of that
+/// bundle, and keeps the configured URI that the plugin record of another
+/// bundle, which stays, still references.
+#[cfg(unix)]
+#[test]
+fn remove_keeps_a_plugin_uri_that_a_bundle_that_stays_still_uses() {
+    let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
+    let registry = env.bundle.parent().unwrap().to_path_buf();
+    write_registry_skill(&registry, "beta");
+    fs::write(
+        registry.join("keep.bundle.yaml"),
+        format!(
+            "schema: 1\nname: keep\ndescription: bundle that stays.\nitems:\n  skills:\n    - beta\nplugins:\n  sp-keep:\n    opencode:\n      plugin_uri: \"{URI}\"\n"
+        ),
+    )
+    .unwrap();
+    env.add().success();
+    env.run(&["add", registry.to_str().unwrap(), "keep", "--project"])
+        .success();
+    assert!(has_uri(&env.opencode_json()));
+
+    env.run(&["remove", "alpha", "--project"]).success();
+
+    let lock = env.lock();
+    let plugins = lock["plugins"].as_array().unwrap();
+    assert!(plugins.iter().all(|p| p["bundle"] == "keep"), "{lock}");
+    assert!(!plugins.is_empty(), "{lock}");
+    assert!(has_uri(&env.opencode_json()), "{}", env.opencode_json());
+}
+
+/// A dependency bundle that is no longer required is dropped with its plugin
+/// records, and the configured URI stays because the plugin record of a
+/// bundle that stays still references it.
+#[cfg(unix)]
+#[test]
+fn update_keeps_a_plugin_uri_of_a_dropped_dependency_that_a_bundle_that_stays_still_uses() {
+    let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
+    let registry = env.bundle.parent().unwrap().to_path_buf();
+    write_registry_skill(&registry, "beta");
+    write_registry_skill(&registry, "gamma");
+    fs::write(
+        registry.join("dep.bundle.yaml"),
+        format!(
+            "schema: 1\nname: dep\ndescription: dependency bundle.\nitems:\n  skills:\n    - beta\nplugins:\n  sp-dep:\n    opencode:\n      plugin_uri: \"{URI}\"\n"
+        ),
+    )
+    .unwrap();
+    let top = |requires: &str| {
+        format!(
+            "schema: 1\nname: top\ndescription: root bundle.\nitems:\n  skills:\n    - gamma\n{requires}"
+        )
+    };
+    fs::write(
+        registry.join("top.bundle.yaml"),
+        top("requires:\n  - { name: dep }\n"),
+    )
+    .unwrap();
+    env.add().success();
+    env.run(&["add", registry.to_str().unwrap(), "top", "--project"])
+        .success();
+    assert!(
+        env.lock()["plugins"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["bundle"] == "dep"),
+        "{}",
+        env.lock()
+    );
+    fs::write(registry.join("top.bundle.yaml"), top("")).unwrap();
+
+    env.run(&["update", "--yes", "--project"]).code(0);
+
+    let lock = env.lock();
+    let mut bundles: Vec<_> = lock["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["name"].as_str().unwrap().to_string())
+        .collect();
+    bundles.sort();
+    assert_eq!(bundles, ["oc", "top"], "{lock}");
+    let plugins = lock["plugins"].as_array().unwrap();
+    assert!(plugins.iter().all(|p| p["bundle"] == "oc"), "{lock}");
+    assert!(!plugins.is_empty(), "{lock}");
+    assert!(has_uri(&env.opencode_json()), "{}", env.opencode_json());
+}
+
 #[cfg(unix)]
 #[test]
 fn module_plugin_installs_with_plugin_add_and_doctor_uses_plugin_list() {

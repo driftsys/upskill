@@ -127,7 +127,9 @@ pub struct LockedItem {
     /// sets it, and only `remove` clears it; `update` keeps the recorded
     /// value. `update` keeps a member of a bundle that left its source only
     /// when this field is true, another recorded bundle lists it, or an
-    /// installed item requires it (issue #649).
+    /// installed item requires it (issue #649). `update` also keeps an item
+    /// with this field true when a dependency bundle that lists it is
+    /// dropped, as long as its source still holds the item.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub direct: bool,
     /// Effective generation clients this item's output was written for
