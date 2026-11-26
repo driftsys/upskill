@@ -2236,10 +2236,10 @@ fn update_lists_a_dependency_planned_from_two_sources_once() {
     );
 }
 
-/// Pins today's behaviour: `update` replays the recorded item names, so an
-/// item that was renamed in the source makes `update` fail without writing.
+/// Pins today's behaviour: when the only recorded item was renamed in the
+/// source, no recorded item remains, so `update` fails without writing.
 #[test]
-fn update_fails_on_an_item_renamed_in_the_source() {
+fn update_fails_when_no_recorded_item_remains_after_a_rename() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();

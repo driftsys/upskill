@@ -1577,3 +1577,32 @@ fn release_check_runs_at_most_once_a_day() {
     let out = notice_cmd(&e, &repo, &[]).output().unwrap();
     assert_eq!(stdout(&out), release_line("100.0.0"));
 }
+
+#[test]
+fn release_line_not_printed_when_run_lock_is_busy() {
+    let e = env();
+    let repo = release_repo(&e, &["v99.0.0"]);
+    let lock = cache_path(&e).with_file_name("notice.lock");
+    fs::create_dir_all(lock.parent().unwrap()).unwrap();
+    fs::write(&lock, "").unwrap();
+    let before = release_checked_at(&e);
+    let out = notice_cmd(&e, &repo, &[]).output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+    assert_eq!(release_checked_at(&e), before);
+    assert!(lock.is_file());
+    fs::remove_file(lock).unwrap();
+    let after = notice_cmd(&e, &repo, &[]).output().unwrap();
+    assert_eq!(stdout(&after), release_line("99.0.0"));
+}
+
+#[test]
+fn release_line_not_printed_with_quiet() {
+    let e = env();
+    let repo = release_repo(&e, &["v99.0.0"]);
+    let out = notice_cmd(&e, &repo, &["--quiet"]).output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+}
