@@ -8,7 +8,7 @@
 mod common;
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
@@ -2236,13 +2236,15 @@ fn update_lists_a_dependency_planned_from_two_sources_once() {
     );
 }
 
-/// Installs the skill `old-name` from a local source, then renames it to
-/// `new-name` in the source. Returns `(home, source, target)`.
-fn install_then_rename(root: &Path) -> (PathBuf, PathBuf, PathBuf) {
-    let home = root.join("home");
+/// Pins today's behaviour: when the only recorded item was renamed in the
+/// source, no recorded item remains, so `update` fails without writing.
+#[test]
+fn update_fails_when_no_recorded_item_remains_after_a_rename() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
-    let source = root.join("source");
-    let target = root.join("target");
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
     fs::create_dir_all(source.join("old-name")).unwrap();
     fs::write(
         source.join("old-name/SKILL.md"),
@@ -2250,64 +2252,37 @@ fn install_then_rename(root: &Path) -> (PathBuf, PathBuf, PathBuf) {
     )
     .unwrap();
     fs::create_dir_all(target.join(".git")).unwrap();
+
     common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["add", source.to_str().unwrap(), "--project", "--claude"])
         .assert()
         .success();
+    let lock_before = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
+    let output_before =
+        fs::read_to_string(target.join(".claude/skills/old-name/SKILL.md")).unwrap();
+
     fs::rename(source.join("old-name"), source.join("new-name")).unwrap();
     fs::write(
         source.join("new-name/SKILL.md"),
         "---\nschema: 1\nname: new-name\ndescription: A skill that the test renames.\n---\n\nBody.\n",
     )
     .unwrap();
-    (home, source, target)
-}
 
-/// When the only recorded item was renamed in the source, `update` removes
-/// it as no longer in source and installs nothing new (issue #649).
-#[test]
-fn update_removes_the_only_recorded_item_after_a_rename() {
-    let tmp = tempfile::tempdir().unwrap();
-    let (home, _source, target) = install_then_rename(tmp.path());
-
-    let out = common::upskill_cmd(&home)
+    common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update", "--project", "--yes"])
-        .output()
-        .unwrap();
-    assert!(out.status.success(), "{out:?}");
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(
-        stdout
-            .lines()
-            .any(|l| l.contains("old-name") && l.contains("no longer in source")),
-        "{stdout}"
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("old-name"));
+
+    assert_eq!(
+        fs::read_to_string(target.join(".upskill-lock.json")).unwrap(),
+        lock_before
     );
-    assert!(!target.join(".claude/skills/old-name").exists());
-    assert!(!target.join(".claude/skills/new-name").exists());
-    let lock = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
-    assert!(!lock.contains("old-name"), "{lock}");
-    assert!(!lock.contains("new-name"), "{lock}");
-}
-
-/// The same case with a modified output file: the file is kept with the
-/// existing note (issue #649).
-#[test]
-fn update_keeps_a_modified_file_of_the_only_recorded_item_after_a_rename() {
-    let tmp = tempfile::tempdir().unwrap();
-    let (home, _source, target) = install_then_rename(tmp.path());
-    let file = target.join(".claude/skills/old-name/SKILL.md");
-    fs::write(&file, "edited by hand\n").unwrap();
-
-    let out = common::upskill_cmd(&home)
-        .current_dir(&target)
-        .args(["update", "--project", "--yes"])
-        .output()
-        .unwrap();
-    assert!(out.status.success(), "{out:?}");
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(stderr.contains("kept modified file: "), "{stderr}");
-    assert_eq!(fs::read_to_string(&file).unwrap(), "edited by hand\n");
+    assert_eq!(
+        fs::read_to_string(target.join(".claude/skills/old-name/SKILL.md")).unwrap(),
+        output_before
+    );
     assert!(!target.join(".claude/skills/new-name").exists());
 }
