@@ -1489,8 +1489,18 @@ pub fn update(
             // to Copilot on the MCP axis; MCP config is additive and never
             // auto-removed (see the MCP fan-out note in install.rs), so
             // this widens rather than loses.
+            // The dependency entries that this source's roots reach join a
+            // group only after the prepare phase, so their clients are added
+            // here.
             let effective_selection = if selection.is_all() {
-                reselect_from_entries(&source_entries)
+                let mut entries = source_entries.clone();
+                entries.extend(
+                    dependency_entries
+                        .iter()
+                        .filter(|(_, roots)| roots.contains(&source_label))
+                        .map(|(entry, _)| entry.clone()),
+                );
+                reselect_from_entries(&entries)
             } else {
                 selection.clone()
             };
@@ -1499,11 +1509,20 @@ pub fn update(
                 .iter()
                 .filter(|bundle| bundle.source == source_label)
                 .collect();
-            let kinds = if recorded_bundles
+            // The kinds of the dependency bundles that this source's roots
+            // reach count with the kinds of its own bundles.
+            let kind_bundles: Vec<_> = lock
+                .bundles
                 .iter()
-                .all(|bundle| !bundle.kinds.is_empty())
-            {
-                recorded_bundles
+                .filter(|bundle| {
+                    bundle.source == source_label
+                        || dependency_roots
+                            .get(&bundle.name)
+                            .is_some_and(|roots| roots.contains(&source_label))
+                })
+                .collect();
+            let kinds = if kind_bundles.iter().all(|bundle| !bundle.kinds.is_empty()) {
+                kind_bundles
                     .iter()
                     .flat_map(|bundle| bundle.kinds.iter().copied())
                     .collect::<std::collections::BTreeSet<_>>()

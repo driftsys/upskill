@@ -1495,3 +1495,54 @@ fn update_reports_a_cross_source_dependency_of_an_unreachable_root_as_skipped() 
     );
     assert_eq!(recorded_bundles(consumer.path()), vec!["dep", "top"]);
 }
+
+#[test]
+fn bare_update_keeps_the_clients_of_a_dependency_item() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    write_top_bundle(registry.path(), &["{ name: dep }".to_string()]);
+    let add = |args: &[&str]| {
+        common::upskill_cmd(&fake_home(consumer.path()))
+            .current_dir(consumer.path())
+            .arg("add")
+            .arg(registry.path())
+            .args(args)
+            .arg("--project")
+            .assert()
+            .success();
+    };
+    // The bundle for Copilot, then its own item again for Claude only.
+    add(&["top", "--copilot"]);
+    add(&["own", "--claude"]);
+    let clients = |name: &str| {
+        read_update_lock(consumer.path())["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap()["clients"]
+            .clone()
+    };
+    let dep_clients = clients("dep-only");
+    assert_eq!(dep_clients, serde_json::json!(["copilot"]));
+    assert_ne!(clients("own"), dep_clients);
+    let copilot_output = consumer.path().join(".github/skills/dep-only/SKILL.md");
+    assert!(copilot_output.exists());
+
+    update_output(consumer.path());
+
+    // The selection of a source is the union of the clients of its entries,
+    // which can widen an entry but never drops a recorded client.
+    assert!(
+        clients("dep-only")
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("copilot")),
+        "{}",
+        clients("dep-only")
+    );
+    assert!(copilot_output.exists());
+}
