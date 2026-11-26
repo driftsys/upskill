@@ -2587,8 +2587,41 @@ fn run_pack(args: &PackArgs) -> i32 {
         let mut directories = Vec::new();
         let mut plugins = Vec::new();
         for bundle in bundles {
+            let mut built = Vec::new();
             for &client in &clients {
-                let directory = pack::build(&root, &bundle.name, &args.source, client)?;
+                built.push((
+                    client,
+                    pack::build(&root, &bundle.name, &args.source, client)?,
+                ));
+            }
+            // A client output with nothing to pack is skipped. A named bundle
+            // with nothing to pack for every selected client is refused;
+            // `--all` skips it (#658).
+            let client_name = |client: PackClient| match client {
+                PackClient::Claude => "Claude Code",
+                PackClient::Copilot => "Copilot CLI",
+            };
+            if !args.all && built.iter().all(|(_, directory)| !directory.has_content()) {
+                return Err(pack::NothingToPack {
+                    bundle: bundle.name.clone(),
+                    clients: clients
+                        .iter()
+                        .map(|&client| client_name(client))
+                        .collect::<Vec<_>>()
+                        .join(" or "),
+                }
+                .into());
+            }
+            for (client, directory) in built {
+                if !directory.has_content() {
+                    eprintln!(
+                        "{} skipped bundle `{}` for {}: it has nothing to pack for this client",
+                        style::warn("warning:"),
+                        bundle.name,
+                        client_name(client)
+                    );
+                    continue;
+                }
                 plugins.push(PackedPlugin {
                     client,
                     name: bundle.name.clone(),
@@ -2626,7 +2659,9 @@ fn run_pack(args: &PackArgs) -> i32 {
     match result {
         Ok(()) => EXIT_SUCCESS,
         Err(error) => {
-            let code = if error.downcast_ref::<CatalogUsageError>().is_some() {
+            let code = if error.downcast_ref::<CatalogUsageError>().is_some()
+                || error.downcast_ref::<pack::NothingToPack>().is_some()
+            {
                 EXIT_USAGE
             } else {
                 EXIT_ERROR

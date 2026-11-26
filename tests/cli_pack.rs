@@ -2691,3 +2691,78 @@ fn pack_of_the_upskill_bundle_writes_skills_and_setup_hook() {
         "{bash}"
     );
 }
+
+/// Write a bundle that only declares a third-party plugin: it has nothing to
+/// pack (#658).
+fn write_pointer_bundle(f: &Fixture) {
+    fs::write(
+        f.registry.join("pointer.bundle.yaml"),
+        "schema: 1\nname: pointer\ndescription: Points at a third-party plugin\nitems: {}\nplugins:\n  other:\n    claude:\n      source: example/other-marketplace\n      marketplace: other-marketplace\n      plugin: other\n",
+    )
+    .unwrap();
+}
+
+#[test]
+fn pack_refuses_a_named_bundle_with_nothing_to_pack() {
+    let f = Fixture::new();
+    write_pointer_bundle(&f);
+    let output = f.pack(&["pointer"]).assert().code(2);
+    let stderr = String::from_utf8_lossy(&output.get_output().stderr);
+    assert!(stderr.contains("pointer"), "{stderr}");
+    assert!(stderr.contains("nothing to pack"), "{stderr}");
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_all_skips_a_bundle_with_nothing_to_pack_with_a_warning() {
+    let f = Fixture::new();
+    write_pointer_bundle(&f);
+    let output = f.pack(&["--all"]).assert().success();
+    let stderr = String::from_utf8_lossy(&output.get_output().stderr);
+    assert!(
+        stderr.contains("warning:") && stderr.contains("pointer"),
+        "{stderr}"
+    );
+    assert!(!f.out.join("pointer-claude").exists());
+    assert!(!f.out.join("pointer-copilot").exists());
+    assert!(f.out.join("demo-claude").exists());
+}
+
+#[test]
+fn pack_catalog_all_removes_the_entry_of_a_bundle_with_nothing_to_pack() {
+    let f = Fixture::new_catalog();
+    write_pointer_bundle(&f);
+    let path = existing_catalog(
+        &f,
+        br#"{"name":"m","owner":{"name":"o"},"plugins":[
+            {"name":"pointer","source":"./plugins/pointer-claude"}
+        ]}"#,
+    );
+    let output = f.catalog(&["--all", "--claude"]).assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(
+        stdout.contains(&format!("Removed pointer from {}", path.display())),
+        "{stdout}"
+    );
+    let written = fs::read_to_string(&path).unwrap();
+    assert!(!written.contains("pointer"), "{written}");
+}
+
+#[test]
+fn pack_skips_a_client_output_with_nothing_to_pack_with_a_warning() {
+    let f = Fixture::new();
+    f.hook(
+        "directed",
+        "events:\n  session-start:",
+        "<!-- @client:claude -->\nClaude only\n<!-- @endclient -->",
+    );
+    f.hook_bundle("directives", "directed", "");
+    let output = f.command_for_clients("directives").assert().success();
+    let stderr = String::from_utf8_lossy(&output.get_output().stderr);
+    assert!(
+        stderr.contains("warning:") && stderr.contains("Copilot CLI"),
+        "{stderr}"
+    );
+    assert!(f.out.join("directives-claude").is_dir());
+    assert!(!f.out.join("directives-copilot").exists());
+}

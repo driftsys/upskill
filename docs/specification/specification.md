@@ -1013,6 +1013,15 @@ with a bundle name is a usage error (exit code 2). Two bundle files that declare
 one name fail the run with exit code 1, with a bundle name or with `--all`, even
 when neither is named.
 
+A client output that would hold only its manifest has nothing to pack, for
+example the output of a bundle that only declares third-party plugins: a plugin
+cannot install another plugin. `pack` does not write it and prints a warning on
+stderr that names the bundle and the client. A named bundle with nothing to pack
+for every selected client is a usage error (exit code 2), and nothing is
+written. `--all` skips such a bundle with the warning and builds the others;
+with `--catalog`, the skipped output gets no marketplace entry, and an earlier
+entry of it is removed as for any directory that `pack` did not write.
+
 ```bash
 upskill pack my-bundle --source owner/repo@v1 --out dist
 upskill pack --all --source owner/repo@v1 --out dist

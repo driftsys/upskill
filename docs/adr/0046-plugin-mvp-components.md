@@ -100,7 +100,10 @@ implemented.
     entries that `pack` did not write. With `--all`, an entry whose `source` is
     inside `--out` and names no packed plugin directory is removed. `pack`
     deletes no plugin directory. A new file needs `--catalog-name` and
-    `--catalog-owner`; without them `pack` stops with a usage error (exit 2).
+    `--catalog-owner`; without them `pack` stops with a usage error (exit 2). A
+    client output that would hold only its manifest is not written and gets no
+    entry; a named bundle with nothing to pack for every selected client is a
+    usage error, and `--all` skips it with a warning (#658).
 14. **Build location.** `driftsys/metapowers` commits the packed plugins and the
     marketplace files. Its CI runs
     `upskill pack --all --force --source <source> --out <dir> --catalog .` with
