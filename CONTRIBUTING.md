@@ -71,7 +71,10 @@ requires network access; commit and push hooks do not download tools.
 
 After `just release` tags a version, publish the `upskill` plugin. Check out the
 tag in this repository, run `pack` with the output inside a checkout of
-`driftsys/metapowers`, then commit the result there and open a pull request:
+`driftsys/metapowers`, then commit the result there and open a pull request.
+`just release` also sets `metadata.version` of `skills/upskill.bundle.yaml` to
+the release version (`.git-std.toml`), and `pack` writes that value to the
+plugin manifests, so clients detect each published plugin as an update:
 
 ```bash
 git checkout vX.Y.Z
