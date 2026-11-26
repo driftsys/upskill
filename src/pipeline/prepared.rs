@@ -182,7 +182,10 @@ pub(super) fn prepare_install(
         scanned_items
             .iter()
             .filter(|(_, n)| !options.excludes.contains(n))
-            .filter(|(kind, _)| options.kinds.is_empty() || options.kinds.contains(kind))
+            .filter(|(kind, _)| {
+                let kinds = options.source_kinds.get(&label).unwrap_or(&options.kinds);
+                kinds.is_empty() || kinds.contains(kind)
+            })
             .filter(|(_, n)| items.is_empty() || items.contains(n))
             .filter(|(kind, name)| seen.insert((*kind, name.clone())))
             .map(|(kind, name)| (*kind, name.clone()))
@@ -267,7 +270,7 @@ pub(super) fn prepare_install(
         };
 
     if let Some(closure) = &mut closure {
-        closure.retain_kinds(&options.kinds);
+        closure.retain_kinds(&options.kinds, &options.source_kinds);
     }
 
     // Installed names of entry-source items. The first mapping given for
@@ -276,6 +279,7 @@ pub(super) fn prepare_install(
     let mut entry_names = plan::PlanNames {
         excludes: options.excludes.clone(),
         kinds: options.kinds.clone(),
+        clients: options.item_clients.clone(),
         ..plan::PlanNames::default()
     };
     for (from, to) in &options.aliases {
@@ -355,6 +359,7 @@ pub(super) fn prepare_install(
         let no_aliases = plan::PlanNames {
             excludes: options.excludes.clone(),
             kinds: options.kinds.clone(),
+            clients: options.item_clients.clone(),
             ..plan::PlanNames::default()
         };
         // Every visited source, also one without items in the run: its item
@@ -396,6 +401,7 @@ pub(super) fn prepare_install(
     let dependency_names = plan::PlanNames {
         excludes: options.excludes.clone(),
         kinds: options.kinds.clone(),
+        clients: options.item_clients.clone(),
         ..plan::PlanNames::default()
     };
     let mut report = if let Some(closure) = &closure {

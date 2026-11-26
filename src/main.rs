@@ -358,6 +358,8 @@ fn run_add(args: AddArgs) -> i32 {
         excludes: excludes.to_vec(),
         bundles: Vec::new(),
         kinds,
+        source_kinds: Default::default(),
+        item_clients: Default::default(),
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
         keep_unwithheld_edits: false,
         keep_recorded_excludes: false,

@@ -121,6 +121,15 @@ pub struct AddOptions {
     /// Item kinds to install. Empty means every kind. When it is not empty, the
     /// install runs no plugin step and no MCP step.
     pub kinds: Vec<ItemKind>,
+    /// Set by `update`: for a source of the closure, the item kinds that the
+    /// run takes from that source, a subset of `kinds`. A source without an
+    /// entry takes `kinds` (#655).
+    pub source_kinds: std::collections::BTreeMap<String, Vec<ItemKind>>,
+    /// Set by a bare `update`: the recorded clients of each item, by kind and
+    /// installed name. An item with an entry is generated for those clients
+    /// only, also when `selection` targets more (#655).
+    pub item_clients:
+        std::collections::BTreeMap<(ItemKind, String), crate::select::ClientSelection>,
     /// Bundle names that the run resolves as bundles only; set by `update`;
     /// `add` leaves it empty.
     pub bundles: Vec<String>,

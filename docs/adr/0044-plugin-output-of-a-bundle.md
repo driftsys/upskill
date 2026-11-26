@@ -58,10 +58,13 @@ bundle; it does not replace the bundle or change its schema.
    without duplicates, and bundle entries are sorted by name. `update` restricts
    a source only when every root bundle of that source (a recorded bundle that
    is not a dependency bundle with `required_by`, ADR-0009) has recorded kinds,
-   using their union together with the recorded kinds of the dependency bundles
-   that these roots reach. One unrestricted root bundle makes the source
-   unrestricted; a dependency bundle without recorded kinds does not (#648).
-   Under a kind restriction, `update` skips both the plugin and MCP steps.
+   using their union together with the kinds of the dependency bundles that
+   these roots reach. The kinds of a dependency bundle are the union of the
+   recorded kinds of its roots, not its own recorded kinds, and each source of
+   the closure is taken with the kinds of its own bundles (#655). One
+   unrestricted root bundle makes the source unrestricted; a dependency bundle
+   without kinds does not (#648). Under a kind restriction, `update` skips both
+   the plugin and MCP steps.
 7. For a directory source with recorded bundles, `update` passes the recorded
    bundle names separately from the directly installed item names of that
    source. Bundle names resolve only as bundles, including cross-source

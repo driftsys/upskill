@@ -1613,17 +1613,10 @@ fn bare_update_keeps_the_clients_of_a_dependency_item() {
 
     update_output(consumer.path());
 
-    // The selection of a source is the union of the clients of its entries,
-    // which can widen an entry but never drops a recorded client.
-    assert!(
-        clients("dep-only")
-            .as_array()
-            .unwrap()
-            .contains(&serde_json::json!("copilot")),
-        "{}",
-        clients("dep-only")
-    );
+    // Each item keeps exactly its recorded clients (#655).
+    assert_eq!(clients("dep-only"), serde_json::json!(["copilot"]));
     assert!(copilot_output.exists());
+    assert!(!consumer.path().join(".claude/skills/dep-only").exists());
 }
 
 /// `dropped` (required by `first`) and `kept` (required by `second`, whose
@@ -1850,7 +1843,7 @@ fn an_unrestricted_dependency_does_not_lift_the_kind_restriction_of_its_root() {
 }
 
 #[test]
-fn a_restricted_dependency_adds_its_kinds_to_the_kinds_of_its_root_source() {
+fn a_restricted_dependency_keeps_the_kind_restriction_of_its_root() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     let second = tempfile::tempdir().unwrap();
@@ -1876,10 +1869,68 @@ fn a_restricted_dependency_adds_its_kinds_to_the_kinds_of_its_root_source() {
 
     let out = update_output(consumer.path());
 
-    // `dep` is recorded with the kind `skill`, so the source of `top`
-    // resolves with the kinds `rule` and `skill`.
+    // `top` keeps its kind `rule`; `dep` takes the kinds of both its roots
+    // (#655).
     assert!(
-        consumer.path().join(".claude/skills/own/SKILL.md").exists(),
+        !consumer.path().join(".claude/skills/own").exists(),
+        "{out}"
+    );
+    assert!(consumer.path().join(".claude/rules/r.md").exists(), "{out}");
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-skill/SKILL.md")
+            .exists(),
+        "{out}"
+    );
+}
+
+#[test]
+fn a_shared_dependency_keeps_the_kinds_of_each_of_its_roots() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let second = tempfile::tempdir().unwrap();
+    let dep = tempfile::tempdir().unwrap();
+    setup_kind_restricted_root(registry.path(), dep.path());
+    write_rule(dep.path(), "dep-rule");
+    write(
+        &dep.path().join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Dependency bundle.\nitems:\n  rules: [dep-rule]\n  skills: [dep-skill]\n",
+    );
+    write_skill(second.path(), "own2");
+    write_root_bundle(
+        second.path(),
+        "second",
+        "own2",
+        &[format!(
+            "{{ name: dep, source: '{}' }}",
+            dep.path().display()
+        )],
+    );
+    add_with(consumer.path(), registry.path(), &["top", "--kind", "rule"]);
+    add_with(
+        consumer.path(),
+        second.path(),
+        &["second", "--kind", "skill"],
+    );
+    let dep_rule = consumer.path().join(".claude/rules/dep-rule.md");
+    assert!(dep_rule.exists());
+
+    let out = update_output(consumer.path());
+
+    // The rule of `dep` belongs to the restriction of `top`, its skill to
+    // the restriction of `second`.
+    assert!(dep_rule.exists(), "{out}");
+    assert!(!removed_line(&out, "dep-rule"), "{out}");
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-skill/SKILL.md")
+            .exists(),
+        "{out}"
+    );
+    assert!(
+        !consumer.path().join(".claude/skills/own").exists(),
         "{out}"
     );
 }
@@ -2035,4 +2086,43 @@ fn update_removes_a_directly_installed_item_with_its_dropped_dependency() {
     // The lockfile records no marker for a direct install.
     assert!(removed_line(&out, "dep-only"), "{out}");
     assert!(!consumer.path().join(".claude/skills/dep-only").exists());
+}
+
+/// An item of a dropped dependency bundle that another source still installs
+/// is recorded with the requirer of that source, so a later update does not
+/// take it for a direct install (#655).
+#[test]
+fn an_item_of_a_dropped_dependency_keeps_the_provenance_of_its_installer() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let dep = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(dep.path(), "shared");
+    write_skill(dep.path(), "other");
+    write_skill_bundle(dep.path(), "dep", &["shared"]);
+    let requires = format!("{{ name: dep, source: '{}' }}", dep.path().display());
+    write_root_bundle(registry.path(), "top", "own", &[requires]);
+    add_with(consumer.path(), registry.path(), &["top"]);
+    add_with(consumer.path(), dep.path(), &["other"]);
+
+    write_root_bundle(registry.path(), "top", "own", &[]);
+    write(
+        &dep.path().join("other/SKILL.md"),
+        "---\nname: other\ndescription: other.\nrequires:\n  skills: [shared]\n---\nBody.\n",
+    );
+    let out = update_output(consumer.path());
+
+    let lock = read_update_lock(consumer.path());
+    let shared = lock["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == "shared")
+        .unwrap_or_else(|| panic!("{out}"));
+    assert_eq!(
+        shared["required_by"],
+        serde_json::json!(["skill:other"]),
+        "{out}"
+    );
+    assert_eq!(recorded_bundles(consumer.path()), vec!["top"]);
 }
