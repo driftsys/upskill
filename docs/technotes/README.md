@@ -101,6 +101,9 @@ snapshot; a stable name does not imply that external research remains current.
   only).
 - [Smoke test of `upskill pack` output with a marketplace install](t3-pack-marketplace-smoke.md):
   Claude Code 2.1.308 and Copilot CLI 1.0.112, 2026-11-19; every check passed.
+- [Smoke test of plugin output with a hosted git marketplace](t5-hosted-marketplace-smoke.md):
+  T5, prepared for issue #637; fixture, run checklist and result placeholders;
+  not run yet.
 - [Copilot visibility of duplicate installs](t1-copilot-duplicate-visibility.md):
   T1, Copilot 1.0.109; a rule installed for Claude and Copilot is listed twice
   (observed); that it is applied twice rests on the model's own statement; the
