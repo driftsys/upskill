@@ -471,7 +471,8 @@ fn remove_selected(
 
 /// Delete the plugin records of `bundles` from `lock`, and the opencode
 /// config entry of each installed opencode plugin among them. Used by
-/// `remove` and by `update` for a bundle that left its source. The MCP
+/// `remove`, by `update` for a bundle that left its source, and by `update`
+/// for a dependency bundle that is no longer required. The MCP
 /// records are kept: MCP removal is explicit, through `remove-mcp`.
 fn drop_bundle_plugins(at: &ScopeRoot, lock: &mut crate::lockfile::Lockfile, bundles: &[String]) {
     for plugin in lock.plugins.iter().filter(|p| bundles.contains(&p.bundle)) {
@@ -2218,6 +2219,7 @@ pub fn update(
             }
             applied_sources.insert(source_label.clone());
             update_dependency_records(
+                at,
                 target,
                 &dependency_roots,
                 &reached_bundles,
@@ -2551,10 +2553,11 @@ fn collect_recorded_local_items(
 /// `requirers` (each with the requirers that this resolution found): a
 /// requirer that this resolution evaluated and that no longer reaches a
 /// dependency leaves its `required_by` (#648). A dependency bundle outside
-/// `reached` is dropped once every one of its root sources is in `applied`.
-/// Runs after the commit of each applied source, so that an error in a
+/// `reached` is dropped once every one of its root sources is in `applied`,
+/// with its plugin records, as `remove` drops them (#670). Runs after the commit of each applied source, so that an error in a
 /// later source leaves the records of the applied sources up to date.
 fn update_dependency_records(
+    at: &ScopeRoot,
     target: &Path,
     dependency_roots: &std::collections::BTreeMap<String, std::collections::BTreeSet<String>>,
     reached: &std::collections::BTreeSet<String>,
@@ -2592,6 +2595,12 @@ fn update_dependency_records(
             .get(&b.name)
             .is_none_or(|roots| reached.contains(&b.name) || !roots.is_subset(applied))
     });
+    let dropped: Vec<String> = before
+        .iter()
+        .filter(|b| !lock.bundles.iter().any(|kept| kept.name == b.name))
+        .map(|b| b.name.clone())
+        .collect();
+    drop_bundle_plugins(at, &mut lock, &dropped);
     if lock.bundles != before {
         lock.save(target)?;
     }
