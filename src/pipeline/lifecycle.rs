@@ -1281,9 +1281,12 @@ fn repair_missing_plugins(
 /// dependency of that source whose requirers are all absent from the
 /// lockfile (an orphaned dependency, #613), unless a recorded bundle of the
 /// source lists it: a bundle member follows its bundle. It reinstalls no other
-/// source item. It applies a kind restriction only when every recorded bundle
-/// of the source has recorded kinds, using their union. With one unrestricted
-/// bundle of the source, no restriction applies. Every entry of that source
+/// source item. It applies a kind restriction only when every root bundle of
+/// the source (a recorded bundle that is not a dependency bundle, see below)
+/// has recorded kinds, using their union together with the recorded kinds of
+/// the dependency bundles that these roots reach. With one unrestricted root
+/// bundle of the source, no restriction applies; a dependency bundle without
+/// recorded kinds adds no kind. Every entry of that source
 /// whose kind is outside the restriction is kept unchanged and is not updated.
 /// If its source is skipped, the entry is reported as skipped too. To update
 /// it, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
@@ -1311,6 +1314,20 @@ fn repair_missing_plugins(
 /// paths of `at.scope`, so an item recorded at other paths (a global Copilot
 /// item recorded at its `.github` paths) is written at the new paths and its
 /// unchanged files at the old paths are deleted through the ownership record.
+/// In a full update (no `names`), a dependency bundle (a recorded bundle with
+/// `required_by` whose chain reaches recorded root bundles, all of whose
+/// sources have entries in the run) is not resolved from its own record: the
+/// roots reach it through `requires` (#648). Its entries leave their source
+/// group before the prepare phase, carrying the union of the root sources of
+/// every dependency bundle that lists them. After the prepare phase, each
+/// joins the group of the first source whose plan provides it, otherwise the
+/// group of its first prepared root source, which removes it; it is kept and
+/// reported as skipped when a root source was skipped and no plan provides it.
+/// An entry outside the kind restriction of its new group is kept and reported
+/// as up to date. After each applied source, a requirer that the resolution of
+/// the source evaluated and that no longer reaches a dependency bundle leaves
+/// its `required_by`, and a dependency bundle that no prepared resolution
+/// reaches is dropped once every one of its root sources is applied.
 ///
 /// An error after an adoption carries the adopted paths as
 /// [`AdoptedBeforeFailure`]. An error after a source was skipped carries the
