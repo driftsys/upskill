@@ -299,6 +299,7 @@ mod tests {
 
     fn item(kind: ItemKind, name: &str, clients: &[&str]) -> LockedItem {
         LockedItem {
+            direct: false,
             kind,
             name: name.to_string(),
             source: "./src".to_string(),

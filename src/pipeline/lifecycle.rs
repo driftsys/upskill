@@ -1343,10 +1343,10 @@ fn repair_missing_plugins(
 /// Then, for each source, in this order:
 ///
 /// 1. The prepared install of the source is taken from the first step.
-/// 2. A source that resolves to no items (a directory source: and to no bundle
-///    file) while the lockfile records items
+/// 2. A source that resolves to no items while the lockfile records items
 ///    from it is an error (`guard_against_empty_source`), before any write
-///    of the source.
+///    of the source. A directory source that holds an item or a bundle file
+///    is not such a source.
 /// 3. A `schema: 1` lockfile is adopted (`adopt_schema1`) and the adopted
 ///    paths are in [`SourcePreview::adopted`] of this source. With
 ///    `dry_run`, the adoption is done on a copy of the lockfile in memory,
@@ -1354,13 +1354,16 @@ fn repair_missing_plugins(
 /// 4. The [`SourcePreview`] is computed from the disk and the lockfile:
 ///    the planned items through `PreparedInstall::preview`, and each
 ///    lockfile entry of the source that the source no longer contains
-///    through `plan_removal`, as a [`PreviewAction::Remove`] item.
+///    through `plan_removal`, as a [`PreviewAction::Remove`] item; and
+///    [`SourcePreview::vanished_bundles`], the recorded bundles that the
+///    source no longer holds.
 /// 5. `observer.preview` decides. With `dry_run`, the decision is ignored
 ///    and nothing is applied.
 /// 6. On [`SourceDecision::Apply`]: `PreparedInstall::commit` decides the
 ///    plan again from the disk and writes it, then the removed items are
 ///    planned again from the saved lockfile and deleted with the rules of
-///    [`remove`], then `observer.applied` receives the counts. On
+///    [`remove`], then the records of the vanished bundles are dropped
+///    (`drop_vanished_bundles`), then `observer.applied` receives the counts. On
 ///    [`SourceDecision::Stop`]: [`UpdateReport::stopped`] is set and no
 ///    later source is previewed or applied.
 ///
@@ -1720,6 +1723,29 @@ pub fn update(
                         .collect()
                 },
                 allow_vanished: true,
+                // The members of each recorded bundle that stay when the bundle
+                // vanishes: the ones that `add` installed on request
+                // (`LockedItem::direct`). A member that another bundle lists
+                // or that an installed item requires is resolved through that
+                // bundle or item.
+                bundle_members: recorded_bundles
+                    .iter()
+                    .map(|bundle| {
+                        let direct = bundle
+                            .items
+                            .iter()
+                            .filter(|member| {
+                                lock.items.iter().any(|i| {
+                                    i.source == source_label
+                                        && i.direct
+                                        && i.source_name.as_ref().unwrap_or(&i.name) == *member
+                                })
+                            })
+                            .cloned()
+                            .collect();
+                        (bundle.name.clone(), direct)
+                    })
+                    .collect(),
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
                 keep_recorded_excludes: true,
@@ -2091,23 +2117,13 @@ pub fn update(
                     items.push(removal_preview(plan_removal(target, entry, overwrite)?));
                 }
             }
-            let previewed_vanished = droppable_vanished(
-                &current,
-                &source_label,
-                prepared.vanished_bundles(),
-                &source_entries
-                    .iter()
-                    .filter(|e| is_orphan(e))
-                    .map(|e| e.name.clone())
-                    .collect(),
-            );
             let preview = SourcePreview {
                 source: source_label.clone(),
                 items,
                 kept_notes: install_preview.kept_notes,
                 handshake: install_preview.handshake,
                 adopted,
-                vanished_bundles: previewed_vanished.clone(),
+                vanished_bundles: prepared.vanished_bundles().to_vec(),
             };
             report.sources_considered += 1;
             let decision = observer.preview(&preview);
@@ -2276,19 +2292,10 @@ pub fn update(
                 lock.save(target)?;
                 drop_global_opencode_rules(at.scope, target, &dropped);
             }
-            // A vanished bundle record is dropped once every member of the
-            // bundle is removed or provided by a bundle that stays.
+            // The record of a vanished bundle is dropped. Its direct members
+            // stay installed; the other members were removed above, unless
+            // another bundle or an installed item keeps them.
             let dropped = drop_vanished_bundles(target, at.scope, &source_label, &vanished)?;
-            // A bundle that the preview announced and that is kept: a member
-            // stays installed after the apply, for example a skill that
-            // another item requires, which the preview counted as covered by
-            // the recorded membership of a bundle that stays.
-            report.kept_vanished_bundles.extend(
-                previewed_vanished
-                    .iter()
-                    .filter(|name| !dropped.contains(name))
-                    .map(|name| (name.clone(), source_label.clone())),
-            );
             report.vanished_bundles.extend(
                 dropped
                     .iter()
@@ -2562,47 +2569,10 @@ fn collect_recorded_local_items(
     )
 }
 
-/// The bundles of `names` (vanished from `source`) whose records can be
-/// dropped: those for which no member remains installed. A member remains
-/// when `lock` has an item of `source` with that source name that `removed`
-/// (installed names) does not cover and that no recorded bundle of `source`
-/// outside `names` lists.
-fn droppable_vanished(
-    lock: &crate::lockfile::Lockfile,
-    source: &str,
-    names: &[String],
-    removed: &std::collections::BTreeSet<String>,
-) -> Vec<String> {
-    names
-        .iter()
-        .filter(|name| {
-            let Some(bundle) = lock
-                .bundles
-                .iter()
-                .find(|b| b.source == source && &b.name == *name)
-            else {
-                return false;
-            };
-            bundle.items.iter().all(|member| {
-                let installed = lock.items.iter().any(|i| {
-                    i.source == source
-                        && i.source_name.as_ref().unwrap_or(&i.name) == member
-                        && !removed.contains(&i.name)
-                });
-                let kept = lock.bundles.iter().any(|b| {
-                    b.source == source && !names.contains(&b.name) && b.items.contains(member)
-                });
-                !installed || kept
-            })
-        })
-        .cloned()
-        .collect()
-}
-
-/// Drops the records of the droppable bundles of `names` of `source` from the
-/// lockfile (see [`droppable_vanished`]), and the plugin records of those
-/// bundles, as `remove` does. Returns the dropped names. The items of those
-/// bundles are removed as orphans by the caller (issue #649).
+/// Drops the records of the bundles `names` of `source` from the lockfile,
+/// and the plugin records of those bundles, as `remove` does. Returns the
+/// dropped names. The caller has removed the members that nothing keeps (the
+/// orphans); direct members stay installed (issue #649).
 fn drop_vanished_bundles(
     target: &Path,
     scope: crate::scope::Scope,
@@ -2613,7 +2583,15 @@ fn drop_vanished_bundles(
         return Ok(Vec::new());
     }
     let mut lock = crate::lockfile::Lockfile::load(target)?;
-    let dropped = droppable_vanished(&lock, source, names, &std::collections::BTreeSet::new());
+    let dropped: Vec<String> = names
+        .iter()
+        .filter(|name| {
+            lock.bundles
+                .iter()
+                .any(|b| b.source == source && &b.name == *name)
+        })
+        .cloned()
+        .collect();
     if dropped.is_empty() {
         return Ok(dropped);
     }

@@ -1195,6 +1195,7 @@ mod tests {
 
     fn locked(name: &str, files: Vec<OwnedFile>) -> LockedItem {
         LockedItem {
+            direct: false,
             kind: ItemKind::Skill,
             name: name.to_string(),
             source: "./src".to_string(),
@@ -1586,6 +1587,7 @@ mod pre_check_tests {
     fn stale_record(path: &str, bytes: &[u8]) -> Lockfile {
         let mut lock = Lockfile::new();
         lock.items.push(crate::lockfile::LockedItem {
+            direct: false,
             kind: ItemKind::Skill,
             name: "s".into(),
             source: "./src".into(),
@@ -1807,6 +1809,7 @@ mod conflict_tests {
     fn lock_with(name: &str, files: Vec<OwnedFile>) -> Lockfile {
         let mut lock = Lockfile::new();
         lock.items.push(LockedItem {
+            direct: false,
             kind: ItemKind::Skill,
             name: name.to_string(),
             source: "./src".to_string(),
@@ -2300,6 +2303,7 @@ mod repeatable_tests {
 
     fn entry(files: Vec<OwnedFile>, pending: Vec<OwnedFile>) -> LockedItem {
         LockedItem {
+            direct: false,
             kind: ItemKind::Skill,
             name: "s".to_string(),
             source: "./src".to_string(),
@@ -2985,6 +2989,7 @@ mod pending_stale_tests {
     fn lock_with(files: Vec<OwnedFile>, pending: Vec<OwnedFile>) -> Lockfile {
         let mut lock = Lockfile::new();
         lock.items.push(LockedItem {
+            direct: false,
             kind: ItemKind::Skill,
             name: "s".to_string(),
             source: "./src".to_string(),
@@ -3086,6 +3091,7 @@ mod disposition_tests {
 
     fn entry(files: Vec<OwnedFile>) -> LockedItem {
         LockedItem {
+            direct: false,
             kind: ItemKind::Skill,
             name: "s".to_string(),
             source: "./src".to_string(),

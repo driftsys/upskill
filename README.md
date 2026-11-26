@@ -36,10 +36,12 @@ before your next `upskill update`:
 upskill remove --global upskill-cli upskill-prompt-design upskill-prompt-distilling upskill-writing-rules upskill-writing-subagents upskill-evaluating-prompts upskill-writing-bundles
 ```
 
-A lockfile that records the bundle `prompt-engineering` makes `update` stop
-until you remove its items. For an install by item name, `update` removes the
-old `upskill-cli` and keeps the other six old skills beside the plugin's copies.
-See [Getting started](docs/book/getting-started.md#set-up-the-upskill-plugin).
+`update` no longer stops for a lockfile that records the bundle
+`prompt-engineering`: it drops the bundle record and removes the bundle's items,
+except those that you also added by name. For an install by item name, `update`
+removes the old `upskill-cli` and keeps the other six old skills beside the
+plugin's copies. The `remove` command above removes the copies that stay. See
+[Getting started](docs/book/getting-started.md#set-up-the-upskill-plugin).
 
 For opencode, or when you want no plugin, install the CLI and add the skills
 with `upskill add`:

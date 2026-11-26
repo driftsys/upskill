@@ -97,13 +97,14 @@ failed until `update --force`.
    matching read bit; a difference in the other permission bits is not a
    change), changes an item record of the lockfile (any field except `pending`,
    `required_by` and `commit`), completes an interrupted item, removes an item,
-   or creates or changes a hand-shake file. `y` applies the source. `n` or any
-   other text continues without it. `q`, end of input or a read error stops the
-   run; earlier sources stay applied. Ctrl-C while the question waits exits at
-   once with code 130 and applies none of the changes shown for that source; an
-   adoption of a `schema: 1` lockfile that the run already saved stays saved. An
-   interrupt during the apply of a source stops the run before the next source
-   is shown or applied, with code 130.
+   drops the record of a vanished bundle (issue #649), or creates or changes a
+   hand-shake file. `y` applies the source. `n` or any other text continues
+   without it. `q`, end of input or a read error stops the run; earlier sources
+   stay applied. Ctrl-C while the question waits exits at once with code 130 and
+   applies none of the changes shown for that source; an adoption of a
+   `schema: 1` lockfile that the run already saved stays saved. An interrupt
+   during the apply of a source stops the run before the next source is shown or
+   applied, with code 130.
 3. **The rule for edited files.** Without `--force`, an item whose only
    difference is a modified recorded file is not skipped. This holds when the
    source hash of the item equals the recorded hash, the item has no `pending`
@@ -144,8 +145,9 @@ failed until `update --force`.
   skipped (a terminal run still installs again a recorded plugin that `doctor`
   reports missing or that is recorded as skipped, ADR-0008; the plugin and MCP
   steps and this repair are all skipped under a kind restriction), and a change
-  confined to a `bundles` record of the lockfile (the preview does not compare
-  `bundles` records).
+  confined to a `bundles` record of the lockfile, except the drop of the record
+  of a bundle that left its source, which the preview announces as a change
+  (issue #649).
 - A run without a source change reports an edited file, asks to delete the files
   of a client that the flags no longer select, asks to complete an interrupted
   item, and adopts a `schema: 1` lockfile.

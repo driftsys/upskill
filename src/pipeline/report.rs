@@ -686,10 +686,6 @@ pub struct UpdateReport {
     /// Recorded bundles (name, source) that their source no longer holds and
     /// whose records an applied source dropped (issue #649).
     pub vanished_bundles: Vec<(String, String)>,
-    /// Bundles (name, source) that the preview announced as removed and whose
-    /// records an applied source kept, because a member stays installed (for
-    /// example through the `requires` of another item).
-    pub kept_vanished_bundles: Vec<(String, String)>,
     /// Items that an exclude kept out of the run, each once, over all
     /// sources. Also set by a dry run.
     pub excluded: Vec<(ItemKind, String)>,
@@ -782,7 +778,9 @@ pub struct SourcePreview {
     /// Paths adopted from a `schema: 1` lockfile just before this preview.
     pub adopted: Option<Vec<String>>,
     /// Recorded bundles of this source that the source no longer holds;
-    /// applying the source drops their records (issue #649).
+    /// applying the source drops their records (issue #649). Their members
+    /// that the source still holds stay installed. A non-empty list is a
+    /// change of the preview.
     pub vanished_bundles: Vec<String>,
 }
 
@@ -790,7 +788,8 @@ impl SourcePreview {
     /// True exactly when a commit would write or delete a file or change an
     /// item record: an item has a non-empty `write`, `delete` or `forced`,
     /// or its action is `Complete` or `Remove`, or it is `record_only`; or a
-    /// hand-shake file would be created or changed. A `Skip` item and a
+    /// hand-shake file would be created or changed; or a vanished bundle
+    /// record would be dropped. A `Skip` item and a
     /// note in `kept_notes` are not changes. The write of a new source commit
     /// to the lockfile entries of a source without changes (except the entries of
     /// skipped items) is not a change.

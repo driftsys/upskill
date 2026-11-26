@@ -46,15 +46,19 @@ pub(super) fn probe_effective_name(entry_path: &Path, kind: ItemKind, folder: &s
 /// The frontmatter `name` of the entrypoint `raw`, or `folder` when there is
 /// none or the frontmatter does not parse.
 fn name_from_content(raw: &str, folder: &str) -> String {
+    name_from_content_strict(raw, folder).unwrap_or_else(|_| folder.to_string())
+}
+
+/// As [`name_from_content`], but a frontmatter that does not parse is an
+/// error.
+fn name_from_content_strict(raw: &str, folder: &str) -> Result<String> {
     #[derive(serde::Deserialize)]
     struct NameProbe {
         #[serde(default)]
         name: Option<String>,
     }
-    match frontmatter::parse::<NameProbe>(raw) {
-        Ok((p, _)) => p.name.unwrap_or_else(|| folder.to_string()),
-        Err(_) => folder.to_string(),
-    }
+    let (probe, _) = frontmatter::parse::<NameProbe>(raw)?;
+    Ok(probe.name.unwrap_or_else(|| folder.to_string()))
 }
 
 /// Returns true when the directory contains at least one SSOT entrypoint
@@ -460,7 +464,8 @@ fn probe_name(entry_path: &Path, kind: ItemKind, folder: &str, strict: bool) -> 
     }
     let raw =
         fs::read_to_string(entry_path).with_context(|| format!("read {}", entry_path.display()))?;
-    Ok(name_from_content(&raw, folder))
+    name_from_content_strict(&raw, folder)
+        .with_context(|| format!("parse {}", entry_path.display()))
 }
 
 fn scan_items(source: &Path, strict: bool) -> Result<Vec<(ItemKind, String)>> {
@@ -1171,6 +1176,13 @@ mod tests {
             "folder"
         );
         assert_eq!(name_from_content("no frontmatter", "folder"), "folder");
+        // The strict form reports a frontmatter that does not parse.
+        assert!(name_from_content_strict("---\nname: [x\n---\nB\n", "folder").is_err());
+        assert!(name_from_content_strict("no frontmatter", "folder").is_err());
+        assert_eq!(
+            name_from_content_strict("---\nname: policy\n---\nB\n", "folder").unwrap(),
+            "policy"
+        );
     }
 
     /// `update` decides "no longer in source" from the strict scan, and plans

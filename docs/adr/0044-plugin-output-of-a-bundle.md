@@ -1,7 +1,7 @@
 # AD-0044 — Plugin output of a bundle
 
-Status: **accepted**; decision 7 amended on 2026-11-23 (see the end of this
-record). Date: 2026-11-19. Resolves
+Status: **accepted**; decision 7 amended on 2026-11-23 and on 2026-11-26 (see
+the end of this record). Date: 2026-11-19. Resolves
 [#563](https://github.com/driftsys/upskill/issues/563). Amended by
 [AD-0046](0046-plugin-mvp-components.md), which decides planned changes to
 Decisions 1, 4, 5 and 8 and to two entries of "Alternatives considered" (rule
@@ -76,10 +76,9 @@ bundle; it does not replace the bundle or change its schema.
    unless its source is skipped. It then shares the source's skipped status,
    also when the source is skipped later because it requires an item of a
    skipped source. `add <source> <item>` updates it. A recorded bundle that is
-   no longer in its source is dropped: `update` removes its items as
-   `removed — no longer in source` and deletes its record, even if an item has
-   the same name (amended by issue #649). The source must still hold at least
-   one item or bundle file; otherwise `update` stops before any write.
+   no longer in its source is dropped: `update` deletes its record, even if an
+   item has the same name, and removes the members that nothing else keeps (see
+   the amendment of 2026-11-26).
 8. `pack` resolves the entry bundle in the current directory. A `requires` entry
    with a `source` is fetched from that source. The init `--source` must parse
    as an install source and, like the bundle name, is limited to a safe
@@ -145,3 +144,23 @@ removal that kept the `required_by` links. A dependency that still has an
 installed requirer keeps the earlier behaviour. See the amendment of
 [AD-0045](0045-record-add-excludes-in-lockfile.md) and
 [#613](https://github.com/driftsys/upskill/issues/613).
+
+## Amendment: update drops a bundle that left its source (2026-11-26)
+
+Decision 7 said that `update` stops before any write when a recorded bundle is
+no longer in its source
+([#649](https://github.com/driftsys/upskill/issues/649)). It now drops the
+record of that bundle, and the plugin records of that bundle, and reports
+`bundle <name> removed — no longer in source (<source>)`. The URI of an opencode
+plugin of that bundle leaves the opencode config unless another installed plugin
+record still references it. A member stays installed when the lockfile marks it
+`direct` (`add` installed it because the user named it, or through a whole
+directory source without names) and the source still holds it, when another
+recorded bundle that stays lists it, or when an installed item requires it.
+Every other member is removed as `no longer in source`. The new optional field
+`direct` of an item entry records the first case; `update` keeps it and only
+`remove` clears it. No member stays because of the vanished bundle alone, so the
+record is always dropped. A source that holds no item and no bundle file still
+stops the run before any write (issue #196). Before it decides that an item is
+no longer in the source, `update` inspects every directory that its walk
+reaches, and an inspection error other than not-found stops the run.

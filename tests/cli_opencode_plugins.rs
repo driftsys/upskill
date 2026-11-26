@@ -318,6 +318,26 @@ fn update_keeps_a_plugin_uri_that_a_bundle_that_stays_still_uses() {
     assert!(has_uri(&env.opencode_json()), "{}", env.opencode_json());
 }
 
+/// Issue #649: the bundle with the only record of an opencode plugin vanishes:
+/// its URI leaves the opencode config together with its plugin record.
+#[cfg(unix)]
+#[test]
+fn update_removes_the_plugin_uri_of_a_vanished_bundle_that_no_other_record_uses() {
+    let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
+    env.add().success();
+    assert!(has_uri(&env.opencode_json()));
+    fs::remove_file(&env.bundle).unwrap();
+
+    env.run(&["update", "--yes", "--project"]).code(0);
+
+    assert!(!has_uri(&env.opencode_json()), "{}", env.opencode_json());
+    let lock = env.lock();
+    assert!(
+        lock["plugins"].as_array().is_none_or(|p| p.is_empty()),
+        "{lock}"
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn module_plugin_installs_with_plugin_add_and_doctor_uses_plugin_list() {

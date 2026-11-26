@@ -139,15 +139,10 @@ pub(super) fn prepare_install(
     let tmp_guard = fetched.guard;
     let commit = fetched.commit;
     let scanned_items = if options.allow_vanished {
-        // `update` removes an installed item that no plan provides, so every
-        // root that the run plans from is walked strictly: here the entry
-        // source, and below the registry root of a bundle-file source and
-        // each source root of the resolved closure. The strict walk reads the
-        // hidden directories that the scan skips, and an unreadable directory
-        // stops the run instead of making its items look absent.
-        if local_source.is_dir() {
-            discovery::iter_item_dirs_strict(&local_source)?;
-        }
+        // `update` removes an installed item that no plan provides, so the
+        // scan is strict (see below for the strict walk of every planned
+        // root): an unreadable directory stops the run instead of making its
+        // items look absent.
         scan_source_items_strict(&local_source)?
     } else {
         scan_source_items(&local_source)?
@@ -176,6 +171,42 @@ pub(super) fn prepare_install(
         &pruned
     } else {
         options
+    };
+    // `update`: the direct members of a vanished bundle that are still in the
+    // source stay installed; a name that matches
+    // nothing in the source is dropped from the request, so that the item is
+    // removed as no longer in the source. `nothing_left` marks a request
+    // that was not empty and has nothing left: the run installs nothing and
+    // must not fall back to the whole source (an empty request means the
+    // whole source).
+    let present_items: Vec<String>;
+    let mut nothing_left = false;
+    let items: &[String] = if options.allow_vanished && !discovery::is_bundle_file(&local_source) {
+        let mut seen = BTreeSet::new();
+        let wanted: Vec<String> = items
+            .iter()
+            .chain(
+                vanished_bundles
+                    .iter()
+                    .filter_map(|bundle| options.bundle_members.get(bundle))
+                    .flatten(),
+            )
+            .filter(|name| seen.insert(name.as_str()))
+            .cloned()
+            .collect();
+        present_items = wanted
+            .iter()
+            .filter(|name| {
+                scanned_items.iter().any(|(_, scanned)| scanned == *name)
+                    || discovery::has_matching_items(&local_source, name)
+            })
+            .cloned()
+            .collect();
+        nothing_left =
+            present_items.is_empty() && (!wanted.is_empty() || !vanished_bundles.is_empty());
+        &present_items
+    } else {
+        items
     };
     if !options.keep_recorded_excludes && !discovery::is_bundle_file(&local_source) {
         for name in items {
@@ -244,7 +275,13 @@ pub(super) fn prepare_install(
     // zero items). Bundle-file sources own their own resolution too.
     let defer_to_name_resolution = !items.is_empty()
         && !discovery::is_bundle_file(&local_source)
-        && ((requested.is_empty() && !options.allow_vanished)
+        && (requested.is_empty()
+            // A name that the scan does not list but that names an item
+            // directory (a hidden one, installed by name): only the name
+            // resolution reads it.
+            || items
+                .iter()
+                .any(|n| !scanned_items.iter().any(|(_, scanned)| scanned == n))
             || items
                 .iter()
                 .any(|n| discovery::find_bundle_by_name(&local_source, n).is_some()));
@@ -259,13 +296,7 @@ pub(super) fn prepare_install(
     // item-level path uses, so the install + item-lockfile machinery is shared;
     // `resolved_bundles` carries each bundle's own source for the bundle
     // lockfile recording and plugin/MCP install.
-    let bundle_resolution = if options.allow_vanished
-        && options.bundles.is_empty()
-        && !vanished_bundles.is_empty()
-        && items.is_empty()
-    {
-        // Every recorded bundle vanished and no item is left to resolve: the
-        // run installs nothing, and must not fall back to the whole source.
+    let bundle_resolution = if nothing_left && options.bundles.is_empty() {
         Some((DependencyClosure::default(), Vec::new()))
     } else if options.bundles.is_empty() {
         resolve_bundle_request(
@@ -277,11 +308,6 @@ pub(super) fn prepare_install(
             &options.excludes,
         )?
     } else {
-        for name in &options.bundles {
-            if discovery::find_bundle_by_name(&local_source, name).is_none() {
-                anyhow::bail!("bundle '{name}' is no longer in source {label}");
-            }
-        }
         let (mut closure, bundles) = resolve_bundle_closure(
             &label,
             &local_source,
@@ -332,10 +358,14 @@ pub(super) fn prepare_install(
                 .entry(label.clone())
                 .or_insert_with(|| local_source.clone());
         }
+        // `update` removes an installed item that no plan provides, so every
+        // root that the run plans from is walked strictly: each source root
+        // of the closure (the entry source, the registry root of a
+        // bundle-file source and every dependency source). The strict walk
+        // reads the hidden directories that the scan skips, and an
+        // unreadable directory stops the run instead of making its items
+        // look absent.
         if options.allow_vanished {
-            if discovery::is_bundle_file(&local_source) {
-                discovery::iter_item_dirs_strict(&install::bundle_file_root(&local_source)?)?;
-            }
             for root in closure.source_roots.values() {
                 discovery::iter_item_dirs_strict(root)?;
             }
@@ -846,7 +876,11 @@ impl PreparedInstall {
 
     /// The lockfile entry of each planned item, with an empty `files`
     /// record. Used by `preview` and `commit`.
-    fn new_items(&self) -> Vec<LockedItem> {
+    ///
+    /// `direct` is true for an item that this `add` installs because the user
+    /// named it, or through a whole directory source without names, and for
+    /// an item that `lock` already records as direct. `update` never sets it.
+    fn new_items(&self, lock: &Lockfile) -> Vec<LockedItem> {
         // Aliases were applied at plan time; map each alias to its source
         // name for the lockfile `source_name`.
         let aliased_names = self.aliased_names();
@@ -875,10 +909,31 @@ impl PreparedInstall {
             &provenance,
             |k, n| hashes.get(&(k, n.to_string())).cloned().flatten(),
         );
+        let bundle_names: BTreeSet<&str> = self
+            .resolved_bundles
+            .iter()
+            .map(|rb| rb.bundle.name.as_str())
+            .collect();
+        let whole_directory_source = self.requested.is_empty()
+            && self.resolved_bundles.is_empty()
+            && !discovery::is_bundle_file(&self.local_source);
         for item in &mut new_items {
             if let Some(original) = aliased_names.get(&item.name) {
                 item.source_name = Some(original.clone());
             }
+            let source_name = item.source_name.as_ref().unwrap_or(&item.name);
+            let named = self
+                .requested
+                .iter()
+                .any(|n| n == source_name && !bundle_names.contains(n.as_str()));
+            let added_here = !self.options.allow_vanished
+                && item.source == self.label
+                && (named || whole_directory_source);
+            let recorded = lock
+                .items
+                .iter()
+                .any(|i| i.kind == item.kind && i.name == item.name && i.direct);
+            item.direct = recorded || added_here;
         }
         new_items
     }
@@ -900,7 +955,7 @@ impl PreparedInstall {
         lock: &Lockfile,
         orphan_rules: &BTreeSet<String>,
     ) -> Result<InstallPreview> {
-        let new_items = self.new_items();
+        let new_items = self.new_items(lock);
         let decision = apply::decide_plan(
             target,
             lock,
@@ -982,7 +1037,7 @@ impl PreparedInstall {
         mut lock: Lockfile,
         adopted: Option<Vec<String>>,
     ) -> Result<InstallReport> {
-        let new_items = self.new_items();
+        let new_items = self.new_items(&lock);
         let provenance = self.requires_provenance();
         let has_rules = self.has_rules();
         let opencode_rules = self.opencode_rule_names();
@@ -1080,6 +1135,7 @@ impl PreparedInstall {
                     .find(|i| i.kind == item.kind && i.name == item.name)
                 {
                     entry.commit = item.commit.take();
+                    entry.direct |= item.direct;
                 }
                 continue;
             }
@@ -1771,6 +1827,7 @@ mod tests {
 
     fn entry(files: Vec<OwnedFile>) -> LockedItem {
         LockedItem {
+            direct: false,
             kind: ItemKind::Skill,
             name: "s".to_string(),
             source: "./src".to_string(),

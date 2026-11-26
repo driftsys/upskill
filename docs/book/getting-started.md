@@ -34,10 +34,12 @@ upskill remove --global upskill-cli upskill-prompt-design upskill-prompt-distill
 ```
 
 List the installed names with `upskill list`. Remove the old upskill skills
-before the next `upskill update`. A lockfile that records the bundle
-`prompt-engineering` makes `update` stop until its items are removed. For an
-install by item name, `update` removes the old `upskill-cli` and keeps the other
-six old skills beside the plugin's copies.
+before the next `upskill update`. `update` no longer stops for a lockfile that
+records the bundle `prompt-engineering`: it drops the bundle record and removes
+the bundle's items, except those that you also added by name. For an install by
+item name, `update` removes the old `upskill-cli` and keeps the other six old
+skills beside the plugin's copies. The `remove` command above removes the copies
+that stay.
 
 ## Install
 
