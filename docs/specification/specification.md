@@ -1030,9 +1030,16 @@ example the output of a bundle that only declares third-party plugins: a plugin
 cannot install another plugin. `pack` does not write it and prints a warning on
 stderr that names the bundle and the client. A named bundle with nothing to pack
 for every selected client is a usage error (exit code 2), and nothing is
-written. `--all` skips such a bundle with the warning and builds the others;
-with `--catalog`, the skipped output gets no marketplace entry, and an earlier
-entry of it is removed as for any directory that `pack` did not write.
+written; the error names the third-party plugins as the cause only when the
+bundle declares plugins, and otherwise says that its plugin would hold only its
+manifest. With `--catalog`, a skipped output gets no marketplace entry, and an
+earlier entry of it is removed when its `source` is inside `--out` and names no
+plugin directory packed in the run, in a named run as well as with `--all`;
+`pack` reports the removal and deletes no plugin directory. An entry whose
+`source` is outside `--out` is kept. `--all` skips such a bundle with the
+warning and builds the others. `--all` that packs no output fails with exit code
+1 before it writes a plugin directory or a marketplace file, so no marketplace
+entry is removed (#678).
 
 ```bash
 upskill pack my-bundle --source owner/repo@v1 --out dist
@@ -1231,18 +1238,21 @@ catalog root to the plugin directory, prefixed with `./`, with `/` separators)
 and `description` (the bundle description), with no `version`. Entries are
 sorted by name. An existing file keeps its top-level fields and entries of other
 names; a packed bundle replaces its whole earlier entry, including any
-`version`. With `--all`, an entry whose string `source` is inside `--out` and
-names no plugin directory of that client packed in the run is removed. Each
-removal prints `Removed <name> from <path>`. A source is inside `--out` when,
-after ignoring empty and `.` components, it starts with the components of
-`--out` relative to the root and has at least one more component. Absolute
-paths, sources containing `..` and object sources are kept. When `--out` equals
-`--catalog`, `--all` removes every entry whose `source` is a string that is not
-an absolute path, has no `..` component and has at least one component other
-than `.`; that includes string shorthand such as `owner/repo` and URL sources
-such as `https://example.com/owner/repo`, unless the run packs it. No plugin
-directory is deleted by catalog pruning. Keep hand-written plugins outside
-`--out` if their entries must stay.
+`version`. An entry whose string `source` is inside `--out` and names no plugin
+directory of that client packed in the run is removed with `--all`, and also in
+a run with named bundles when its name is a bundle whose output for that client
+the run skipped because it had nothing to pack. An `--all` run that packs no
+output fails with exit code 1 and removes no entry. Each removal prints
+`Removed <name> from <path>`. A source is inside `--out` when, after ignoring
+empty and `.` components, it starts with the components of `--out` relative to
+the root and has at least one more component. Absolute paths, sources containing
+`..` and object sources are kept. When `--out` equals `--catalog`, `--all`
+removes every entry whose `source` is a string that is not an absolute path, has
+no `..` component and has at least one component other than `.`; that includes
+string shorthand such as `owner/repo` and URL sources such as
+`https://example.com/owner/repo`, unless the run packs it. No plugin directory
+is deleted by catalog pruning. Keep hand-written plugins outside `--out` if
+their entries must stay.
 
 A new file needs both `--catalog-name` and `--catalog-owner`, which set `name`
 and `owner.name`; a missing flag is a usage error (exit code 2). Both flags need
