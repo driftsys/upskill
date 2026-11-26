@@ -379,6 +379,39 @@ fn remove_keeps_a_plugin_uri_that_a_bundle_that_stays_still_uses() {
     assert!(has_uri(&env.opencode_json()), "{}", env.opencode_json());
 }
 
+/// `remove` of the item of one bundle deletes its configured URI when the
+/// bundle that stays references only a different URI.
+#[cfg(unix)]
+#[test]
+fn remove_deletes_a_plugin_uri_that_a_bundle_that_stays_does_not_use() {
+    const OTHER: &str = "other@git+https://example.com/other.git";
+    let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
+    let registry = env.bundle.parent().unwrap().to_path_buf();
+    write_registry_skill(&registry, "beta");
+    fs::write(
+        registry.join("keep.bundle.yaml"),
+        format!(
+            "schema: 1\nname: keep\ndescription: bundle that stays.\nitems:\n  skills:\n    - beta\nplugins:\n  sp-keep:\n    opencode:\n      plugin_uri: \"{OTHER}\"\n"
+        ),
+    )
+    .unwrap();
+    env.add().success();
+    env.run(&["add", registry.to_str().unwrap(), "keep", "--project"])
+        .success();
+    assert!(has_uri(&env.opencode_json()));
+
+    env.run(&["remove", "alpha", "--project"]).success();
+
+    let config = env.opencode_json();
+    assert!(!has_uri(&config), "{config}");
+    assert!(
+        config["plugins"]
+            .as_array()
+            .is_some_and(|a| a.iter().any(|v| v == OTHER)),
+        "{config}"
+    );
+}
+
 /// A dependency bundle that is no longer required is dropped with its plugin
 /// records, and the configured URI stays because the plugin record of a
 /// bundle that stays still references it.

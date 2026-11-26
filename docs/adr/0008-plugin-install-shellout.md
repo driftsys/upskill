@@ -123,10 +123,11 @@ upskill uses the plugin commands of opencode 2 or later only:
 `opencode plugin add <package>` to install and `opencode plugin list` to check.
 upskill runs no `opencode plugin remove`: `remove` deletes the plugin's entry
 from the `plugin` and `plugins` arrays of `opencode.json` and runs no opencode
-command. Before it runs any `opencode plugin` command, upskill runs
-`opencode --version`. When the major version is below 2, or no version can be
-read, upskill runs no `opencode plugin` command: opencode 1.x reads
-`opencode plugin <word>` as an install of the module `<word>`, so
+command. The entry stays when an installed opencode plugin record of a bundle
+that stays references the same entry. Before it runs any `opencode plugin`
+command, upskill runs `opencode --version`. When the major version is below 2,
+or no version can be read, upskill runs no `opencode plugin` command: opencode
+1.x reads `opencode plugin <word>` as an install of the module `<word>`, so
 `opencode plugin list` would install a module named `list`. An install then
 records the plugin as `skipped`, and `add` prints a warning that names
 `opencode 2` and the version found. `doctor` treats the plugin as a plugin whose
