@@ -1399,41 +1399,42 @@ pub fn update(
     // The entries of those dependencies leave their source group. After the
     // prepare phase each one joins the group of a source whose plan provides
     // it, or, when no plan provides it, the group of a root source, which
-    // removes it. Each entry keeps the root sources of its dependencies.
+    // removes it. Each entry carries the union of the root sources of every
+    // dependency bundle that lists it. An entry that a bundle resolved as a
+    // root also lists stays in its group.
     let mut dependency_entries: Vec<(
         crate::lockfile::LockedItem,
         std::collections::BTreeSet<String>,
     )> = Vec::new();
-    for bundle in &lock.bundles {
-        let Some(roots) = dependency_roots.get(&bundle.name) else {
-            continue;
-        };
-        let Some(group) = by_source.get_mut(&bundle.source) else {
-            continue;
-        };
+    for (label, group) in &mut by_source {
         let (moved, kept): (Vec<_>, Vec<_>) = std::mem::take(group).into_iter().partition(|e| {
             let name = e.source_name.as_ref().unwrap_or(&e.name);
-            bundle.items.contains(name)
-                && !lock.bundles.iter().any(|b| {
-                    b.source == bundle.source
-                        && !dependency_roots.contains_key(&b.name)
-                        && b.items.contains(name)
-                })
+            let lists =
+                |b: &&crate::lockfile::LockedBundle| b.source == *label && b.items.contains(name);
+            lock.bundles
+                .iter()
+                .filter(lists)
+                .any(|b| dependency_roots.contains_key(&b.name))
+                && !lock
+                    .bundles
+                    .iter()
+                    .filter(lists)
+                    .any(|b| !dependency_roots.contains_key(&b.name))
         });
         *group = kept;
         for entry in moved {
-            dependency_entries.push((entry, roots.clone()));
+            let name = entry.source_name.as_ref().unwrap_or(&entry.name);
+            let roots = lock
+                .bundles
+                .iter()
+                .filter(|b| b.source == *label && b.items.contains(name))
+                .filter_map(|b| dependency_roots.get(&b.name))
+                .flatten()
+                .cloned()
+                .collect();
+            dependency_entries.push((entry, roots));
         }
     }
-    // An entry of two dependencies carries the root sources of both.
-    dependency_entries.sort_by(|(a, _), (b, _)| (a.kind, &a.name).cmp(&(b.kind, &b.name)));
-    dependency_entries.dedup_by(|(next, next_roots), (first, first_roots)| {
-        let same = next.kind == first.kind && next.name == first.name;
-        if same {
-            first_roots.extend(std::mem::take(next_roots));
-        }
-        same
-    });
     // A group left without entries is kept only when the run resolves a
     // root bundle of its source.
     by_source.retain(|label, group| {
@@ -1573,7 +1574,6 @@ pub fn update(
                 } else if !recorded_bundles.is_empty() {
                     source_entries
                         .iter()
-                        .filter(|entry| entry.source == source_label)
                         .filter(|entry| {
                             entry.required_by.is_empty() || lock.is_orphaned_dependency(entry)
                         })
@@ -1588,7 +1588,6 @@ pub fn update(
                 } else {
                     source_entries
                         .iter()
-                        .filter(|e| e.source == source_label)
                         .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
                         .collect()
                 };

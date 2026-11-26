@@ -1486,7 +1486,7 @@ fn update_reports_a_cross_source_dependency_of_an_unreachable_root_as_skipped() 
         .lines()
         .find(|l| l.contains("dep-only"))
         .unwrap_or_else(|| panic!("{out}"));
-    assert!(line.contains("skipped"), "{out}");
+    assert!(line.contains("source not reachable"), "{out}");
     assert!(
         consumer
             .path()
@@ -1545,4 +1545,87 @@ fn bare_update_keeps_the_clients_of_a_dependency_item() {
         clients("dep-only")
     );
     assert!(copilot_output.exists());
+}
+
+#[test]
+fn update_keeps_an_item_of_two_dependency_bundles_while_a_root_source_is_skipped() {
+    // `dep1` (required by `first`) and `dep2` (required by `second`) both
+    // list `shared`. `first` drops `dep1` while the source of `second` is
+    // unreachable: `shared` belongs to the skipped installation too.
+    let consumer = tempfile::tempdir().unwrap();
+    let first = tempfile::tempdir().unwrap();
+    let parent = tempfile::tempdir().unwrap();
+    let second = parent.path().join("second");
+    let dep = tempfile::tempdir().unwrap();
+    write_skill(first.path(), "own1");
+    write_skill(&second, "own2");
+    write_skill(dep.path(), "shared");
+    write_skill_bundle(dep.path(), "dep1", &["shared"]);
+    write_skill_bundle(dep.path(), "dep2", &["shared"]);
+    let requires = |name: &str| format!("{{ name: {name}, source: '{}' }}", dep.path().display());
+    write_root_bundle(first.path(), "first", "own1", &[requires("dep1")]);
+    write_root_bundle(&second, "second", "own2", &[requires("dep2")]);
+    add_bundle_named(consumer.path(), first.path(), "first");
+    add_bundle_named(consumer.path(), &second, "second");
+
+    write_root_bundle(first.path(), "first", "own1", &[]);
+    fs::remove_dir_all(&second).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+
+    assert!(!removed_line(&out, "shared"), "{out}");
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/shared/SKILL.md")
+            .exists(),
+        "{out}"
+    );
+    assert!(recorded_items(consumer.path()).contains(&"shared".to_string()));
+}
+
+#[test]
+fn update_refreshes_a_dependency_that_a_prepared_root_provides_beside_a_skipped_root() {
+    let consumer = tempfile::tempdir().unwrap();
+    let first = tempfile::tempdir().unwrap();
+    let parent = tempfile::tempdir().unwrap();
+    let second = parent.path().join("second");
+    let dep = tempfile::tempdir().unwrap();
+    write_skill(first.path(), "own1");
+    write_skill(&second, "own2");
+    write_skill(dep.path(), "dep-only");
+    write_skill_bundle(dep.path(), "dep", &["dep-only"]);
+    let requires = format!("{{ name: dep, source: '{}' }}", dep.path().display());
+    write_root_bundle(first.path(), "first", "own1", &[requires.clone()]);
+    write_root_bundle(&second, "second", "own2", &[requires]);
+    add_bundle_named(consumer.path(), first.path(), "first");
+    add_bundle_named(consumer.path(), &second, "second");
+
+    fs::remove_dir_all(&second).unwrap();
+    write(
+        &dep.path().join("dep-only/SKILL.md"),
+        "---\nname: dep-only\ndescription: Changed.\n---\nChanged body.\n",
+    );
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+
+    let line = out
+        .lines()
+        .find(|l| l.contains("dep-only"))
+        .unwrap_or_else(|| panic!("{out}"));
+    assert!(!line.contains("skipped"), "{out}");
+    assert!(
+        fs::read_to_string(consumer.path().join(".claude/skills/dep-only/SKILL.md"))
+            .unwrap()
+            .contains("Changed body."),
+        "{out}"
+    );
 }
