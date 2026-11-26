@@ -18,6 +18,8 @@ items:
     - upskill-evaluating-prompts # eval: RED-GREEN-REFACTOR
     - upskill-managing-content # ops: add / update / audit
     - upskill-writing-bundles # authoring: .bundle.yaml manifests + plugins
+  hooks:
+    - upskill-setup # session start: install offer and update notice
 
 # Client-native plugins required by this bundle's skills.
 plugins:
