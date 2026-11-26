@@ -1679,7 +1679,12 @@ fn update_refreshes_a_dependency_that_a_prepared_root_provides_beside_a_skipped_
     write_skill(dep.path(), "dep-only");
     write_skill_bundle(dep.path(), "dep", &["dep-only"]);
     let requires = format!("{{ name: dep, source: '{}' }}", dep.path().display());
-    write_root_bundle(first.path(), "first", "own1", &[requires.clone()]);
+    write_root_bundle(
+        first.path(),
+        "first",
+        "own1",
+        std::slice::from_ref(&requires),
+    );
     write_root_bundle(&second, "second", "own2", &[requires]);
     add_bundle_named(consumer.path(), first.path(), "first");
     add_bundle_named(consumer.path(), &second, "second");
