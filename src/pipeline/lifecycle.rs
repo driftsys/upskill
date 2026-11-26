@@ -537,17 +537,59 @@ fn add_command_for_bundle(
     Some(format!("upskill add {source}{name} --{}", at.scope))
 }
 
-/// Whether `update` applies a kind restriction to `source`: the lockfile
-/// records at least one bundle for it, and every such bundle has recorded
-/// kinds (`add --kind`). With one unrestricted bundle, no restriction
-/// applies.
+/// Whether `update` applies a kind restriction to `source`, by
+/// [`source_kind_restriction`], with the dependency bundles that the lockfile
+/// records (a bundle whose `required_by` chain reaches a recorded root
+/// bundle). A full `update` that reads the source of every root uses the same
+/// bundles.
 fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> bool {
-    let mut recorded = lock
+    !source_kind_restriction(
+        lock,
+        source,
+        |bundle| !lock.root_bundles_of(bundle).is_empty(),
+        |bundle| {
+            lock.root_bundles_of(bundle)
+                .iter()
+                .any(|root| root.source == source)
+        },
+    )
+    .is_empty()
+}
+
+/// The kinds that `update` restricts `source` to; empty for no restriction
+/// (#648). The kinds come from the root bundles of the source (its recorded
+/// bundles for which `is_dependency` is false): a restriction applies only
+/// when each of them has recorded kinds (`add --kind`), and is their union.
+/// The recorded kinds of each dependency bundle that these roots reach
+/// (`reached_from_source`) are added. A dependency bundle without recorded
+/// kinds adds none, so it does not lift the restriction of its roots. With one
+/// unrestricted root bundle, or no root bundle, no restriction applies.
+fn source_kind_restriction(
+    lock: &crate::lockfile::Lockfile,
+    source: &str,
+    is_dependency: impl Fn(&crate::lockfile::LockedBundle) -> bool,
+    reached_from_source: impl Fn(&crate::lockfile::LockedBundle) -> bool,
+) -> Vec<ItemKind> {
+    let roots: Vec<_> = lock
         .bundles
         .iter()
-        .filter(|b| b.source == source)
-        .peekable();
-    recorded.peek().is_some() && recorded.all(|b| !b.kinds.is_empty())
+        .filter(|bundle| bundle.source == source && !is_dependency(bundle))
+        .collect();
+    if roots.is_empty() || roots.iter().any(|bundle| bundle.kinds.is_empty()) {
+        return Vec::new();
+    }
+    roots
+        .iter()
+        .flat_map(|bundle| bundle.kinds.iter().copied())
+        .chain(
+            lock.bundles
+                .iter()
+                .filter(|bundle| reached_from_source(bundle))
+                .flat_map(|bundle| bundle.kinds.iter().copied()),
+        )
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect()
 }
 
 /// Verify installed-state consistency against `.upskill-lock.json`.
@@ -1268,8 +1310,10 @@ fn repair_missing_plugins(
 ///
 /// After the decision, a git source without changes
 /// ([`SourcePreview::has_changes`] is false) that is not applied, in a run
-/// that is not a dry run and not stopped, gets the fetched commit in the
-/// lockfile entries that the run selected (`names`, or every entry when
+/// that is not a dry run and not stopped, gets a fetched commit in the
+/// lockfile entries that the run selected (the commit of the source, or for
+/// an entry of another source that joined the group the commit of its own
+/// source, or none) (`names`, or every entry when
 /// `names` is empty; `PreparedInstall::record_commit`) except the entry of an
 /// item whose update is withheld (a [`PreviewAction::Skip`] item), which keeps
 /// its recorded commit. An entry of the source that `names` did not select
@@ -1281,9 +1325,12 @@ fn repair_missing_plugins(
 /// dependency of that source whose requirers are all absent from the
 /// lockfile (an orphaned dependency, #613), unless a recorded bundle of the
 /// source lists it: a bundle member follows its bundle. It reinstalls no other
-/// source item. It applies a kind restriction only when every recorded bundle
-/// of the source has recorded kinds, using their union. With one unrestricted
-/// bundle of the source, no restriction applies. Every entry of that source
+/// source item. It applies a kind restriction only when every root bundle of
+/// the source (a recorded bundle that is not a dependency bundle, see below)
+/// has recorded kinds, using their union together with the recorded kinds of
+/// the dependency bundles that these roots reach. With one unrestricted root
+/// bundle of the source, no restriction applies; a dependency bundle without
+/// recorded kinds adds no kind. Every entry of that source
 /// whose kind is outside the restriction is kept unchanged and is not updated.
 /// If its source is skipped, the entry is reported as skipped too. To update
 /// it, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
@@ -1311,6 +1358,20 @@ fn repair_missing_plugins(
 /// paths of `at.scope`, so an item recorded at other paths (a global Copilot
 /// item recorded at its `.github` paths) is written at the new paths and its
 /// unchanged files at the old paths are deleted through the ownership record.
+/// In a full update (no `names`), a dependency bundle (a recorded bundle with
+/// `required_by` whose chain reaches recorded root bundles, all of whose
+/// sources have entries in the run) is not resolved from its own record: the
+/// roots reach it through `requires` (#648). Its entries leave their source
+/// group before the prepare phase, carrying the union of the root sources of
+/// every dependency bundle that lists them. After the prepare phase, each
+/// joins the group of the first source whose plan provides it, otherwise the
+/// group of its first prepared root source, which removes it; it is kept and
+/// reported as skipped when a root source was skipped and no plan provides it.
+/// An entry outside the kind restriction of its new group is kept and reported
+/// as up to date. After each applied source, a requirer that the resolution of
+/// the source evaluated and that no longer reaches a dependency bundle leaves
+/// its `required_by`, and a dependency bundle that no prepared resolution
+/// reaches is dropped once every one of its root sources is applied.
 ///
 /// An error after an adoption carries the adopted paths as
 /// [`AdoptedBeforeFailure`]. An error after a source was skipped carries the
@@ -1374,6 +1435,78 @@ pub fn update(
         .map(|e| (e.kind, e.name.clone()))
         .collect();
 
+    // A dependency bundle (a bundle that recorded root bundles reach through
+    // `requires`) is resolved again through its roots, not from its own
+    // record (#648). This holds only for a full `update` in which the source
+    // of every root of the dependency has a group. Otherwise (`update
+    // <name>`, or a root source without selected entries) the dependency is
+    // resolved from its own record, as a root, and its record is kept.
+    let dependency_roots: std::collections::BTreeMap<String, std::collections::BTreeSet<String>> =
+        if names.is_empty() {
+            lock.bundles
+                .iter()
+                .filter_map(|b| {
+                    let roots: std::collections::BTreeSet<String> = lock
+                        .root_bundles_of(b)
+                        .iter()
+                        .map(|root| root.source.clone())
+                        .collect();
+                    (!roots.is_empty() && roots.iter().all(|r| by_source.contains_key(r)))
+                        .then(|| (b.name.clone(), roots))
+                })
+                .collect()
+        } else {
+            std::collections::BTreeMap::new()
+        };
+    // The entries of those dependencies leave their source group. After the
+    // prepare phase each one joins the group of a source whose plan provides
+    // it, or, when no plan provides it, the group of a root source, which
+    // removes it. Each entry carries the union of the root sources of every
+    // dependency bundle that lists it. An entry that a bundle resolved as a
+    // root also lists stays in its group.
+    let mut dependency_entries: Vec<(
+        crate::lockfile::LockedItem,
+        std::collections::BTreeSet<String>,
+    )> = Vec::new();
+    for (label, group) in &mut by_source {
+        let (moved, kept): (Vec<_>, Vec<_>) = std::mem::take(group).into_iter().partition(|e| {
+            let name = e.source_name.as_ref().unwrap_or(&e.name);
+            let lists =
+                |b: &&crate::lockfile::LockedBundle| b.source == *label && b.items.contains(name);
+            lock.bundles
+                .iter()
+                .filter(lists)
+                .any(|b| dependency_roots.contains_key(&b.name))
+                && !lock
+                    .bundles
+                    .iter()
+                    .filter(lists)
+                    .any(|b| !dependency_roots.contains_key(&b.name))
+        });
+        *group = kept;
+        for entry in moved {
+            let name = entry.source_name.as_ref().unwrap_or(&entry.name);
+            let roots = lock
+                .bundles
+                .iter()
+                .filter(|b| b.source == *label && b.items.contains(name))
+                .filter_map(|b| dependency_roots.get(&b.name))
+                .flatten()
+                .cloned()
+                .collect();
+            dependency_entries.push((entry, roots));
+        }
+    }
+    // A group left without entries is kept only when the run resolves a
+    // root bundle of its source.
+    by_source.retain(|label, group| {
+        !group.is_empty()
+            || lock
+                .bundles
+                .iter()
+                .any(|b| b.source == *label && !dependency_roots.contains_key(&b.name))
+    });
+
     let mut report = UpdateReport::default();
     // The adoption of a `schema: 1` lockfile is saved. A later error must
     // still carry the adopted paths for the adoption notice.
@@ -1384,6 +1517,9 @@ pub fn update(
         // adoption and before any source is applied, except a fetch failure,
         // which skips the source.
         let mut prepared_sources = Vec::with_capacity(by_source.len());
+        // The kind restriction of each prepared source.
+        let mut source_kinds: std::collections::BTreeMap<String, Vec<ItemKind>> =
+            std::collections::BTreeMap::new();
         for (source_label, source_entries) in by_source {
             // An interrupt stops the prepare phase at once: no further
             // source is fetched.
@@ -1394,8 +1530,16 @@ pub fn update(
                 .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
 
             // Build aliases from lockfile entries that have source_name
+            // A dependency entry carries its alias to the run of each of its
+            // root sources, which installs it through `requires`.
             let aliases: Vec<(String, String)> = source_entries
                 .iter()
+                .chain(
+                    dependency_entries
+                        .iter()
+                        .filter(|(_, roots)| roots.contains(&source_label))
+                        .map(|(entry, _)| entry),
+                )
                 .filter_map(|e| {
                     e.source_name
                         .as_ref()
@@ -1411,8 +1555,18 @@ pub fn update(
             // to Copilot on the MCP axis; MCP config is additive and never
             // auto-removed (see the MCP fan-out note in install.rs), so
             // this widens rather than loses.
+            // The dependency entries that this source's roots reach join a
+            // group only after the prepare phase, so their clients are added
+            // here.
             let effective_selection = if selection.is_all() {
-                reselect_from_entries(&source_entries)
+                let mut entries = source_entries.clone();
+                entries.extend(
+                    dependency_entries
+                        .iter()
+                        .filter(|(_, roots)| roots.contains(&source_label))
+                        .map(|(entry, _)| entry.clone()),
+                );
+                reselect_from_entries(&entries)
             } else {
                 selection.clone()
             };
@@ -1421,19 +1575,17 @@ pub fn update(
                 .iter()
                 .filter(|bundle| bundle.source == source_label)
                 .collect();
-            let kinds = if recorded_bundles
-                .iter()
-                .all(|bundle| !bundle.kinds.is_empty())
-            {
-                recorded_bundles
-                    .iter()
-                    .flat_map(|bundle| bundle.kinds.iter().copied())
-                    .collect::<std::collections::BTreeSet<_>>()
-                    .into_iter()
-                    .collect()
-            } else {
-                Vec::new()
-            };
+            let kinds = source_kind_restriction(
+                &lock,
+                &source_label,
+                |bundle| dependency_roots.contains_key(&bundle.name),
+                |bundle| {
+                    dependency_roots
+                        .get(&bundle.name)
+                        .is_some_and(|roots| roots.contains(&source_label))
+                },
+            );
+            source_kinds.insert(source_label.clone(), kinds.clone());
             let mut options = AddOptions {
                 force: true,
                 overwrite,
@@ -1445,12 +1597,14 @@ pub fn update(
                 } else {
                     recorded_bundles
                         .iter()
+                        .filter(|bundle| !dependency_roots.contains_key(&bundle.name))
                         .map(|bundle| bundle.name.clone())
                         .collect()
                 },
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
                 keep_recorded_excludes: true,
+                keep_recorded_requirers: true,
                 scope: at.scope,
             };
             // Scope the reinstall to exactly the items this source already
@@ -1516,7 +1670,7 @@ pub fn update(
                         report.items.push(UpdatedItem {
                             kind: entry.kind,
                             name: entry.name.clone(),
-                            source: source_label.clone(),
+                            source: entry.source.clone(),
                             status: UpdateStatus::SourceSkipped {
                                 cause: SkipCause::Unreachable,
                             },
@@ -1550,7 +1704,7 @@ pub fn update(
                         report.items.push(UpdatedItem {
                             kind: entry.kind,
                             name: entry.name.clone(),
-                            source: source_label.clone(),
+                            source: entry.source.clone(),
                             status: UpdateStatus::UpToDate,
                         });
                     }
@@ -1599,7 +1753,7 @@ pub fn update(
                 report.items.push(UpdatedItem {
                     kind: entry.kind,
                     name: entry.name.clone(),
-                    source: source_label.clone(),
+                    source: entry.source.clone(),
                     status: UpdateStatus::SourceSkipped {
                         cause: SkipCause::RequiresSkipped,
                     },
@@ -1613,6 +1767,66 @@ pub fn update(
                 ),
             });
         }
+        // Each dependency entry joins the group of the first source whose
+        // plan provides it. When no plan provides it and every root source
+        // was prepared, it joins the group of its first root source, which
+        // removes it. When a root source was skipped, the entry is kept and
+        // reported with the skip of that source.
+        let dependency_keys: std::collections::BTreeSet<(ItemKind, String)> = dependency_entries
+            .iter()
+            .map(|(entry, _)| (entry.kind, entry.name.clone()))
+            .collect();
+        for (entry, roots) in std::mem::take(&mut dependency_entries) {
+            let key = (entry.kind, entry.name.clone());
+            let provider = prepared_sources
+                .iter()
+                .position(|(_, _, p)| p.planned_hashes().contains_key(&key));
+            let all_roots_prepared = roots
+                .iter()
+                .all(|root| prepared_sources.iter().any(|(label, _, _)| label == root));
+            let first_root = prepared_sources
+                .iter()
+                .position(|(label, _, _)| roots.contains(label));
+            match (provider, all_roots_prepared, first_root) {
+                (Some(index), _, _) | (None, true, Some(index)) => {
+                    // An entry outside the kind restriction of the group is
+                    // kept unchanged, as an entry of the group is.
+                    let label = &prepared_sources[index].0;
+                    let kinds = source_kinds.get(label).map_or(&[][..], Vec::as_slice);
+                    if !kinds.is_empty() && !kinds.contains(&entry.kind) {
+                        report.items.push(UpdatedItem {
+                            kind: entry.kind,
+                            name: entry.name.clone(),
+                            source: entry.source.clone(),
+                            status: UpdateStatus::UpToDate,
+                        });
+                    } else {
+                        prepared_sources[index].1.push(entry);
+                    }
+                }
+                _ => {
+                    let cause = report
+                        .skipped_sources
+                        .iter()
+                        .find(|s| roots.contains(&s.source))
+                        .map_or(SkipCause::RequiresSkipped, |s| s.cause);
+                    report.items.push(UpdatedItem {
+                        kind: entry.kind,
+                        name: entry.name.clone(),
+                        source: entry.source.clone(),
+                        status: UpdateStatus::SourceSkipped { cause },
+                    });
+                }
+            }
+        }
+        // The bundles that a prepared resolution reaches: a dependency bundle
+        // outside this set is dropped once its root sources are applied.
+        let reached_bundles: std::collections::BTreeSet<String> = prepared_sources
+            .iter()
+            .flat_map(|(_, _, p)| p.resolved_bundle_names())
+            .collect();
+        let mut applied_sources: std::collections::BTreeSet<String> =
+            std::collections::BTreeSet::new();
         let total_sources = prepared_sources.len();
         for (_, _, prepared) in &prepared_sources {
             run_items.extend(prepared.planned_hashes().into_keys());
@@ -1686,22 +1900,32 @@ pub fn update(
             prepared_sources.into_iter().enumerate()
         {
             let new_hashes = prepared.planned_hashes();
-            guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
+            // A dependency entry is not counted: a root bundle that resolves
+            // to no item, because it lists none and dropped its `requires`,
+            // removes the entries of its former dependencies.
+            let own_entries: Vec<_> = source_entries
+                .iter()
+                .filter(|e| !dependency_keys.contains(&(e.kind, e.name.clone())))
+                .cloned()
+                .collect();
+            guard_against_empty_source(&new_hashes, &own_entries, &source_label)?;
             // The bundles that the lockfile records for this source, as the
             // fetched source declares them now: the plugin repair below
             // installs from them (issue #229). A source under a kind
-            // restriction (every recorded bundle of the source has recorded
-            // kinds) runs no plugin step, so it gets no repair either.
-            let repair_bundles: Vec<crate::model::Bundle> =
-                if source_is_kind_restricted(&lock, &source_label) {
-                    Vec::new()
-                } else {
-                    lock.bundles
-                        .iter()
-                        .filter(|b| b.source == source_label)
-                        .filter_map(|b| prepared.source_bundle(&b.name))
-                        .collect()
-                };
+            // restriction (see [`source_kind_restriction`]) runs no plugin
+            // step, so it gets no repair either.
+            let repair_bundles: Vec<crate::model::Bundle> = if source_kinds
+                .get(&source_label)
+                .is_some_and(|k| !k.is_empty())
+            {
+                Vec::new()
+            } else {
+                lock.bundles
+                    .iter()
+                    .filter(|b| b.source == source_label)
+                    .filter_map(|b| prepared.source_bundle(&b.name))
+                    .collect()
+            };
 
             let mut current = crate::lockfile::Lockfile::load(target)?;
             let adopted = if dry_run {
@@ -1781,7 +2005,7 @@ pub fn update(
                     report.items.push(UpdatedItem {
                         kind: entry.kind,
                         name: entry.name.clone(),
-                        source: source_label.clone(),
+                        source: entry.source.clone(),
                         status,
                     });
                 }
@@ -1844,7 +2068,16 @@ pub fn update(
             let first_item = report.items.len();
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
+            let requirers = prepared.resolved_requirers();
             let install_report = prepared.commit(target, plugin_scope)?;
+            applied_sources.insert(source_label.clone());
+            update_dependency_records(
+                target,
+                &dependency_roots,
+                &reached_bundles,
+                &applied_sources,
+                &requirers,
+            )?;
             // The plugin step of the apply attempts every plugin of the
             // recorded bundles of the source, so an applied source needs no
             // plugin repair.
@@ -1896,10 +2129,14 @@ pub fn update(
                     report.kept_modified.extend(plan.kept.iter().cloned());
                     report.forced.extend(plan.forced.iter().cloned());
                     lock.remove(plan.kind, &plan.name);
+                    let source = orphans
+                        .iter()
+                        .find(|o| o.kind == plan.kind && o.name == plan.name)
+                        .map_or_else(|| source_label.clone(), |o| o.source.clone());
                     report.items.push(UpdatedItem {
                         kind: plan.kind,
                         name: plan.name,
-                        source: source_label.clone(),
+                        source,
                         status: UpdateStatus::Removed,
                     });
                 }
@@ -1939,7 +2176,7 @@ pub fn update(
                 report.items.push(UpdatedItem {
                     kind,
                     name: entry.name.clone(),
-                    source: source_label.clone(),
+                    source: entry.source.clone(),
                     status,
                 });
             }
@@ -2163,6 +2400,58 @@ fn collect_recorded_local_items(
     )
 }
 
+/// Brings the records of the dependency bundles of `dependency_roots` up to
+/// date after an applied source whose resolution reached the bundles of
+/// `requirers` (each with the requirers that this resolution found): a
+/// requirer that this resolution evaluated and that no longer reaches a
+/// dependency leaves its `required_by` (#648). A dependency bundle outside
+/// `reached` is dropped once every one of its root sources is in `applied`.
+/// Runs after the commit of each applied source, so that an error in a
+/// later source leaves the records of the applied sources up to date.
+fn update_dependency_records(
+    target: &Path,
+    dependency_roots: &std::collections::BTreeMap<String, std::collections::BTreeSet<String>>,
+    reached: &std::collections::BTreeSet<String>,
+    applied: &std::collections::BTreeSet<String>,
+    requirers: &std::collections::BTreeMap<String, Vec<String>>,
+) -> Result<()> {
+    if dependency_roots.is_empty() {
+        return Ok(());
+    }
+    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    let before = lock.bundles.clone();
+    let evaluated: std::collections::BTreeSet<String> = requirers
+        .keys()
+        .map(|name| format!("bundle:{name}"))
+        .collect();
+    for bundle in &mut lock.bundles {
+        if !dependency_roots.contains_key(&bundle.name) || bundle.required_by.is_empty() {
+            continue;
+        }
+        let mut merged: std::collections::BTreeSet<String> = bundle
+            .required_by
+            .iter()
+            .filter(|r| !evaluated.contains(*r))
+            .cloned()
+            .collect();
+        if let Some(found) = requirers.get(&bundle.name) {
+            merged.extend(found.iter().cloned());
+        }
+        if !merged.is_empty() {
+            bundle.required_by = merged.into_iter().collect();
+        }
+    }
+    lock.bundles.retain(|b| {
+        dependency_roots
+            .get(&b.name)
+            .is_none_or(|roots| reached.contains(&b.name) || !roots.is_subset(applied))
+    });
+    if lock.bundles != before {
+        lock.save(target)?;
+    }
+    Ok(())
+}
+
 /// Guard against the data-loss footgun in issue #196: when re-resolving a
 /// source yields **no** items but the lockfile still records entries for
 /// it, treat that as a fetch/resolution anomaly and abort rather than
@@ -2267,6 +2556,7 @@ mod tests {
             git_ref: None,
             items: vec![],
             kinds: vec![],
+            required_by: vec![],
         });
         if let Some(item_source) = item_source {
             let mut lock2: crate::lockfile::Lockfile = serde_json::from_value(serde_json::json!({

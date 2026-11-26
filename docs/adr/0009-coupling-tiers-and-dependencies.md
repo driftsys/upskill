@@ -112,7 +112,10 @@ ignore: ["scripts/**", "fixtures/**"]
   plus a **`required_by`** provenance list.
 - **Removal never cascades** (the #196 "never auto-delete" ethos). `doctor`
   flags an item that is now present only as a removed item's dependency as an
-  "orphaned dependency."
+  "orphaned dependency." This holds for `remove` and `doctor`. `update` is
+  different for bundles: when a bundle drops a bundle from its `requires`,
+  `update` removes the items that only the dropped dependency bundle provided
+  (#648; see the bundle-level update rule below).
 - **Status.** Both same-source (Slice 1) and cross-source (Slice 2) resolution
   are implemented. A cross-source `source` is fetched once and cached for the
   duration of one resolution; the transitive closure may span sources.
@@ -141,7 +144,23 @@ The contract mirrors the item-level one, one layer up:
   an **error** (the same-source `union_items` rule, extended across sources).
 - **Cycle detection** is keyed by `(canonical-source-label, bundle-name)`.
 - **Provenance.** Each resolved bundle, and each item it contributes, is
-  recorded in the lockfile under its **own** source and ref.
+  recorded in the lockfile under its **own** source and ref. A bundle that the
+  closure reached through `requires` records its requirers in `required_by`
+  (`bundle:<name>`); a bundle that the user requested records none and is a
+  root.
+- **Update.** A full `update` resolves only the root bundles again (no
+  `required_by`, or a `required_by` chain that reaches no recorded root) and
+  reaches the other bundles through `requires`, also across sources. The entries
+  of a dependency bundle leave their own source group and join the group of a
+  source whose resolution provides them, or else a root source, which removes
+  them. A dependency bundle that no resolution of the run reaches is dropped
+  from the lockfile once every one of its root sources was applied, so a
+  dependency that a second root still requires is kept (#648). When a root
+  source is not read by the run (`update <name>`, or no selected entry), the
+  dependency is resolved from its own record and keeps its `required_by`. A
+  lockfile without `required_by` records every bundle as a root. A bundle-file
+  (`*.bundle.yaml`) source resolves through the same bundle closure, so its
+  dependency bundles record `required_by` too.
 - **Reuse.** Bundle resolution emits the same per-source item closure the
   item-level path produces, so install and item-lockfile recording are shared;
   only per-bundle source recording is bundle-specific.

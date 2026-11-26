@@ -361,6 +361,7 @@ fn run_add(args: AddArgs) -> i32 {
         selection: resolve_selection(&flag_clients, project_config_root(is_global)),
         keep_unwithheld_edits: false,
         keep_recorded_excludes: false,
+        keep_recorded_requirers: false,
         scope: at.scope,
     };
 

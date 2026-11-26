@@ -452,33 +452,45 @@ item and a `kept modified file` note are not changes.
   requires (from the same source or from another one). For a directory source
   with recorded bundles, it reinstalls the members of those bundles and the
   items of that source installed directly, including their `requires` closure.
-  It also reinstalls each dependency of that source that no installed item
-  requires, which `doctor` reports as an orphaned dependency, unless a recorded
-  bundle of the source lists it as a member: a bundle member follows its bundle.
-  It installs no unrelated item of the source. It applies a kind restriction
-  only when every recorded bundle of the source has recorded kinds, using their
-  union. With one unrestricted bundle of the source, no kind restriction
-  applies. Every lockfile entry of that source whose kind is outside the
-  restriction is left untouched and reported as up to date, regardless of bundle
-  membership or `required_by`, unless its source is skipped. In that case it is
-  reported as skipped with the cause of its source, also when the source is
-  skipped later because it requires an item of a skipped source. To update such
-  an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
-  reinstalled as a whole. Recorded bundle names resolve only as bundles. A
-  missing bundle causes `bundle '<name>' is no longer in source <label>` before
-  any write, even if an item has that name. Each reinstalled entry gets the
-  commit of its own source (an entry from another source gets that source's
-  commit), unless its update is skipped, and any other entry keeps its recorded
-  commit. The lockfile is saved only when a value differs. This write is not a
-  change of the source (see the preview above) and does not count in the output.
-  A dry run, a declined source and a stopped run record no commit.
+  In a full `update`, a dependency bundle (a recorded bundle with `required_by`)
+  is resolved through the `requires:` of its root bundles, not from its own
+  record, and its entries join the block of the source that resolves them
+  (§2.6). It also reinstalls each dependency of that source that no installed
+  item requires, which `doctor` reports as an orphaned dependency, unless a
+  recorded bundle of the source lists it as a member: a bundle member follows
+  its bundle. It installs no unrelated item of the source. It applies a kind
+  restriction only when every root bundle of the source (a recorded bundle of
+  the source that is not a dependency bundle, §2.6) has recorded kinds, using
+  their union together with the recorded kinds of each dependency bundle that
+  these roots reach. With one unrestricted root bundle of the source, no kind
+  restriction applies; a dependency bundle without recorded kinds adds no kind
+  and does not remove the restriction. An entry of a dependency bundle that
+  joins the source is part of it for this rule. Every lockfile entry of that
+  source whose kind is outside the restriction is left untouched and reported as
+  up to date, regardless of bundle membership or `required_by`, unless its
+  source is skipped. In that case it is reported as skipped with the cause of
+  its source, also when the source is skipped later because it requires an item
+  of a skipped source. To update such an item, run `upskill add <source> <item>`
+  again. A `.bundle.yaml` source is reinstalled as a whole. Recorded bundle
+  names resolve only as bundles. A missing root bundle causes
+  `bundle '<name>' is no longer in source <label>` before any write, even if an
+  item has that name. A dependency bundle that the run resolves through its
+  roots is not looked up by name: when no root reaches it any more, its record
+  is dropped (§2.6). Each reinstalled entry gets the commit of its own source
+  (an entry from another source gets that source's commit), unless its update is
+  skipped, and any other entry keeps its recorded commit. The lockfile is saved
+  only when a value differs. This write is not a change of the source (see the
+  preview above) and does not count in the output. A dry run, a declined source
+  and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
-  is the number of selected lockfile entries that the block of their own source
-  lists with an action other than `skip`; a dependency from another source and
-  an item that is not in the lockfile are not counted; `<m>` has the meaning of
-  the terminal summary) and
+  is the number of selected lockfile entries that the block of their group lists
+  with an action other than `skip`: the block of their own source, or for an
+  entry of a dependency bundle the block of the source that resolves it (§2.6);
+  a dependency from another source that is not such an entry, and an item that
+  is not in the lockfile, are not counted; `<m>` has the meaning of the terminal
+  summary) and
   `Each block is computed for the current state; a later block does not include the effect of an earlier one.`,
   and exits with code 0 when no step fails and no source was skipped, for either
   cause (code 1 otherwise). `update --dry-run --quiet` prints nothing on stdout,
@@ -932,7 +944,44 @@ behaviour:
   different sources within one closure is an error.
 - **Lockfile.** Each installed bundle is recorded as a top-level `bundles[]`
   entry in `.upskill-lock.json` alongside its resolved items. The same item may
-  appear in multiple bundle `items[]` lists; it is installed once.
+  appear in multiple bundle `items[]` lists; it is installed once. A bundle that
+  the closure reached through `requires:` records its requiring bundles in the
+  optional `required_by` array (`bundle:<name>`, sorted, omitted when empty); a
+  bundle requested by the user records none. A bundle recorded without
+  `required_by` keeps none when a later install reaches it through `requires:`.
+- **Update.** A full `update` resolves the root bundles again and reaches the
+  other bundles through `requires:`, across sources too. A root bundle is a
+  bundle without `required_by`, or one whose `required_by` chain reaches no
+  recorded root. A dependency bundle is resolved from its own record, as a root,
+  when the run does not read the source of each of its roots: in
+  `update <name>`, or when a root source has no selected entry. Such a run keeps
+  the `required_by` of the record. The entries of a dependency bundle join the
+  block of the first source whose resolution provides them, otherwise the block
+  of one of their root sources; an entry that several dependency bundles list
+  has the root sources of all of them. After each applied source, a requirer
+  that its resolution evaluated and that no longer reaches a dependency bundle
+  leaves the `required_by` of that bundle, and a dependency bundle that no
+  resolution of the run reaches is dropped from the lockfile once every one of
+  its root sources is applied. Each of its items that no resolution provides is
+  removed, reported as `removed — no longer in source`; an item that another
+  root still reaches is kept. The lockfile records no marker for an item that
+  was installed directly: an item that is also a member of a dropped dependency
+  bundle is removed with it, and `upskill add <source> <item>` installs it
+  again. An item outside the kind restriction of the source that resolves it is
+  kept unchanged. When a root source is skipped, the items of its dependency
+  bundles are kept and reported as skipped, unless another resolution of the run
+  provides them. A root bundle that lists no item can drop its `requires:`; its
+  former dependency items are then removed. A root source resolves with the
+  kinds of its root bundles when each of them has recorded kinds, together with
+  the recorded kinds of the dependency bundles that they reach; a dependency
+  bundle without recorded kinds adds none. A lockfile written before
+  `required_by` existed records every bundle as a root, so `update` keeps a
+  dependency that its root no longer requires. To drop such a dependency once,
+  run `upskill remove <item>...` with the items of the dependency bundle:
+  removing an item also drops each bundle record that lists it. There is no
+  `remove <bundle-name>` form. Removing and adding the root bundle again does
+  not repair the record, because a bundle recorded without `required_by` keeps
+  none.
 - **Removal.** `upskill remove --source <label>` removes every item that came
   from that source, including those introduced via bundles. A
   bundle-name-targeted removal (`remove <bundle-name>` removing only items
@@ -1452,6 +1501,13 @@ across-repo continuity for global scope.
       "source": "github:driftsys/bundles",
       "ref": "v0.4.0",
       "items": ["code-review", "secret-scanner"]
+    },
+    {
+      "name": "review-tools",
+      "source": "github:driftsys/bundles",
+      "ref": "v0.4.0",
+      "items": ["lint-helper"],
+      "required_by": ["bundle:platform-defaults"]
     }
   ],
   "plugins": []

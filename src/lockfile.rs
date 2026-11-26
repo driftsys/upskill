@@ -160,6 +160,12 @@ pub struct LockedBundle {
     /// The kinds that `add --kind` restricted this bundle to. Empty: every kind.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub kinds: Vec<ItemKind>,
+    /// The bundles whose `requires` reached this bundle, as `bundle:<name>`.
+    /// Empty: the user installed this bundle directly (a root bundle), or the
+    /// lockfile predates the field. `update` resolves only root bundles and
+    /// reaches the others through `requires` (#648). Sorted.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required_by: Vec<String>,
 }
 
 /// Plugin entry recorded when a bundle's `plugins:` map is installed via
@@ -374,6 +380,36 @@ impl Lockfile {
             .filter(|i| i.kind == ItemKind::Rule && !i.is_opencode_rule())
             .map(|i| i.name.clone())
             .collect()
+    }
+
+    /// The root bundle records that `bundle` is reached from through the
+    /// `required_by` chain, sorted by name. Empty when `bundle` is a root
+    /// itself or when no requirer chain leads to a recorded root bundle.
+    pub fn root_bundles_of(&self, bundle: &LockedBundle) -> Vec<&LockedBundle> {
+        let mut roots: Vec<&LockedBundle> = Vec::new();
+        let mut seen = std::collections::BTreeSet::new();
+        let mut pending: Vec<&LockedBundle> = vec![bundle];
+        while let Some(current) = pending.pop() {
+            if !seen.insert(current.name.as_str()) {
+                continue;
+            }
+            for requirer in &current.required_by {
+                let Some(name) = requirer.strip_prefix("bundle:") else {
+                    continue;
+                };
+                if let Some(record) = self.bundles.iter().find(|b| b.name == name) {
+                    if record.required_by.is_empty() {
+                        if !roots.iter().any(|r| r.name == record.name) {
+                            roots.push(record);
+                        }
+                    } else {
+                        pending.push(record);
+                    }
+                }
+            }
+        }
+        roots.sort();
+        roots
     }
 
     /// Add or replace a bundle entry by `name`. Bundles are kept sorted
@@ -1176,5 +1212,53 @@ mod tests {
         .unwrap();
         let lock = Lockfile::load(tmp.path()).expect("must parse");
         assert!(lock.plugins.is_empty());
+    }
+
+    #[test]
+    fn bundle_required_by_defaults_to_empty_and_round_trips() {
+        let old: LockedBundle =
+            serde_json::from_str(r#"{"name":"b","source":"local:/r","items":[]}"#).unwrap();
+        assert!(old.required_by.is_empty());
+        assert!(!serde_json::to_string(&old).unwrap().contains("required_by"));
+        let mut dep = old.clone();
+        dep.required_by = vec!["bundle:top".into()];
+        let text = serde_json::to_string(&dep).unwrap();
+        assert!(text.contains(r#""required_by":["bundle:top"]"#), "{text}");
+        let back: LockedBundle = serde_json::from_str(&text).unwrap();
+        assert_eq!(back, dep);
+    }
+
+    #[test]
+    fn root_bundles_of_follows_the_requirer_chain() {
+        let bundle = |name: &str, by: &[&str]| LockedBundle {
+            name: name.into(),
+            source: "local:/r".into(),
+            git_ref: None,
+            items: vec![],
+            kinds: vec![],
+            required_by: by.iter().map(|s| s.to_string()).collect(),
+        };
+        let lock = Lockfile {
+            bundles: vec![
+                bundle("top", &[]),
+                bundle("mid", &["bundle:top"]),
+                bundle("leaf", &["bundle:mid"]),
+                bundle("stray", &["bundle:gone"]),
+                bundle("other", &[]),
+                bundle("shared", &["bundle:mid", "bundle:other"]),
+            ],
+            ..Default::default()
+        };
+        let root = |n: &str| {
+            let b = lock.bundles.iter().find(|b| b.name == n).unwrap();
+            lock.root_bundles_of(b)
+                .iter()
+                .map(|r| r.name.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(root("leaf"), vec!["top"]);
+        assert_eq!(root("shared"), vec!["other", "top"]);
+        assert!(root("top").is_empty());
+        assert!(root("stray").is_empty());
     }
 }
