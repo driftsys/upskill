@@ -1,6 +1,6 @@
 ---
 schema: 1
-name: upskill-cli
+name: upskill-managing-content
 description: Use when working in an upskill-consumer repo and needing to add, modify, vendor, audit, or remove installed content (rules, skills, agents, bundles). Trigger when `upskill lint` or `upskill doctor` reports issues. Trigger when adding a third-party bundle or updating one from upstream. Trigger when generated per-client files (e.g., `.claude/`, `.github/skills/`) look stale or wrong. Do NOT trigger for actual authoring decisions — hand off to upskill-prompt-distilling, upskill-writing-rules, writing-skills, or upskill-writing-subagents. Do NOT trigger for cosmetic typo fixes in skill bodies; raw edits to source registry files plus `upskill lint` are sufficient.
 metadata:
   version: 0.2.0
@@ -39,8 +39,9 @@ GO THROUGH UPSKILL FOR LIFECYCLE OPERATIONS. HAND OFF TO writing-* SKILLS FOR
 AUTHORING DECISIONS.
 
 This Iron Law is a routing law, not a discipline law (no "NO X WITHOUT Y FIRST"
-shape like the other meta-skills), because `upskill-cli` governs which tool to
-reach for, not whether to pressure-test content before shipping it.
+shape like the other meta-skills), because `upskill-managing-content` governs
+which tool to reach for, not whether to pressure-test content before shipping
+it.
 
 The boundary is sharp. upskill handles fetching, frontmatter canonicalization,
 per-client generation, validation, and lockfile tracking. It does not decide

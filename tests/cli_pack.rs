@@ -2635,3 +2635,59 @@ fn pack_catalog_refuses_an_empty_catalog_name_or_owner() {
         assert!(!f.market.exists());
     }
 }
+
+#[test]
+fn pack_of_the_upskill_bundle_writes_skills_and_setup_hook() {
+    let tmp = tempfile::tempdir().unwrap();
+    let registry = tmp.path().join("registry");
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = Path::new("skills");
+    for (rel, bytes) in tree(source) {
+        let dest = registry.join(&rel);
+        fs::create_dir_all(dest.parent().unwrap()).unwrap();
+        fs::write(&dest, bytes).unwrap();
+        let mode = fs::metadata(source.join(&rel)).unwrap().permissions();
+        fs::set_permissions(&dest, mode).unwrap();
+    }
+    let out = tmp.path().join("out");
+    common::upskill_cmd(&home)
+        .current_dir(&registry)
+        .args([
+            "pack",
+            "upskill",
+            "--source",
+            "driftsys/upskill@v1",
+            "--out",
+        ])
+        .arg(&out)
+        .assert()
+        .success();
+
+    let claude = out.join("upskill-claude");
+    let mut skills: Vec<String> = fs::read_dir(claude.join("skills"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    skills.sort();
+    assert_eq!(skills.len(), 7, "{skills:?}");
+    assert!(skills.contains(&"upskill-managing-content".to_string()));
+
+    let hooks: serde_json::Value =
+        serde_json::from_slice(&fs::read(claude.join("hooks/hooks.json")).unwrap()).unwrap();
+    let command = hooks["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+        .as_str()
+        .unwrap();
+    assert!(
+        command.ends_with("hooks/upskill-setup/upskill-setup.sh\""),
+        "{command}"
+    );
+
+    let hooks: serde_json::Value =
+        serde_json::from_slice(&fs::read(out.join("upskill-copilot/hooks.json")).unwrap()).unwrap();
+    let bash = hooks["hooks"]["sessionStart"][0]["bash"].as_str().unwrap();
+    assert!(
+        bash.ends_with("./hooks/upskill-setup/upskill-setup.sh"),
+        "{bash}"
+    );
+}

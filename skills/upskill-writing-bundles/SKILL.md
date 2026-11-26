@@ -24,7 +24,7 @@ related skills, rules, and agents together with their plugin dependencies.
 - Authoring individual skill content → `writing-skills`
 - Authoring rules → `upskill-writing-rules`
 - Authoring subagents → `upskill-writing-subagents`
-- Lifecycle operations (add/update/remove) → `upskill-cli`
+- Lifecycle operations (add/update/remove) → `upskill-managing-content`
 
 ## Bundle YAML Schema
 
@@ -95,9 +95,9 @@ A command-only or hook-only directory (`COMMAND.md` or `HOOK.md` with no
 `SKILL.md`, `RULE.md` or `AGENT.md`) is excluded from this check, so a bundle
 may share its name with a command or a hook.
 
-**Name collision prevention:** If your bundle is called `prompt-engineering`,
-don't have a skill directory also called `prompt-engineering/`. Use a distinct
-name for one of them (e.g., rename the skill to `upskill-prompt-design`).
+**Name collision prevention:** If your bundle is called `upskill`, don't have a
+skill directory also called `upskill/`. Use a distinct name for one of them
+(e.g., rename the skill to `upskill-prompt-design`).
 
 ### Choosing the namespace prefix
 
@@ -116,7 +116,7 @@ Rules of thumb:
 - **Default to repo/org scope** — it is shorter and signals who ships the
   content. This repo uses the `upskill-` prefix (e.g. `upskill-writing-rules`).
 - The namespace token SHOULD be short (≤ 10 characters) and stable. Prefer the
-  project name over a long topic name (`upskill-`, not `prompt-engineering-`).
+  project name over a long topic name (`upskill-`, not `prompt-design-`).
 - Co-located entrypoints keep one prefixed base name and differ only by kind
   (`upskill-writing-rules` skill + rule) — the resolver allows same `name`
   across different kinds. A command is the exception: a command and a skill

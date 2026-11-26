@@ -258,6 +258,22 @@ fn ls_remote_command(url: &str, git_ref: Option<&str>) -> Command {
     cmd
 }
 
+/// The output of `git ls-remote --tags` at `url`. It has the environment
+/// hygiene of [`ls_remote`].
+pub(crate) fn ls_remote_tags(url: &str, deadline: Instant) -> Result<String, RunError> {
+    run_until(ls_remote_tags_command(url), deadline)
+}
+
+fn ls_remote_tags_command(url: &str) -> Command {
+    let mut cmd = Command::new("git");
+    cmd.arg("ls-remote").arg("--tags").arg("--").arg(url);
+    cmd.env("GIT_TERMINAL_PROMPT", "0")
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE");
+    cmd
+}
+
 /// True for 40 lowercase or uppercase hexadecimal characters.
 pub(crate) fn is_full_commit_hash(git_ref: &str) -> bool {
     git_ref.len() == 40 && git_ref.bytes().all(|b| b.is_ascii_hexdigit())
@@ -582,6 +598,26 @@ mod tests {
         git_out(&bare, &["branch", "v2", &second]);
         let got = ls_remote(&file_url(&bare), Some("v2"), far_deadline()).expect("ls-remote");
         assert_eq!(got, Some(second));
+    }
+
+    #[test]
+    fn ls_remote_tags_command_lists_tags() {
+        let cmd = ls_remote_tags_command("https://example.invalid/team/skills");
+        let args: Vec<_> = cmd.get_args().collect();
+        assert_eq!(
+            args,
+            [
+                "ls-remote",
+                "--tags",
+                "--",
+                "https://example.invalid/team/skills"
+            ]
+        );
+        let prompt = cmd
+            .get_envs()
+            .find(|(key, _)| *key == "GIT_TERMINAL_PROMPT")
+            .map(|(_, value)| value);
+        assert_eq!(prompt, Some(Some(std::ffi::OsStr::new("0"))));
     }
 
     #[test]

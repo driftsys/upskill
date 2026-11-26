@@ -122,3 +122,10 @@ case ":${PATH}:" in
 esac
 
 "${INSTALL_DIR}/${BIN}" --version
+
+cat >&2 <<'MSG'
+Set up upskill in your AI client (skills and update notices):
+  claude  plugin marketplace add driftsys/metapowers && claude  plugin install upskill@metapowers
+  copilot plugin marketplace add driftsys/metapowers && copilot plugin install upskill@metapowers
+opencode: upskill add driftsys/upskill --global --opencode
+MSG

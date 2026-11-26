@@ -1347,6 +1347,16 @@ fn notice_lines(repeat: bool) -> Option<()> {
             }
         }
     }
+    notice::refresh_release(&mut cache, now);
+    let release_line = if style::is_quiet() {
+        None
+    } else {
+        upskill::release::parse_version(env!("CARGO_PKG_VERSION"))
+            .and_then(|current| notice::decide_release(&mut cache, current, repeat))
+    };
+    if let Some(line) = release_line {
+        let _ = writeln!(std::io::stdout().lock(), "{line}");
+    }
     // The lookups can take seconds, and another run may have saved meanwhile:
     // apply the roots of this run onto the file as it is now.
     // The entry of a root without a lockfile is not handled here: `prune`

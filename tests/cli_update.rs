@@ -2235,3 +2235,54 @@ fn update_lists_a_dependency_planned_from_two_sources_once() {
         "{stdout}"
     );
 }
+
+/// Pins today's behaviour: when the only recorded item was renamed in the
+/// source, no recorded item remains, so `update` fails without writing.
+#[test]
+fn update_fails_when_no_recorded_item_remains_after_a_rename() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(source.join("old-name")).unwrap();
+    fs::write(
+        source.join("old-name/SKILL.md"),
+        "---\nschema: 1\nname: old-name\ndescription: A skill that the test renames.\n---\n\nBody.\n",
+    )
+    .unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap(), "--project", "--claude"])
+        .assert()
+        .success();
+    let lock_before = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
+    let output_before =
+        fs::read_to_string(target.join(".claude/skills/old-name/SKILL.md")).unwrap();
+
+    fs::rename(source.join("old-name"), source.join("new-name")).unwrap();
+    fs::write(
+        source.join("new-name/SKILL.md"),
+        "---\nschema: 1\nname: new-name\ndescription: A skill that the test renames.\n---\n\nBody.\n",
+    )
+    .unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("old-name"));
+
+    assert_eq!(
+        fs::read_to_string(target.join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert_eq!(
+        fs::read_to_string(target.join(".claude/skills/old-name/SKILL.md")).unwrap(),
+        output_before
+    );
+    assert!(!target.join(".claude/skills/new-name").exists());
+}

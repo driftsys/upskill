@@ -922,6 +922,20 @@ The command is quiet by design:
   lookup that reaches some sources but not all adds the updates it found and
   keeps every earlier stored update whose item (kind and name) it did not find
   again; it cannot tell which source an earlier update came from.
+- It also checks for a newer upskill release. At most once in 24 hours, it runs
+  one `git ls-remote --tags` against `https://github.com/driftsys/upskill` with
+  a time limit of 3 seconds, separate from the limit of the source lookups, and
+  stores the latest `vX.Y.Z` tag under the key `release` of `notice.json`. A
+  failed lookup keeps the stored tag, and the next attempt waits for the 24
+  hours. It prints one line, once for each version, when that version is greater
+  than the running one (with `--repeat`, at every run):
+
+  ```text
+  upskill 0.10.0 is available (you have 0.9.4): curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh
+  ```
+
+  A failed or timed-out lookup prints nothing. Setting `UPSKILL_NO_UPDATE_CHECK`
+  to a nonempty value skips the check. `update --check` does not include it.
 - It exits with code 0 in every case after the arguments are parsed (a usage
   error exits with code 2). An interrupt ends the command at once with exit code
   0. An interrupt during the lookups prints nothing and writes no cache file. An
