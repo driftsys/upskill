@@ -6,7 +6,7 @@ items:
   rules: [smoke-rule]
   skills: [smoke-skill]
   agents: [smoke-agent]
-  hooks: [smoke-hook, smoke-counter]
+  hooks: [smoke-hook, smoke-counter, smoke-match-bash, smoke-match-edit]
   commands: [smoke-command]
 mcps:
   smoke-mcp:
@@ -29,7 +29,7 @@ mcps:
               elif method == "tools/list":
                   r = {"tools": [{"name": "smoke_marker", "description": "Returns the fixed smoke marker word", "inputSchema": {"type": "object", "properties": {}}}]}
               elif method == "tools/call":
-                  r = {"content": [{"type": "text", "text": "SMOKE_MCP_MARKER"}]}
+                  r = {"content": [{"type": "text", "text": "slate-newt-2468"}]}
               else:
                   r = {}
               sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": i, "result": r}) + "\n")
@@ -40,8 +40,11 @@ lsps:
     args:
       - -c
       - |
-        import json, os, sys
-        open(os.path.join(os.environ.get("TMPDIR", "/tmp"), "upskill-smoke-lsp-marker"), "a").write("started\n")
+        import json, os, sys, time
+        def log(t):
+            d = os.environ.get("TMPDIR") or "/tmp"
+            open(os.path.join(d, "upskill-smoke-lsp-marker"), "a").write("%s %s pid=%d\n" % (t, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), os.getpid()))
+        log("started")
         def read():
             n = 0
             while True:
@@ -58,8 +61,6 @@ lsps:
             b = json.dumps(o).encode()
             sys.stdout.buffer.write(b"Content-Length: %d\r\n\r\n" % len(b) + b)
             sys.stdout.buffer.flush()
-        def log(t):
-            open(os.path.join(os.environ.get("TMPDIR", "/tmp"), "upskill-smoke-lsp-marker"), "a").write(t + "\n")
         while True:
             m = read()
             if m is None or m.get("method") == "exit":

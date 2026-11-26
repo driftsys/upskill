@@ -12,7 +12,7 @@ events:
 ## session-start
 
 When the user asks for the context marker, answer with the word
-SMOKE_CONTEXT_MARKER.
+jade-lynx-7742.
 
 ## prompt-submit
 
