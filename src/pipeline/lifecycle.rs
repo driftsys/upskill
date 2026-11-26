@@ -1363,6 +1363,7 @@ pub fn update(
             .or_default()
             .push(entry);
     }
+
     // The items that the run covers: every lockfile entry that the run
     // selects, and below the items that the plans of the sources that were
     // fetched and not skipped install (a source skipped for `RequiresSkipped`
@@ -1748,9 +1749,8 @@ pub fn update(
                 }
             }
         }
-        // A dependency bundle is dropped from the lockfile after the run
-        // when no prepared resolution reaches it and every one of its root
-        // sources was applied.
+        // The bundles that a prepared resolution reaches: a dependency bundle
+        // outside this set is dropped once its root sources are applied.
         let reached_bundles: std::collections::BTreeSet<String> = prepared_sources
             .iter()
             .flat_map(|(_, _, p)| p.resolved_bundle_names())
@@ -1988,8 +1988,16 @@ pub fn update(
             let first_item = report.items.len();
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
+            let requirers = prepared.resolved_requirers();
             let install_report = prepared.commit(target, plugin_scope)?;
             applied_sources.insert(source_label.clone());
+            update_dependency_records(
+                target,
+                &dependency_roots,
+                &reached_bundles,
+                &applied_sources,
+                &requirers,
+            )?;
             // The plugin step of the apply attempts every plugin of the
             // recorded bundles of the source, so an applied source needs no
             // plugin repair.
@@ -2162,20 +2170,6 @@ pub fn update(
             }
             observer.applied(&result);
         }
-        // The commits save the lockfile per source, so this drop is one more
-        // save after the last commit, when it is known which roots applied.
-        let dropped: Vec<&String> = dependency_roots
-            .iter()
-            .filter(|(name, roots)| {
-                !reached_bundles.contains(*name) && roots.is_subset(&applied_sources)
-            })
-            .map(|(name, _)| name)
-            .collect();
-        if !dropped.is_empty() {
-            let mut lock = crate::lockfile::Lockfile::load(target)?;
-            lock.bundles.retain(|b| !dropped.contains(&&b.name));
-            lock.save(target)?;
-        }
         Ok(())
     })();
     // An item that a source changed as a dependency of another source can
@@ -2334,6 +2328,58 @@ fn collect_recorded_local_items(
 /// failure here, so erring toward "do not delete" is the safe default —
 /// the user can `upskill remove --source <label>` to clear such entries
 /// deliberately.
+/// Brings the records of the dependency bundles of `dependency_roots` up to
+/// date after an applied source whose resolution reached the bundles of
+/// `requirers` (each with the requirers that this resolution found): a
+/// requirer that this resolution evaluated and that no longer reaches a
+/// dependency leaves its `required_by` (#648). A dependency bundle outside
+/// `reached` is dropped once every one of its root sources is in `applied`.
+/// Runs after the commit of each applied source, so that an error in a
+/// later source leaves the records of the applied sources up to date.
+fn update_dependency_records(
+    target: &Path,
+    dependency_roots: &std::collections::BTreeMap<String, std::collections::BTreeSet<String>>,
+    reached: &std::collections::BTreeSet<String>,
+    applied: &std::collections::BTreeSet<String>,
+    requirers: &std::collections::BTreeMap<String, Vec<String>>,
+) -> Result<()> {
+    if dependency_roots.is_empty() {
+        return Ok(());
+    }
+    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    let before = lock.bundles.clone();
+    let evaluated: std::collections::BTreeSet<String> = requirers
+        .keys()
+        .map(|name| format!("bundle:{name}"))
+        .collect();
+    for bundle in &mut lock.bundles {
+        if !dependency_roots.contains_key(&bundle.name) || bundle.required_by.is_empty() {
+            continue;
+        }
+        let mut merged: std::collections::BTreeSet<String> = bundle
+            .required_by
+            .iter()
+            .filter(|r| !evaluated.contains(*r))
+            .cloned()
+            .collect();
+        if let Some(found) = requirers.get(&bundle.name) {
+            merged.extend(found.iter().cloned());
+        }
+        if !merged.is_empty() {
+            bundle.required_by = merged.into_iter().collect();
+        }
+    }
+    lock.bundles.retain(|b| {
+        dependency_roots
+            .get(&b.name)
+            .is_none_or(|roots| reached.contains(&b.name) || !roots.is_subset(applied))
+    });
+    if lock.bundles != before {
+        lock.save(target)?;
+    }
+    Ok(())
+}
+
 fn guard_against_empty_source(
     new_hashes: &std::collections::BTreeMap<(ItemKind, String), Option<String>>,
     source_entries: &[crate::lockfile::LockedItem],

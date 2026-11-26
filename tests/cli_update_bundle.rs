@@ -1361,6 +1361,85 @@ fn assert_dependency_of_a_second_root_is_kept(
     );
     assert!(recorded_bundles(consumer.path()).contains(&"dep".to_string()));
     assert!(recorded_items(consumer.path()).contains(&"dep-only".to_string()));
+    // The requirer that dropped the dependency leaves its `required_by`.
+    assert_eq!(
+        bundle_required_by(consumer.path(), "dep"),
+        serde_json::json!(["bundle:second"])
+    );
+}
+
+/// The `required_by` value of the bundle record `name` (`null` when absent).
+fn bundle_required_by(consumer: &Path, name: &str) -> serde_json::Value {
+    read_update_lock(consumer)["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|b| b["name"] == name)
+        .unwrap_or_else(|| panic!("bundle {name} not recorded"))
+        .get("required_by")
+        .cloned()
+        .unwrap_or(serde_json::Value::Null)
+}
+
+/// A registry with the skills `own1`, `own2` and `dep-only`, the bundle
+/// `dep` (lists `dep-only`) and the roots `first` and `second`, which both
+/// require `dep`.
+fn setup_two_roots_of_one_dependency(registry: &Path) {
+    write_skill(registry, "own1");
+    write_skill(registry, "own2");
+    write_skill(registry, "dep-only");
+    write_skill_bundle(registry, "dep", &["dep-only"]);
+    write_root_bundle(registry, "first", "own1", &["{ name: dep }".to_string()]);
+    write_root_bundle(registry, "second", "own2", &["{ name: dep }".to_string()]);
+}
+
+#[test]
+fn a_second_add_keeps_the_requirer_of_the_first_add() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_two_roots_of_one_dependency(registry.path());
+    add_bundle_named(consumer.path(), registry.path(), "first");
+    add_bundle_named(consumer.path(), registry.path(), "second");
+    assert_eq!(
+        bundle_required_by(consumer.path(), "dep"),
+        serde_json::json!(["bundle:first", "bundle:second"])
+    );
+}
+
+#[test]
+fn a_bundle_installed_directly_stays_a_root_when_a_later_add_requires_it() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_two_roots_of_one_dependency(registry.path());
+    add_bundle_named(consumer.path(), registry.path(), "dep");
+    add_bundle_named(consumer.path(), registry.path(), "first");
+    assert_eq!(
+        bundle_required_by(consumer.path(), "dep"),
+        serde_json::Value::Null
+    );
+}
+
+#[test]
+fn a_bundle_requested_beside_its_requirer_is_a_root() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_two_roots_of_one_dependency(registry.path());
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "first",
+            "dep",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert_eq!(
+        bundle_required_by(consumer.path(), "dep"),
+        serde_json::Value::Null
+    );
 }
 
 #[test]

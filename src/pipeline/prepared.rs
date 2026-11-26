@@ -552,6 +552,16 @@ impl PreparedInstall {
             .collect()
     }
 
+    /// Each bundle that this install resolved, with the bundles of this
+    /// resolution whose `requires` reached it (`bundle:<name>`; empty for a
+    /// requested bundle).
+    pub fn resolved_requirers(&self) -> BTreeMap<String, Vec<String>> {
+        self.resolved_bundles
+            .iter()
+            .map(|rb| (rb.bundle.name.clone(), rb.required_by.clone()))
+            .collect()
+    }
+
     /// The bundle `name` as the fetched entry source declares it now: a
     /// bundle that this install resolved (always the case for a bundle-file
     /// source), else the bundle file of that name in a directory source.
