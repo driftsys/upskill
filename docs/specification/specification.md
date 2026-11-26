@@ -948,9 +948,10 @@ behaviour:
   root sources. Each of its items that no resolution provides is removed,
   reported as `removed — no longer in source`; an item that another root still
   reaches is kept. When a root source is skipped, the items of its dependency
-  bundles are kept and reported as skipped. The kinds of a dependency bundle are
-  those of the root resolution. A lockfile written before `required_by` existed
-  records every bundle as a root.
+  bundles are kept and reported as skipped, unless another resolution of the run
+  provides them. The kinds of a dependency bundle are those of the root
+  resolution. A lockfile written before `required_by` existed records every
+  bundle as a root.
 - **Removal.** `upskill remove --source <label>` removes every item that came
   from that source, including those introduced via bundles. A
   bundle-name-targeted removal (`remove <bundle-name>` removing only items
