@@ -389,13 +389,14 @@ The empty client root and kind directories that remain, for example
 
 `update` honours the same [client-selection](#upskill-add-source-items) flags
 and `clients:` config as `add` (`--claude`, `--copilot`, `--vscode`,
-`--opencode`). With no flag and no config, `update` **preserves each source's
-recorded selection** — a bare `update` of a `--claude`-only install stays
-Claude-only rather than re-expanding to all clients. Pass a flag (or set
-`clients:`) to change the selection on update. The files that a narrower
-selection no longer writes are deleted when they are unchanged; a modified one
-is kept, stays in the record, and is reported as described below (when the item
-is skipped, nothing of it changes, except its `required_by`).
+`--opencode`). With no flag and no config, `update` **preserves the recorded
+selection of each item** — a bare `update` of a `--claude`-only install stays
+Claude-only rather than re-expanding to all clients, and an item recorded for
+other clients than its neighbours in the same source keeps its own clients. Pass
+a flag (or set `clients:`) to change the selection on update. The files that a
+narrower selection no longer writes are deleted when they are unchanged; a
+modified one is kept, stays in the record, and is reported as described below
+(when the item is skipped, nothing of it changes, except its `required_by`).
 
 `update` protects files in the same way as `add`. An item with a destination
 that was modified, or that upskill does not manage, is not written and keeps its
@@ -630,26 +631,31 @@ unless a recorded bundle of the source lists it as a member: a bundle member
 follows its bundle. It installs no unrelated item of the source. It applies a
 kind restriction only when every root bundle of the source (a recorded bundle of
 the source that is not a dependency bundle, see **Dependency bundles** below)
-has recorded kinds, using their union together with the recorded kinds of each
-dependency bundle that these roots reach. With one unrestricted root bundle of
-the source, no kind restriction applies; a dependency bundle without recorded
-kinds adds no kind and does not remove the restriction. An entry of a dependency
-bundle that joins the source is part of it for this rule. Every lockfile entry
-of that source whose kind is outside the restriction is left untouched and
-reported as up to date, regardless of bundle membership or `required_by`, unless
-its source is skipped. Such an item is reported as skipped with the cause of its
-source, also when the source is skipped later because it requires an item of a
-skipped source. To update such an item, run `upskill add <source> <item>` again.
-A `.bundle.yaml` source is reinstalled as a whole. Each reinstalled entry gets
-the commit of its own source, unless its update is skipped, and any other entry
-keeps its commit. If a recorded root bundle is missing from the source, update
-fails before any write with `bundle '<name>' is no longer in source <label>`,
-even if an item has that name; remove the bundle's items with `upskill remove`
-or restore the bundle. A dependency bundle that a full update resolves through
-its roots is not looked up by name (see below). For a source that is not
-applied, only a changed commit value, or a changed `required_by` value, causes a
-lockfile write. This write is not a change: it does not count in the output
-above, and `update --dry-run` and a declined source record no commit.
+has recorded kinds, using their union together with the kinds of each dependency
+bundle that these roots reach. The kinds of a dependency bundle are the union of
+the recorded kinds of the root bundles that reach it, from any source; the kinds
+recorded on the dependency bundle itself are not used. Under the restriction,
+the update takes from each source only the kinds of the bundles of that source:
+the root bundles for the source itself, and the dependency bundles for each
+other source. With one unrestricted root bundle of the source, no kind
+restriction applies; a dependency bundle without kinds adds no kind and does not
+remove the restriction. An entry of a dependency bundle that joins the source is
+part of it for this rule. Every lockfile entry of that source whose kind is
+outside the restriction is left untouched and reported as up to date, regardless
+of bundle membership or `required_by`, unless its source is skipped. Such an
+item is reported as skipped with the cause of its source, also when the source
+is skipped later because it requires an item of a skipped source. To update such
+an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
+reinstalled as a whole. Each reinstalled entry gets the commit of its own
+source, unless its update is skipped, and any other entry keeps its commit. If a
+recorded root bundle is missing from the source, update fails before any write
+with `bundle '<name>' is no longer in source <label>`, even if an item has that
+name; remove the bundle's items with `upskill remove` or restore the bundle. A
+dependency bundle that a full update resolves through its roots is not looked up
+by name (see below). For a source that is not applied, only a changed commit
+value, or a changed `required_by` value, causes a lockfile write. This write is
+not a change: it does not count in the output above, and `update --dry-run` and
+a declined source record no commit.
 
 **Dependency bundles.** `add` records in the lockfile, for each bundle that a
 bundle's `requires:` reached, the requiring bundles (`required_by`). A bundle

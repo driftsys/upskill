@@ -561,9 +561,10 @@ fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> 
 /// bundles for which `is_dependency` is false): a restriction applies only
 /// when each of them has recorded kinds (`add --kind`), and is their union.
 /// The recorded kinds of each dependency bundle that these roots reach
-/// (`reached_from_source`) are added. A dependency bundle without recorded
-/// kinds adds none, so it does not lift the restriction of its roots. With one
-/// unrestricted root bundle, or no root bundle, no restriction applies.
+/// (`reached_from_source`) are added, as [`dependency_kinds`] gives them. A
+/// dependency bundle without kinds adds none, so it does not lift the
+/// restriction of its roots. With one unrestricted root bundle, or no root
+/// bundle, no restriction applies.
 fn source_kind_restriction(
     lock: &crate::lockfile::Lockfile,
     source: &str,
@@ -585,10 +586,84 @@ fn source_kind_restriction(
             lock.bundles
                 .iter()
                 .filter(|bundle| reached_from_source(bundle))
-                .flat_map(|bundle| bundle.kinds.iter().copied()),
+                .flat_map(|bundle| dependency_kinds(lock, bundle)),
         )
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
+        .collect()
+}
+
+/// The kinds of the dependency bundle `bundle`: the union of the recorded
+/// kinds of the root bundles that reach it; empty (every kind) when one of
+/// them has no kinds or none is recorded. The kinds recorded on the
+/// dependency itself are not used: they are those of the last `add` that
+/// reached it, so they can widen or narrow the kinds of another root (#655).
+fn dependency_kinds(
+    lock: &crate::lockfile::Lockfile,
+    bundle: &crate::lockfile::LockedBundle,
+) -> Vec<ItemKind> {
+    let roots = lock.root_bundles_of(bundle);
+    if roots.is_empty() || roots.iter().any(|root| root.kinds.is_empty()) {
+        return Vec::new();
+    }
+    roots
+        .iter()
+        .flat_map(|root| root.kinds.iter().copied())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+/// The kinds that the run of `source`, restricted to `kinds`, takes from each
+/// source of its closure (#655): for a source, the union of the kinds of the
+/// root bundles of `source` that are recorded with that source and of the
+/// kinds ([`dependency_kinds`]) of the dependency bundles that `source`
+/// reaches (`reached_from_source`) and that are recorded with that source. A
+/// source with a contributor without kinds, or without a contributor, has no
+/// entry, so it takes `kinds`. Empty when `kinds` is empty.
+fn closure_source_kinds(
+    lock: &crate::lockfile::Lockfile,
+    source: &str,
+    kinds: &[ItemKind],
+    is_dependency: impl Fn(&crate::lockfile::LockedBundle) -> bool,
+    reached_from_source: impl Fn(&crate::lockfile::LockedBundle) -> bool,
+) -> std::collections::BTreeMap<String, Vec<ItemKind>> {
+    let mut by_source: std::collections::BTreeMap<
+        String,
+        Option<std::collections::BTreeSet<ItemKind>>,
+    > = std::collections::BTreeMap::new();
+    if kinds.is_empty() {
+        return std::collections::BTreeMap::new();
+    }
+    for bundle in &lock.bundles {
+        let contributed = if is_dependency(bundle) {
+            if !reached_from_source(bundle) {
+                continue;
+            }
+            dependency_kinds(lock, bundle)
+        } else if bundle.source == source {
+            bundle.kinds.clone()
+        } else {
+            continue;
+        };
+        let slot = by_source
+            .entry(bundle.source.clone())
+            .or_insert_with(|| Some(std::collections::BTreeSet::new()));
+        match (slot.as_mut(), contributed.is_empty()) {
+            (Some(_), true) => *slot = None,
+            (Some(set), false) => set.extend(contributed),
+            (None, _) => {}
+        }
+    }
+    by_source
+        .into_iter()
+        .filter_map(|(label, set)| {
+            let set = set?;
+            Some((
+                label,
+                set.into_iter().filter(|k| kinds.contains(k)).collect(),
+            ))
+        })
         .collect()
 }
 
@@ -1517,9 +1592,16 @@ pub fn update(
         // adoption and before any source is applied, except a fetch failure,
         // which skips the source.
         let mut prepared_sources = Vec::with_capacity(by_source.len());
-        // The kind restriction of each prepared source.
-        let mut source_kinds: std::collections::BTreeMap<String, Vec<ItemKind>> =
-            std::collections::BTreeMap::new();
+        // The kind restriction of each prepared source, together
+        // with the kinds that it takes from each source of its closure.
+        #[allow(clippy::type_complexity)]
+        let mut source_kinds: std::collections::BTreeMap<
+            String,
+            (
+                Vec<ItemKind>,
+                std::collections::BTreeMap<String, Vec<ItemKind>>,
+            ),
+        > = std::collections::BTreeMap::new();
         for (source_label, source_entries) in by_source {
             // An interrupt stops the prepare phase at once: no further
             // source is fetched.
@@ -1585,13 +1667,48 @@ pub fn update(
                         .is_some_and(|roots| roots.contains(&source_label))
                 },
             );
-            source_kinds.insert(source_label.clone(), kinds.clone());
+            let closure_kinds = closure_source_kinds(
+                &lock,
+                &source_label,
+                &kinds,
+                |bundle| dependency_roots.contains_key(&bundle.name),
+                |bundle| {
+                    dependency_roots
+                        .get(&bundle.name)
+                        .is_some_and(|roots| roots.contains(&source_label))
+                },
+            );
+            source_kinds.insert(source_label.clone(), (kinds.clone(), closure_kinds.clone()));
+            // A bare `update` generates each recorded item for its own
+            // recorded clients, not for the union of the source (#655).
+            let item_clients = if selection.is_all() {
+                source_entries
+                    .iter()
+                    .chain(
+                        dependency_entries
+                            .iter()
+                            .filter(|(_, roots)| roots.contains(&source_label))
+                            .map(|(entry, _)| entry),
+                    )
+                    .filter(|entry| !entry.clients.is_empty())
+                    .map(|entry| {
+                        (
+                            (entry.kind, entry.name.clone()),
+                            reselect_from_entries(std::slice::from_ref(entry)),
+                        )
+                    })
+                    .collect()
+            } else {
+                std::collections::BTreeMap::new()
+            };
             let mut options = AddOptions {
                 force: true,
                 overwrite,
                 aliases,
                 excludes: Vec::new(),
                 kinds,
+                source_kinds: closure_kinds,
+                item_clients,
                 bundles: if source_label.ends_with(crate::parse::bundle::BUNDLE_SUFFIX) {
                     Vec::new()
                 } else {
@@ -1792,7 +1909,11 @@ pub fn update(
                     // An entry outside the kind restriction of the group is
                     // kept unchanged, as an entry of the group is.
                     let label = &prepared_sources[index].0;
-                    let kinds = source_kinds.get(label).map_or(&[][..], Vec::as_slice);
+                    let kinds = source_kinds
+                        .get(label)
+                        .map_or(&[][..], |(kinds, by_source)| {
+                            by_source.get(&entry.source).unwrap_or(kinds).as_slice()
+                        });
                     if !kinds.is_empty() && !kinds.contains(&entry.kind) {
                         report.items.push(UpdatedItem {
                             kind: entry.kind,
@@ -1916,7 +2037,7 @@ pub fn update(
             // step, so it gets no repair either.
             let repair_bundles: Vec<crate::model::Bundle> = if source_kinds
                 .get(&source_label)
-                .is_some_and(|k| !k.is_empty())
+                .is_some_and(|(k, _)| !k.is_empty())
             {
                 Vec::new()
             } else {

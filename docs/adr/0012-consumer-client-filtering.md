@@ -114,7 +114,8 @@ silently un-narrow a `--claude` install — re-emitting `.github/**` /
 `.agents/**` and overwriting the lockfile `clients` record. Instead, when no
 explicit selection is supplied, `update` reconstructs each source's selection
 from the union of its entries' recorded `clients`, so a narrowed install stays
-narrow. An explicit flag/config selection still overrides. (Recorded `clients`
+narrow, and generates each recorded item for its own recorded `clients` only
+(#655). An explicit flag/config selection still overrides. (Recorded `clients`
 are generation clients, so the reconstruction maps a `--vscode`-only install
 onto Copilot on the MCP axis — MCP config is additive and never auto-removed, so
 this widens rather than loses.)

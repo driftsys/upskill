@@ -38,6 +38,10 @@ pub(crate) struct PlanNames {
     pub excludes: Vec<String>,
     /// Item kinds to include; an empty list includes every kind.
     pub kinds: Vec<ItemKind>,
+    /// Clients of each item, by kind and installed name; an item with an
+    /// entry is generated only for the clients that the entry targets
+    /// (`AddOptions::item_clients`).
+    pub clients: BTreeMap<(ItemKind, String), crate::select::ClientSelection>,
 }
 
 impl PlanNames {

@@ -379,11 +379,20 @@ impl DependencyClosure {
 
     /// Remove every item whose kind is not in `kinds` from `by_source`,
     /// `item_source` and the keys of `required_by`. No-op for an empty slice.
-    pub(super) fn retain_kinds(&mut self, kinds: &[ItemKind]) {
+    /// A source with an entry in `by_label` keeps the kinds of that entry
+    /// instead (#655).
+    pub(super) fn retain_kinds(
+        &mut self,
+        kinds: &[ItemKind],
+        by_label: &BTreeMap<String, Vec<ItemKind>>,
+    ) {
         if kinds.is_empty() {
             return;
         }
-        for source in self.by_source.values_mut() {
+        let kinds_of =
+            |label: &str| -> &[ItemKind] { by_label.get(label).map_or(kinds, Vec::as_slice) };
+        for (label, source) in &mut self.by_source {
+            let kinds = kinds_of(label);
             if !kinds.contains(&ItemKind::Rule) {
                 source.items.rules.clear();
             }
@@ -394,8 +403,16 @@ impl DependencyClosure {
                 source.items.agents.clear();
             }
         }
-        self.item_source.retain(|(kind, _), _| kinds.contains(kind));
-        self.required_by.retain(|(kind, _), _| kinds.contains(kind));
+        let mut narrowed = BTreeSet::new();
+        self.item_source.retain(|key, label| {
+            let keep = kinds_of(label).contains(&key.0);
+            if !keep {
+                narrowed.insert(key.clone());
+            }
+            keep
+        });
+        self.required_by
+            .retain(|key, _| kinds.contains(&key.0) && !narrowed.contains(key));
     }
 }
 
@@ -1534,6 +1551,11 @@ fn install_items_of_kind(
         if names.excludes.contains(&name) {
             continue;
         }
+        let mut renders = renders;
+        let installed_name = names.alias_for(&name).unwrap_or(&name);
+        if let Some(clients) = names.clients.get(&(kind, installed_name.clone())) {
+            renders.retain(|(client, _)| clients.targets_generation(*client));
+        }
 
         // Warn-skip: a restrictive consumer selection (ADR-0012) that shares
         // no client with this item's author `audience:` yields zero renders.
@@ -1722,7 +1744,7 @@ mod tests {
             &[],
         )
         .unwrap();
-        closure.retain_kinds(&[ItemKind::Rule]);
+        closure.retain_kinds(&[ItemKind::Rule], &BTreeMap::new());
         let source = &closure.by_source["local:source"];
         assert_eq!(source.items.rules, ["base", "r"]);
         assert!(source.items.skills.is_empty());
