@@ -1570,6 +1570,30 @@ fn release_check_network_failure_is_silent() {
 }
 
 #[test]
+fn failed_release_check_is_not_retried_within_a_day_and_keeps_latest() {
+    let e = env();
+    // A due check with a known newer release in the cache.
+    let path = cache_path(&e);
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let seeded = serde_json::json!({
+        "release": { "checked_at": 1, "latest": "99.0.0" }
+    });
+    fs::write(&path, serde_json::to_vec(&seeded).unwrap()).unwrap();
+    // The default release URL is a missing path, so this lookup fails.
+    command(&e, &e.outside, &["update", "--notice"], &e.upstream, None)
+        .output()
+        .unwrap();
+    let cache: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    assert!(cache["release"]["checked_at"].as_u64().unwrap() > 1);
+    assert_eq!(cache["release"]["latest"], "99.0.0");
+    // A reachable newer release is not looked up again within 24 hours.
+    let repo = release_repo(&e, &["v100.0.0"]);
+    notice_cmd(&e, &repo, &[]).output().unwrap();
+    let cache: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    assert_eq!(cache["release"]["latest"], "99.0.0");
+}
+
+#[test]
 fn release_check_runs_at_most_once_a_day() {
     let e = env();
     let repo = release_repo(&e, &["v99.0.0"]);

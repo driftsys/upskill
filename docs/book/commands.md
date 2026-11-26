@@ -928,9 +928,8 @@ The command is quiet by design:
   upskill 0.10.0 is available (you have 0.9.4): curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh
   ```
 
-  A failed or timed-out lookup prints nothing and is tried again at the next
-  run. Setting `UPSKILL_NO_UPDATE_CHECK` to a nonempty value skips the check.
-  `update --check` does not include it.
+  A failed or timed-out lookup prints nothing. Setting `UPSKILL_NO_UPDATE_CHECK`
+  to a nonempty value skips the check. `update --check` does not include it.
 - It exits with code 0 in every case after the arguments are parsed (a usage
   error exits with code 2). An interrupt ends the command at once with exit code
   0. An interrupt during the lookups prints nothing and writes no cache file. An

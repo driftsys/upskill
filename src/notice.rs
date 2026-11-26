@@ -211,7 +211,7 @@ pub struct ScopeState {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ReleaseState {
-    /// Unix time in seconds of the last lookup that found a release.
+    /// Unix time in seconds of the last lookup, also one that failed.
     pub checked_at: u64,
     /// The latest release version found, as `X.Y.Z`.
     pub latest: Option<String>,
@@ -241,8 +241,9 @@ pub fn record_release(cache: &mut NoticeCache, latest: Version, now: u64) {
 }
 
 /// Looks up the latest upskill release when it is due and records it in
-/// `cache`. The opt-out variable, a failed lookup and a reply without a
-/// release tag leave the cache as it is.
+/// `cache`. The opt-out variable leaves the cache as it is. A failed lookup
+/// and a reply without a release tag set only `checked_at`, so the next
+/// attempt waits for the period, and keep the last known `latest`.
 pub fn refresh_release(cache: &mut NoticeCache, now: u64) {
     use crate::release::{OPT_OUT_ENV, RELEASE_URL, TIME_LIMIT, latest_tag};
     let opted_out = std::env::var_os(OPT_OUT_ENV).is_some_and(|v| !v.is_empty());
