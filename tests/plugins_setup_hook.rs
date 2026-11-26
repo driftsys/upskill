@@ -132,6 +132,11 @@ fn setup_missing_cli_prints_once_a_day() {
 
 #[test]
 fn setup_unwritable_cache_exits_zero() {
+    // The root user can write to a mode 0555 directory, so the case cannot be set up.
+    let uid = std::process::Command::new("id").arg("-u").output().unwrap();
+    if String::from_utf8_lossy(&uid.stdout).trim() == "0" {
+        return;
+    }
     let env = Env::new();
     fs::set_permissions(env.cache(), fs::Permissions::from_mode(0o555)).unwrap();
     let out = env.run("claude");
