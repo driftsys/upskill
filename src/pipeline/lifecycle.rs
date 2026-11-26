@@ -715,6 +715,10 @@ fn closure_source_kinds(
 ///   because the client CLI was missing, or opencode was below version 2 or
 ///   gave no version.
 /// - **MCP entries** — MCP server reconciliation against each client.
+/// - **orphaned MCP servers** (advisory) — one entry for each MCP record
+///   (server and client) whose bundle the lockfile does not record, with the
+///   `upskill remove-mcp` command that removes the server. Does not affect
+///   `is_clean`.
 /// - **interrupted** — items with a non-empty `pending` record: an `add` or
 ///   `update` failed or was stopped between its first and its last write.
 ///   Running the same command again completes it.
@@ -1116,12 +1120,24 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
                 name: mcp.name.clone(),
                 client: mcp.client.clone(),
                 bundle: mcp.bundle.clone(),
-                remove_command: format!("upskill remove-mcp {} --{}", mcp.name, at.scope),
+                remove_command: remove_mcp_command(at.scope, &mcp.name),
             });
         }
     }
 
     Ok(report)
+}
+
+/// The `upskill remove-mcp` command that removes the MCP server `name` in
+/// `scope`. The name is quoted for a POSIX shell when needed, and follows `--`
+/// when it starts with `-`, so that it is not read as a flag.
+fn remove_mcp_command(scope: Scope, name: &str) -> String {
+    let quoted = super::discovery::shell_quote(name);
+    if name.starts_with('-') {
+        format!("upskill remove-mcp --{scope} -- {quoted}")
+    } else {
+        format!("upskill remove-mcp {quoted} --{scope}")
+    }
 }
 
 /// The entrypoint paths of `(kind, name)` that a released version wrote and
@@ -2920,6 +2936,26 @@ mod tests {
             return lock2;
         }
         lock
+    }
+
+    #[test]
+    fn remove_mcp_command_quotes_the_name_and_separates_a_leading_dash() {
+        assert_eq!(
+            remove_mcp_command(Scope::Project, "drawio"),
+            "upskill remove-mcp drawio --project"
+        );
+        assert_eq!(
+            remove_mcp_command(Scope::Global, "my server"),
+            "upskill remove-mcp 'my server' --global"
+        );
+        assert_eq!(
+            remove_mcp_command(Scope::Project, "it's"),
+            r"upskill remove-mcp 'it'\''s' --project"
+        );
+        assert_eq!(
+            remove_mcp_command(Scope::Project, "-x"),
+            "upskill remove-mcp --project -- -x"
+        );
     }
 
     #[test]

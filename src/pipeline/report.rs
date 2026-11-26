@@ -1079,6 +1079,18 @@ mod tests {
     }
 
     #[test]
+    fn doctor_report_clean_with_an_orphaned_mcp() {
+        let mut report = DoctorReport::default();
+        report.orphaned_mcps.push(OrphanedMcp {
+            name: "my-mcp".into(),
+            client: "claude".into(),
+            bundle: "gone".into(),
+            remove_command: "upskill remove-mcp my-mcp --project".into(),
+        });
+        assert!(report.is_clean());
+    }
+
+    #[test]
     fn doctor_report_clean_with_mcp_cli_not_found_or_query_failed() {
         let mut report = DoctorReport::default();
         report.mcp_entries.push(McpDoctorEntry {

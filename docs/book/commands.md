@@ -1031,7 +1031,9 @@ installed opencode plugin entry of that bundle from the `plugin` and `plugins`
 arrays of the `opencode.json` of the scope. The entry stays when an installed
 opencode plugin record of a bundle that stays references the same entry. In the
 global scope, removing a rule that is installed for opencode also deletes its
-`instructions` entry from the global opencode config.
+`instructions` entry from the global opencode config. The MCP records of a
+bundle are kept, because MCP removal is explicit: `upskill doctor` reports them,
+and [`upskill remove-mcp`](#upskill-remove-mcp-name) removes a server.
 
 Without a scope flag, `remove` uses the project scope inside a git repository
 and the global scope outside one. When the current directory is the home
@@ -1210,9 +1212,12 @@ scope. For each scope it reports fourteen independent buckets:
   lockfile no longer records. `remove` and `update` keep the MCP records of a
   bundle they drop, because MCP removal is explicit. The lockfile records no
   source for an MCP record, so a bundle removed by `remove` and a bundle that
-  left its source are both reported. Each line names the server, the client, the
-  bundle and the command that removes the server
-  (`upskill remove-mcp <name> --<scope>`). Does **not** cause exit 1.
+  left its source are both reported. `doctor` prints one line for each record
+  (server and client), so a server configured for two clients gets two lines.
+  Each line names the server, the client, the bundle and the command that
+  removes the server (`upskill remove-mcp <name> --<scope>`; a name that needs
+  it is quoted for a POSIX shell, and a name that starts with `-` follows `--`).
+  Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
   found in the client. Likely uninstalled out-of-band; `upskill update --yes`
   reinstalls them, also when no item changed, for a source without a kind

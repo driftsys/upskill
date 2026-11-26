@@ -886,8 +886,10 @@ the check above refuses it.
   instructions: `update` runs no install for it and prints its instructions
   again when it applies the source), orphaned dependencies (informational), MCP
   server reconciliation, MCP records whose bundle the lockfile does not record
-  (`orphaned_mcps`, informational; `remove` and `update` keep them, and each
-  entry names the `upskill remove-mcp <name> --<scope>` command), and
+  (`orphaned_mcps`, informational; `remove` and `update` keep them; one entry
+  for each record, that is for each server and client, and each entry names the
+  `upskill remove-mcp <name> --<scope>` command, with the name quoted for a
+  POSIX shell when needed and after `--` when it starts with `-`), and
   interrupted items (an item with a non-empty `pending` record: run the same
   command again to complete it), and, for the global scope only, files at the
   earlier global Copilot paths (`earlier_layout`; `upskill update --global`

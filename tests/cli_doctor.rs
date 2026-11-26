@@ -1268,9 +1268,49 @@ fn doctor_reports_an_mcp_record_of_a_bundle_that_is_not_installed() {
         .assert()
         .success();
     let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    assert!(out.contains("'server'"), "{out}");
-    assert!(out.contains("'gone'"), "{out}");
-    assert!(out.contains("upskill remove-mcp server --project"), "{out}");
+    assert!(
+        out.contains(
+            "MCP 'server' (vscode) of bundle 'gone'; remove it with `upskill remove-mcp server --project`"
+        ),
+        "{out}"
+    );
+}
+
+#[test]
+fn doctor_reports_only_the_mcp_record_of_a_bundle_that_is_not_installed() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    let content = serde_json::json!({
+        "schema": 3,
+        "items": [],
+        "bundles": [{ "name": "kept", "source": "local:/r", "items": [] }],
+        "mcps": [
+            { "name": "kept-server", "client": "vscode", "bundle": "kept",
+              "status": "installed" },
+            { "name": "gone-server", "client": "vscode", "bundle": "gone",
+              "status": "installed" }
+        ]
+    });
+    fs::write(
+        tmp.path().join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&content).unwrap(),
+    )
+    .unwrap();
+
+    let (code, v) = doctor_json(tmp.path(), &home);
+    assert_eq!(code, Some(0), "{v}");
+    let orphaned = v["orphaned_mcps"]
+        .as_array()
+        .unwrap_or_else(|| panic!("no orphaned_mcps: {v}"));
+    assert_eq!(orphaned.len(), 1, "{v}");
+    assert_eq!(orphaned[0]["name"], "gone-server", "{v}");
+    assert_eq!(orphaned[0]["bundle"], "gone", "{v}");
+    assert_eq!(
+        orphaned[0]["remove_command"], "upskill remove-mcp gone-server --project",
+        "{v}"
+    );
 }
 
 #[test]
