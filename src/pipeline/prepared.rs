@@ -543,6 +543,25 @@ impl PreparedInstall {
             .collect())
     }
 
+    /// The names of the bundles that this install resolved, through the
+    /// `requires` of the requested bundles included.
+    pub fn resolved_bundle_names(&self) -> BTreeSet<String> {
+        self.resolved_bundles
+            .iter()
+            .map(|rb| rb.bundle.name.clone())
+            .collect()
+    }
+
+    /// Each bundle that this install resolved, with the bundles of this
+    /// resolution whose `requires` reached it (`bundle:<name>`; empty for a
+    /// requested bundle).
+    pub fn resolved_requirers(&self) -> BTreeMap<String, Vec<String>> {
+        self.resolved_bundles
+            .iter()
+            .map(|rb| (rb.bundle.name.clone(), rb.required_by.clone()))
+            .collect()
+    }
+
     /// The bundle `name` as the fetched entry source declares it now: a
     /// bundle that this install resolved (always the case for a bundle-file
     /// source), else the bundle file of that name in a directory source.
@@ -584,9 +603,12 @@ impl PreparedInstall {
             .collect()
     }
 
-    /// Sets the fetched commit on the lockfile entries in `selected` (the
+    /// Sets a fetched commit on the lockfile entries in `selected` (the
     /// `(kind, installed name)` of each entry that the run selected and
-    /// whose update is not withheld), refreshes `required_by` of every entry
+    /// whose update is not withheld): an entry of this source gets the
+    /// commit of this source, and an entry of another source (a dependency
+    /// entry that joined the group, #648) gets the commit of its own source,
+    /// or none when this install did not fetch that source with a commit. It refreshes `required_by` of every entry
     /// with [`refresh_required_by`], and saves the lockfile only when a
     /// value differs. An entry that is not in `selected` keeps its recorded
     /// commit. A source without a commit (a local path) sets no commit.
@@ -600,16 +622,24 @@ impl PreparedInstall {
     ) -> Result<()> {
         let mut lock = Lockfile::load(target)?;
         let mut changed = refresh_required_by(&mut lock, &self.requires_provenance());
-        if let Some(commit) = &self.commit {
-            for item in lock
-                .items
-                .iter_mut()
-                .filter(|i| selected.contains(&(i.kind, i.name.clone())))
-            {
-                if item.commit.as_ref() != Some(commit) {
-                    item.commit = Some(commit.clone());
-                    changed = true;
-                }
+        for item in lock
+            .items
+            .iter_mut()
+            .filter(|i| selected.contains(&(i.kind, i.name.clone())))
+        {
+            // An entry of another source (a dependency that this install
+            // reaches) gets the commit of its own source.
+            let commit = if item.source == self.label {
+                self.commit.as_ref()
+            } else {
+                self.closure
+                    .as_ref()
+                    .and_then(|c| c.by_source.get(&item.source))
+                    .and_then(|s| s.commit.as_ref())
+            };
+            if commit.is_some() && item.commit.as_ref() != commit {
+                item.commit = commit.cloned();
+                changed = true;
             }
         }
         if changed {
@@ -998,12 +1028,42 @@ impl PreparedInstall {
                     source: label.clone(),
                     git_ref: git_ref.clone(),
                     items: bundle_item_names(bundle),
+                    required_by: Vec::new(),
                 });
             }
         } else {
             // Bundle closure: record each bundle under its OWN source and ref.
             for rb in &resolved_bundles {
+                // A recorded root stays a root. Otherwise the requirers that
+                // this run resolved are replaced by the ones it found, and the
+                // requirers of other runs are kept.
+                let existing = lock.bundles.iter().find(|b| b.name == rb.bundle.name);
+                let required_by = match existing {
+                    Some(existing)
+                        if rb.required_by.is_empty() && options.keep_recorded_requirers =>
+                    {
+                        existing.required_by.clone()
+                    }
+                    _ if rb.required_by.is_empty() => Vec::new(),
+                    Some(existing) if existing.required_by.is_empty() => Vec::new(),
+                    Some(existing) => {
+                        let mut merged: BTreeSet<String> = existing
+                            .required_by
+                            .iter()
+                            .filter(|r| {
+                                !resolved_bundles
+                                    .iter()
+                                    .any(|o| format!("bundle:{}", o.bundle.name) == **r)
+                            })
+                            .cloned()
+                            .collect();
+                        merged.extend(rb.required_by.iter().cloned());
+                        merged.into_iter().collect()
+                    }
+                    None => rb.required_by.clone(),
+                };
                 lock.upsert_bundle(crate::lockfile::LockedBundle {
+                    required_by,
                     kinds: options.kinds.clone(),
                     name: rb.bundle.name.clone(),
                     source: rb.source_label.clone(),

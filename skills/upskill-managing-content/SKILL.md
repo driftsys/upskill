@@ -427,9 +427,11 @@ rules of the closure target the client, init is written at
 It runs `add --kind rule --project` for that client. `add --kind` is repeatable
 for `rule`, `skill` and `agent`; it skips plugin and MCP steps. Bundle lockfile
 entries record the selected `kinds`. `update` uses their union only when every
-recorded bundle of the source has recorded kinds; one unrestricted bundle leaves
-that source unrestricted. Every entry of that source whose kind is outside the
-restriction stays unchanged; reinstall it explicitly to update it.
+root bundle of the source (a bundle that you named in `add`, not one that
+another bundle's `requires` pulled in) has recorded kinds; one unrestricted root
+bundle leaves that source unrestricted, and an unrestricted dependency bundle
+does not. Every entry of that source whose kind is outside the restriction stays
+unchanged; reinstall it explicitly to update it.
 
 The embedded notice hook calls `update --notice`. Runs sharing a cache use
 `notice.lock`: a lock younger than 60 seconds makes another run exit silently. A

@@ -1153,3 +1153,57 @@ fn a_terminal_update_of_an_unchanged_git_source_saves_no_lockfile() {
         "{result}"
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn check_reports_no_update_for_a_cross_source_dependency_after_an_unchanged_update() {
+    // Issue #648: the entries of a cross-source dependency bundle are
+    // refreshed in the run of the root source, and keep the commit of their
+    // own source.
+    let e = env();
+    let other = e.home.parent().unwrap().join("other");
+    fs::create_dir_all(&other).unwrap();
+    git_in_dir(&e, &other, &["init", "--initial-branch=main"]);
+    write_skill(&other, "dep-only", "Dependency content.");
+    fs::write(
+        other.join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Dependency bundle.\nitems:\n  skills: [dep-only]\n",
+    )
+    .unwrap();
+    git_in_dir(&e, &other, &["add", "."]);
+    git_in_dir(&e, &other, &["commit", "-m", "initial"]);
+    let dep_head = git_in_dir(&e, &other, &["rev-parse", "HEAD"]);
+    advance(
+        &e,
+        "top.bundle.yaml",
+        &format!(
+            "schema: 1\nname: top\ndescription: Root bundle.\nitems:\n  skills: [alpha]\nrequires:\n  - {{ name: dep, source: '{OTHER_REMOTE}' }}\n"
+        ),
+    );
+    let out = run_with_other(&e, &other, &["add", REMOTE, "top", "--claude"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(commit_of(&e.repo, "dep-only"), dep_head.as_str());
+
+    // A new commit of the root source that changes no item.
+    let root_head = advance(&e, "NOTES.md", "new commit\n");
+    // A terminal run does not apply a source without changes: it records the
+    // fetched commits alone.
+    let result = common::update_in_terminal_with_env(
+        &e.repo,
+        &e.home,
+        &[],
+        "",
+        &terminal_env(&e, Some(&other)),
+    );
+    assert_eq!(result["returncode"], 0, "{result}");
+    assert_eq!(commit_of(&e.repo, "alpha"), root_head.as_str(), "{result}");
+    assert_eq!(
+        commit_of(&e.repo, "dep-only"),
+        dep_head.as_str(),
+        "{result}"
+    );
+
+    let out = run_with_other(&e, &other, &["update", "--check"]);
+    let text = stdout(&out);
+    assert!(text.ends_with("No updates available.\n"), "{text}");
+}

@@ -417,6 +417,87 @@ fn terminal_repair_runs_when_one_bundle_of_the_source_is_unrestricted() {
     );
 }
 
+/// The kind restriction of a source comes from its root bundles (#648): a
+/// dependency bundle of the same source that another root requires without
+/// `--kind` does not remove the restriction that `add --kind` recorded on the
+/// root. `update`, its plugin repair and the `doctor` hint agree on it.
+#[cfg(unix)]
+#[test]
+fn an_unrestricted_dependency_bundle_does_not_lift_the_kind_restriction_for_the_repair() {
+    let env = Env::new(&format!("module: {MODULE}"), "v2.1.4");
+    let registry = env.bundle.parent().unwrap().to_path_buf();
+    let root = registry.parent().unwrap().to_path_buf();
+    fs::create_dir_all(registry.join("beta")).unwrap();
+    fs::write(
+        registry.join("beta").join("SKILL.md"),
+        "---\nschema: 1\nname: beta\ndescription: dependency skill for the issue 648 test.\n---\n\n## Body\n\nText.\n",
+    )
+    .unwrap();
+    fs::write(
+        registry.join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: dependency bundle.\nitems:\n  skills:\n    - beta\n",
+    )
+    .unwrap();
+    let second = root.join("second");
+    fs::create_dir_all(second.join("gamma")).unwrap();
+    fs::write(
+        second.join("gamma").join("SKILL.md"),
+        "---\nschema: 1\nname: gamma\ndescription: skill of the second root.\n---\n\n## Body\n\nText.\n",
+    )
+    .unwrap();
+    fs::write(
+        second.join("second.bundle.yaml"),
+        format!(
+            "schema: 1\nname: second\ndescription: second root.\nitems:\n  skills:\n    - gamma\nrequires:\n  - {{ name: dep, source: '{}' }}\n",
+            registry.display()
+        ),
+    )
+    .unwrap();
+    env.add().success();
+    env.run(&[
+        "add",
+        registry.to_str().unwrap(),
+        "oc",
+        "--project",
+        "--kind",
+        "skill",
+    ])
+    .success();
+    env.run(&["add", second.to_str().unwrap(), "second", "--project"])
+        .success();
+    let lock = env.lock();
+    let dep = lock["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|b| b["name"] == "dep")
+        .unwrap()
+        .clone();
+    assert!(dep.get("kinds").is_none(), "{lock}");
+    assert_eq!(
+        dep["required_by"],
+        serde_json::json!(["bundle:second"]),
+        "{lock}"
+    );
+
+    env.set_list("");
+    env.clear_log();
+    terminal_update(&env);
+    assert!(
+        !plugin_lines(&env.log())
+            .iter()
+            .any(|l| l.starts_with("plugin add")),
+        "{}",
+        env.log()
+    );
+    let out = env.run(&["doctor", "--project"]).code(1);
+    let text = stdout(&out);
+    assert!(
+        text.contains(&format!("upskill add {} oc --project", registry.display())),
+        "{text}"
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn opencode_1x_runs_no_plugin_command_and_warns() {

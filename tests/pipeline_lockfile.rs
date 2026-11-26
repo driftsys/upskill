@@ -757,6 +757,7 @@ fn bundles_with_kinds_are_sorted_by_name_and_write_name_first() {
             git_ref: None,
             items: vec!["r".into()],
             kinds,
+            required_by: vec![],
         });
     }
     lock.save(tmp.path()).unwrap();
