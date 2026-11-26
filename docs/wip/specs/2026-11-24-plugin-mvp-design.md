@@ -266,10 +266,10 @@ compaction remove the text. It gets no matcher in Copilot CLI.
 A second matcher group of the same event gets the file name `<event>-2.json`,
 and so on in closure order. The hook entry prints the file: `cat` with the
 plugin root variable in Claude Code (`${CLAUDE_PLUGIN_ROOT}`); in Copilot CLI a
-`bash` command and a `powershell` command that read the file by a path relative
-to the plugin root, which is the working directory of a plugin hook (trial 5).
-The text passes through the existing `@client` directive processing before it is
-written.
+`bash` command and a `powershell` command that read the file by a path below
+`COPILOT_PLUGIN_ROOT`, which Copilot CLI sets to the plugin root in the
+environment of a plugin hook (trial 5; issue #671). The text passes through the
+existing `@client` directive processing before it is written.
 
 **Command hooks.** An event with `run` is a command hook. `run` is the name of
 one file in the item directory, without arguments. `pack` copies the item

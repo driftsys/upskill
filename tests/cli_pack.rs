@@ -1428,7 +1428,10 @@ fn pack_writes_one_context_file_for_each_distinct_matcher() {
                 "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/context/post-tool-2.json\""
             );
         } else {
-            assert_eq!(entries[1]["bash"], "cat hooks/context/post-tool-2.json");
+            assert_eq!(
+                entries[1]["bash"],
+                "cat \"${COPILOT_PLUGIN_ROOT}/hooks/context/post-tool-2.json\""
+            );
         }
     }
 }
@@ -1673,7 +1676,7 @@ fn pack_writes_a_command_hook_entry_that_sets_upskill_client() {
     assert_eq!(entry["matcher"], "edit");
     assert_eq!(
         entry["bash"],
-        "UPSKILL_CLIENT=copilot ./hooks/edit-checks/check.sh"
+        "UPSKILL_CLIENT=copilot \"${COPILOT_PLUGIN_ROOT}/hooks/edit-checks/check.sh\""
     );
     assert_eq!(entry["timeoutSec"], 10);
     assert!(entry.get("powershell").is_none());
@@ -1719,10 +1722,13 @@ fn pack_orders_notice_then_context_then_command_hooks() {
             .unwrap()
             .contains("upskill update --notice")
     );
-    assert_eq!(entries[1]["bash"], "cat hooks/context/session-start.json");
+    assert_eq!(
+        entries[1]["bash"],
+        "cat \"${COPILOT_PLUGIN_ROOT}/hooks/context/session-start.json\""
+    );
     assert_eq!(
         entries[2]["bash"],
-        "UPSKILL_CLIENT=copilot ./hooks/starter/start.sh"
+        "UPSKILL_CLIENT=copilot \"${COPILOT_PLUGIN_ROOT}/hooks/starter/start.sh\""
     );
 }
 
@@ -2686,9 +2692,9 @@ fn pack_of_the_upskill_bundle_writes_skills_and_setup_hook() {
     let hooks: serde_json::Value =
         serde_json::from_slice(&fs::read(out.join("upskill-copilot/hooks.json")).unwrap()).unwrap();
     let bash = hooks["hooks"]["sessionStart"][0]["bash"].as_str().unwrap();
-    assert!(
-        bash.ends_with("./hooks/upskill-setup/upskill-setup.sh"),
-        "{bash}"
+    assert_eq!(
+        bash,
+        "UPSKILL_CLIENT=copilot \"${COPILOT_PLUGIN_ROOT}/hooks/upskill-setup/upskill-setup.sh\""
     );
 }
 

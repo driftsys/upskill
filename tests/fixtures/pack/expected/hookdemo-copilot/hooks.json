@@ -5,7 +5,7 @@
       {
         "type": "command",
         "matcher": "edit",
-        "bash": "UPSKILL_CLIENT=copilot ./hooks/edit-checks/check.sh",
+        "bash": "UPSKILL_CLIENT=copilot \"${COPILOT_PLUGIN_ROOT}/hooks/edit-checks/check.sh\"",
         "timeoutSec": 10
       }
     ],
@@ -17,15 +17,15 @@
       },
       {
         "type": "command",
-        "bash": "cat hooks/context/session-start.json",
-        "powershell": "Get-Content -Raw -Encoding UTF8 -LiteralPath hooks/context/session-start.json"
+        "bash": "cat \"${COPILOT_PLUGIN_ROOT}/hooks/context/session-start.json\"",
+        "powershell": "Get-Content -Raw -Encoding UTF8 -LiteralPath \"$env:COPILOT_PLUGIN_ROOT/hooks/context/session-start.json\""
       }
     ],
     "userPromptSubmitted": [
       {
         "type": "command",
-        "bash": "cat hooks/context/prompt-submit.json",
-        "powershell": "Get-Content -Raw -Encoding UTF8 -LiteralPath hooks/context/prompt-submit.json"
+        "bash": "cat \"${COPILOT_PLUGIN_ROOT}/hooks/context/prompt-submit.json\"",
+        "powershell": "Get-Content -Raw -Encoding UTF8 -LiteralPath \"$env:COPILOT_PLUGIN_ROOT/hooks/context/prompt-submit.json\""
       }
     ]
   }

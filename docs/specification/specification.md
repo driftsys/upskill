@@ -1093,11 +1093,14 @@ context file is ASCII only. A generated context hook prints this static file and
 does not call `upskill`.
 
 The Claude Code entry runs `cat "${CLAUDE_PLUGIN_ROOT}/hooks/context/<file>"`.
-The Copilot CLI entry sets `bash` to `cat hooks/context/<file>` and `powershell`
-to `Get-Content -Raw -Encoding UTF8 -LiteralPath hooks/context/<file>`. The
-Copilot paths are relative to the plugin directory, which was the working
-directory of a plugin hook in one local-install observation (technote T4, trial
-5).
+The Copilot CLI entry sets `bash` to
+`cat "${COPILOT_PLUGIN_ROOT}/hooks/context/<file>"` and `powershell` to
+`Get-Content -Raw -Encoding UTF8 -LiteralPath "$env:COPILOT_PLUGIN_ROOT/hooks/context/<file>"`.
+Copilot CLI sets `COPILOT_PLUGIN_ROOT` to the installation directory of the
+plugin in the environment of a plugin hook (Copilot CLI changelog, 1.0.26;
+technote T4, trial 5). The paths do not depend on the working directory of the
+hook: Copilot CLI 1.0.88 runs a hook without `cwd` in the project root, but one
+local-install observation saw the plugin directory (technote T4, trial 5).
 
 A matcher string applies unchanged to both clients. A context hook on
 `prompt-submit` or `stop` cannot have a matcher, because Claude Code ignores a
@@ -1120,11 +1123,15 @@ sorted by portable event name.
 
 The Claude Code command is
 `UPSKILL_CLIENT=claude "${CLAUDE_PLUGIN_ROOT}/hooks/<name>/<run>"`. The Copilot
-CLI `bash` command is `UPSKILL_CLIENT=copilot ./hooks/<name>/<run>`; it has no
-`powershell` command. The shell prefix sets `UPSKILL_CLIENT` to `claude` or
-`copilot`. `timeout` is written as `timeout` in Claude Code and `timeoutSec` in
-Copilot CLI, in seconds. A command hook has no default matcher, including on
-`session-start`.
+CLI `bash` command is
+`UPSKILL_CLIENT=copilot "${COPILOT_PLUGIN_ROOT}/hooks/<name>/<run>"`; it has no
+`powershell` command. The Copilot CLI changelog of 1.0.115 lists a fix for
+plugin hooks whose executable path uses `${COPILOT_PLUGIN_ROOT}`, so an earlier
+version may not run this command. No trial has run a packed hook with these
+Copilot paths in a live Copilot CLI session (issue #671). The shell prefix sets
+`UPSKILL_CLIENT` to `claude` or `copilot`. `timeout` is written as `timeout` in
+Claude Code and `timeoutSec` in Copilot CLI, in seconds. A command hook has no
+default matcher, including on `session-start`.
 
 Every `run` must name a copied resource. A missing file, an entry file, an
 `ignore` match, a symbolic link, or (on Unix) a file without an executable bit
