@@ -956,9 +956,9 @@ impl PreparedInstall {
                 && item.source == self.label
                 && (named || whole_directory_source);
             // The lockfile holds one entry per `(kind, name)`, so the source
-            // does not tell entries apart. It is not compared: the source of
-            // an entry written under a legacy label is rewritten by `update`
-            // to the canonical label, which differs from the planned one.
+            // does not tell entries apart. It is not compared: an entry
+            // written under a legacy label records a spelling that differs
+            // from the planned label until `update` rewrites it.
             let recorded = lock
                 .items
                 .iter()

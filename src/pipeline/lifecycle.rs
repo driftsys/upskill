@@ -2681,7 +2681,7 @@ fn droppable_vanished(
                     return true;
                 }
                 // An installed requirer item explains the member; a stale
-                // requirer (no longer installed) and a bundle requirer do not.
+                // requirer (no longer installed) does not.
                 i.direct
                     || i.required_by.iter().any(|requirer| {
                         lock.items.iter().any(|o| {
