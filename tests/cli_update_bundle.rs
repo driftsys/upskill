@@ -1759,6 +1759,72 @@ fn update_removes_a_kind_restricted_bundle_that_vanished() {
     assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
 }
 
+/// A bundle with an MCP server leaves its source: `update` keeps the MCP
+/// record, and `doctor` reports it with the command that removes the server
+/// (issue #669).
+#[test]
+#[cfg(unix)]
+fn doctor_reports_the_kept_mcp_record_of_a_bundle_that_left_its_source() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    let bundle_path = registry.path().join("bun.bundle.yaml");
+    let mut bundle = fs::read_to_string(&bundle_path).unwrap();
+    bundle.push_str("mcps:\n  server:\n    local:\n      command: example-server\n");
+    write(&bundle_path, &bundle);
+    let bin = consumer.path().join("bin");
+    let claude = bin.join("claude");
+    write(&claude, "#!/bin/sh\nexit 0\n");
+    fs::set_permissions(&claude, fs::Permissions::from_mode(0o755)).unwrap();
+    let mut paths = vec![bin];
+    paths.extend(std::env::split_paths(
+        &std::env::var_os("PATH").unwrap_or_default(),
+    ));
+    let path = std::env::join_paths(paths).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .env("PATH", &path)
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "bun",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert_eq!(read_update_lock(consumer.path())["mcps"][0]["bundle"], "bun");
+    fs::remove_file(&bundle_path).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .env("PATH", &path)
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    let lock = read_update_lock(consumer.path());
+    assert!(
+        lock["bundles"].as_array().is_none_or(|b| b.is_empty()),
+        "{lock}"
+    );
+    assert_eq!(lock["mcps"][0]["name"], "server", "{lock}");
+
+    let out = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .env("PATH", &path)
+        .args(["doctor", "--json", "--project"])
+        .output()
+        .unwrap();
+    let doctor: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    let orphaned = &doctor["scopes"][0]["orphaned_mcps"];
+    assert_eq!(orphaned[0]["name"], "server", "{doctor}");
+    assert_eq!(orphaned[0]["bundle"], "bun", "{doctor}");
+    assert_eq!(
+        orphaned[0]["remove_command"], "upskill remove-mcp server --project",
+        "{doctor}"
+    );
+}
+
 fn read_update_lock(consumer: &Path) -> serde_json::Value {
     serde_json::from_slice(&fs::read(consumer.join(".upskill-lock.json")).unwrap()).unwrap()
 }

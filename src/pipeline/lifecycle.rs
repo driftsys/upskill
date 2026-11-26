@@ -24,10 +24,11 @@ use super::{
     ALL_CLIENTS, AddOptions, AdoptedBeforeFailure, BothScopesItem, DoctorReport, DoctorScopes,
     EarlierLayoutFile, FetchFailed, InterruptedItem, ItemKind, KeptItem, ListReport, ListedBundle,
     ListedItem, MissingOutput, MissingPlugin, MissingRuleEntry, ModifiedFile, OrphanEntry,
-    OrphanReason, OrphanedDependency, PreviewAction, PreviewItem, RemoveFilter, RemoveReport,
-    RemovedItem, ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure, SkippedPlugin,
-    SkippedSource, SourceDecision, SourcePreview, SourceResult, StaleHash, StaleRuleEntry,
-    UnreadableFile, UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem, hash_item_dir,
+    OrphanReason, OrphanedDependency, OrphanedMcp, PreviewAction, PreviewItem, RemoveFilter,
+    RemoveReport, RemovedItem, ScopedDoctor, ScopedList, SkipCause, SkippedBeforeFailure,
+    SkippedPlugin, SkippedSource, SourceDecision, SourcePreview, SourceResult, StaleHash,
+    StaleRuleEntry, UnreadableFile, UpdateObserver, UpdateReport, UpdateStatus, UpdatedItem,
+    hash_item_dir,
 };
 
 /// Remove installed content recorded in `<target>/.upskill-lock.json`,
@@ -1102,6 +1103,22 @@ pub fn doctor(at: &ScopeRoot) -> Result<DoctorReport> {
             bundle: mcp.bundle.clone(),
             status,
         });
+    }
+
+    // -- MCP records of a bundle that is not installed (advisory, #669) --
+    // `remove` and `update` keep the MCP records of a bundle they drop, so
+    // that `remove-mcp` can still find the server. The lockfile records no
+    // source for an MCP record, so a bundle removed by `remove` and a bundle
+    // that left its source look the same here; both are reported.
+    for mcp in &lock.mcps {
+        if !lock.bundles.iter().any(|b| b.name == mcp.bundle) {
+            report.orphaned_mcps.push(OrphanedMcp {
+                name: mcp.name.clone(),
+                client: mcp.client.clone(),
+                bundle: mcp.bundle.clone(),
+                remove_command: format!("upskill remove-mcp {} --{}", mcp.name, at.scope),
+            });
+        }
     }
 
     Ok(report)

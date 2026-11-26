@@ -663,7 +663,7 @@ full `update` removes that member and drops the record. A lockfile entry written
 before upskill recorded `direct` is never direct, so an item that you added by
 name before that change is removed when its bundle vanishes; run
 `upskill add <source> <item>` again to keep it. Add the renamed bundle again
-with `upskill add <source> <bundle>`. The run reads every directory that its
+with `upskill add <source> <bundle>`. The MCP records of the bundle are kept: `upskill doctor` reports them, and `upskill remove-mcp <name>` removes an MCP server. The run reads every directory that its
 walk reaches (the source root and the directories one and two levels below it,
 also hidden ones; every bundle file anywhere below the root; every root of the
 dependency sources) and stops before any write when one cannot be inspected or
@@ -1174,7 +1174,7 @@ the lockfile label (`local:/path` or `github:owner/repo` etc.).
 Verify on-disk state matches `.upskill-lock.json`. Without a scope flag,
 `doctor` checks both scopes, in the order and with the same rules as
 [`list`](#upskill-list); `--global` or `--project` limits the check to that
-scope. For each scope it reports thirteen independent buckets:
+scope. For each scope it reports fourteen independent buckets:
 
 - **Missing per-client output files** — reinstall fixes
   (`upskill add
@@ -1206,6 +1206,13 @@ scope. For each scope it reports thirteen independent buckets:
   permission error; the read error is printed) — `upskill remove` to clear.
 - **Orphaned dependencies** (informational) — items installed only as a
   dependency of items that are no longer installed. Does **not** cause exit 1.
+- **Orphaned MCP servers** (informational) — MCP records whose bundle the
+  lockfile no longer records. `remove` and `update` keep the MCP records of a
+  bundle they drop, because MCP removal is explicit. The lockfile records no
+  source for an MCP record, so a bundle removed by `remove` and a bundle that
+  left its source are both reported. Each line names the server, the client, the
+  bundle and the command that removes the server
+  (`upskill remove-mcp <name> --<scope>`). Does **not** cause exit 1.
 - **Missing plugins** — recorded as `installed` in the lockfile but no longer
   found in the client. Likely uninstalled out-of-band; `upskill update --yes`
   reinstalls them, also when no item changed, for a source without a kind
@@ -1284,11 +1291,11 @@ line for each client and kind with its level, as in
 Exits 0 when clean, 1 when any drift bucket is non-empty (missing outputs,
 modified files, unreadable files, stale hashes, orphan entries, missing plugins,
 unregistered MCP servers, interrupted items, files at earlier global paths,
-missing rule entries, or stale rule entries). Skipped plugins and unverifiable
-MCP entries are informational warnings and do not affect the exit code. `doctor`
-never fetches; remote-source drift detection is `update --check` (a lookup of
-the remote commit, without a fetch) and `update --dry-run` (a fetch and a
-preview).
+missing rule entries, or stale rule entries). Skipped plugins, unverifiable MCP
+entries and orphaned MCP servers are informational warnings and do not affect
+the exit code. `doctor` never fetches; remote-source drift detection is
+`update --check` (a lookup of the remote commit, without a fetch) and
+`update --dry-run` (a fetch and a preview).
 
 Pass `--json` for a stable machine-readable document. Exit code is unchanged.
 The document has one element in `scopes` for each checked scope (also when
@@ -1351,6 +1358,10 @@ Each element of `scopes` has these keys besides `scope` and `root`:
     { "name": "drawio", "client": "claude", "bundle": "baseline",
       "status": "not-registered" }
   ],
+  "orphaned_mcps": [
+    { "name": "kroki", "client": "claude", "bundle": "diagrams",
+      "remove_command": "upskill remove-mcp kroki --project" }
+  ],
   "interrupted": [
     { "kind": "skill", "name": "..." }
   ],
@@ -1376,12 +1387,12 @@ unreadable). MCP `status` is one of `"ok"`, `"not-registered"`,
 `{ "query-failed": { "stderr": "..." } }`, or
 `{ "config-unreadable": { "detail": "..." } }`. The plugin and item arrays are
 always present (possibly empty); `mcp_entries` is omitted when no MCP servers
-are recorded, and `missing_rule_entries` and `stale_rule_entries` are omitted
-when empty. An entry of `missing_plugins` or `skipped_plugins` has the key
-`repair_command` only when `update` does not install the plugin (no recorded
-item comes from the recorded source of its bundle, or that source is under a
-kind restriction); the value is the `upskill add` command that installs it
-again.
+are recorded, `orphaned_mcps` is omitted when empty, and `missing_rule_entries`
+and `stale_rule_entries` are omitted when empty. An entry of `missing_plugins`
+or `skipped_plugins` has the key `repair_command` only when `update` does not
+install the plugin (no recorded item comes from the recorded source of its
+bundle, or that source is under a kind restriction); the value is the
+`upskill add` command that installs it again.
 
 ### `upskill search <query>`
 
