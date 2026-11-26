@@ -1,5 +1,42 @@
 # Getting started
 
+## Set up the upskill plugin
+
+The `upskill` plugin is the first setup path for Claude Code and Copilot CLI.
+The `driftsys/metapowers` marketplace publishes it. Install it for each client
+that you use:
+
+```bash
+claude plugin marketplace add driftsys/metapowers
+claude plugin install upskill@metapowers
+
+copilot plugin marketplace add driftsys/metapowers
+copilot plugin install upskill@metapowers
+```
+
+The plugin gives you the upskill skills and a session-start hook. When the
+`upskill` CLI is missing, the hook prints the command that installs it, at most
+once a day. When the CLI is present, the hook runs `upskill update --notice`, so
+you see updates of installed content and of the CLI release.
+
+For opencode, or when you want no plugin, install the CLI (next section) and run
+`upskill add driftsys/upskill --global --opencode`.
+
+If you installed the upskill skills with `upskill add driftsys/upskill`, the
+plugin now provides them, so each skill would exist twice, and the old install
+keeps the old names (`upskill-cli` is now `upskill-managing-content`, and the
+bundle `prompt-engineering` is now `upskill`). Run `upskill remove` on those
+skills before your next `upskill update`, and add `--global` for a global
+install:
+
+```bash
+upskill remove --global upskill-cli
+```
+
+List the installed names with `upskill list`. Remove each upskill skill the same
+way. The order matters: `upskill update` stops before it writes anything when
+the lockfile records a name that the source no longer holds.
+
 ## Install
 
 **Linux / macOS:**

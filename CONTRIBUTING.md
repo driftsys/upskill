@@ -67,6 +67,18 @@ requires network access; commit and push hooks do not download tools.
 2. One PR per story/task.
 3. Keep code + tests + docs together.
 
+## Release
+
+After `just release` tags a version, publish the `upskill` plugin. Check out the
+tag in this repository, run `pack` with the output inside a checkout of
+`driftsys/metapowers`, then commit the result there and open a pull request:
+
+```bash
+git checkout vX.Y.Z
+upskill pack upskill --source driftsys/upskill@vX.Y.Z \
+  --out ../metapowers/plugins --catalog ../metapowers --force
+```
+
 ## AI agents
 
 See [AGENTS.md](AGENTS.md) for AI-specific conventions, issue model, and
