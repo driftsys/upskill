@@ -281,14 +281,15 @@ the way you would for any manual `git clone`.
     `cli_doctor_source_lookup`, `cli_exit_codes`, `cli_fmt`, `cli_global_scope`,
     `cli_install`, `cli_interrupted`, `cli_legacy_source_labels`, `cli_lint`,
     `cli_list`, `cli_lockfile_schema`, `cli_mangen`, `cli_mcp`, `cli_misc`,
-    `cli_new`, `cli_opencode_plugins`, `cli_ownership`, `cli_pack`,
-    `cli_pack_only_items`, `cli_quiet`, `cli_recorded_path_guard`,
-    `cli_relaxed_naming`, `cli_remove`, `cli_repeatable`, `cli_requires`,
-    `cli_resources`, `cli_scope`, `cli_search`, `cli_smoke_source`,
-    `cli_stdio_discipline`, `cli_support_levels`, `cli_update`,
-    `cli_update_bundle`, `cli_update_check`, `cli_update_excludes`,
-    `cli_update_notice`, `cli_update_prompt`, `cli_update_source_overlap`,
-    `cli_update_unreachable_source`, `cli_ux_polish`.
+    `cli_new`, `cli_opencode_plugins`, `cli_opencode_rules`, `cli_ownership`,
+    `cli_pack`, `cli_pack_only_items`, `cli_plugin_smoke_fixture`, `cli_quiet`,
+    `cli_recorded_path_guard`, `cli_relaxed_naming`, `cli_remove`,
+    `cli_repeatable`, `cli_requires`, `cli_resources`, `cli_scope`,
+    `cli_search`, `cli_smoke_source`, `cli_stdio_discipline`,
+    `cli_support_levels`, `cli_update`, `cli_update_bundle`, `cli_update_check`,
+    `cli_update_excludes`, `cli_update_notice`, `cli_update_prompt`,
+    `cli_update_source_overlap`, `cli_update_unreachable_source`,
+    `cli_ux_polish`.
   - **Pipeline:** `pipeline_ignore`, `pipeline_local`, `pipeline_lockfile`,
     `pipeline_mcp`, `pipeline_source`.
   - **Generation (v0.2 pipeline):** `generate_skills`, `generate_rules`,
@@ -296,7 +297,8 @@ the way you would for any manual `git clone`.
     `tests/fixtures/`.
   - **Parsing:** `parse_bundles`.
   - **Plugins:** `plugins_notice_hook` (the `upskill` hook plugins in
-    `plugins/`).
+    `plugins/`), `plugins_setup_hook` (the `upskill-setup` session-start hook
+    script).
   - **Harness:** `tests/common/mod.rs` (`upskill_cmd`) and
     `cli_test_harness_guard` (enforces the fake-`$HOME` convention).
   - When adding behavior, prefer extending the matching file or creating a new
