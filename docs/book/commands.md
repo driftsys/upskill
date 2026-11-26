@@ -946,14 +946,14 @@ The command is quiet by design:
   roots cannot be determined or when a lockfile of a scope that is due cannot be
   parsed. Only a scope that is due has its lockfile read: when that lockfile
   cannot be parsed, the command prints nothing for either scope, also not the
-  cached line of the other scope, and changes no scope entry of the cache file.
-  In both cases the release check below still runs and can print its line. A
-  source that is not reachable adds no update, but the updates stored from
-  earlier lookups stay and are counted and printed as described above. A cache
-  file that cannot be read or written does not stop the command: an invalid
-  cache file is treated as an empty one, and a failed write is ignored. When the
-  cache directory cannot be written, nothing is stored, so the check runs and
-  the line is printed at every session start.
+  cached line of the other scope, and changes no cache entry of a scope that has
+  a lockfile. In both cases the release check below still runs and can print its
+  line. A source that is not reachable adds no update, but the updates stored
+  from earlier lookups stay and are counted and printed as described above. A
+  cache file that cannot be read or written does not stop the command: an
+  invalid cache file is treated as an empty one, and a failed write is ignored.
+  When the cache directory cannot be written, nothing is stored, so the check
+  runs and the line is printed at every session start.
 - It changes no lockfile and no installed file. It keeps the cache file
   `notice.json` in the upskill cache directory (it writes it through a temporary
   file `notice.json.<pid>.tmp` and a rename), which is `$XDG_CACHE_HOME/upskill`

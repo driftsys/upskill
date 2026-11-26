@@ -707,23 +707,25 @@ rules, in order:
    notice run lock does not cover applying `update` or notice runs that proceed
    without a lock.
 
-Every failure after argument parsing prints nothing and gives exit code 0;
-nothing is written to stderr. An interrupt (SIGINT) ends the command at once
-with exit code 0. During the lookups it prints nothing and writes no cache file.
-After the line was written and before the cache file was saved, the same line
-prints again in the next session. A temporary file `notice.json.<pid>.tmp` can
-remain in the cache directory. A failed installation of the signal handler is
-ignored. The failures are: no cache directory is known (neither an absolute
-`XDG_CACHE_HOME` nor the home directory), the scope roots cannot be determined,
-and a lockfile that cannot be parsed. Only a root that is due has its lockfile
-read; when that lockfile cannot be parsed, the command prints nothing for any
-root, also not the cached line of a root that is not due, and writes no cache
-file. A source that is not reachable adds no update, but the entries that
-earlier checks stored stay in `updates` (rule 1) and rule 2 counts them; a
-failed read or write of the cache file is ignored. When the cache directory
-cannot be written, nothing is stored, so the check runs and the line is printed
-at every session start. With `--quiet`, rule 1 and rule 3 apply, and rule 2
-prints nothing and leaves `reported` unchanged.
+Every failure after argument parsing gives exit code 0; nothing is written to
+stderr. An interrupt (SIGINT) ends the command at once with exit code 0. During
+the lookups it prints nothing and writes no cache file. After the line was
+written and before the cache file was saved, the same line prints again in the
+next session. A temporary file `notice.json.<pid>.tmp` can remain in the cache
+directory. A failed installation of the signal handler is ignored. When no cache
+directory is known (neither an absolute `XDG_CACHE_HOME` nor the home
+directory), the command prints nothing. When the scope roots cannot be
+determined or a lockfile cannot be parsed, it prints no line for any root and
+changes no entry of a root that has a lockfile; the release check still runs,
+can print its line and saves its state. Only a root that is due has its lockfile
+read; when that lockfile cannot be parsed, the command prints no line for any
+root, also not the cached line of a root that is not due. A source that is not
+reachable adds no update, but the entries that earlier checks stored stay in
+`updates` (rule 1) and rule 2 counts them; a failed read or write of the cache
+file is ignored. When the cache directory cannot be written, nothing is stored,
+so the check runs and the line is printed at every session start. With
+`--quiet`, rule 1 and rule 3 apply, and rule 2 prints nothing and leaves
+`reported` unchanged.
 
 An `update` that applies (not `--dry-run`, `--check` or `--notice`) and returns
 its report, with exit code 0, 1 or 130 (an interrupt), removes from `updates`
