@@ -49,6 +49,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::pipeline::{ScopedCheck, SourceStatus, UpdateReport, UpdateStatus};
+use crate::release::Version;
 use crate::scope::Scope;
 
 /// The shortest time in seconds between two checks that contact the sources.
@@ -201,11 +202,55 @@ pub struct ScopeState {
     pub reported: Vec<String>,
 }
 
-/// The cache file: scope root path to state.
+/// State of the CLI release check. It is global: one per cache file.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ReleaseState {
+    /// Unix time in seconds of the last lookup that found a release.
+    pub checked_at: u64,
+    /// The latest release version found, as `X.Y.Z`.
+    pub latest: Option<String>,
+    /// The version that the last printed release line named.
+    pub reported: Option<String>,
+}
+
+/// The cache file: scope root path to state, and the release check state.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct NoticeCache {
     pub scopes: BTreeMap<String, ScopeState>,
+    pub release: ReleaseState,
+}
+
+/// True when the release lookup is due: the period has passed since the last
+/// one, or the clock is earlier than the recorded time.
+pub fn needs_release_check(cache: &NoticeCache, now: u64) -> bool {
+    now < cache.release.checked_at
+        || now >= cache.release.checked_at.saturating_add(NETWORK_PERIOD_SECS)
+}
+
+/// Record the latest release found at `now`.
+pub fn record_release(cache: &mut NoticeCache, latest: Version, now: u64) {
+    cache.release.checked_at = now;
+    cache.release.latest = Some(latest.to_string());
+}
+
+/// The release line when the cached latest version is greater than `current`
+/// and has not been printed yet (or `repeat` is set). Printing sets
+/// `reported`.
+pub fn decide_release(cache: &mut NoticeCache, current: Version, repeat: bool) -> Option<String> {
+    let latest_text = cache.release.latest.clone()?;
+    let latest = crate::release::parse_version(&latest_text)?;
+    if latest <= current {
+        return None;
+    }
+    if !repeat && cache.release.reported.as_deref() == Some(latest_text.as_str()) {
+        return None;
+    }
+    cache.release.reported = Some(latest_text);
+    Some(format!(
+        "upskill {latest} is available (you have {current}): curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh"
+    ))
 }
 
 impl NoticeCache {
@@ -371,6 +416,9 @@ pub fn merge_roots(
     roots: &[PathBuf],
     checked: &[PathBuf],
 ) -> NoticeCache {
+    if mine.release.checked_at >= fresh.release.checked_at {
+        fresh.release = mine.release.clone();
+    }
     for root in roots {
         match mine.scopes.get(&key(root)) {
             Some(state) => {
@@ -481,6 +529,7 @@ pub fn decide(cache: &mut NoticeCache, scope: Scope, root: &Path, repeat: bool) 
 mod tests {
     use super::*;
     use crate::pipeline::{CheckedSource, ItemKind};
+    use crate::release::Version;
     use std::path::PathBuf;
 
     use std::time::{Duration, SystemTime};
@@ -1386,5 +1435,92 @@ mod tests {
             source(update(Some("c9")), vec![(ItemKind::Skill, "a")]),
         ]);
         assert_eq!(update_set(&check), set(&["skill:a@c9"]));
+    }
+
+    fn ver(major: u64, minor: u64, patch: u64) -> Version {
+        Version {
+            major,
+            minor,
+            patch,
+        }
+    }
+
+    fn cache_with_latest(latest: Version) -> NoticeCache {
+        let mut cache = NoticeCache::default();
+        record_release(&mut cache, latest, 1_000);
+        cache
+    }
+
+    #[test]
+    fn old_cache_without_release_key_loads() {
+        let cache: NoticeCache = serde_json::from_str(r#"{"scopes":{}}"#).unwrap();
+        assert_eq!(cache.release, ReleaseState::default());
+    }
+
+    #[test]
+    fn release_check_due_after_24h_and_on_clock_skew() {
+        let cache = cache_with_latest(ver(0, 9, 4));
+        assert!(!needs_release_check(
+            &cache,
+            1_000 + NETWORK_PERIOD_SECS - 1
+        ));
+        assert!(needs_release_check(&cache, 1_000 + NETWORK_PERIOD_SECS));
+        assert!(needs_release_check(&cache, 999));
+        assert!(needs_release_check(
+            &NoticeCache::default(),
+            NETWORK_PERIOD_SECS
+        ));
+    }
+
+    #[test]
+    fn decide_release_prints_once_then_silent() {
+        let mut cache = cache_with_latest(ver(0, 10, 0));
+        let line = decide_release(&mut cache, ver(0, 9, 4), false);
+        assert_eq!(
+            line.as_deref(),
+            Some(
+                "upskill 0.10.0 is available (you have 0.9.4): curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh"
+            )
+        );
+        assert_eq!(decide_release(&mut cache, ver(0, 9, 4), false), None);
+    }
+
+    #[test]
+    fn decide_release_repeat_prints_again() {
+        let mut cache = cache_with_latest(ver(0, 10, 0));
+        assert!(decide_release(&mut cache, ver(0, 9, 4), true).is_some());
+        assert!(decide_release(&mut cache, ver(0, 9, 4), true).is_some());
+    }
+
+    #[test]
+    fn current_newer_than_latest_prints_nothing() {
+        let mut cache = cache_with_latest(ver(0, 9, 4));
+        assert_eq!(decide_release(&mut cache, ver(0, 10, 0), true), None);
+    }
+
+    #[test]
+    fn equal_versions_print_nothing() {
+        let mut cache = cache_with_latest(ver(0, 9, 4));
+        assert_eq!(decide_release(&mut cache, ver(0, 9, 4), true), None);
+    }
+
+    #[test]
+    fn merge_roots_keeps_newer_release_state() {
+        let mut fresh = NoticeCache::default();
+        record_release(&mut fresh, ver(0, 9, 4), 2_000);
+        let mut mine = NoticeCache::default();
+        record_release(&mut mine, ver(0, 9, 3), 1_000);
+        let merged = merge_roots(fresh.clone(), &mine, &[], &[]);
+        assert_eq!(merged.release.latest.as_deref(), Some("0.9.4"));
+
+        let mut mine = NoticeCache::default();
+        record_release(&mut mine, ver(0, 9, 5), 3_000);
+        let merged = merge_roots(fresh.clone(), &mine, &[], &[]);
+        assert_eq!(merged.release.latest.as_deref(), Some("0.9.5"));
+
+        let mut tie = NoticeCache::default();
+        record_release(&mut tie, ver(0, 9, 6), 2_000);
+        let merged = merge_roots(fresh, &tie, &[], &[]);
+        assert_eq!(merged.release.latest.as_deref(), Some("0.9.6"));
     }
 }

@@ -27,6 +27,7 @@ pub mod pack;
 pub mod parse;
 pub mod pipeline;
 pub mod plugin;
+pub mod release;
 pub mod scaffold;
 pub mod scope;
 pub mod search;
