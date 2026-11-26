@@ -138,6 +138,10 @@ pub struct AddOptions {
     /// excludes recorded for the scope. Only the positional names of `add`
     /// remove names from the record.
     pub keep_recorded_excludes: bool,
+    /// Set by `update`. When true, a bundle that the run requests keeps the
+    /// requirers (`required_by`) recorded for it: `update <name>` resolves a
+    /// dependency bundle from its own record without making it a root.
+    pub keep_recorded_requirers: bool,
     /// The scope of the install. It selects the output paths: the global
     /// scope writes Copilot content under `~/.copilot`. The default is the
     /// project scope.

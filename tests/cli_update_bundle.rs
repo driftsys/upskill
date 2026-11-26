@@ -1287,3 +1287,211 @@ fn update_refreshes_a_cross_source_dependency_once() {
     );
     assert_eq!(recorded_bundles(consumer.path()), vec!["dep", "top"]);
 }
+
+/// Writes a root bundle `name` that lists the skill `own_skill` and requires
+/// each entry of `requires`.
+fn write_root_bundle(registry: &Path, name: &str, own_skill: &str, requires: &[String]) {
+    let requires = if requires.is_empty() {
+        String::new()
+    } else {
+        format!("requires: [{}]\n", requires.join(", "))
+    };
+    write(
+        &registry.join(format!("{name}.bundle.yaml")),
+        &format!(
+            "schema: 1\nname: {name}\ndescription: Root bundle.\nitems:\n  skills: [{own_skill}]\n{requires}"
+        ),
+    );
+}
+
+fn add_bundle_named(consumer: &Path, registry: &Path, name: &str) {
+    common::upskill_cmd(&fake_home(consumer))
+        .current_dir(consumer)
+        .args([
+            "add",
+            registry.to_str().unwrap(),
+            name,
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+}
+
+/// Two roots require `dep`; `first` drops it and `second` keeps it. The
+/// roots are in `first_registry` and `second_registry` (the same directory
+/// for the same-source case); `dep` is in `dep_registry`.
+fn assert_dependency_of_a_second_root_is_kept(
+    first_registry: &Path,
+    second_registry: &Path,
+    dep_registry: &Path,
+) {
+    let consumer = tempfile::tempdir().unwrap();
+    write_skill(first_registry, "own1");
+    write_skill(second_registry, "own2");
+    write_skill(dep_registry, "dep-only");
+    write_skill_bundle(dep_registry, "dep", &["dep-only"]);
+    let dep_ref = |registry: &Path| {
+        if registry == dep_registry {
+            "{ name: dep }".to_string()
+        } else {
+            format!("{{ name: dep, source: '{}' }}", dep_registry.display())
+        }
+    };
+    write_root_bundle(first_registry, "first", "own1", &[dep_ref(first_registry)]);
+    write_root_bundle(
+        second_registry,
+        "second",
+        "own2",
+        &[dep_ref(second_registry)],
+    );
+    add_bundle_named(consumer.path(), first_registry, "first");
+    add_bundle_named(consumer.path(), second_registry, "second");
+
+    write_root_bundle(first_registry, "first", "own1", &[]);
+    let out = update_output(consumer.path());
+
+    assert!(!removed_line(&out, "dep-only"), "{out}");
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-only/SKILL.md")
+            .exists(),
+        "{out}"
+    );
+    assert!(recorded_bundles(consumer.path()).contains(&"dep".to_string()));
+    assert!(recorded_items(consumer.path()).contains(&"dep-only".to_string()));
+}
+
+#[test]
+fn update_keeps_a_dependency_that_a_root_of_another_source_still_requires() {
+    let first = tempfile::tempdir().unwrap();
+    let second = tempfile::tempdir().unwrap();
+    let dep = tempfile::tempdir().unwrap();
+    assert_dependency_of_a_second_root_is_kept(first.path(), second.path(), dep.path());
+}
+
+#[test]
+fn update_keeps_a_dependency_that_a_root_of_the_dependency_source_still_requires() {
+    // `second` and `dep` share a source, `first` is in another one.
+    let first = tempfile::tempdir().unwrap();
+    let shared = tempfile::tempdir().unwrap();
+    assert_dependency_of_a_second_root_is_kept(first.path(), shared.path(), shared.path());
+}
+
+#[test]
+fn update_keeps_a_dependency_that_a_root_of_the_same_source_still_requires() {
+    let registry = tempfile::tempdir().unwrap();
+    assert_dependency_of_a_second_root_is_kept(registry.path(), registry.path(), registry.path());
+}
+
+#[test]
+fn named_update_keeps_the_dependency_bundle_and_its_items() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    write_top_bundle(registry.path(), &["{ name: dep }".to_string()]);
+    add_top(consumer.path(), registry.path());
+
+    write_top_bundle(registry.path(), &[]);
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project", "own"])
+        .assert()
+        .success();
+
+    // A named update does not read the whole resolution: the dependency and
+    // its record stay until a full `update`.
+    assert_eq!(recorded_bundles(consumer.path()), vec!["dep", "top"]);
+    let lock = read_update_lock(consumer.path());
+    let dep = lock["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|b| b["name"] == "dep")
+        .unwrap()
+        .clone();
+    assert_eq!(dep["required_by"], serde_json::json!(["bundle:top"]));
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-only/SKILL.md")
+            .exists()
+    );
+
+    let out = update_output(consumer.path());
+    assert!(removed_line(&out, "dep-only"), "{out}");
+    assert_eq!(recorded_bundles(consumer.path()), vec!["top"]);
+}
+
+#[test]
+fn update_keeps_an_aliased_member_of_a_dependency_bundle() {
+    // `add` applies `--as` to a member of a same-source dependency bundle
+    // only; a member of a cross-source dependency keeps its name.
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    write_top_bundle(registry.path(), &["{ name: dep }".to_string()]);
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "top",
+            "--project",
+            "--claude",
+            "--as",
+            "dep-only=renamed",
+        ])
+        .assert()
+        .success();
+    assert!(recorded_items(consumer.path()).contains(&"renamed".to_string()));
+
+    let out = update_output(consumer.path());
+    assert!(!removed_line(&out, "renamed"), "{out}");
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/renamed/SKILL.md")
+            .exists()
+    );
+    assert!(!consumer.path().join(".claude/skills/dep-only").exists());
+}
+
+#[test]
+fn update_reports_a_cross_source_dependency_of_an_unreachable_root_as_skipped() {
+    let consumer = tempfile::tempdir().unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let registry = root.path().join("registry");
+    let dependency = tempfile::tempdir().unwrap();
+    write_skill(&registry, "own");
+    write_skill(dependency.path(), "dep-only");
+    write_skill_bundle(dependency.path(), "dep", &["dep-only"]);
+    let requires = format!("{{ name: dep, source: '{}' }}", dependency.path().display());
+    write_top_bundle(&registry, &[requires]);
+    add_top(consumer.path(), &registry);
+    fs::remove_dir_all(&registry).unwrap();
+
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+    let out = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let line = out
+        .lines()
+        .find(|l| l.contains("dep-only"))
+        .unwrap_or_else(|| panic!("{out}"));
+    assert!(line.contains("skipped"), "{out}");
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-only/SKILL.md")
+            .exists()
+    );
+    assert_eq!(recorded_bundles(consumer.path()), vec!["dep", "top"]);
+}

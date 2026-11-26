@@ -382,12 +382,11 @@ impl Lockfile {
             .collect()
     }
 
-    /// Add or replace a bundle entry by `name`. Bundles are kept sorted
-    /// for deterministic on-disk output.
-    /// The root bundle record that `bundle` is reached from through the
-    /// `required_by` chain, or `None` when `bundle` is a root itself or when
-    /// no requirer chain leads to a recorded root bundle.
-    pub fn root_bundle_of(&self, bundle: &LockedBundle) -> Option<&LockedBundle> {
+    /// The root bundle records that `bundle` is reached from through the
+    /// `required_by` chain, sorted by name. Empty when `bundle` is a root
+    /// itself or when no requirer chain leads to a recorded root bundle.
+    pub fn root_bundles_of(&self, bundle: &LockedBundle) -> Vec<&LockedBundle> {
+        let mut roots: Vec<&LockedBundle> = Vec::new();
         let mut seen = std::collections::BTreeSet::new();
         let mut pending: Vec<&LockedBundle> = vec![bundle];
         while let Some(current) = pending.pop() {
@@ -400,21 +399,27 @@ impl Lockfile {
                 };
                 if let Some(record) = self.bundles.iter().find(|b| b.name == name) {
                     if record.required_by.is_empty() {
-                        return Some(record);
+                        if !roots.iter().any(|r| r.name == record.name) {
+                            roots.push(record);
+                        }
+                    } else {
+                        pending.push(record);
                     }
-                    pending.push(record);
                 }
             }
         }
-        None
+        roots.sort();
+        roots
     }
 
     /// True when `update` resolves `bundle` itself: it records no requirer,
     /// or none of its requirer chains leads to a recorded root bundle.
     pub fn is_root_bundle(&self, bundle: &LockedBundle) -> bool {
-        bundle.required_by.is_empty() || self.root_bundle_of(bundle).is_none()
+        bundle.required_by.is_empty() || self.root_bundles_of(bundle).is_empty()
     }
 
+    /// Add or replace a bundle entry by `name`. Bundles are kept sorted
+    /// for deterministic on-disk output.
     pub fn upsert_bundle(&mut self, bundle: LockedBundle) {
         self.bundles.retain(|existing| existing.name != bundle.name);
         self.bundles.push(bundle);
@@ -553,9 +558,11 @@ pub fn items_from_report(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn bundle_required_by_defaults_to_empty_and_round_trips() {
-        let old: super::LockedBundle =
+        let old: LockedBundle =
             serde_json::from_str(r#"{"name":"b","source":"local:/r","items":[]}"#).unwrap();
         assert!(old.required_by.is_empty());
         assert!(!serde_json::to_string(&old).unwrap().contains("required_by"));
@@ -563,13 +570,13 @@ mod tests {
         dep.required_by = vec!["bundle:top".into()];
         let text = serde_json::to_string(&dep).unwrap();
         assert!(text.contains(r#""required_by":["bundle:top"]"#), "{text}");
-        let back: super::LockedBundle = serde_json::from_str(&text).unwrap();
+        let back: LockedBundle = serde_json::from_str(&text).unwrap();
         assert_eq!(back, dep);
     }
 
     #[test]
-    fn root_bundle_of_follows_the_requirer_chain() {
-        let bundle = |name: &str, by: &[&str]| super::LockedBundle {
+    fn root_bundles_of_follows_the_requirer_chain() {
+        let bundle = |name: &str, by: &[&str]| LockedBundle {
             name: name.into(),
             source: "local:/r".into(),
             git_ref: None,
@@ -577,27 +584,31 @@ mod tests {
             kinds: vec![],
             required_by: by.iter().map(|s| s.to_string()).collect(),
         };
-        let lock = super::Lockfile {
+        let lock = Lockfile {
             bundles: vec![
                 bundle("top", &[]),
                 bundle("mid", &["bundle:top"]),
                 bundle("leaf", &["bundle:mid"]),
                 bundle("stray", &["bundle:gone"]),
+                bundle("other", &[]),
+                bundle("shared", &["bundle:mid", "bundle:other"]),
             ],
             ..Default::default()
         };
         let root = |n: &str| {
             let b = lock.bundles.iter().find(|b| b.name == n).unwrap();
-            lock.root_bundle_of(b).map(|r| r.name.clone())
+            lock.root_bundles_of(b)
+                .iter()
+                .map(|r| r.name.clone())
+                .collect::<Vec<_>>()
         };
-        assert_eq!(root("leaf").as_deref(), Some("top"));
-        assert_eq!(root("top"), None);
-        assert_eq!(root("stray"), None);
+        assert_eq!(root("leaf"), vec!["top"]);
+        assert_eq!(root("shared"), vec!["other", "top"]);
+        assert!(root("top").is_empty());
+        assert!(root("stray").is_empty());
         assert!(lock.is_root_bundle(&lock.bundles[3]));
         assert!(!lock.is_root_bundle(&lock.bundles[2]));
     }
-
-    use super::*;
     use crate::generate::Client;
     use crate::pipeline::InstalledItem;
     use std::path::PathBuf;

@@ -543,11 +543,6 @@ impl PreparedInstall {
             .collect())
     }
 
-    /// The bundle `name` as the fetched entry source declares it now: a
-    /// bundle that this install resolved (always the case for a bundle-file
-    /// source), else the bundle file of that name in a directory source.
-    /// `None` when the source has no such bundle or its manifest cannot be
-    /// read.
     /// The names of the bundles that this install resolved, through the
     /// `requires` of the requested bundles included.
     pub fn resolved_bundle_names(&self) -> BTreeSet<String> {
@@ -557,6 +552,11 @@ impl PreparedInstall {
             .collect()
     }
 
+    /// The bundle `name` as the fetched entry source declares it now: a
+    /// bundle that this install resolved (always the case for a bundle-file
+    /// source), else the bundle file of that name in a directory source.
+    /// `None` when the source has no such bundle or its manifest cannot be
+    /// read.
     pub fn source_bundle(&self, name: &str) -> Option<crate::model::Bundle> {
         if let Some(rb) = self
             .resolved_bundles
@@ -1018,6 +1018,11 @@ impl PreparedInstall {
                 // requirers of other runs are kept.
                 let existing = lock.bundles.iter().find(|b| b.name == rb.bundle.name);
                 let required_by = match existing {
+                    Some(existing)
+                        if rb.required_by.is_empty() && options.keep_recorded_requirers =>
+                    {
+                        existing.required_by.clone()
+                    }
                     _ if rb.required_by.is_empty() => Vec::new(),
                     Some(existing) if existing.required_by.is_empty() => Vec::new(),
                     Some(existing) => {

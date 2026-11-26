@@ -937,12 +937,20 @@ behaviour:
   optional `required_by` array (`bundle:<name>`, sorted, omitted when empty); a
   bundle requested by the user records none. A bundle recorded without
   `required_by` keeps none when a later install reaches it through `requires:`.
-- **Update.** `update` resolves the bundles without `required_by` again and
-  reaches the others through `requires:`, across sources too. When a bundle no
-  longer requires a dependency bundle, `update` drops the record of that
-  dependency and removes each of its items that the new closure does not
-  provide, reported as `removed — no longer in source`. A lockfile written
-  before `required_by` existed records every bundle as requested by the user.
+- **Update.** A full `update` resolves the root bundles again and reaches the
+  other bundles through `requires:`, across sources too. A root bundle is a
+  bundle without `required_by`, or one whose `required_by` chain reaches no
+  recorded root. A dependency bundle is resolved from its own record, as a root,
+  when the run does not read the source of each of its roots: in
+  `update <name>`, or when a root source has no selected entry. Such a run keeps
+  the `required_by` of the record. A dependency bundle that no resolution of the
+  run reaches is dropped from the lockfile when the run applied every one of its
+  root sources. Each of its items that no resolution provides is removed,
+  reported as `removed — no longer in source`; an item that another root still
+  reaches is kept. When a root source is skipped, the items of its dependency
+  bundles are kept and reported as skipped. The kinds of a dependency bundle are
+  those of the root resolution. A lockfile written before `required_by` existed
+  records every bundle as a root.
 - **Removal.** `upskill remove --source <label>` removes every item that came
   from that source, including those introduced via bundles. A
   bundle-name-targeted removal (`remove <bundle-name>` removing only items

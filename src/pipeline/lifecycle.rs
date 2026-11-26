@@ -1363,31 +1363,51 @@ pub fn update(
             .or_default()
             .push(entry);
     }
-    // A dependency bundle (a bundle that a recorded root bundle reaches
-    // through `requires`) is resolved again through its root, not from its
-    // own record (#648). The entries of a dependency bundle of another source
-    // are moved to the group of the root source, so that the run of the root
-    // source refreshes them, or removes them when the root no longer reaches
-    // them. A dependency bundle whose root source the run does not read
-    // (`update <name>`) is resolved from its own record, as a root.
-    let dependency_roots: std::collections::BTreeMap<String, String> = lock
-        .bundles
-        .iter()
-        .filter(|b| !lock.is_root_bundle(b))
-        .filter_map(|b| {
-            let root = lock.root_bundle_of(b)?;
-            by_source
-                .contains_key(&root.source)
-                .then(|| (b.name.clone(), root.source.clone()))
-        })
+    // The items that the run covers: every lockfile entry that the run
+    // selects, and below the items that the plans of the sources that were
+    // fetched and not skipped install (a source skipped for `RequiresSkipped`
+    // is removed from `prepared_sources` before its plan is counted).
+    let mut run_items: std::collections::BTreeSet<(ItemKind, String)> = by_source
+        .values()
+        .flatten()
+        .map(|e| (e.kind, e.name.clone()))
         .collect();
+
+    // A dependency bundle (a bundle that recorded root bundles reach through
+    // `requires`) is resolved again through its roots, not from its own
+    // record (#648). This holds only for a full `update` in which the source
+    // of every root of the dependency has a group. Otherwise (`update
+    // <name>`, or a root source without selected entries) the dependency is
+    // resolved from its own record, as a root, and its record is kept.
+    let dependency_roots: std::collections::BTreeMap<String, std::collections::BTreeSet<String>> =
+        if names.is_empty() {
+            lock.bundles
+                .iter()
+                .filter_map(|b| {
+                    let roots: std::collections::BTreeSet<String> = lock
+                        .root_bundles_of(b)
+                        .iter()
+                        .map(|root| root.source.clone())
+                        .collect();
+                    (!roots.is_empty() && roots.iter().all(|r| by_source.contains_key(r)))
+                        .then(|| (b.name.clone(), roots))
+                })
+                .collect()
+        } else {
+            std::collections::BTreeMap::new()
+        };
+    // The entries of those dependencies leave their source group. After the
+    // prepare phase each one joins the group of a source whose plan provides
+    // it, or, when no plan provides it, the group of a root source, which
+    // removes it. Each entry keeps the root sources of its dependencies.
+    let mut dependency_entries: Vec<(
+        crate::lockfile::LockedItem,
+        std::collections::BTreeSet<String>,
+    )> = Vec::new();
     for bundle in &lock.bundles {
-        let Some(root_source) = dependency_roots.get(&bundle.name) else {
+        let Some(roots) = dependency_roots.get(&bundle.name) else {
             continue;
         };
-        if *root_source == bundle.source {
-            continue;
-        }
         let Some(group) = by_source.get_mut(&bundle.source) else {
             continue;
         };
@@ -1401,24 +1421,28 @@ pub fn update(
                 })
         });
         *group = kept;
-        if group.is_empty() {
-            by_source.remove(&bundle.source);
+        for entry in moved {
+            dependency_entries.push((entry, roots.clone()));
         }
-        by_source
-            .get_mut(root_source)
-            .expect("root source group checked above")
-            .extend(moved);
     }
-
-    // The items that the run covers: every lockfile entry that the run
-    // selects, and below the items that the plans of the sources that were
-    // fetched and not skipped install (a source skipped for `RequiresSkipped`
-    // is removed from `prepared_sources` before its plan is counted).
-    let mut run_items: std::collections::BTreeSet<(ItemKind, String)> = by_source
-        .values()
-        .flatten()
-        .map(|e| (e.kind, e.name.clone()))
-        .collect();
+    // An entry of two dependencies carries the root sources of both.
+    dependency_entries.sort_by(|(a, _), (b, _)| (a.kind, &a.name).cmp(&(b.kind, &b.name)));
+    dependency_entries.dedup_by(|(next, next_roots), (first, first_roots)| {
+        let same = next.kind == first.kind && next.name == first.name;
+        if same {
+            first_roots.extend(std::mem::take(next_roots));
+        }
+        same
+    });
+    // A group left without entries is kept only when the run resolves a
+    // root bundle of its source.
+    by_source.retain(|label, group| {
+        !group.is_empty()
+            || lock
+                .bundles
+                .iter()
+                .any(|b| b.source == *label && !dependency_roots.contains_key(&b.name))
+    });
 
     let mut report = UpdateReport::default();
     // The adoption of a `schema: 1` lockfile is saved. A later error must
@@ -1440,9 +1464,16 @@ pub fn update(
                 .with_context(|| format!("parse lockfile source label `{source_label}`"))?;
 
             // Build aliases from lockfile entries that have source_name
+            // A dependency entry carries its alias to the run of each of its
+            // root sources, which installs it through `requires`.
             let aliases: Vec<(String, String)> = source_entries
                 .iter()
-                .filter(|e| e.source == source_label)
+                .chain(
+                    dependency_entries
+                        .iter()
+                        .filter(|(_, roots)| roots.contains(&source_label))
+                        .map(|(entry, _)| entry),
+                )
                 .filter_map(|e| {
                     e.source_name
                         .as_ref()
@@ -1499,6 +1530,7 @@ pub fn update(
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
                 keep_recorded_excludes: true,
+                keep_recorded_requirers: true,
                 scope: at.scope,
             };
             // Scope the reinstall to exactly the items this source already
@@ -1663,6 +1695,50 @@ pub fn update(
                 ),
             });
         }
+        // Each dependency entry joins the group of the first source whose
+        // plan provides it. When no plan provides it and every root source
+        // was prepared, it joins the group of its first root source, which
+        // removes it. When a root source was skipped, the entry is kept and
+        // reported with the skip of that source.
+        for (entry, roots) in std::mem::take(&mut dependency_entries) {
+            let key = (entry.kind, entry.name.clone());
+            let provider = prepared_sources
+                .iter()
+                .position(|(_, _, p)| p.planned_hashes().contains_key(&key));
+            let all_roots_prepared = roots
+                .iter()
+                .all(|root| prepared_sources.iter().any(|(label, _, _)| label == root));
+            let first_root = prepared_sources
+                .iter()
+                .position(|(label, _, _)| roots.contains(label));
+            match (provider, all_roots_prepared, first_root) {
+                (Some(index), _, _) | (None, true, Some(index)) => {
+                    prepared_sources[index].1.push(entry);
+                }
+                _ => {
+                    let cause = report
+                        .skipped_sources
+                        .iter()
+                        .find(|s| roots.contains(&s.source))
+                        .map_or(SkipCause::RequiresSkipped, |s| s.cause);
+                    report.items.push(UpdatedItem {
+                        kind: entry.kind,
+                        name: entry.name.clone(),
+                        source: entry.source.clone(),
+                        status: UpdateStatus::SourceSkipped { cause },
+                    });
+                }
+            }
+        }
+        // A dependency bundle is dropped from the lockfile after the run
+        // when no prepared resolution reaches it and every one of its root
+        // sources was applied.
+        let reached_bundles: std::collections::BTreeSet<String> = prepared_sources
+            .iter()
+            .flat_map(|(_, _, p)| p.resolved_bundle_names())
+            .collect();
+        let mut applied_sources: std::collections::BTreeSet<String> =
+            std::collections::BTreeSet::new();
         let total_sources = prepared_sources.len();
         for (_, _, prepared) in &prepared_sources {
             run_items.extend(prepared.planned_hashes().into_keys());
@@ -1894,21 +1970,8 @@ pub fn update(
             let first_item = report.items.len();
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
-            let resolved_bundles = prepared.resolved_bundle_names();
             let install_report = prepared.commit(target, plugin_scope)?;
-            // A dependency bundle of this root source that the resolution no
-            // longer reaches is dropped from the lockfile. Its items that the
-            // resolution does not provide are removed below as orphans.
-            let dropped_bundles: Vec<&String> = dependency_roots
-                .iter()
-                .filter(|(name, root)| **root == source_label && !resolved_bundles.contains(*name))
-                .map(|(name, _)| name)
-                .collect();
-            if !dropped_bundles.is_empty() {
-                let mut lock = crate::lockfile::Lockfile::load(target)?;
-                lock.bundles.retain(|b| !dropped_bundles.contains(&&b.name));
-                lock.save(target)?;
-            }
+            applied_sources.insert(source_label.clone());
             // The plugin step of the apply attempts every plugin of the
             // recorded bundles of the source, so an applied source needs no
             // plugin repair.
@@ -2080,6 +2143,20 @@ pub fn update(
                 }
             }
             observer.applied(&result);
+        }
+        // The commits save the lockfile per source, so this drop is one more
+        // save after the last commit, when it is known which roots applied.
+        let dropped: Vec<&String> = dependency_roots
+            .iter()
+            .filter(|(name, roots)| {
+                !reached_bundles.contains(*name) && roots.is_subset(&applied_sources)
+            })
+            .map(|(name, _)| name)
+            .collect();
+        if !dropped.is_empty() {
+            let mut lock = crate::lockfile::Lockfile::load(target)?;
+            lock.bundles.retain(|b| !dropped.contains(&&b.name));
+            lock.save(target)?;
         }
         Ok(())
     })();

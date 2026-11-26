@@ -145,13 +145,18 @@ The contract mirrors the item-level one, one layer up:
   closure reached through `requires` records its requirers in `required_by`
   (`bundle:<name>`); a bundle that the user requested records none and is a
   root.
-- **Update.** `update` resolves only the root bundles again and reaches the
-  other bundles through `requires`, also across sources: the entries of a
-  dependency bundle of another source are refreshed in the run of the root
-  source. A dependency bundle that the new closure no longer reaches is dropped
-  from the lockfile, and its items that the closure does not provide are removed
-  (#648). A lockfile without `required_by` records every bundle as a root. A
-  bundle-file (`*.bundle.yaml`) source records no `required_by`.
+- **Update.** A full `update` resolves only the root bundles again (no
+  `required_by`, or a `required_by` chain that reaches no recorded root) and
+  reaches the other bundles through `requires`, also across sources. The entries
+  of a dependency bundle leave their own source group and join the group of a
+  source whose resolution provides them, or else a root source, which removes
+  them. A dependency bundle that no resolution of the run reaches is dropped
+  from the lockfile once every one of its root sources was applied, so a
+  dependency that a second root still requires is kept (#648). When a root
+  source is not read by the run (`update <name>`, or no selected entry), the
+  dependency is resolved from its own record and keeps its `required_by`. A
+  lockfile without `required_by` records every bundle as a root. A bundle-file
+  (`*.bundle.yaml`) source records no `required_by`.
 - **Reuse.** Bundle resolution emits the same per-source item closure the
   item-level path produces, so install and item-lockfile recording are shared;
   only per-bundle source recording is bundle-specific.
