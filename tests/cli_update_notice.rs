@@ -567,13 +567,19 @@ fn notice_reports_the_global_scope_with_its_own_line() {
 }
 
 #[test]
-fn notice_without_a_lockfile_prints_nothing_and_writes_no_cache_entry() {
+fn notice_without_a_lockfile_prints_nothing_and_writes_no_scope_entry() {
     let e = env();
     let out = run(&e, &e.outside, &["update", "--notice"]);
     assert_eq!(out.status.code(), Some(0));
     assert_eq!(stdout(&out), "");
     assert_eq!(stderr(&out), "");
-    assert!(!cache_path(&e).exists());
+    // The cache file can exist because the release lookup records its
+    // attempt, but no scope root is recorded.
+    if cache_path(&e).exists() {
+        let text = std::fs::read_to_string(cache_path(&e)).unwrap();
+        let cache: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert!(cache["scopes"].as_object().is_none_or(|m| m.is_empty()));
+    }
 }
 
 #[test]
