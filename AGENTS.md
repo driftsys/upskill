@@ -312,15 +312,15 @@ upskill-writing-rules, writing-skills, upskill-writing-subagents.</description>
 </skill>
 <skill>
 <name>upskill-prompt-design</name>
-<description>Use as the entry point to the upskill framework's
-prompt-engineering discipline. Trigger when someone is new to the framework,
-when an author is not sure which meta-skill to activate, when reviewing how a
-team is using rules/skills/subagents, or when cross-cutting concerns
-(portability across clients, classification, token economics, composition
-patterns) come up. Do NOT trigger for general one-shot prompt-writing guidance —
-that is an onboarding concern outside the framework. Do NOT trigger for specific
-authoring tasks — hand off to upskill-prompt-distilling, upskill-writing-rules,
-writing-skills, upskill-writing-subagents, or upskill-cli.</description>
+<description>Use as the entry point to the upskill framework's prompt-design
+discipline. Trigger when someone is new to the framework, when an author is not
+sure which meta-skill to activate, when reviewing how a team is using
+rules/skills/subagents, or when cross-cutting concerns (portability across
+clients, classification, token economics, composition patterns) come up. Do NOT
+trigger for general one-shot prompt-writing guidance — that is an onboarding
+concern outside the framework. Do NOT trigger for specific authoring tasks —
+hand off to upskill-prompt-distilling, upskill-writing-rules, writing-skills,
+upskill-writing-subagents, or upskill-managing-content.</description>
 <location>skills/upskill-prompt-design/SKILL.md</location>
 </skill>
 <skill>
@@ -335,7 +335,7 @@ writing-skills, or upskill-writing-subagents.</description>
 <location>skills/upskill-prompt-distilling/SKILL.md</location>
 </skill>
 <skill>
-<name>upskill-cli</name>
+<name>upskill-managing-content</name>
 <description>Use when working in an upskill-consumer repo and needing to add,
 modify, vendor, audit, or remove installed content (rules, skills, agents,
 bundles). Trigger when `upskill lint` or `upskill doctor` reports issues.
@@ -346,7 +346,7 @@ upskill-prompt-distilling, upskill-writing-rules, writing-skills, or
 upskill-writing-subagents. Do NOT trigger for cosmetic typo fixes in skill
 bodies; raw edits to source registry files plus `upskill lint` are
 sufficient.</description>
-<location>skills/upskill-cli/SKILL.md</location>
+<location>skills/upskill-managing-content/SKILL.md</location>
 </skill>
 <skill>
 <name>upskill-writing-rules</name>

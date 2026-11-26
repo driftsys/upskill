@@ -1,8 +1,8 @@
 # upskill bundle manifest — pure YAML (format-spec §2.2, ADR-0007).
 
 schema: 1 # bundle schema version
-name: prompt-engineering # must match the filename stem
-description: One-shot install of the driftsys prompt-engineering discipline —
+name: upskill # must match the filename stem
+description: One-shot install of the driftsys upskill discipline —
   meta-skills for authoring durable agent content (rules, skills, agents)
   under upskill management.
 license: MIT
@@ -16,7 +16,7 @@ items:
     - upskill-writing-rules # authoring: always-loaded invariants
     - upskill-writing-subagents # authoring: bounded sub-task delegation
     - upskill-evaluating-prompts # eval: RED-GREEN-REFACTOR
-    - upskill-cli # ops: add / update / audit
+    - upskill-managing-content # ops: add / update / audit
     - upskill-writing-bundles # authoring: .bundle.yaml manifests + plugins
 
 # Client-native plugins required by this bundle's skills.

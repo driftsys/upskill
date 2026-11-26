@@ -1,7 +1,7 @@
 ---
 schema: 1
 name: upskill-prompt-design
-description: Use as the entry point to the upskill framework's prompt-engineering discipline. Trigger when someone is new to the framework, when an author is not sure which meta-skill to activate, when reviewing how a team is using rules/skills/subagents, or when cross-cutting concerns (portability across clients, classification, token economics, composition patterns) come up. Do NOT trigger for general one-shot prompt-writing guidance — that is an onboarding concern outside the framework. Do NOT trigger for specific authoring tasks — hand off to upskill-prompt-distilling, upskill-writing-rules, writing-skills, upskill-writing-subagents, or upskill-cli.
+description: Use as the entry point to the upskill framework's prompt-design discipline. Trigger when someone is new to the framework, when an author is not sure which meta-skill to activate, when reviewing how a team is using rules/skills/subagents, or when cross-cutting concerns (portability across clients, classification, token economics, composition patterns) come up. Do NOT trigger for general one-shot prompt-writing guidance — that is an onboarding concern outside the framework. Do NOT trigger for specific authoring tasks — hand off to upskill-prompt-distilling, upskill-writing-rules, writing-skills, upskill-writing-subagents, or upskill-managing-content.
 metadata:
   version: 0.1.0
   author: driftsys
@@ -39,7 +39,7 @@ referenced from the framework but governed by their own processes.
 | "I know it's a rule, how do I write it well"                               | `upskill-writing-rules`                                  |
 | "I know it's a skill, how do I write it well"                              | `superpowers:writing-skills`                             |
 | "I know it's a subagent, how do I write it well"                           | `upskill-writing-subagents`                              |
-| "I need to run upskill commands / vendor a bundle / audit content"         | `upskill-cli`                                            |
+| "I need to run upskill commands / vendor a bundle / audit content"         | `upskill-managing-content`                               |
 | "I need to set up the RED-GREEN-REFACTOR cycle for something I authored"   | `upskill-evaluating-prompts`                             |
 | "I want to write an MCP server"                                            | `mcp-builder` (vendored) — out of upskill's direct scope |
 | "I want to write good one-shot prompts to send to Claude Code"             | Not this framework — see onboarding doc                  |
@@ -117,7 +117,7 @@ consumer project at install time. `upskill lint` catches schema and structural
 errors in source registries; `upskill doctor` verifies installed state against
 `.upskill-lock.json`. Generated per-client files are never hand-edited — drift
 is silent. Vendored bundles (like `superpowers`) carry NOTICE files and
-attribution. `upskill-cli` covers the workflows.
+attribution. `upskill-managing-content` covers the workflows.
 
 ## Symptoms that suggest framework-level problems
 
@@ -132,8 +132,8 @@ If you notice any of these, this skill is the right entry point for diagnosis:
 - "The subagent's output is bigger than what the parent would have done inline"
   → return-contract failure. Activate `upskill-writing-subagents`.
 - "We added a rule and now every interaction feels slower" → token budget
-  exceeded. Activate `upskill-cli` (`doctor`) and `upskill-prompt-distilling`
-  (the content may not deserve to be a rule).
+  exceeded. Activate `upskill-managing-content` (`doctor`) and
+  `upskill-prompt-distilling` (the content may not deserve to be a rule).
 - "Different teams handle the same situation differently" → cross-cutting
   convention without a home. Route via `upskill-prompt-distilling`.
 

@@ -1,7 +1,7 @@
-# driftsys prompt-engineering meta-skills
+# driftsys upskill meta-skills
 
 This directory is the source registry for the v0.1 draft set of meta-skills for
-the driftsys prompt-engineering discipline, managed via upskill.
+the driftsys upskill discipline, managed via upskill.
 
 ## Layout
 
@@ -13,7 +13,7 @@ bundles flat under `skills/`; see
 skills/
 ├── README.md                       (this file)
 ├── NOTICE                          attribution for vendored methodology
-├── prompt-engineering.bundle.yaml  one-shot install of the discipline
+├── upskill.bundle.yaml  one-shot install of the discipline
 ├── upskill-prompt-design/          umbrella / orientation
 │   └── SKILL.md
 ├── upskill-prompt-distilling/      decompose authoring intent + place across layers
@@ -26,16 +26,16 @@ skills/
 │   └── SKILL.md
 ├── upskill-writing-bundles/        .bundle.yaml authoring + plugin declarations
 │   └── SKILL.md
-└── upskill-cli/                  lifecycle operations
+└── upskill-managing-content/                  lifecycle operations
     └── SKILL.md
 ```
 
 ## Status
 
 All skills are v0.1.0 except `upskill-prompt-distilling` (v0.3.0, renamed from
-`picking-the-layer`) and `upskill-cli` (v0.2.0, rewritten against the real CLI
-surface). None have yet been through their own RED-GREEN-REFACTOR cycle. Each
-carries an "Honest caveats" section flagging this.
+`picking-the-layer`) and `upskill-managing-content` (v0.2.0, rewritten against
+the real CLI surface). None have yet been through their own RED-GREEN-REFACTOR
+cycle. Each carries an "Honest caveats" section flagging this.
 
 ## Not yet present
 
@@ -53,8 +53,8 @@ full stack:
 
 - **superpowers** — engineering discipline (TDD, debugging, brainstorming,
   plans, code review, worktrees).
-- **prompt-engineering** (this bundle) — authoring discipline for durable agent
-  content (rules, skills, agents).
+- **upskill** (this bundle) — authoring discipline for durable agent content
+  (rules, skills, agents).
 
 ### 1. Install superpowers
 
@@ -71,21 +71,21 @@ client. Pick the one matching your setup:
 
 If you use more than one harness, install superpowers separately for each.
 
-### 2. Install upskill's prompt-engineering bundle
+### 2. Install upskill bundle
 
 `upskill add` resolves a bundle when the `source` argument points at the
 `.bundle.yaml` file directly. From the upskill repo root (treating this
 directory as a local source registry):
 
 ```bash
-upskill add ./skills/prompt-engineering.bundle.yaml
+upskill add ./skills/upskill.bundle.yaml
 ```
 
 Or, once published, from the canonical source (using the `:subfolder` syntax to
 point at the bundle file inside the repo):
 
 ```bash
-upskill add driftsys/skills:skills/prompt-engineering.bundle.yaml
+upskill add driftsys/skills:skills/upskill.bundle.yaml
 ```
 
 To install one item without the rest of the bundle, point at the registry
@@ -95,7 +95,7 @@ directory and pass the item name as a filter:
 upskill add ./skills upskill-prompt-design   # just the umbrella skill
 ```
 
-See `upskill-cli/SKILL.md` for the full lifecycle.
+See `upskill-managing-content/SKILL.md` for the full lifecycle.
 
 ## Recommended adoption sequence
 
