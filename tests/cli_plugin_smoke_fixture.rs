@@ -113,7 +113,8 @@ fn pack_catalog_writes_both_plugins_and_both_marketplace_files() {
     assert!(claude.join(".mcp.json").is_file() && copilot.join(".mcp.json").is_file());
     assert!(claude.join("hooks/hooks.json").is_file() && copilot.join("hooks.json").is_file());
 
-    // The marker words that the T5 fixture table names.
+    // The marker words that the T5 fixture table names, except the MCP marker,
+    // which the MCP test pins.
     for (file, word) in [
         ("agents/smoke-agent.md", "cobalt-heron-3306"),
         ("skills/smoke-skill/SKILL.md", "amber-otter-1957"),
@@ -123,10 +124,18 @@ fn pack_catalog_writes_both_plugins_and_both_marketplace_files() {
         let text = fs::read_to_string(claude.join(file)).unwrap();
         assert!(text.contains(word), "{file} lacks {word}");
     }
-    let copilot_agent = fs::read_to_string(copilot.join("agents/smoke-agent.agent.md")).unwrap();
-    assert!(copilot_agent.contains("cobalt-heron-3306"));
-    let context = fs::read_to_string(copilot.join("hooks/context/session-start.json")).unwrap();
-    assert!(context.contains("jade-lynx-7742"));
+    for (file, word) in [
+        ("agents/smoke-agent.agent.md", "cobalt-heron-3306"),
+        ("skills/smoke-skill/SKILL.md", "amber-otter-1957"),
+        ("skills/smoke-command/SKILL.md", "onyx-wren-5913"),
+        ("hooks/context/session-start.json", "jade-lynx-7742"),
+    ] {
+        let text = fs::read_to_string(copilot.join(file)).unwrap();
+        assert!(text.contains(word), "copilot {file} lacks {word}");
+    }
+    // The rule is not packed; `init` installs it from the registry.
+    let rule = fs::read_to_string(registry.join("items/smoke-rule/RULE.md")).unwrap();
+    assert!(rule.contains("ruby-falcon-4821"));
     for client in [&claude, &copilot] {
         let command = fs::read_to_string(client.join("skills/smoke-command/SKILL.md")).unwrap();
         assert!(command.contains("disable-model-invocation: true"));
@@ -175,6 +184,93 @@ fn pack_catalog_writes_both_plugins_and_both_marketplace_files() {
             "{command}"
         );
     }
+
+    // Every smoke script runs on its own event, in both clients, with the
+    // `UPSKILL_CLIENT=` prefix; no PostToolUse entry lacks a matcher.
+    let claude_commands = hook_commands(&claude_hooks["hooks"], |group| {
+        group["hooks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|h| h["command"].as_str().unwrap().to_string())
+            .collect()
+    });
+    let copilot_commands = hook_commands(&copilot_hooks["hooks"], |entry| {
+        vec![entry["bash"].as_str().unwrap().to_string()]
+    });
+    for (commands, client, prefix) in [
+        (&claude_commands, "claude", "UPSKILL_CLIENT=claude "),
+        (&copilot_commands, "copilot", "UPSKILL_CLIENT=copilot "),
+    ] {
+        let (session, prompt, post) = if client == "claude" {
+            ("SessionStart", "UserPromptSubmit", "PostToolUse")
+        } else {
+            ("sessionStart", "userPromptSubmitted", "postToolUse")
+        };
+        for (script, event) in [
+            ("smoke-counter/counter.sh", session),
+            ("smoke-hook/marker.sh", prompt),
+            ("smoke-match-bash/match-bash.sh", post),
+            ("smoke-match-edit/match-edit.sh", post),
+        ] {
+            let found: Vec<&(String, String)> = commands
+                .iter()
+                .filter(|(_, c)| c.contains(script))
+                .collect();
+            assert_eq!(
+                found.len(),
+                1,
+                "{client}: {script} is wired {} times",
+                found.len()
+            );
+            assert_eq!(
+                found[0].0, event,
+                "{client}: {script} is on the wrong event"
+            );
+            assert!(found[0].1.starts_with(prefix), "{client}: {}", found[0].1);
+        }
+        assert!(
+            commands.iter().any(|(e, c)| e == session
+                && c.contains("cat")
+                && c.contains("hooks/context/session-start.json")),
+            "{client}: no context entry on the session start"
+        );
+    }
+    // The context entry of Claude Code keeps its matcher; the counter has none.
+    let session_groups = claude_hooks["hooks"]["SessionStart"].as_array().unwrap();
+    let context_group = session_groups
+        .iter()
+        .find(|g| {
+            g["hooks"][0]["command"]
+                .as_str()
+                .unwrap()
+                .contains("context/session-start.json")
+        })
+        .unwrap();
+    assert_eq!(context_group["matcher"], "startup|clear|compact");
+    for group in claude_hooks["hooks"]["PostToolUse"].as_array().unwrap() {
+        assert!(group["matcher"].is_string(), "unmatched PostToolUse group");
+    }
+    for entry in copilot_hooks["hooks"]["postToolUse"].as_array().unwrap() {
+        assert!(entry["matcher"].is_string(), "unmatched postToolUse entry");
+    }
+}
+
+/// Flattens a hooks object into `(event, command)` pairs. `commands_of` reads
+/// the commands of one group or entry.
+fn hook_commands(
+    hooks: &serde_json::Value,
+    commands_of: impl Fn(&serde_json::Value) -> Vec<String>,
+) -> Vec<(String, String)> {
+    let mut all = Vec::new();
+    for (event, groups) in hooks.as_object().unwrap() {
+        for group in groups.as_array().unwrap() {
+            for command in commands_of(group) {
+                all.push((event.clone(), command));
+            }
+        }
+    }
+    all
 }
 
 fn read_json(path: &Path) -> serde_json::Value {
@@ -431,25 +527,59 @@ fn packed_hook_scripts_write_their_marker_files() {
     }
 }
 
-/// `YYYY-MM-DDTHH:MM:SSZ`.
-fn is_utc_time(text: &str) -> bool {
+/// Seconds since the Unix epoch of `YYYY-MM-DDTHH:MM:SSZ`, or `None` when the
+/// text has another shape.
+fn utc_epoch(text: &str) -> Option<i64> {
     let bytes = text.as_bytes();
-    bytes.len() == 20
+    let shaped = bytes.len() == 20
         && bytes.iter().enumerate().all(|(i, b)| match i {
             4 | 7 => *b == b'-',
             10 => *b == b'T',
             13 | 16 => *b == b':',
             19 => *b == b'Z',
             _ => b.is_ascii_digit(),
-        })
+        });
+    if !shaped {
+        return None;
+    }
+    let n = |range: std::ops::Range<usize>| text[range].parse::<i64>().unwrap();
+    let (y, m, d) = (n(0..4), n(5..7), n(8..10));
+    // Days since 1970-01-01 (proleptic Gregorian calendar).
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    Some(days * 86_400 + n(11..13) * 3600 + n(14..16) * 60 + n(17..19))
+}
+
+/// True when `text` has the UTC time format and names a time within five
+/// minutes of now, so a local time with a `Z` suffix fails on a host outside
+/// UTC.
+fn is_utc_time(text: &str) -> bool {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    utc_epoch(text).is_some_and(|t| (now - t).abs() <= 300)
 }
 
 #[test]
 fn the_time_check_accepts_the_format_and_rejects_others() {
-    assert!(is_utc_time("2026-11-26T07:14:38Z"));
-    assert!(!is_utc_time("2026-11-26 07:14:38Z"));
-    assert!(!is_utc_time("2026-11-26T07:14:38"));
-    assert!(!is_utc_time(""));
+    assert_eq!(utc_epoch("1970-01-02T00:00:01Z"), Some(86_401));
+    assert_eq!(utc_epoch("2026-11-26T07:14:38Z"), Some(1_795_677_278));
+    assert!(utc_epoch("2026-11-26 07:14:38Z").is_none());
+    assert!(utc_epoch("2026-11-26T07:14:38").is_none());
+    assert!(utc_epoch("").is_none());
+    assert!(
+        !is_utc_time("2026-11-26T07:14:38Z"),
+        "an old time is rejected"
+    );
+    assert!(
+        !is_utc_time("2999-01-01T00:00:00Z"),
+        "a future time is rejected"
+    );
 }
 
 /// A response with an explicit `"result": null` and no `error`. Indexing a

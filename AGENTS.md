@@ -297,7 +297,8 @@ the way you would for any manual `git clone`.
     `tests/fixtures/`.
   - **Parsing:** `parse_bundles`.
   - **Plugins:** `plugins_notice_hook` (the `upskill` hook plugins in
-    `plugins/`).
+    `plugins/`), `plugins_setup_hook` (the `upskill-setup` session-start hook
+    script).
   - **Harness:** `tests/common/mod.rs` (`upskill_cmd`) and
     `cli_test_harness_guard` (enforces the fake-`$HOME` convention).
   - When adding behavior, prefer extending the matching file or creating a new
