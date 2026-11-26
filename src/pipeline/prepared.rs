@@ -603,9 +603,12 @@ impl PreparedInstall {
             .collect()
     }
 
-    /// Sets the fetched commit on the lockfile entries in `selected` (the
+    /// Sets a fetched commit on the lockfile entries in `selected` (the
     /// `(kind, installed name)` of each entry that the run selected and
-    /// whose update is not withheld), refreshes `required_by` of every entry
+    /// whose update is not withheld): an entry of this source gets the
+    /// commit of this source, and an entry of another source (a dependency
+    /// entry that joined the group, #648) gets the commit of its own source,
+    /// or none when this install did not fetch that source with a commit. It refreshes `required_by` of every entry
     /// with [`refresh_required_by`], and saves the lockfile only when a
     /// value differs. An entry that is not in `selected` keeps its recorded
     /// commit. A source without a commit (a local path) sets no commit.

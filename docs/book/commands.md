@@ -657,8 +657,9 @@ that you named records none: it is a root. A full `update` resolves the root
 bundles again and reaches their dependency bundles through `requires:`, also
 across sources, so the items of a dependency are refreshed in the block of the
 source that resolves them. When a bundle stops requiring a dependency bundle,
-`update` drops the record of that dependency once every bundle that required it
-was applied, and removes each of its items that no remaining bundle provides
+`update` drops the record of that dependency once every one of its root sources
+was applied (the sources of the bundles that you named and that reach it), and
+removes each of its items that no remaining bundle provides
 (`removed — no longer in source`). An item that another bundle still provides is
 kept, and an item outside the kind restriction is kept unchanged. An item that
 you also installed directly is removed with the dependency, because the lockfile

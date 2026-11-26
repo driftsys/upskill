@@ -1310,8 +1310,10 @@ fn repair_missing_plugins(
 ///
 /// After the decision, a git source without changes
 /// ([`SourcePreview::has_changes`] is false) that is not applied, in a run
-/// that is not a dry run and not stopped, gets the fetched commit in the
-/// lockfile entries that the run selected (`names`, or every entry when
+/// that is not a dry run and not stopped, gets a fetched commit in the
+/// lockfile entries that the run selected (the commit of the source, or for
+/// an entry of another source that joined the group the commit of its own
+/// source, or none) (`names`, or every entry when
 /// `names` is empty; `PreparedInstall::record_commit`) except the entry of an
 /// item whose update is withheld (a [`PreviewAction::Skip`] item), which keeps
 /// its recorded commit. An entry of the source that `names` did not select
@@ -2398,14 +2400,6 @@ fn collect_recorded_local_items(
     )
 }
 
-/// Guard against the data-loss footgun in issue #196: when re-resolving a
-/// source yields **no** items but the lockfile still records entries for
-/// it, treat that as a fetch/resolution anomaly and abort rather than
-/// scheduling every entry for removal. A source whose items were all
-/// genuinely deleted upstream is indistinguishable from a transient
-/// failure here, so erring toward "do not delete" is the safe default —
-/// the user can `upskill remove --source <label>` to clear such entries
-/// deliberately.
 /// Brings the records of the dependency bundles of `dependency_roots` up to
 /// date after an applied source whose resolution reached the bundles of
 /// `requirers` (each with the requirers that this resolution found): a
@@ -2458,6 +2452,14 @@ fn update_dependency_records(
     Ok(())
 }
 
+/// Guard against the data-loss footgun in issue #196: when re-resolving a
+/// source yields **no** items but the lockfile still records entries for
+/// it, treat that as a fetch/resolution anomaly and abort rather than
+/// scheduling every entry for removal. A source whose items were all
+/// genuinely deleted upstream is indistinguishable from a transient
+/// failure here, so erring toward "do not delete" is the safe default —
+/// the user can `upskill remove --source <label>` to clear such entries
+/// deliberately.
 fn guard_against_empty_source(
     new_hashes: &std::collections::BTreeMap<(ItemKind, String), Option<String>>,
     source_entries: &[crate::lockfile::LockedItem],
