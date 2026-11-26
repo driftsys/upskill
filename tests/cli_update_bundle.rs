@@ -1626,11 +1626,10 @@ fn bare_update_keeps_the_clients_of_a_dependency_item() {
     assert!(copilot_output.exists());
 }
 
-#[test]
-fn update_keeps_an_item_of_two_dependency_bundles_while_a_root_source_is_skipped() {
-    // `dep1` (required by `first`) and `dep2` (required by `second`) both
-    // list `shared`. `first` drops `dep1` while the source of `second` is
-    // unreachable: `shared` belongs to the skipped installation too.
+/// `dropped` (required by `first`) and `kept` (required by `second`, whose
+/// source is unreachable at update time) both list `shared`. `first` drops
+/// `dropped`: `shared` belongs to the skipped installation too.
+fn assert_item_of_two_dependency_bundles_is_kept(dropped: &str, kept: &str) {
     let consumer = tempfile::tempdir().unwrap();
     let first = tempfile::tempdir().unwrap();
     let parent = tempfile::tempdir().unwrap();
@@ -1639,11 +1638,11 @@ fn update_keeps_an_item_of_two_dependency_bundles_while_a_root_source_is_skipped
     write_skill(first.path(), "own1");
     write_skill(&second, "own2");
     write_skill(dep.path(), "shared");
-    write_skill_bundle(dep.path(), "dep1", &["shared"]);
-    write_skill_bundle(dep.path(), "dep2", &["shared"]);
+    write_skill_bundle(dep.path(), dropped, &["shared"]);
+    write_skill_bundle(dep.path(), kept, &["shared"]);
     let requires = |name: &str| format!("{{ name: {name}, source: '{}' }}", dep.path().display());
-    write_root_bundle(first.path(), "first", "own1", &[requires("dep1")]);
-    write_root_bundle(&second, "second", "own2", &[requires("dep2")]);
+    write_root_bundle(first.path(), "first", "own1", &[requires(dropped)]);
+    write_root_bundle(&second, "second", "own2", &[requires(kept)]);
     add_bundle_named(consumer.path(), first.path(), "first");
     add_bundle_named(consumer.path(), &second, "second");
 
@@ -1665,6 +1664,24 @@ fn update_keeps_an_item_of_two_dependency_bundles_while_a_root_source_is_skipped
         "{out}"
     );
     assert!(recorded_items(consumer.path()).contains(&"shared".to_string()));
+    // The root source of `kept` was not applied: its record stays.
+    let bundles = recorded_bundles(consumer.path());
+    assert!(bundles.contains(&kept.to_string()), "{bundles:?}");
+    assert!(!bundles.contains(&dropped.to_string()), "{bundles:?}");
+    assert_eq!(
+        bundle_required_by(consumer.path(), kept),
+        serde_json::json!(["bundle:second"])
+    );
+}
+
+#[test]
+fn update_keeps_an_item_of_two_dependency_bundles_while_a_root_source_is_skipped() {
+    assert_item_of_two_dependency_bundles_is_kept("dep1", "dep2");
+}
+
+#[test]
+fn update_keeps_an_item_of_two_dependency_bundles_when_the_dropped_one_sorts_last() {
+    assert_item_of_two_dependency_bundles_is_kept("dep2", "dep1");
 }
 
 #[test]
@@ -1763,6 +1780,11 @@ fn update_keeps_an_out_of_kind_item_of_a_dropped_dependency() {
 
     // The skill is outside the recorded kind restriction: it is kept.
     assert!(removed_line(&out, "dep-rule"), "{out}");
+    assert!(
+        out.lines()
+            .any(|l| l.contains("dep-skill") && l.contains("up to date")),
+        "{out}"
+    );
     assert!(!removed_line(&out, "dep-skill"), "{out}");
     assert!(
         consumer
@@ -1889,4 +1911,128 @@ fn update_lets_a_bundle_without_items_drop_its_requires() {
     assert!(removed_line(&out, "dep-only"), "{out}");
     assert!(!consumer.path().join(".claude/skills/dep-only").exists());
     assert_eq!(recorded_bundles(consumer.path()), vec!["top"]);
+}
+
+#[test]
+fn update_keeps_the_requirer_of_a_dependency_while_another_root_source_is_skipped() {
+    // `first` and `second` require `mid`, which requires `dep`. `mid` drops
+    // `dep` while the source of `second` is unreachable: the run evaluated
+    // `mid` but cannot drop `dep`, so `dep` keeps its recorded requirer.
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let parent = tempfile::tempdir().unwrap();
+    let second = parent.path().join("second");
+    write_skill(registry.path(), "own1");
+    write_skill(registry.path(), "mid-skill");
+    write_skill(registry.path(), "dep-only");
+    write_skill(&second, "own2");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    let mid = |requires: &str| {
+        write(
+            &registry.path().join("mid.bundle.yaml"),
+            &format!(
+                "schema: 1\nname: mid\ndescription: Middle bundle.\nitems:\n  skills: [mid-skill]\n{requires}"
+            ),
+        )
+    };
+    mid("requires: [{ name: dep }]\n");
+    write_root_bundle(
+        registry.path(),
+        "first",
+        "own1",
+        &["{ name: mid }".to_string()],
+    );
+    write_root_bundle(
+        &second,
+        "second",
+        "own2",
+        &[format!(
+            "{{ name: mid, source: '{}' }}",
+            registry.path().display()
+        )],
+    );
+    add_bundle_named(consumer.path(), registry.path(), "first");
+    add_bundle_named(consumer.path(), &second, "second");
+    assert_eq!(
+        bundle_required_by(consumer.path(), "dep"),
+        serde_json::json!(["bundle:mid"])
+    );
+
+    mid("");
+    fs::remove_dir_all(&second).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .code(1);
+
+    assert!(recorded_bundles(consumer.path()).contains(&"dep".to_string()));
+    assert_eq!(
+        bundle_required_by(consumer.path(), "dep"),
+        serde_json::json!(["bundle:mid"])
+    );
+}
+
+#[test]
+fn a_bundle_file_source_records_the_requirer_of_its_dependency() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    write_top_bundle(registry.path(), &["{ name: dep }".to_string()]);
+    add_bundle(consumer.path(), &registry.path().join("top.bundle.yaml"));
+    assert_eq!(
+        bundle_required_by(consumer.path(), "dep"),
+        serde_json::json!(["bundle:top"])
+    );
+}
+
+#[test]
+fn update_keeps_a_dependency_recorded_before_required_by_existed() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    write_top_bundle(registry.path(), &["{ name: dep }".to_string()]);
+    add_top(consumer.path(), registry.path());
+    // A lockfile written before `required_by` existed.
+    let path = consumer.path().join(".upskill-lock.json");
+    let mut lock = read_update_lock(consumer.path());
+    for bundle in lock["bundles"].as_array_mut().unwrap() {
+        bundle.as_object_mut().unwrap().remove("required_by");
+    }
+    fs::write(&path, serde_json::to_string_pretty(&lock).unwrap()).unwrap();
+
+    write_top_bundle(registry.path(), &[]);
+    let out = update_output(consumer.path());
+
+    assert!(!removed_line(&out, "dep-only"), "{out}");
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-only/SKILL.md")
+            .exists()
+    );
+    assert_eq!(recorded_bundles(consumer.path()), vec!["dep", "top"]);
+}
+
+#[test]
+fn update_removes_a_directly_installed_item_with_its_dropped_dependency() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    write_top_bundle(registry.path(), &["{ name: dep }".to_string()]);
+    add_with(consumer.path(), registry.path(), &["dep-only"]);
+    add_top(consumer.path(), registry.path());
+
+    write_top_bundle(registry.path(), &[]);
+    let out = update_output(consumer.path());
+
+    // The lockfile records no marker for a direct install.
+    assert!(removed_line(&out, "dep-only"), "{out}");
+    assert!(!consumer.path().join(".claude/skills/dep-only").exists());
 }
