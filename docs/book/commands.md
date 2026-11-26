@@ -649,11 +649,13 @@ an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
 reinstalled as a whole. Each reinstalled entry gets the commit of its own
 source, unless its update is skipped, and any other entry keeps its commit. If a
 recorded root bundle is missing from the source, update drops its record, even
-if an item has that name, and removes its items as `no longer in source`, unless
-the run installs them another way; its plugin and MCP records are kept. If none
-of the recorded items and bundles of a source remains in it (for example after
-the source renamed its only item), and the source still has items, update
-installs nothing from that source and removes its recorded items as
+if an item has that name. A member that the source still has as an item stays
+installed and is updated; a member that the source no longer has is removed as
+`no longer in source`. The plugin records of the bundle are removed, as `remove`
+does; its MCP records are kept, and `upskill remove-mcp <name>` removes an MCP
+server. If none of the recorded items and bundles of a source remains in it (for
+example after the source renamed its only item), and the source still has items,
+update installs nothing from that source and removes its recorded items as
 `no longer in source`. An unchanged file is deleted and a modified file is kept
 with a note, as for any removed item. A dependency bundle that a full update
 resolves through its roots is not looked up by name (see below). For a source

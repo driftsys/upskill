@@ -57,11 +57,11 @@ the name of a second program.
 ## Consequences
 
 - `upskill update` drops the record of a bundle that is no longer in the source
-  (here `prompt-engineering`) and removes its items as "no longer in source";
-  this was fixed by issue #649. For an install by item name, `update` removes
-  the old `upskill-cli` as "no longer in source" and keeps the other six old
-  skills beside the plugin's copies. A user with the old install must run
-  `upskill remove` on the six other old names.
+  (here `prompt-engineering`); this was fixed by issue #649. Its members that
+  the source still has stay installed as items, and the old `upskill-cli` is
+  removed as "no longer in source". The same holds for an install by item name.
+  The six old skills that remain stay beside the plugin's copies, so a user with
+  the old install must run `upskill remove` on those six names.
 - Publishing to `driftsys/metapowers` is a manual step of each release. A
   release can ship before the plugin is regenerated.
 - A tag exists a few minutes before its release binaries finish uploading, so

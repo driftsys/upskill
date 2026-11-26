@@ -479,19 +479,21 @@ item and a `kept modified file` note are not changes.
   such an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source
   is reinstalled as a whole. Recorded bundle names resolve only as bundles. A
   root bundle that the source no longer has is dropped from the lockfile, even
-  if an item has that name, and its items that the run does not install
-  otherwise are removed as `no longer in source`. Its plugin and MCP records are
-  kept, as for a dependency bundle that is dropped. When none of the recorded
-  items and bundles of a source remains in it, and the source still has items,
-  `update` installs nothing from it and removes the recorded items as
-  `no longer in source` (issue #649). A dependency bundle that the run resolves
-  through its roots is not looked up by name: when no root reaches it any more,
-  its record is dropped (§2.6). Each reinstalled entry gets the commit of its
-  own source (an entry from another source gets that source's commit), unless
-  its update is skipped, and any other entry keeps its recorded commit. The
-  lockfile is saved only when a value differs. This write is not a change of the
-  source (see the preview above) and does not count in the output. A dry run, a
-  declined source and a stopped run record no commit.
+  if an item has that name. Each of its members that the source still has as an
+  item stays installed and is updated as an item; each member that the source no
+  longer has is removed as `no longer in source`. The plugin records of the
+  dropped bundle are removed, as `remove` removes them; its MCP records are
+  kept, as `remove` keeps them, because MCP removal is explicit (`remove-mcp`).
+  When none of the recorded items and bundles of a source remains in it, and the
+  source still has items, `update` installs nothing from it and removes the
+  recorded items as `no longer in source` (issue #649). A dependency bundle that
+  the run resolves through its roots is not looked up by name: when no root
+  reaches it any more, its record is dropped (§2.6). Each reinstalled entry gets
+  the commit of its own source (an entry from another source gets that source's
+  commit), unless its update is skipped, and any other entry keeps its recorded
+  commit. The lockfile is saved only when a value differs. This write is not a
+  change of the source (see the preview above) and does not count in the output.
+  A dry run, a declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
