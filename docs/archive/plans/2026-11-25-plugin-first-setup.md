@@ -18,7 +18,7 @@ release step, not code.
 **Tech Stack:** Rust 2024 (MSRV 1.85), no new dependency; POSIX sh for the hook
 script and `install.sh`.
 
-**Spec:** `docs/wip/specs/2026-11-25-plugin-first-setup-design.md`
+**Spec:** `docs/archive/specs/2026-11-25-plugin-first-setup-design.md`
 
 ## Global Constraints
 

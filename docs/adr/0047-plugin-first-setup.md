@@ -2,7 +2,7 @@
 
 Status: **accepted**. Date: 2026-11-26. Amends
 [AD-0044](0044-plugin-output-of-a-bundle.md). The design is
-[the plugin-first setup design](../wip/specs/2026-11-25-plugin-first-setup-design.md).
+[the plugin-first setup design](../archive/specs/2026-11-25-plugin-first-setup-design.md).
 
 ## Context
 

@@ -1,10 +1,11 @@
 # Plugin-first setup design
 
-Date: 2026-11-25. Status: **draft, reviewed by a builder check; waiting for user
-approval**. Related records:
+Date: 2026-11-25. Status: **approved by the user on 2026-11-25; implemented on
+branch feat/plugin-first-setup**. Decision record:
+[AD-0047](../../adr/0047-plugin-first-setup.md). Related records:
 [AD-0044](../../adr/0044-plugin-output-of-a-bundle.md),
 [AD-0046](../../adr/0046-plugin-mvp-components.md),
-[plugin MVP design](2026-11-24-plugin-mvp-design.md).
+[plugin MVP design](../../wip/specs/2026-11-24-plugin-mvp-design.md).
 
 This document is a design. It does not describe released behaviour.
 
