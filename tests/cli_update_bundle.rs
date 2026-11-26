@@ -1021,6 +1021,121 @@ fn update_keeps_only_the_direct_kind_of_a_name_that_two_kinds_share() {
     assert!(!consumer.path().join(".claude/skills/shared").exists());
 }
 
+/// A direct item of a source whose bundle `dep` is reached only through a
+/// root of another source: when the root stops requiring `dep`, the direct
+/// item stays.
+#[test]
+fn update_keeps_a_direct_item_of_a_dependency_only_source() {
+    let consumer = tempfile::tempdir().unwrap();
+    let roots = tempfile::tempdir().unwrap();
+    let dep_source = roots.path().join("dep-source");
+    let root_source = roots.path().join("root-source");
+    write_skill(&dep_source, "a");
+    write(
+        &dep_source.join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Leaf.\nitems:\n  skills: [a]\n",
+    );
+    write_skill(&root_source, "own");
+    let top = |requires: &str| {
+        format!("schema: 1\nname: top\ndescription: Root.\nitems:\n  skills: [own]\n{requires}")
+    };
+    write(
+        &root_source.join("top.bundle.yaml"),
+        &top(&format!(
+            "requires:\n  - {{ name: dep, source: {} }}\n",
+            dep_source.display()
+        )),
+    );
+    add_direct(consumer.path(), &dep_source, "a");
+    add_direct(consumer.path(), &root_source, "top");
+    write(&root_source.join("top.bundle.yaml"), &top(""));
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+    assert!(consumer.path().join(".claude/skills/own/SKILL.md").exists());
+}
+
+/// A hidden direct item sends the run through the name resolution; the
+/// recorded kind of the shared name still holds there.
+#[test]
+fn update_keeps_the_direct_kind_of_a_shared_name_beside_a_hidden_direct_item() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "shared");
+    write_skill(registry.path(), ".x");
+    write(
+        &registry.path().join("shared/RULE.md"),
+        "---\nname: shared\ndescription: A rule.\n---\nBody.\n",
+    );
+    write(
+        &registry.path().join("both.bundle.yaml"),
+        "schema: 1\nname: both\ndescription: Both kinds.\nitems:\n  rules: [shared]\n  skills: [shared]\n",
+    );
+    add_direct(consumer.path(), registry.path(), "both");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "shared",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    add_direct(consumer.path(), registry.path(), ".x");
+    fs::remove_file(registry.path().join("both.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/rules/shared.md").exists());
+    assert!(!consumer.path().join(".claude/skills/shared").exists());
+    assert!(consumer.path().join(".claude/skills/.x/SKILL.md").exists());
+}
+
+/// A stale `required_by` (its requirer was removed) does not explain a
+/// member: `update a` keeps the vanished record while `b` stays.
+#[test]
+fn update_keeps_the_record_of_a_vanished_bundle_when_a_member_has_only_a_stale_requirer() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    for name in ["a", "b"] {
+        write_skill(registry.path(), name);
+    }
+    write(
+        &registry.path().join("c/SKILL.md"),
+        "---\nschema: 1\nname: c\ndescription: Requires b.\nrequires:\n  skills: [b]\n---\nBody.\n",
+    );
+    write(
+        &registry.path().join("bun.bundle.yaml"),
+        "schema: 1\nname: bun\ndescription: Two skills.\nitems:\n  skills: [a, b]\n",
+    );
+    add_direct(consumer.path(), registry.path(), "bun");
+    add_direct(consumer.path(), registry.path(), "c");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["remove", "c", "--project"])
+        .assert()
+        .success();
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "a", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(consumer.path().join(".claude/skills/b/SKILL.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert_eq!(lock["bundles"].as_array().unwrap().len(), 1, "{lock}");
+}
+
 /// True when the process cannot create a file in the read-only `dir`, that
 /// is, when permissions are enforced (not the case for root).
 #[cfg(unix)]

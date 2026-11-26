@@ -551,13 +551,25 @@ pub(super) fn prepare_install(
             options.scope,
         )?
     } else {
-        install_with_name_resolution_from_local(
+        let mut resolved = install_with_name_resolution_from_local(
             &local_source,
             items,
             &options.selection,
             &entry_names,
             options.scope,
-        )?
+        )?;
+        // The name resolution installs every kind of a name. For a name that
+        // only the recovery of `update` requests, keep the recorded kinds.
+        if options.allow_vanished {
+            let restricted = |kind: ItemKind, name: &str| {
+                !original_names.contains(name)
+                    && recovered.iter().any(|(_, n)| n == name)
+                    && !recovered.contains(&(kind, name.to_string()))
+            };
+            resolved.items.retain(|i| !restricted(i.kind, &i.name));
+            resolved.planned.retain(|p| !restricted(p.kind, &p.name));
+        }
+        resolved
     };
 
     // `update` accepts an empty plan: the recorded items that the source no
@@ -943,9 +955,10 @@ impl PreparedInstall {
             let added_here = !self.options.allow_vanished
                 && item.source == self.label
                 && (named || whole_directory_source);
-            // The lockfile keys an item by `(kind, name)`; the recorded source
-            // can still have a legacy spelling that `update` rewrites, so the
-            // source is not compared.
+            // The lockfile holds one entry per `(kind, name)`, so the source
+            // does not tell entries apart. It is not compared: the source of
+            // an entry written under a legacy label is rewritten by `update`
+            // to the canonical label, which differs from the planned one.
             let recorded = lock
                 .items
                 .iter()

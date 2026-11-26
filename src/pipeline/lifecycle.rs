@@ -1566,6 +1566,12 @@ pub fn update(
     )> = Vec::new();
     for (label, group) in &mut by_source {
         let (moved, kept): (Vec<_>, Vec<_>) = std::mem::take(group).into_iter().partition(|e| {
+            // A direct entry is an independent request: it stays in its group,
+            // so that its source is prepared even when the group would be
+            // empty otherwise.
+            if e.direct {
+                return false;
+            }
             let name = e.source_name.as_ref().unwrap_or(&e.name);
             let lists =
                 |b: &&crate::lockfile::LockedBundle| b.source == *label && b.items.contains(name);
@@ -2362,6 +2368,11 @@ pub fn update(
             // The record of a vanished bundle is dropped. Its direct members
             // stay installed; the other members were removed above, unless
             // another bundle or an installed item keeps them.
+            // In a full `update` every member is reconciled here: a member
+            // that nothing explains is an orphan and was removed above, and a
+            // failed removal returns before this point. Only `update <name>`
+            // can leave a member that nothing explains, so only it keeps a
+            // vanished record.
             let dropped = drop_vanished_bundles(at, &source_label, &vanished)?;
             report.vanished_bundles.extend(
                 dropped
@@ -2669,8 +2680,15 @@ fn droppable_vanished(
                 {
                     return true;
                 }
+                // An installed requirer item explains the member; a stale
+                // requirer (no longer installed) and a bundle requirer do not.
                 i.direct
-                    || !i.required_by.is_empty()
+                    || i.required_by.iter().any(|requirer| {
+                        lock.items.iter().any(|o| {
+                            format!("{}:{}", o.kind, o.name) == *requirer
+                                && !removed.contains(&(o.kind, o.name.clone()))
+                        })
+                    })
                     || lock.bundles.iter().any(|b| {
                         b.source == source && !names.contains(&b.name) && b.items.contains(member)
                     })
