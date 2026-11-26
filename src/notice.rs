@@ -250,9 +250,10 @@ pub fn refresh_release(cache: &mut NoticeCache, now: u64) {
         return;
     }
     let deadline = std::time::Instant::now() + TIME_LIMIT;
-    if let Ok(tags) = crate::fetch::ls_remote_tags(RELEASE_URL, deadline)
-        && let Some(latest) = latest_tag(&tags)
-    {
+    let latest = crate::fetch::ls_remote_tags(RELEASE_URL, deadline)
+        .ok()
+        .and_then(|tags| latest_tag(&tags));
+    if let Some(latest) = latest {
         record_release(cache, latest, now);
     }
 }
