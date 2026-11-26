@@ -295,7 +295,7 @@ This skill has not yet been put through its own RED-GREEN-REFACTOR cycle. The
 most natural way to evaluate it is to use it to evaluate the existing
 meta-skills (`upskill-writing-rules`, `upskill-writing-subagents`,
 `upskill-managing-content`) — if the methodology produces actionable results
-when applied to those four, this skill earns its slot. If authors end up
+when applied to those three, this skill earns its slot. If authors end up
 evaluating prompts the same way regardless of whether this skill is present, the
 skill itself is unjustified.
 
