@@ -976,26 +976,28 @@ behaviour:
   that its resolution evaluated and that no longer reaches a dependency bundle
   leaves the `required_by` of that bundle, and a dependency bundle that no
   resolution of the run reaches is dropped from the lockfile once every one of
-  its root sources is applied. Each of its items that no resolution provides is
-  removed, reported as `removed — no longer in source`; an item that another
-  root still reaches is kept. The lockfile records no marker for an item that
-  was installed directly: an item that is also a member of a dropped dependency
-  bundle is removed with it, and `upskill add <source> <item>` installs it
-  again. An item outside the kind restriction of the source that resolves it is
-  kept unchanged. When a root source is skipped, the items of its dependency
-  bundles are kept and reported as skipped, unless another resolution of the run
-  provides them. A root bundle that lists no item can drop its `requires:`; its
-  former dependency items are then removed. A root source resolves with the
-  kinds of its root bundles when each of them has recorded kinds, together with
-  the kinds of the dependency bundles that they reach (the union of the recorded
-  kinds of the roots of each dependency bundle); a dependency bundle without
-  kinds adds none. A lockfile written before `required_by` existed records every
-  bundle as a root, so `update` keeps a dependency that its root no longer
-  requires. To drop such a dependency once, run `upskill remove <item>...` with
-  the items of the dependency bundle: removing an item also drops each bundle
-  record that lists it. There is no `remove <bundle-name>` form. Removing and
-  adding the root bundle again does not repair the record, because a bundle
-  recorded without `required_by` keeps none.
+  its root sources is applied. Its plugin entries are dropped with it, as
+  `remove` drops them; its MCP entries are kept. Each of its items that no
+  resolution provides is removed, reported as `removed — no longer in source`;
+  an item that another root still reaches is kept. The lockfile records no
+  marker for an item that was installed directly: an item that is also a member
+  of a dropped dependency bundle is removed with it, and
+  `upskill add <source> <item>` installs it again. An item outside the kind
+  restriction of the source that resolves it is kept unchanged. When a root
+  source is skipped, the items of its dependency bundles are kept and reported
+  as skipped, unless another resolution of the run provides them. A root bundle
+  that lists no item can drop its `requires:`; its former dependency items are
+  then removed. A root source resolves with the kinds of its root bundles when
+  each of them has recorded kinds, together with the kinds of the dependency
+  bundles that they reach (the union of the recorded kinds of the roots of each
+  dependency bundle); a dependency bundle without kinds adds none. A lockfile
+  written before `required_by` existed records every bundle as a root, so
+  `update` keeps a dependency that its root no longer requires. To drop such a
+  dependency once, run `upskill remove <item>...` with the items of the
+  dependency bundle: removing an item also drops each bundle record that lists
+  it. There is no `remove <bundle-name>` form. Removing and adding the root
+  bundle again does not repair the record, because a bundle recorded without
+  `required_by` keeps none.
 - **Removal.** `upskill remove --source <label>` removes every item that came
   from that source, including those introduced via bundles. A
   bundle-name-targeted removal (`remove <bundle-name>` removing only items
