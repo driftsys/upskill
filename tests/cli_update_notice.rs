@@ -400,7 +400,10 @@ fn notice_prints_nothing_when_a_lockfile_cannot_be_read() {
     assert_eq!(out.status.code(), Some(0));
     assert_eq!(stdout(&out), "");
     assert_eq!(stderr(&out), "");
-    assert!(!cache_path(&e).exists());
+    // The release check can record its attempt; no scope entry is written.
+    let cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap_or_default()).unwrap_or_default();
+    assert!(cache["scopes"].as_object().is_none_or(|m| m.is_empty()));
 }
 
 /// Both scopes have a recorded, unreported set. Returns the environment.
@@ -1330,8 +1333,25 @@ fn notice_with_repeat_releases_the_lock_when_a_due_lockfile_cannot_be_parsed() {
     assert_eq!(out.status.code(), Some(0));
     assert_eq!(stdout(&out), "");
     assert_eq!(stderr(&out), "");
-    assert!(!cache_path(&e).exists());
     assert!(!cache_path(&e).with_file_name("notice.lock").exists());
+}
+
+#[test]
+fn release_line_prints_when_a_due_lockfile_cannot_be_parsed() {
+    let e = env();
+    run(&e, &e.repo, &["add", REMOTE, "--claude"]);
+    fs::write(e.repo.join(".upskill-lock.json"), "not json {").unwrap();
+    let repo = release_repo(&e, &["v99.0.0"]);
+    let mut cmd = notice_cmd(&e, &repo, &[]);
+    let out = cmd.current_dir(&e.repo).output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), release_line("99.0.0"));
+    assert_eq!(stderr(&out), "");
+    let cache: serde_json::Value =
+        serde_json::from_slice(&fs::read(cache_path(&e)).unwrap()).unwrap();
+    assert_ne!(cache["release"]["checked_at"].as_u64(), Some(0));
+    assert_eq!(cache["release"]["reported"], "99.0.0");
+    assert!(cache["scopes"].as_object().is_none_or(|m| m.is_empty()));
 }
 
 #[cfg(unix)]
