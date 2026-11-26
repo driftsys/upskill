@@ -1456,6 +1456,9 @@ pub fn update(
         // adoption and before any source is applied, except a fetch failure,
         // which skips the source.
         let mut prepared_sources = Vec::with_capacity(by_source.len());
+        // The kind restriction of each prepared source.
+        let mut source_kinds: std::collections::BTreeMap<String, Vec<ItemKind>> =
+            std::collections::BTreeMap::new();
         for (source_label, source_entries) in by_source {
             // An interrupt stops the prepare phase at once: no further
             // source is fetched.
@@ -1511,28 +1514,37 @@ pub fn update(
                 .iter()
                 .filter(|bundle| bundle.source == source_label)
                 .collect();
-            // The kinds of the dependency bundles that this source's roots
-            // reach count with the kinds of its own bundles.
-            let kind_bundles: Vec<_> = lock
-                .bundles
+            // The kinds of the source come from its root bundles: a kind
+            // restriction applies only when each of them has recorded kinds.
+            // The recorded kinds of a dependency bundle that these roots reach
+            // are added; a dependency without recorded kinds adds none, so it
+            // does not lift the restriction of its roots.
+            let root_bundles: Vec<_> = recorded_bundles
                 .iter()
-                .filter(|bundle| {
-                    bundle.source == source_label
-                        || dependency_roots
-                            .get(&bundle.name)
-                            .is_some_and(|roots| roots.contains(&source_label))
-                })
+                .filter(|bundle| !dependency_roots.contains_key(&bundle.name))
                 .collect();
-            let kinds = if kind_bundles.iter().all(|bundle| !bundle.kinds.is_empty()) {
-                kind_bundles
+            let kinds: Vec<ItemKind> = if root_bundles.iter().all(|bundle| !bundle.kinds.is_empty())
+            {
+                root_bundles
                     .iter()
                     .flat_map(|bundle| bundle.kinds.iter().copied())
+                    .chain(
+                        lock.bundles
+                            .iter()
+                            .filter(|bundle| {
+                                dependency_roots
+                                    .get(&bundle.name)
+                                    .is_some_and(|roots| roots.contains(&source_label))
+                            })
+                            .flat_map(|bundle| bundle.kinds.iter().copied()),
+                    )
                     .collect::<std::collections::BTreeSet<_>>()
                     .into_iter()
                     .collect()
             } else {
                 Vec::new()
             };
+            source_kinds.insert(source_label.clone(), kinds.clone());
             let mut options = AddOptions {
                 force: true,
                 overwrite,
@@ -1719,6 +1731,10 @@ pub fn update(
         // was prepared, it joins the group of its first root source, which
         // removes it. When a root source was skipped, the entry is kept and
         // reported with the skip of that source.
+        let dependency_keys: std::collections::BTreeSet<(ItemKind, String)> = dependency_entries
+            .iter()
+            .map(|(entry, _)| (entry.kind, entry.name.clone()))
+            .collect();
         for (entry, roots) in std::mem::take(&mut dependency_entries) {
             let key = (entry.kind, entry.name.clone());
             let provider = prepared_sources
@@ -1732,7 +1748,20 @@ pub fn update(
                 .position(|(label, _, _)| roots.contains(label));
             match (provider, all_roots_prepared, first_root) {
                 (Some(index), _, _) | (None, true, Some(index)) => {
-                    prepared_sources[index].1.push(entry);
+                    // An entry outside the kind restriction of the group is
+                    // kept unchanged, as an entry of the group is.
+                    let label = &prepared_sources[index].0;
+                    let kinds = source_kinds.get(label).map_or(&[][..], Vec::as_slice);
+                    if !kinds.is_empty() && !kinds.contains(&entry.kind) {
+                        report.items.push(UpdatedItem {
+                            kind: entry.kind,
+                            name: entry.name.clone(),
+                            source: entry.source.clone(),
+                            status: UpdateStatus::UpToDate,
+                        });
+                    } else {
+                        prepared_sources[index].1.push(entry);
+                    }
                 }
                 _ => {
                     let cause = report
@@ -1830,7 +1859,15 @@ pub fn update(
             prepared_sources.into_iter().enumerate()
         {
             let new_hashes = prepared.planned_hashes();
-            guard_against_empty_source(&new_hashes, &source_entries, &source_label)?;
+            // A dependency entry is not counted: a root bundle that resolves
+            // to no item, because it lists none and dropped its `requires`,
+            // removes the entries of its former dependencies.
+            let own_entries: Vec<_> = source_entries
+                .iter()
+                .filter(|e| !dependency_keys.contains(&(e.kind, e.name.clone())))
+                .cloned()
+                .collect();
+            guard_against_empty_source(&new_hashes, &own_entries, &source_label)?;
             // The bundles that the lockfile records for this source, as the
             // fetched source declares them now: the plugin repair below
             // installs from them (issue #229). A source under a kind

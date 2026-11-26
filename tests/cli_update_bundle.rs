@@ -1708,3 +1708,180 @@ fn update_refreshes_a_dependency_that_a_prepared_root_provides_beside_a_skipped_
         "{out}"
     );
 }
+
+fn write_rule(registry: &Path, name: &str) {
+    write_rule_body(registry, name, &format!("Rule {name}."));
+}
+
+fn add_with(consumer: &Path, registry: &Path, args: &[&str]) {
+    common::upskill_cmd(&fake_home(consumer))
+        .current_dir(consumer)
+        .arg("add")
+        .arg(registry)
+        .args(args)
+        .args(["--project", "--claude"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn update_keeps_an_out_of_kind_item_of_a_dropped_dependency() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_rule(registry.path(), "r");
+    write_rule(registry.path(), "dep-rule");
+    write_skill(registry.path(), "dep-skill");
+    write(
+        &registry.path().join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Dependency bundle.\nitems:\n  rules: [dep-rule]\n  skills: [dep-skill]\n",
+    );
+    let top = |requires: &str| {
+        write(
+            &registry.path().join("top.bundle.yaml"),
+            &format!(
+                "schema: 1\nname: top\ndescription: Root bundle.\nitems:\n  rules: [r]\n{requires}"
+            ),
+        )
+    };
+    top("requires: [{ name: dep }]\n");
+    add_with(consumer.path(), registry.path(), &["top"]);
+    add_with(consumer.path(), registry.path(), &["top", "--kind", "rule"]);
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-skill/SKILL.md")
+            .exists()
+    );
+
+    top("");
+    let out = update_output(consumer.path());
+
+    // The skill is outside the recorded kind restriction: it is kept.
+    assert!(removed_line(&out, "dep-rule"), "{out}");
+    assert!(!removed_line(&out, "dep-skill"), "{out}");
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-skill/SKILL.md")
+            .exists(),
+        "{out}"
+    );
+    assert!(recorded_items(consumer.path()).contains(&"dep-skill".to_string()));
+}
+
+/// The root `top` in `registry` lists the rule `r` and the skill `own` and
+/// requires `dep` from `dep_registry`, which lists the skill `dep-skill`.
+fn setup_kind_restricted_root(registry: &Path, dep_registry: &Path) {
+    write_rule(registry, "r");
+    write_skill(registry, "own");
+    write_skill(dep_registry, "dep-skill");
+    write_skill_bundle(dep_registry, "dep", &["dep-skill"]);
+    write(
+        &registry.join("top.bundle.yaml"),
+        &format!(
+            "schema: 1\nname: top\ndescription: Root bundle.\nitems:\n  rules: [r]\n  skills: [own]\nrequires: [{{ name: dep, source: '{}' }}]\n",
+            dep_registry.display()
+        ),
+    );
+}
+
+#[test]
+fn an_unrestricted_dependency_does_not_lift_the_kind_restriction_of_its_root() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let second = tempfile::tempdir().unwrap();
+    let dep = tempfile::tempdir().unwrap();
+    setup_kind_restricted_root(registry.path(), dep.path());
+    write_skill(second.path(), "own2");
+    write_root_bundle(
+        second.path(),
+        "second",
+        "own2",
+        &[format!(
+            "{{ name: dep, source: '{}' }}",
+            dep.path().display()
+        )],
+    );
+    add_with(consumer.path(), registry.path(), &["top", "--kind", "rule"]);
+    add_with(consumer.path(), second.path(), &["second"]);
+    assert!(!consumer.path().join(".claude/skills/own").exists());
+
+    let out = update_output(consumer.path());
+
+    assert!(
+        !consumer.path().join(".claude/skills/own").exists(),
+        "{out}"
+    );
+    assert!(consumer.path().join(".claude/rules/r.md").exists(), "{out}");
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-skill/SKILL.md")
+            .exists(),
+        "{out}"
+    );
+}
+
+#[test]
+fn a_restricted_dependency_adds_its_kinds_to_the_kinds_of_its_root_source() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let second = tempfile::tempdir().unwrap();
+    let dep = tempfile::tempdir().unwrap();
+    setup_kind_restricted_root(registry.path(), dep.path());
+    write_skill(second.path(), "own2");
+    write_root_bundle(
+        second.path(),
+        "second",
+        "own2",
+        &[format!(
+            "{{ name: dep, source: '{}' }}",
+            dep.path().display()
+        )],
+    );
+    add_with(consumer.path(), registry.path(), &["top", "--kind", "rule"]);
+    add_with(
+        consumer.path(),
+        second.path(),
+        &["second", "--kind", "skill"],
+    );
+    assert!(!consumer.path().join(".claude/skills/own").exists());
+
+    let out = update_output(consumer.path());
+
+    // `dep` is recorded with the kind `skill`, so the source of `top`
+    // resolves with the kinds `rule` and `skill`.
+    assert!(
+        consumer.path().join(".claude/skills/own/SKILL.md").exists(),
+        "{out}"
+    );
+}
+
+#[test]
+fn update_lets_a_bundle_without_items_drop_its_requires() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    write(
+        &registry.path().join("top.bundle.yaml"),
+        "schema: 1\nname: top\ndescription: Aggregator bundle.\nitems: {}\nrequires: [{ name: dep }]\n",
+    );
+    add_top(consumer.path(), registry.path());
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-only/SKILL.md")
+            .exists()
+    );
+
+    write(
+        &registry.path().join("top.bundle.yaml"),
+        "schema: 1\nname: top\ndescription: Aggregator bundle.\nitems: {}\n",
+    );
+    let out = update_output(consumer.path());
+
+    assert!(removed_line(&out, "dep-only"), "{out}");
+    assert!(!consumer.path().join(".claude/skills/dep-only").exists());
+    assert_eq!(recorded_bundles(consumer.path()), vec!["top"]);
+}
