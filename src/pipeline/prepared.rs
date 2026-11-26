@@ -609,16 +609,24 @@ impl PreparedInstall {
     ) -> Result<()> {
         let mut lock = Lockfile::load(target)?;
         let mut changed = refresh_required_by(&mut lock, &self.requires_provenance());
-        if let Some(commit) = &self.commit {
-            for item in lock
-                .items
-                .iter_mut()
-                .filter(|i| selected.contains(&(i.kind, i.name.clone())))
-            {
-                if item.commit.as_ref() != Some(commit) {
-                    item.commit = Some(commit.clone());
-                    changed = true;
-                }
+        for item in lock
+            .items
+            .iter_mut()
+            .filter(|i| selected.contains(&(i.kind, i.name.clone())))
+        {
+            // An entry of another source (a dependency that this install
+            // reaches) gets the commit of its own source.
+            let commit = if item.source == self.label {
+                self.commit.as_ref()
+            } else {
+                self.closure
+                    .as_ref()
+                    .and_then(|c| c.by_source.get(&item.source))
+                    .and_then(|s| s.commit.as_ref())
+            };
+            if commit.is_some() && item.commit.as_ref() != commit {
+                item.commit = commit.cloned();
+                changed = true;
             }
         }
         if changed {
