@@ -45,7 +45,8 @@ pub struct PackedPlugin {
     pub dir_name: String,
 }
 
-/// New file bytes and the names of entries removed by `--all`, in name order.
+/// New file bytes and the names of entries removed by `--all` or for a skipped
+/// output, in name order.
 pub struct CatalogUpdate {
     pub path: PathBuf,
     pub bytes: Vec<u8>,
@@ -181,7 +182,16 @@ impl Catalog {
     }
 
     /// Merge packed entries and render every file before any output is written.
-    pub fn render(&self, plugins: &[PackedPlugin], prune: bool) -> Result<Vec<CatalogUpdate>> {
+    /// `skipped` lists the client outputs that `pack` skipped for a bundle with
+    /// nothing to pack. The earlier entry of such an output is removed when its
+    /// source is inside `--out` and names no plugin directory packed in this
+    /// run, with or without `prune` (#678).
+    pub fn render(
+        &self,
+        plugins: &[PackedPlugin],
+        skipped: &[(PackClient, String)],
+        prune: bool,
+    ) -> Result<Vec<CatalogUpdate>> {
         let mut updates = Vec::new();
         for file in &self.files {
             let packed: Vec<_> = plugins
@@ -200,22 +210,27 @@ impl Catalog {
                         .join("/")
                 })
                 .collect();
+            let skipped_names: BTreeSet<_> = skipped
+                .iter()
+                .filter(|(client, _)| *client == file.client)
+                .map(|(_, name)| name.as_str())
+                .collect();
             let mut entries = Vec::new();
             let mut removed = Vec::new();
             for entry in &file.entries {
                 if names.contains(entry.name.as_str()) {
                     continue;
                 }
-                if prune
-                    && entry
-                        .source
-                        .as_ref()
-                        .and_then(Value::as_str)
-                        .is_some_and(|source| {
-                            source_is_inside(source, &self.out_rel)
-                                && !sources.contains(&source_components(source).unwrap().join("/"))
-                        })
-                {
+                // Inside `--out` and naming no plugin directory packed in this run.
+                let stale = entry
+                    .source
+                    .as_ref()
+                    .and_then(Value::as_str)
+                    .is_some_and(|source| {
+                        source_is_inside(source, &self.out_rel)
+                            && !sources.contains(&source_components(source).unwrap().join("/"))
+                    });
+                if stale && (prune || skipped_names.contains(entry.name.as_str())) {
                     removed.push(entry.name.clone());
                 } else {
                     entries.push(entry.clone());
@@ -439,6 +454,7 @@ mod tests {
                     description: "Demo".into(),
                     dir_name: "demo-claude".into(),
                 }],
+                &[],
                 false,
             )
             .unwrap();
@@ -496,7 +512,7 @@ mod tests {
             header(),
         )
         .unwrap();
-        let updates = catalog.render(&[], false).unwrap();
+        let updates = catalog.render(&[], &[], false).unwrap();
         assert_eq!(
             updates[0].path,
             cwd.join("work/market/.claude-plugin/marketplace.json")
@@ -547,10 +563,40 @@ mod tests {
             &[PackClient::Claude],
         );
         let updates = catalog
-            .render(&[plugin(PackClient::Claude, "demo-claude")], true)
+            .render(&[plugin(PackClient::Claude, "demo-claude")], &[], true)
             .unwrap();
         assert_eq!(updates[0].removed, ["stale"]);
         assert_eq!(names_of(&updates[0]), ["alias", "demo"]);
+    }
+
+    #[test]
+    fn skipped_output_removes_only_a_stale_entry_of_its_name() {
+        for prune in [false, true] {
+            let tmp = tempfile::tempdir().unwrap();
+            let catalog = open_with(
+                tmp.path(),
+                r#"{"plugins":[
+                    {"name":"alias","source":"./plugins/demo-claude"},
+                    {"name":"gone","source":"./plugins/gone-claude"},
+                    {"name":"kept","source":"./other/gone-claude"}]}"#,
+                "market/plugins",
+                &[PackClient::Claude],
+            );
+            let skipped = [
+                (PackClient::Claude, "alias".to_string()),
+                (PackClient::Claude, "gone".to_string()),
+                (PackClient::Claude, "kept".to_string()),
+            ];
+            let updates = catalog
+                .render(
+                    &[plugin(PackClient::Claude, "demo-claude")],
+                    &skipped,
+                    prune,
+                )
+                .unwrap();
+            assert_eq!(updates[0].removed, ["gone"], "prune={prune}");
+            assert_eq!(names_of(&updates[0]), ["alias", "demo", "kept"]);
+        }
     }
 
     #[test]
@@ -589,6 +635,7 @@ mod tests {
                     plugin(PackClient::Claude, "demo-claude"),
                     plugin(PackClient::Copilot, "demo-copilot"),
                 ],
+                &[],
                 true,
             )
             .unwrap();
@@ -622,7 +669,7 @@ mod tests {
         ] {
             let catalog = open_with(tmp.path(), "{}", out, &[PackClient::Claude]);
             let updates = catalog
-                .render(&[plugin(PackClient::Claude, "demo-claude")], false)
+                .render(&[plugin(PackClient::Claude, "demo-claude")], &[], false)
                 .unwrap();
             let value: Value = serde_json::from_slice(&updates[0].bytes).unwrap();
             assert_eq!(value["plugins"][0]["source"], expected, "{out}");

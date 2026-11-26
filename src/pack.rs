@@ -53,11 +53,18 @@ const COPILOT_MANIFEST: &str = "plugin.json";
 /// every selected client; the CLI maps it to exit code 2 (#658).
 #[derive(Debug, thiserror::Error)]
 #[error(
-    "bundle `{bundle}` has nothing to pack for {clients}: a plugin cannot install the third-party plugins that the bundle declares"
+    "bundle `{bundle}` has nothing to pack for {clients}: {cause}",
+    cause = if *.declares_plugins {
+        "a plugin cannot install the third-party plugins that the bundle declares"
+    } else {
+        "its plugin would hold only its manifest"
+    }
 )]
 pub struct NothingToPack {
     pub bundle: String,
     pub clients: String,
+    /// Whether the bundle declares third-party plugins (#678).
+    pub declares_plugins: bool,
 }
 
 /// A bundle that `pack` builds, with the description of its manifest.
@@ -65,6 +72,8 @@ pub struct NothingToPack {
 pub struct SelectedBundle {
     pub name: String,
     pub description: String,
+    /// Whether the bundle declares third-party plugins.
+    pub declares_plugins: bool,
 }
 
 /// Select named bundles once in name order, or every bundle of the registry.
@@ -95,6 +104,7 @@ pub fn select_bundles(
                 validate_bundle_name(&bundle.name)
                     .with_context(|| format!("bundle '{}'", bundle.name))?;
                 Ok(SelectedBundle {
+                    declares_plugins: !bundle.plugins.is_empty(),
                     name: bundle.name,
                     description: bundle.description,
                 })
@@ -117,6 +127,7 @@ pub fn select_bundles(
             Ok(SelectedBundle {
                 name: bundle.name.clone(),
                 description: bundle.description.clone(),
+                declares_plugins: !bundle.plugins.is_empty(),
             })
         })
         .collect()
@@ -643,10 +654,12 @@ mod tests {
             SelectedBundle {
                 name: "a".into(),
                 description: "A".into(),
+                declares_plugins: false,
             },
             SelectedBundle {
                 name: "b".into(),
                 description: "B".into(),
+                declares_plugins: false,
             },
         ];
         assert_eq!(
