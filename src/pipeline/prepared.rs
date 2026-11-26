@@ -53,6 +53,12 @@ pub(super) struct PreparedInstall {
     source_items: Vec<super::output::SourceItem>,
     /// The fetched root of the entry source: a directory or a bundle file.
     local_source: PathBuf,
+    /// The recorded bundles that `update` asked for and that the source no
+    /// longer has (issue #649).
+    vanished_bundles: Vec<String>,
+    /// Whether none of the recorded item and bundle names that `update` asked
+    /// for is still in the source, which still has items (issue #649).
+    nothing_left: bool,
     /// Deletes the clone of the entry source when dropped.
     _tmp_guard: Option<tempfile::TempDir>,
 }
@@ -156,6 +162,96 @@ pub(super) fn prepare_install(
         }
     }
 
+    // -- `update`: recorded names that the source no longer has --
+    // `update` (the only caller that keeps the recorded excludes) passes the
+    // recorded item and bundle names. A name that the source no longer has
+    // is left out, so that its entries are removed as no longer in source
+    // (issue #649). A source without any item is left to the empty-source
+    // guard of `update`.
+    let mut bundle_names = options.bundles.clone();
+    let mut kept_items = items.to_vec();
+    let mut vanished = Vec::new();
+    if options.keep_recorded_excludes
+        && !discovery::is_bundle_file(&local_source)
+        && !scanned_items.is_empty()
+    {
+        for name in &bundle_names {
+            if discovery::find_bundle_by_name(&local_source, name).is_none() {
+                vanished.push(name.clone());
+            }
+        }
+        bundle_names.retain(|name| !vanished.contains(name));
+        kept_items.retain(|name| {
+            scanned_items.iter().any(|(_, scanned)| scanned == name)
+                || discovery::find_bundle_by_name(&local_source, name).is_some()
+        });
+        // A member of a vanished bundle that the source still has as an item
+        // stays installed: it joins the item filter.
+        if !vanished.is_empty() {
+            let lock = Lockfile::load(target)?;
+            for bundle in lock
+                .bundles
+                .iter()
+                .filter(|b| b.source == label && vanished.contains(&b.name))
+            {
+                for member in &bundle.items {
+                    if scanned_items.iter().any(|(_, scanned)| scanned == member)
+                        && !kept_items.contains(member)
+                    {
+                        kept_items.push(member.clone());
+                    }
+                }
+            }
+        }
+    }
+    // Only a request of which nothing remains disables the empty-source
+    // guard of `update`.
+    let nothing_left = (!vanished.is_empty() || kept_items.len() < items.len())
+        && kept_items.is_empty()
+        && bundle_names.is_empty();
+    let items: &[String] = &kept_items;
+    if nothing_left {
+        // Nothing recorded remains: plan nothing. An empty item filter
+        // would install the whole source.
+        let mut options = options.clone();
+        options.bundles = Vec::new();
+        // The item directories of the source stay protected by the overlap
+        // checks, as for a source that the run reads without items.
+        let names = plan::PlanNames {
+            excludes: options.excludes.clone(),
+            kinds: options.kinds.clone(),
+            clients: options.item_clients.clone(),
+            ..plan::PlanNames::default()
+        };
+        let mut source_items = Vec::new();
+        install::collect_source_items(
+            &local_source,
+            Some(&crate::bundle::ResolvedItems::default()),
+            &names,
+            &mut source_items,
+        )?;
+        let git_ref = match source {
+            InstallSource::Github(r) => r.git_ref.clone(),
+            InstallSource::Git(r) => r.git_ref.clone(),
+            InstallSource::LocalPath(_) => None,
+        };
+        return Ok(PreparedInstall {
+            label,
+            git_ref,
+            commit,
+            options,
+            requested: Vec::new(),
+            report: InstallReport::default(),
+            closure: None,
+            resolved_bundles: Vec::new(),
+            source_items,
+            local_source,
+            vanished_bundles: vanished,
+            nothing_left,
+            _tmp_guard: tmp_guard,
+        });
+    }
+
     // -- Validate bare --as with multi-item source --
     if options.aliases.iter().any(|(from, _)| from.is_empty()) {
         let unique_names: BTreeSet<&str> = scanned_items
@@ -215,7 +311,7 @@ pub(super) fn prepare_install(
     // item-level path uses, so the install + item-lockfile machinery is shared;
     // `resolved_bundles` carries each bundle's own source for the bundle
     // lockfile recording and plugin/MCP install.
-    let bundle_resolution = if options.bundles.is_empty() {
+    let bundle_resolution = if bundle_names.is_empty() {
         resolve_bundle_request(
             &label,
             &local_source,
@@ -225,7 +321,7 @@ pub(super) fn prepare_install(
             &options.excludes,
         )?
     } else {
-        for name in &options.bundles {
+        for name in &bundle_names {
             if discovery::find_bundle_by_name(&local_source, name).is_none() {
                 anyhow::bail!("bundle '{name}' is no longer in source {label}");
             }
@@ -235,7 +331,7 @@ pub(super) fn prepare_install(
             &local_source,
             git_ref,
             commit.as_deref(),
-            &options.bundles,
+            &bundle_names,
             &options.excludes,
         )?;
         if !items.is_empty() {
@@ -478,6 +574,7 @@ pub(super) fn prepare_install(
     apply::check_installed_names(&report.planned)?;
 
     let mut options = options.clone();
+    options.bundles = bundle_names;
     options.kinds.sort();
     options.kinds.dedup();
     let mut excluded: BTreeSet<(ItemKind, String)> = closure
@@ -507,6 +604,8 @@ pub(super) fn prepare_install(
         resolved_bundles,
         source_items,
         local_source,
+        vanished_bundles: vanished,
+        nothing_left,
         _tmp_guard: tmp_guard,
     })
 }
@@ -551,6 +650,17 @@ impl PreparedInstall {
 
     /// The names of the bundles that this install resolved, through the
     /// `requires` of the requested bundles included.
+    /// The recorded bundles that the source no longer has.
+    pub fn vanished_bundles(&self) -> &[String] {
+        &self.vanished_bundles
+    }
+
+    /// Whether none of the recorded names is still in a source that still
+    /// has items: then a plan without items removes the recorded entries.
+    pub fn nothing_left(&self) -> bool {
+        self.nothing_left
+    }
+
     pub fn resolved_bundle_names(&self) -> BTreeSet<String> {
         self.resolved_bundles
             .iter()
@@ -911,6 +1021,8 @@ impl PreparedInstall {
             resolved_bundles,
             source_items: _,
             local_source: _,
+            vanished_bundles: _,
+            nothing_left: _,
             _tmp_guard,
         } = self;
         report.adopted = adopted;

@@ -224,13 +224,14 @@ of an item that its source no longer contains fails, the install of that source
 is already written and saved. A removal that is refused when it is planned (a
 symbolic link above a recorded path, or a recorded path that cannot be
 inspected) fails before the install of that source is written. For `update`, a
-source that resolves to no items while the lockfile records items from it, and a
-hand-shake file that cannot be updated (for example an `opencode.json` whose
-`instructions` is not an array), also fail the source before any file of that
-source is written, in every mode. Without `--force`, an item with at least one
-conflict is skipped as a whole: none of its files is written or deleted and its
-lockfile entry is not changed, except its `required_by` (§2.2). The other items
-are written. `add` then prints one line per conflict to stderr,
+source that resolves to no items while the lockfile records items from it
+(unless the source still has items but none of the recorded names, see §2.2),
+and a hand-shake file that cannot be updated (for example an `opencode.json`
+whose `instructions` is not an array), also fail the source before any file of
+that source is written, in every mode. Without `--force`, an item with at least
+one conflict is skipped as a whole: none of its files is written or deleted and
+its lockfile entry is not changed, except its `required_by` (§2.2). The other
+items are written. `add` then prints one line per conflict to stderr,
 `skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
@@ -477,11 +478,18 @@ item and a `kept modified file` note are not changes.
   is skipped later because it requires an item of a skipped source. To update
   such an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source
   is reinstalled as a whole. Recorded bundle names resolve only as bundles. A
-  missing root bundle causes `bundle '<name>' is no longer in source <label>`
-  before any write, even if an item has that name. A dependency bundle that the
-  run resolves through its roots is not looked up by name: when no root reaches
-  it any more, its record is dropped (§2.6). Each reinstalled entry gets the
-  commit of its own source (an entry from another source gets that source's
+  root bundle that the source no longer has is dropped from the lockfile, even
+  if an item has that name. Each of its members that the source still has as an
+  item stays installed and is updated as an item; each member that the source no
+  longer has is removed as `no longer in source`. The plugin records of the
+  dropped bundle are removed, as `remove` removes them; its MCP records are
+  kept, as `remove` keeps them, because MCP removal is explicit (`remove-mcp`).
+  When none of the recorded items and bundles of a source remains in it, and the
+  source still has items, `update` installs nothing from it and removes the
+  recorded items as `no longer in source` (issue #649). A dependency bundle that
+  the run resolves through its roots is not looked up by name: when no root
+  reaches it any more, its record is dropped (§2.6). Each reinstalled entry gets
+  the commit of its own source (an entry from another source gets that source's
   commit), unless its update is skipped, and any other entry keeps its recorded
   commit. The lockfile is saved only when a value differs. This write is not a
   change of the source (see the preview above) and does not count in the output.
