@@ -348,55 +348,22 @@ fn update_keeps_a_direct_item_of_another_kind_beside_a_kind_restricted_bundle() 
     );
 }
 
-/// A recorded bundle that left the source is dropped and its items are
-/// removed as no longer in source (issue #649).
 #[test]
-fn update_removes_the_items_of_a_recorded_bundle_that_left_the_source() {
+fn update_fails_before_any_write_when_a_recorded_bundle_left_the_source() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     setup_kind_registry(registry.path());
     add_named_bundle(consumer.path(), registry.path(), &[]);
-    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
-    fs::remove_dir_all(registry.path().join("a")).unwrap();
-    write_rule_body(registry.path(), "r", "Changed rule body.");
-    common::upskill_cmd(&fake_home(consumer.path()))
-        .current_dir(consumer.path())
-        .args(["update", "--yes", "--project"])
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("no longer in source"));
-    // The member that left the source is removed; the member that the
-    // source still has as an item stays and is updated.
-    assert!(!consumer.path().join(".claude/skills/a").exists());
-    assert!(
-        fs::read_to_string(consumer.path().join(".claude/rules/r.md"))
-            .unwrap()
-            .contains("Changed rule body.")
-    );
-    let lock = read_update_lock(consumer.path());
-    assert!(
-        lock["bundles"].as_array().is_none_or(|b| b.is_empty()),
-        "{lock}"
-    );
-    let names: Vec<_> = lock["items"]
-        .as_array()
-        .unwrap()
+    let paths = [
+        ".claude/skills/a/SKILL.md",
+        ".claude/rules/r.md",
+        ".upskill-lock.json",
+        "CLAUDE.md",
+    ];
+    let before: Vec<_> = paths
         .iter()
-        .map(|i| i["name"].as_str().unwrap().to_string())
+        .map(|path| fs::read(consumer.path().join(path)).unwrap())
         .collect();
-    assert_eq!(names, vec!["r".to_string()], "{lock}");
-}
-
-/// A member of a vanished bundle that the user also added by name, and that
-/// the source still has as an item, stays installed and is updated (issue
-/// #649).
-#[test]
-fn update_keeps_a_member_of_a_vanished_bundle_that_the_source_still_has() {
-    let consumer = tempfile::tempdir().unwrap();
-    let registry = tempfile::tempdir().unwrap();
-    setup_kind_registry(registry.path());
-    add_named_bundle(consumer.path(), registry.path(), &[]);
-    add_direct(consumer.path(), registry.path(), "a");
     fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
     write(
         &registry.path().join("a/SKILL.md"),
@@ -406,113 +373,15 @@ fn update_keeps_a_member_of_a_vanished_bundle_that_the_source_still_has() {
         .current_dir(consumer.path())
         .args(["update", "--yes", "--project"])
         .assert()
-        .success();
-    assert!(
-        fs::read_to_string(consumer.path().join(".claude/skills/a/SKILL.md"))
-            .unwrap()
-            .contains("Changed skill body.")
-    );
-    let lock = read_update_lock(consumer.path());
-    assert!(
-        lock["bundles"].as_array().is_none_or(|b| b.is_empty()),
-        "{lock}"
-    );
-    assert!(
-        lock["items"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|i| i["name"] == "a"),
-        "{lock}"
-    );
-}
-
-/// `update --dry-run` with a vanished bundle writes nothing (issue #649).
-#[test]
-fn update_dry_run_with_a_vanished_bundle_writes_nothing() {
-    let consumer = tempfile::tempdir().unwrap();
-    let registry = tempfile::tempdir().unwrap();
-    setup_kind_registry(registry.path());
-    add_named_bundle(consumer.path(), registry.path(), &[]);
-    let paths = [
-        ".upskill-lock.json",
-        ".claude/skills/a/SKILL.md",
-        ".claude/rules/r.md",
-        "CLAUDE.md",
-    ];
-    let before: Vec<_> = paths
-        .iter()
-        .map(|p| fs::read(consumer.path().join(p)).unwrap())
-        .collect();
-    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
-    fs::remove_dir_all(registry.path().join("a")).unwrap();
-    common::upskill_cmd(&fake_home(consumer.path()))
-        .current_dir(consumer.path())
-        .args(["update", "--dry-run", "--project"])
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("no longer in source"));
-    for (path, bytes) in paths.iter().zip(before) {
+        .code(1)
+        .stderr(predicates::str::contains("bun"));
+    for (path, contents) in paths.iter().zip(before) {
         assert_eq!(
             fs::read(consumer.path().join(path)).unwrap(),
-            bytes,
+            contents,
             "{path} changed"
         );
     }
-}
-
-/// The plugin record of a vanished bundle is removed, as `remove` removes
-/// the plugin records of a removed bundle. Its MCP record is kept, as
-/// `remove` keeps it: MCP removal is explicit, through `remove-mcp`, which
-/// needs the record (issue #649).
-#[test]
-#[cfg(unix)]
-fn update_drops_the_plugin_record_of_a_vanished_bundle_and_keeps_its_mcp_record() {
-    use std::os::unix::fs::PermissionsExt;
-    let consumer = tempfile::tempdir().unwrap();
-    let registry = tempfile::tempdir().unwrap();
-    setup_kind_registry(registry.path());
-    let bundle_path = registry.path().join("bun.bundle.yaml");
-    let mut bundle = fs::read_to_string(&bundle_path).unwrap();
-    bundle.push_str("plugins:\n  tool:\n    claude:\n      source: example/tools\n      marketplace: tools\n      plugin: tool\nmcps:\n  server:\n    local:\n      command: example-server\n");
-    write(&bundle_path, &bundle);
-    let bin = consumer.path().join("bin");
-    let claude = bin.join("claude");
-    write(&claude, "#!/bin/sh\nexit 0\n");
-    fs::set_permissions(&claude, fs::Permissions::from_mode(0o755)).unwrap();
-    let mut paths = vec![bin];
-    paths.extend(std::env::split_paths(
-        &std::env::var_os("PATH").unwrap_or_default(),
-    ));
-    let path = std::env::join_paths(paths).unwrap();
-    common::upskill_cmd(&fake_home(consumer.path()))
-        .current_dir(consumer.path())
-        .env("PATH", &path)
-        .args([
-            "add",
-            registry.path().to_str().unwrap(),
-            "bun",
-            "--project",
-            "--claude",
-        ])
-        .assert()
-        .success();
-    let lock = read_update_lock(consumer.path());
-    assert_eq!(lock["plugins"][0]["bundle"], "bun", "{lock}");
-    assert_eq!(lock["mcps"][0]["bundle"], "bun", "{lock}");
-    fs::remove_file(&bundle_path).unwrap();
-    common::upskill_cmd(&fake_home(consumer.path()))
-        .current_dir(consumer.path())
-        .env("PATH", &path)
-        .args(["update", "--yes", "--project"])
-        .assert()
-        .success();
-    let lock = read_update_lock(consumer.path());
-    assert!(
-        lock["plugins"].as_array().is_none_or(|p| p.is_empty()),
-        "{lock}"
-    );
-    assert_eq!(lock["mcps"][0]["name"], "server", "{lock}");
 }
 
 fn read_update_lock(consumer: &Path) -> serde_json::Value {
@@ -718,28 +587,36 @@ fn update_resolves_cross_source_bundles_beside_direct_items() {
     assert!(consumer.path().join(".claude/skills/b/SKILL.md").exists());
 }
 
-/// Recorded bundle names resolve only as bundles: an item that took the
-/// name of a recorded bundle is not installed, and the bundle is dropped
-/// (issue #649).
 #[test]
-fn update_does_not_install_an_item_in_place_of_a_recorded_bundle() {
+fn update_refuses_an_item_in_place_of_a_recorded_bundle_before_any_write() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     setup_kind_registry(registry.path());
     add_named_bundle(consumer.path(), registry.path(), &[]);
+    let paths = [
+        ".upskill-lock.json",
+        ".claude/skills/a/SKILL.md",
+        ".claude/rules/r.md",
+        "CLAUDE.md",
+    ];
+    let before: Vec<_> = paths
+        .iter()
+        .map(|p| fs::read(consumer.path().join(p)).unwrap())
+        .collect();
     fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
     write_skill(registry.path(), "bun");
     common::upskill_cmd(&fake_home(consumer.path()))
         .current_dir(consumer.path())
         .args(["update", "--yes", "--project"])
         .assert()
-        .success();
+        .code(1)
+        .stderr(predicates::str::contains(
+            "bundle 'bun' is no longer in source",
+        ));
+    for (path, bytes) in paths.iter().zip(before) {
+        assert_eq!(fs::read(consumer.path().join(path)).unwrap(), bytes);
+    }
     assert!(!consumer.path().join(".claude/skills/bun").exists());
-    let lock = read_update_lock(consumer.path());
-    assert!(
-        lock["bundles"].as_array().is_none_or(|b| b.is_empty()),
-        "{lock}"
-    );
 }
 
 #[test]
@@ -2303,55 +2180,4 @@ fn an_item_of_a_dropped_dependency_keeps_the_provenance_of_its_installer() {
         "{out}"
     );
     assert_eq!(recorded_bundles(consumer.path()), vec!["top"]);
-}
-
-/// A recorded bundle that the source renamed (`old` to `new`, same items):
-/// `update` drops the old bundle record, keeps its members that the source
-/// still has as items and records nothing of the new bundle (issue #649).
-#[test]
-fn update_drops_a_bundle_that_the_source_renamed() {
-    let consumer = tempfile::tempdir().unwrap();
-    let registry = tempfile::tempdir().unwrap();
-    write_skill(registry.path(), "alpha");
-    write_skill(registry.path(), "beta");
-    let old = registry.path().join("old.bundle.yaml");
-    write(
-        &old,
-        "schema: 1\nname: old\ndescription: bundle that the test renames.\nitems:\n  skills:\n    - alpha\n    - beta\n",
-    );
-    fs::create_dir_all(consumer.path().join(".git")).unwrap();
-    let home = fake_home(consumer.path());
-    common::upskill_cmd(&home)
-        .current_dir(consumer.path())
-        .args([
-            "add",
-            registry.path().to_str().unwrap(),
-            "old",
-            "--project",
-            "--claude",
-        ])
-        .assert()
-        .success();
-    let lock_path = consumer.path().join(".upskill-lock.json");
-    assert!(fs::read_to_string(&lock_path).unwrap().contains("\"old\""));
-    fs::remove_file(&old).unwrap();
-    write(
-        &registry.path().join("new.bundle.yaml"),
-        "schema: 1\nname: new\ndescription: bundle that the test renames.\nitems:\n  skills:\n    - alpha\n    - beta\n",
-    );
-
-    let out = common::upskill_cmd(&home)
-        .current_dir(consumer.path())
-        .args(["update", "--project", "--yes"])
-        .output()
-        .unwrap();
-    assert!(out.status.success(), "{out:?}");
-    // The source still has both members as items: they stay installed.
-    for name in ["alpha", "beta"] {
-        assert!(consumer.path().join(".claude/skills").join(name).exists());
-    }
-    let lock: serde_json::Value =
-        serde_json::from_str(&fs::read_to_string(&lock_path).unwrap()).unwrap();
-    let bundles = lock["bundles"].as_array().cloned().unwrap_or_default();
-    assert!(bundles.is_empty(), "{lock}");
 }

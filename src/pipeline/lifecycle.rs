@@ -471,8 +471,7 @@ fn remove_selected(
 
 /// Delete the plugin records of `bundles` from `lock`, and the opencode
 /// config entry of each installed opencode plugin among them. Used by
-/// `remove`, by `update` for a bundle that left its source, and by `update`
-/// for a dependency bundle that is no longer required. The MCP
+/// `remove` and by `update` for a dependency bundle that is no longer required. The MCP
 /// records are kept: MCP removal is explicit, through `remove-mcp`.
 fn drop_bundle_plugins(at: &ScopeRoot, lock: &mut crate::lockfile::Lockfile, bundles: &[String]) {
     for plugin in lock.plugins.iter().filter(|p| bundles.contains(&p.bundle)) {
@@ -2033,11 +2032,7 @@ pub fn update(
                 .filter(|e| !dependency_keys.contains(&(e.kind, e.name.clone())))
                 .cloned()
                 .collect();
-            // A source that still has items, but none of the recorded names,
-            // removes the recorded entries (issue #649).
-            if !prepared.nothing_left() {
-                guard_against_empty_source(&new_hashes, &own_entries, &source_label)?;
-            }
+            guard_against_empty_source(&new_hashes, &own_entries, &source_label)?;
             // The bundles that the lockfile records for this source, as the
             // fetched source declares them now: the plugin repair below
             // installs from them (issue #229). A source under a kind
@@ -2198,25 +2193,7 @@ pub fn update(
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
             let requirers = prepared.resolved_requirers();
-            let vanished_bundles = prepared.vanished_bundles().to_vec();
             let install_report = prepared.commit(target, plugin_scope)?;
-            // A recorded bundle that the source no longer has is dropped; its
-            // items are removed below as no longer in source (issue #649).
-            if !vanished_bundles.is_empty() {
-                let mut lock = crate::lockfile::Lockfile::load(target)?;
-                lock.bundles
-                    .retain(|b| b.source != source_label || !vanished_bundles.contains(&b.name));
-                // The plugin records of a vanished bundle are removed as
-                // `remove` removes them; a record of another recorded bundle
-                // of the same name stays.
-                let gone: Vec<String> = vanished_bundles
-                    .iter()
-                    .filter(|name| !lock.bundles.iter().any(|b| &b.name == *name))
-                    .cloned()
-                    .collect();
-                drop_bundle_plugins(at, &mut lock, &gone);
-                lock.save(target)?;
-            }
             applied_sources.insert(source_label.clone());
             update_dependency_records(
                 at,
