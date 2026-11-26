@@ -35,6 +35,31 @@ pub struct PluginDir {
     pub files: Vec<PackFile>,
 }
 
+impl PluginDir {
+    /// Whether the directory holds a file other than its manifest. A bundle
+    /// that only declares third-party plugins gives a directory without one:
+    /// plugin formats have no field to install another plugin (#658).
+    pub fn has_content(&self) -> bool {
+        self.files.iter().any(|file| {
+            file.rel != Path::new(CLAUDE_MANIFEST) && file.rel != Path::new(COPILOT_MANIFEST)
+        })
+    }
+}
+
+const CLAUDE_MANIFEST: &str = ".claude-plugin/plugin.json";
+const COPILOT_MANIFEST: &str = "plugin.json";
+
+/// A named bundle whose plugin directory would hold only its manifest for
+/// every selected client; the CLI maps it to exit code 2 (#658).
+#[derive(Debug, thiserror::Error)]
+#[error(
+    "bundle `{bundle}` has nothing to pack for {clients}: a plugin cannot install the third-party plugins that the bundle declares"
+)]
+pub struct NothingToPack {
+    pub bundle: String,
+    pub clients: String,
+}
+
 /// A bundle that `pack` builds, with the description of its manifest.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelectedBundle {
@@ -373,8 +398,8 @@ pub fn build(
     client: PackClient,
 ) -> Result<PluginDir> {
     let (generator, suffix, manifest_path) = match client {
-        PackClient::Claude => (Client::Claude, "claude", ".claude-plugin/plugin.json"),
-        PackClient::Copilot => (Client::Copilot, "copilot", "plugin.json"),
+        PackClient::Claude => (Client::Claude, "claude", CLAUDE_MANIFEST),
+        PackClient::Copilot => (Client::Copilot, "copilot", COPILOT_MANIFEST),
     };
     let output = plan_bundle_output(registry_root, bundle, generator)?;
     check_command_names(&output.bundles)?;

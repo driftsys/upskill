@@ -676,14 +676,15 @@ bundles again and reaches their dependency bundles through `requires:`, also
 across sources, so the items of a dependency are refreshed in the block of the
 source that resolves them. When a bundle stops requiring a dependency bundle,
 `update` drops the record of that dependency once every one of its root sources
-was applied (the sources of the bundles that you named and that reach it), and
-removes each of its items that no remaining bundle provides
-(`removed — no longer in source`). An item that another bundle still provides is
-kept, and an item outside the kind restriction is kept unchanged. An item that
-you also installed directly is removed with the dependency, because the lockfile
-does not record that; run `upskill add <source> <item>` again to keep it.
-`update <name>` resolves a dependency bundle from its own record and drops
-nothing.
+was applied (the sources of the bundles that you named and that reach it), drops
+its plugin entries as `remove` does (an opencode plugin also leaves
+`opencode.json`; MCP entries are kept for `remove-mcp`), and removes each of its
+items that no remaining bundle provides (`removed — no longer in source`). An
+item that another bundle still provides is kept, and an item outside the kind
+restriction is kept unchanged. An item that you also installed directly is
+removed with the dependency, because the lockfile does not record that; run
+`upskill add <source> <item>` again to keep it. `update <name>` resolves a
+dependency bundle from its own record and drops nothing.
 
 A lockfile written before upskill recorded `required_by` treats every bundle as
 a root, so `update` keeps a dependency that its root no longer requires. To drop
@@ -955,16 +956,18 @@ The command is quiet by design:
   interrupt after the line was written and before the cache file was saved lets
   the same line print again in the next session, and a temporary file
   `notice.json.<pid>.tmp` can remain in the cache directory. It prints nothing
-  when no cache directory is known, when the scope roots cannot be determined,
-  and when a lockfile of a scope that is due cannot be parsed. Only a scope that
-  is due has its lockfile read: when that lockfile cannot be parsed, the command
-  prints nothing for either scope, also not the cached line of the other scope,
-  and writes no cache file. A source that is not reachable adds no update, but
-  the updates stored from earlier lookups stay and are counted and printed as
-  described above. A cache file that cannot be read or written does not stop the
-  command: an invalid cache file is treated as an empty one, and a failed write
-  is ignored. When the cache directory cannot be written, nothing is stored, so
-  the check runs and the line is printed at every session start.
+  when no cache directory is known. It prints no update line when the scope
+  roots cannot be determined or when a lockfile of a scope that is due cannot be
+  parsed. Only a scope that is due has its lockfile read: when that lockfile
+  cannot be parsed, the command prints nothing for either scope, also not the
+  cached line of the other scope, and changes no cache entry of a scope that has
+  a lockfile. In both cases the release check below still runs and can print its
+  line. A source that is not reachable adds no update, but the updates stored
+  from earlier lookups stay and are counted and printed as described above. A
+  cache file that cannot be read or written does not stop the command: an
+  invalid cache file is treated as an empty one, and a failed write is ignored.
+  When the cache directory cannot be written, nothing is stored, so the check
+  runs and the line is printed at every session start.
 - It changes no lockfile and no installed file. It keeps the cache file
   `notice.json` in the upskill cache directory (it writes it through a temporary
   file `notice.json.<pid>.tmp` and a rename), which is `$XDG_CACHE_HOME/upskill`
@@ -1425,6 +1428,15 @@ both. `--quiet` suppresses the result lines.
 with a bundle name is a usage error (exit code 2). Two bundle files that declare
 one name fail the run with exit code 1, with a bundle name or with `--all`, even
 when neither is named.
+
+A client output that would hold only its manifest has nothing to pack, for
+example the output of a bundle that only declares third-party plugins: a plugin
+cannot install another plugin. `pack` does not write it and prints a warning on
+stderr that names the bundle and the client. A named bundle with nothing to pack
+for every selected client is a usage error (exit code 2), and nothing is
+written. `--all` skips such a bundle with the warning and builds the others;
+with `--catalog`, the skipped output gets no marketplace entry, and an earlier
+entry of it is removed as for any directory that `pack` did not write.
 
 ```bash
 upskill pack my-bundle --source owner/repo@v1 --out dist

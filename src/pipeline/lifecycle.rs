@@ -461,28 +461,45 @@ fn remove_selected(
             .collect(),
     };
 
-    for plugin in lock
-        .plugins
-        .iter()
-        .filter(|p| bundles_to_remove.contains(&p.bundle))
-    {
-        if plugin.client == "opencode"
-            && plugin.status == crate::lockfile::PluginInstallStatus::Installed
-        {
-            let _ = crate::ancillary::remove_opencode_plugin_uri(
-                target,
-                crate::plugin::PluginScope::of(at.scope),
-                &plugin.identifier,
-            );
-        }
-    }
-    lock.plugins
-        .retain(|p| !bundles_to_remove.contains(&p.bundle));
+    drop_bundle_plugins(at, lock, &bundles_to_remove);
     lock.bundles
         .retain(|b| !bundles_to_remove.contains(&b.name));
     lock.save(target)?;
     drop_global_opencode_rules(at.scope, target, &opencode_rules);
     Ok(report)
+}
+
+/// Delete the plugin records of `bundles` from `lock`, and the opencode
+/// config entry of each installed opencode plugin among them, unless another
+/// installed opencode plugin record that stays references the same entry.
+/// Used by `remove`, and by `update` for a dependency bundle that is no longer
+/// required and for a bundle that left its source. The MCP records are kept:
+/// MCP removal is explicit, through `remove-mcp`.
+fn drop_bundle_plugins(at: &ScopeRoot, lock: &mut crate::lockfile::Lockfile, bundles: &[String]) {
+    let removed: Vec<crate::lockfile::LockedPlugin> = lock
+        .plugins
+        .iter()
+        .filter(|p| bundles.contains(&p.bundle))
+        .cloned()
+        .collect();
+    lock.plugins.retain(|p| !bundles.contains(&p.bundle));
+    let installed = |p: &crate::lockfile::LockedPlugin| {
+        p.client == "opencode" && p.status == crate::lockfile::PluginInstallStatus::Installed
+    };
+    for plugin in &removed {
+        if installed(plugin)
+            && !lock
+                .plugins
+                .iter()
+                .any(|p| installed(p) && p.identifier == plugin.identifier)
+        {
+            let _ = crate::ancillary::remove_opencode_plugin_uri(
+                &at.root,
+                crate::plugin::PluginScope::of(at.scope),
+                &plugin.identifier,
+            );
+        }
+    }
 }
 
 /// In the global scope, delete from the global opencode config the entries of
@@ -2295,7 +2312,7 @@ pub fn update(
             // The record of a vanished bundle is dropped. Its direct members
             // stay installed; the other members were removed above, unless
             // another bundle or an installed item keeps them.
-            let dropped = drop_vanished_bundles(target, at.scope, &source_label, &vanished)?;
+            let dropped = drop_vanished_bundles(at, &source_label, &vanished)?;
             report.vanished_bundles.extend(
                 dropped
                     .iter()
@@ -2306,6 +2323,7 @@ pub fn update(
                 requirers.entry(name).or_default();
             }
             update_dependency_records(
+                at,
                 target,
                 &dependency_roots,
                 &reached_bundles,
@@ -2573,16 +2591,11 @@ fn collect_recorded_local_items(
 /// and the plugin records of those bundles, as `remove` does. Returns the
 /// dropped names. The caller has removed the members that nothing keeps (the
 /// orphans); direct members stay installed (issue #649).
-fn drop_vanished_bundles(
-    target: &Path,
-    scope: crate::scope::Scope,
-    source: &str,
-    names: &[String],
-) -> Result<Vec<String>> {
+fn drop_vanished_bundles(at: &ScopeRoot, source: &str, names: &[String]) -> Result<Vec<String>> {
     if names.is_empty() {
         return Ok(Vec::new());
     }
-    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    let mut lock = crate::lockfile::Lockfile::load(&at.root)?;
     let dropped: Vec<String> = names
         .iter()
         .filter(|name| {
@@ -2595,35 +2608,17 @@ fn drop_vanished_bundles(
     if dropped.is_empty() {
         return Ok(dropped);
     }
-    let gone = |bundle: &str| dropped.iter().any(|n| n == bundle);
-    let removed_plugins: Vec<crate::lockfile::LockedPlugin> = lock
-        .plugins
+    lock.bundles
+        .retain(|b| !(b.source == source && dropped.contains(&b.name)));
+    // The plugin records go as `remove` drops them; a bundle of the same name
+    // in another source keeps its records. The MCP records stay.
+    let gone: Vec<String> = dropped
         .iter()
-        .filter(|p| gone(&p.bundle))
+        .filter(|name| !lock.bundles.iter().any(|b| &b.name == *name))
         .cloned()
         .collect();
-    lock.plugins.retain(|p| !gone(&p.bundle));
-    lock.bundles
-        .retain(|b| !(b.source == source && gone(&b.name)));
-    // The URI of an opencode plugin stays in the config while another
-    // installed plugin record of this scope still references it.
-    for plugin in &removed_plugins {
-        if plugin.client == "opencode"
-            && plugin.status == crate::lockfile::PluginInstallStatus::Installed
-            && !lock.plugins.iter().any(|p| {
-                p.client == "opencode"
-                    && p.status == crate::lockfile::PluginInstallStatus::Installed
-                    && p.identifier == plugin.identifier
-            })
-        {
-            let _ = crate::ancillary::remove_opencode_plugin_uri(
-                target,
-                crate::plugin::PluginScope::of(scope),
-                &plugin.identifier,
-            );
-        }
-    }
-    lock.save(target)?;
+    drop_bundle_plugins(at, &mut lock, &gone);
+    lock.save(&at.root)?;
     Ok(dropped)
 }
 
@@ -2632,10 +2627,11 @@ fn drop_vanished_bundles(
 /// `requirers` (each with the requirers that this resolution found): a
 /// requirer that this resolution evaluated and that no longer reaches a
 /// dependency leaves its `required_by` (#648). A dependency bundle outside
-/// `reached` is dropped once every one of its root sources is in `applied`.
-/// Runs after the commit of each applied source, so that an error in a
+/// `reached` is dropped once every one of its root sources is in `applied`,
+/// with its plugin records, as `remove` drops them (#670). Runs after the commit of each applied source, so that an error in a
 /// later source leaves the records of the applied sources up to date.
 fn update_dependency_records(
+    at: &ScopeRoot,
     target: &Path,
     dependency_roots: &std::collections::BTreeMap<String, std::collections::BTreeSet<String>>,
     reached: &std::collections::BTreeSet<String>,
@@ -2673,6 +2669,12 @@ fn update_dependency_records(
             .get(&b.name)
             .is_none_or(|roots| reached.contains(&b.name) || !roots.is_subset(applied))
     });
+    let dropped: Vec<String> = before
+        .iter()
+        .filter(|b| !lock.bundles.iter().any(|kept| kept.name == b.name))
+        .map(|b| b.name.clone())
+        .collect();
+    drop_bundle_plugins(at, &mut lock, &dropped);
     if lock.bundles != before {
         lock.save(target)?;
     }

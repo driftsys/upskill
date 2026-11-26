@@ -2301,6 +2301,61 @@ fn update_removes_the_items_of_a_bundle_that_is_no_longer_required() {
     assert_eq!(recorded_items(consumer.path()), vec!["own"]);
 }
 
+/// The plugin records of a bundle that is no longer required are removed, as
+/// `remove` removes the plugin records of a removed bundle (issue #670).
+#[test]
+#[cfg(unix)]
+fn update_drops_the_plugin_record_of_a_bundle_that_is_no_longer_required() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    let dep_path = registry.path().join("dep.bundle.yaml");
+    let mut dep = fs::read_to_string(&dep_path).unwrap();
+    dep.push_str("plugins:\n  tool:\n    claude:\n      source: example/tools\n      marketplace: tools\n      plugin: tool\n");
+    write(&dep_path, &dep);
+    write_top_bundle(registry.path(), &["{ name: dep }".to_string()]);
+    let bin = consumer.path().join("bin");
+    let claude = bin.join("claude");
+    write(&claude, "#!/bin/sh\nexit 0\n");
+    fs::set_permissions(&claude, fs::Permissions::from_mode(0o755)).unwrap();
+    let mut paths = vec![bin];
+    paths.extend(std::env::split_paths(
+        &std::env::var_os("PATH").unwrap_or_default(),
+    ));
+    let path = std::env::join_paths(paths).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .env("PATH", &path)
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "top",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let lock = read_update_lock(consumer.path());
+    assert_eq!(lock["plugins"][0]["bundle"], "dep", "{lock}");
+
+    write_top_bundle(registry.path(), &[]);
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .env("PATH", &path)
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    let lock = read_update_lock(consumer.path());
+    assert_eq!(recorded_bundles(consumer.path()), vec!["top"]);
+    assert!(
+        lock["plugins"].as_array().is_none_or(|p| p.is_empty()),
+        "{lock}"
+    );
+}
+
 #[test]
 fn update_keeps_an_item_that_a_bundle_still_required_provides() {
     let consumer = tempfile::tempdir().unwrap();

@@ -1,0 +1,79 @@
+schema: 1
+name: smoke
+description: Smoke test bundle with components of every type that a plugin holds
+license: MIT
+items:
+  rules: [smoke-rule]
+  skills: [smoke-skill]
+  agents: [smoke-agent]
+  hooks: [smoke-hook, smoke-counter, smoke-match-bash, smoke-match-edit]
+  commands: [smoke-command]
+mcps:
+  smoke-mcp:
+    local:
+      command: python3
+      args:
+        - -c
+        - |
+          import json, sys
+          for line in sys.stdin:
+              try:
+                  m = json.loads(line)
+              except ValueError:
+                  continue
+              i, method = m.get("id"), m.get("method")
+              if i is None:
+                  continue
+              if method == "initialize":
+                  r = {"protocolVersion": m["params"]["protocolVersion"], "capabilities": {"tools": {}}, "serverInfo": {"name": "smoke-mcp", "version": "0.0.1"}}
+              elif method == "tools/list":
+                  r = {"tools": [{"name": "smoke_marker", "description": "Returns the fixed smoke marker word", "inputSchema": {"type": "object", "properties": {}}}]}
+              elif method == "tools/call":
+                  r = {"content": [{"type": "text", "text": "slate-newt-2468"}]}
+              else:
+                  r = {}
+              sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": i, "result": r}) + "\n")
+              sys.stdout.flush()
+lsps:
+  smoke-lsp:
+    command: python3
+    args:
+      - -c
+      - |
+        import json, os, sys, time
+        def log(t):
+            d = os.environ.get("TMPDIR") or "/tmp"
+            open(os.path.join(d, "upskill-smoke-lsp-marker"), "a").write("%s %s pid=%d\n" % (t, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), os.getpid()))
+        log("started")
+        def read():
+            n = 0
+            while True:
+                h = sys.stdin.buffer.readline()
+                if not h:
+                    return None
+                h = h.strip()
+                if not h:
+                    break
+                if h.lower().startswith(b"content-length:"):
+                    n = int(h.split(b":")[1])
+            return json.loads(sys.stdin.buffer.read(n))
+        def send(o):
+            b = json.dumps(o).encode()
+            sys.stdout.buffer.write(b"Content-Length: %d\r\n\r\n" % len(b) + b)
+            sys.stdout.buffer.flush()
+        while True:
+            m = read()
+            if m is None or m.get("method") == "exit":
+                break
+            i, method = m.get("id"), m.get("method")
+            if i is None:
+                continue
+            if method == "initialize":
+                send({"jsonrpc": "2.0", "id": i, "result": {"capabilities": {"documentSymbolProvider": True}}})
+            elif method == "textDocument/documentSymbol":
+                log("documentSymbol")
+                send({"jsonrpc": "2.0", "id": i, "result": []})
+            else:
+                send({"jsonrpc": "2.0", "id": i, "result": None})
+    extensions:
+      .smoke: smokelang

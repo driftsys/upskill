@@ -726,23 +726,25 @@ rules, in order:
    notice run lock does not cover applying `update` or notice runs that proceed
    without a lock.
 
-Every failure after argument parsing prints nothing and gives exit code 0;
-nothing is written to stderr. An interrupt (SIGINT) ends the command at once
-with exit code 0. During the lookups it prints nothing and writes no cache file.
-After the line was written and before the cache file was saved, the same line
-prints again in the next session. A temporary file `notice.json.<pid>.tmp` can
-remain in the cache directory. A failed installation of the signal handler is
-ignored. The failures are: no cache directory is known (neither an absolute
-`XDG_CACHE_HOME` nor the home directory), the scope roots cannot be determined,
-and a lockfile that cannot be parsed. Only a root that is due has its lockfile
-read; when that lockfile cannot be parsed, the command prints nothing for any
-root, also not the cached line of a root that is not due, and writes no cache
-file. A source that is not reachable adds no update, but the entries that
-earlier checks stored stay in `updates` (rule 1) and rule 2 counts them; a
-failed read or write of the cache file is ignored. When the cache directory
-cannot be written, nothing is stored, so the check runs and the line is printed
-at every session start. With `--quiet`, rule 1 and rule 3 apply, and rule 2
-prints nothing and leaves `reported` unchanged.
+Every failure after argument parsing gives exit code 0; nothing is written to
+stderr. An interrupt (SIGINT) ends the command at once with exit code 0. During
+the lookups it prints nothing and writes no cache file. After the line was
+written and before the cache file was saved, the same line prints again in the
+next session. A temporary file `notice.json.<pid>.tmp` can remain in the cache
+directory. A failed installation of the signal handler is ignored. When no cache
+directory is known (neither an absolute `XDG_CACHE_HOME` nor the home
+directory), the command prints nothing. When the scope roots cannot be
+determined or a lockfile cannot be parsed, it prints no line for any root and
+changes no entry of a root that has a lockfile; the release check still runs,
+can print its line and saves its state. Only a root that is due has its lockfile
+read; when that lockfile cannot be parsed, the command prints no line for any
+root, also not the cached line of a root that is not due. A source that is not
+reachable adds no update, but the entries that earlier checks stored stay in
+`updates` (rule 1) and rule 2 counts them; a failed read or write of the cache
+file is ignored. When the cache directory cannot be written, nothing is stored,
+so the check runs and the line is printed at every session start. With
+`--quiet`, rule 1 and rule 3 apply, and rule 2 prints nothing and leaves
+`reported` unchanged.
 
 An `update` that applies (not `--dry-run`, `--check` or `--notice`) and returns
 its report, with exit code 0, 1 or 130 (an interrupt), removes from `updates`
@@ -985,26 +987,28 @@ behaviour:
   that its resolution evaluated and that no longer reaches a dependency bundle
   leaves the `required_by` of that bundle, and a dependency bundle that no
   resolution of the run reaches is dropped from the lockfile once every one of
-  its root sources is applied. Each of its items that no resolution provides is
-  removed, reported as `removed — no longer in source`; an item that another
-  root still reaches is kept. The lockfile records no marker for an item that
-  was installed directly: an item that is also a member of a dropped dependency
-  bundle is removed with it, and `upskill add <source> <item>` installs it
-  again. An item outside the kind restriction of the source that resolves it is
-  kept unchanged. When a root source is skipped, the items of its dependency
-  bundles are kept and reported as skipped, unless another resolution of the run
-  provides them. A root bundle that lists no item can drop its `requires:`; its
-  former dependency items are then removed. A root source resolves with the
-  kinds of its root bundles when each of them has recorded kinds, together with
-  the kinds of the dependency bundles that they reach (the union of the recorded
-  kinds of the roots of each dependency bundle); a dependency bundle without
-  kinds adds none. A lockfile written before `required_by` existed records every
-  bundle as a root, so `update` keeps a dependency that its root no longer
-  requires. To drop such a dependency once, run `upskill remove <item>...` with
-  the items of the dependency bundle: removing an item also drops each bundle
-  record that lists it. There is no `remove <bundle-name>` form. Removing and
-  adding the root bundle again does not repair the record, because a bundle
-  recorded without `required_by` keeps none.
+  its root sources is applied. Its plugin entries are dropped with it, as
+  `remove` drops them; its MCP entries are kept. Each of its items that no
+  resolution provides is removed, reported as `removed — no longer in source`;
+  an item that another root still reaches is kept. The lockfile records no
+  marker for an item that was installed directly: an item that is also a member
+  of a dropped dependency bundle is removed with it, and
+  `upskill add <source> <item>` installs it again. An item outside the kind
+  restriction of the source that resolves it is kept unchanged. When a root
+  source is skipped, the items of its dependency bundles are kept and reported
+  as skipped, unless another resolution of the run provides them. A root bundle
+  that lists no item can drop its `requires:`; its former dependency items are
+  then removed. A root source resolves with the kinds of its root bundles when
+  each of them has recorded kinds, together with the kinds of the dependency
+  bundles that they reach (the union of the recorded kinds of the roots of each
+  dependency bundle); a dependency bundle without kinds adds none. A lockfile
+  written before `required_by` existed records every bundle as a root, so
+  `update` keeps a dependency that its root no longer requires. To drop such a
+  dependency once, run `upskill remove <item>...` with the items of the
+  dependency bundle: removing an item also drops each bundle record that lists
+  it. There is no `remove <bundle-name>` form. Removing and adding the root
+  bundle again does not repair the record, because a bundle recorded without
+  `required_by` keeps none.
 - **Removal.** `upskill remove --source <label>` removes every item that came
   from that source, including those introduced via bundles. A
   bundle-name-targeted removal (`remove <bundle-name>` removing only items
@@ -1031,6 +1035,15 @@ both. `--quiet` suppresses the result lines.
 with a bundle name is a usage error (exit code 2). Two bundle files that declare
 one name fail the run with exit code 1, with a bundle name or with `--all`, even
 when neither is named.
+
+A client output that would hold only its manifest has nothing to pack, for
+example the output of a bundle that only declares third-party plugins: a plugin
+cannot install another plugin. `pack` does not write it and prints a warning on
+stderr that names the bundle and the client. A named bundle with nothing to pack
+for every selected client is a usage error (exit code 2), and nothing is
+written. `--all` skips such a bundle with the warning and builds the others;
+with `--catalog`, the skipped output gets no marketplace entry, and an earlier
+entry of it is removed as for any directory that `pack` did not write.
 
 ```bash
 upskill pack my-bundle --source owner/repo@v1 --out dist

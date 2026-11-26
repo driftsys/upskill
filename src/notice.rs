@@ -423,6 +423,18 @@ pub fn forget(cache: &mut NoticeCache, root: &Path) {
     cache.scopes.remove(&key(root));
 }
 
+/// The greater of two versions as `X.Y.Z`. A value that does not parse loses
+/// to one that does.
+fn newer_version(a: &Option<String>, b: &Option<String>) -> Option<String> {
+    let parsed = |v: &Option<String>| v.as_deref().and_then(crate::release::parse_version);
+    match (parsed(a), parsed(b)) {
+        (Some(x), Some(y)) if y > x => b.clone(),
+        (Some(_), _) => a.clone(),
+        (None, Some(_)) => b.clone(),
+        (None, None) => a.clone().or_else(|| b.clone()),
+    }
+}
+
 /// Apply the state of each of `roots` in `mine` to `fresh`, and return the
 /// result. A root that `mine` does not hold is removed from `fresh`. The states
 /// of all other roots stay as `fresh` holds them, so that a run that overlapped
@@ -446,9 +458,13 @@ pub fn merge_roots(
     roots: &[PathBuf],
     checked: &[PathBuf],
 ) -> NoticeCache {
+    // `reported` is merged on its own, so a line that either run printed is
+    // not printed again (issue #651).
+    let reported = newer_version(&fresh.release.reported, &mine.release.reported);
     if mine.release.checked_at >= fresh.release.checked_at {
         fresh.release = mine.release.clone();
     }
+    fresh.release.reported = reported;
     for root in roots {
         match mine.scopes.get(&key(root)) {
             Some(state) => {
@@ -1532,6 +1548,29 @@ mod tests {
     fn equal_versions_print_nothing() {
         let mut cache = cache_with_latest(ver(0, 9, 4));
         assert_eq!(decide_release(&mut cache, ver(0, 9, 4), true), None);
+    }
+
+    #[test]
+    fn merge_roots_keeps_the_reported_release_of_either_run() {
+        // Run B printed the line for 0.9.6 and saved. Run A, with the newer
+        // `checked_at`, then saves state where 0.9.6 is not reported yet.
+        let mut printed = NoticeCache::default();
+        record_release(&mut printed, ver(0, 9, 6), 1_000);
+        assert!(decide_release(&mut printed, ver(0, 9, 5), false).is_some());
+        let mut mine = NoticeCache::default();
+        record_release(&mut mine, ver(0, 9, 6), 2_000);
+        let mut merged = merge_roots(printed.clone(), &mine, &[], &[]);
+        assert_eq!(merged.release.checked_at, 2_000);
+        assert_eq!(merged.release.reported.as_deref(), Some("0.9.6"));
+        assert_eq!(decide_release(&mut merged, ver(0, 9, 5), false), None);
+
+        // The other order: the run that printed has the newer `checked_at`
+        // and is merged into a file with an older reported version.
+        let mut old = NoticeCache::default();
+        record_release(&mut old, ver(0, 9, 4), 500);
+        old.release.reported = Some("0.9.4".into());
+        let merged = merge_roots(old, &printed, &[], &[]);
+        assert_eq!(merged.release.reported.as_deref(), Some("0.9.6"));
     }
 
     #[test]
