@@ -13,7 +13,7 @@ bundles flat under `skills/`; see
 skills/
 ├── README.md                       (this file)
 ├── NOTICE                          attribution for vendored methodology
-├── upskill.bundle.yaml  one-shot install of the discipline
+├── upskill.bundle.yaml             one-shot install of the discipline
 ├── upskill-prompt-design/          umbrella / orientation
 │   └── SKILL.md
 ├── upskill-prompt-distilling/      decompose authoring intent + place across layers
@@ -26,8 +26,11 @@ skills/
 │   └── SKILL.md
 ├── upskill-writing-bundles/        .bundle.yaml authoring + plugin declarations
 │   └── SKILL.md
-└── upskill-managing-content/                  lifecycle operations
-    └── SKILL.md
+├── upskill-managing-content/       lifecycle operations
+│   └── SKILL.md
+└── upskill-setup/                  session-start hook
+    ├── HOOK.md
+    └── upskill-setup.sh
 ```
 
 ## Status
@@ -71,7 +74,7 @@ client. Pick the one matching your setup:
 
 If you use more than one harness, install superpowers separately for each.
 
-### 2. Install upskill bundle
+### 2. Install the upskill bundle
 
 `upskill add` resolves a bundle when the `source` argument points at the
 `.bundle.yaml` file directly. From the upskill repo root (treating this

@@ -30,12 +30,14 @@ skills before your next `upskill update`, and add `--global` for a global
 install:
 
 ```bash
-upskill remove --global upskill-cli
+upskill remove --global upskill-cli upskill-prompt-design upskill-prompt-distilling upskill-writing-rules upskill-writing-subagents upskill-evaluating-prompts upskill-writing-bundles
 ```
 
-List the installed names with `upskill list`. Remove each upskill skill the same
-way. The order matters: `upskill update` stops before it writes anything when
-the lockfile records a name that the source no longer holds.
+List the installed names with `upskill list`. Remove the old upskill skills
+before the next `upskill update`. A lockfile that records the bundle
+`prompt-engineering` makes `update` stop until its items are removed. For an
+install by item name, `update` removes the old `upskill-cli` and keeps the other
+six old skills beside the plugin's copies.
 
 ## Install
 

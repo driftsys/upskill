@@ -16,8 +16,8 @@ No Node.js. No npm. No runtime dependencies.
 ## Install (consumer)
 
 Set up upskill in Claude Code or Copilot CLI with the `upskill` plugin from the
-`driftsys/metapowers` marketplace. It gives you the upskill skills, offers to
-install the CLI when it is missing, and prints update notices:
+`driftsys/metapowers` marketplace. It gives you the upskill skills, prints the
+command that installs the CLI when it is missing, and prints update notices:
 
 ```bash
 claude plugin marketplace add driftsys/metapowers
@@ -29,10 +29,17 @@ copilot plugin install upskill@metapowers
 
 If you installed the upskill skills before with `upskill add driftsys/upskill`,
 the plugin now provides them, and the old install keeps the old names. Run
-`upskill remove` on those skills (add `--global` for a global install) before
-your next `upskill update`, because `update` stops when the source no longer
-holds an installed name. See
-[Getting started](docs/book/getting-started.md#set-up-the-upskill-plugin).
+`upskill remove` on the seven old skills (add `--global` for a global install)
+before your next `upskill update`:
+
+```bash
+upskill remove --global upskill-cli upskill-prompt-design upskill-prompt-distilling upskill-writing-rules upskill-writing-subagents upskill-evaluating-prompts upskill-writing-bundles
+```
+
+A lockfile that records the bundle `prompt-engineering` makes `update` stop
+until you remove its items. For an install by item name, `update` removes the
+old `upskill-cli` and keeps the other six old skills beside the plugin's copies.
+See [Getting started](docs/book/getting-started.md#set-up-the-upskill-plugin).
 
 For opencode, or when you want no plugin, install the CLI and add the skills
 with `upskill add`:
