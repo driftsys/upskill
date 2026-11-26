@@ -133,6 +133,12 @@ pub struct AddOptions {
     /// Bundle names that the run resolves as bundles only; set by `update`;
     /// `add` leaves it empty.
     pub bundles: Vec<String>,
+    /// Set by `update`. When true, a bundle of `bundles` that the source no
+    /// longer holds, and an item name that matches nothing in the source, are
+    /// not errors: the bundle is listed in
+    /// `PreparedInstall::vanished_bundles` and the run resolves what is
+    /// left. `add` leaves it false.
+    pub allow_vanished: bool,
     /// Consumer-side client selection (ADR-0012). Default targets all
     /// clients, preserving the emit-for-everyone behaviour.
     pub selection: crate::select::ClientSelection,

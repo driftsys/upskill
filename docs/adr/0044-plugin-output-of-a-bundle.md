@@ -76,9 +76,10 @@ bundle; it does not replace the bundle or change its schema.
    unless its source is skipped. It then shares the source's skipped status,
    also when the source is skipped later because it requires an item of a
    skipped source. `add <source> <item>` updates it. A recorded bundle that is
-   no longer in its source causes
-   `bundle '<name>' is no longer in source <label>` before any write, even if an
-   item has the same name.
+   no longer in its source is dropped: `update` removes its items as
+   `removed — no longer in source` and deletes its record, even if an item has
+   the same name (amended by issue #649). The source must still hold at least
+   one item or bundle file; otherwise `update` stops before any write.
 8. `pack` resolves the entry bundle in the current directory. A `requires` entry
    with a `source` is fetched from that source. The init `--source` must parse
    as an install source and, like the bundle name, is limited to a safe

@@ -2236,10 +2236,11 @@ fn update_lists_a_dependency_planned_from_two_sources_once() {
     );
 }
 
-/// Pins today's behaviour: when the only recorded item was renamed in the
-/// source, no recorded item remains, so `update` fails without writing.
+/// When the only recorded item was renamed in the source, the source still
+/// holds an item, so `update` reports the old item as removed, deletes its
+/// output and does not install the new name.
 #[test]
-fn update_fails_when_no_recorded_item_remains_after_a_rename() {
+fn update_removes_a_recorded_item_that_a_rename_took_from_the_source() {
     let tmp = tempfile::tempdir().unwrap();
     let home = tmp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -2258,9 +2259,6 @@ fn update_fails_when_no_recorded_item_remains_after_a_rename() {
         .args(["add", source.to_str().unwrap(), "--project", "--claude"])
         .assert()
         .success();
-    let lock_before = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
-    let output_before =
-        fs::read_to_string(target.join(".claude/skills/old-name/SKILL.md")).unwrap();
 
     fs::rename(source.join("old-name"), source.join("new-name")).unwrap();
     fs::write(
@@ -2269,20 +2267,62 @@ fn update_fails_when_no_recorded_item_remains_after_a_rename() {
     )
     .unwrap();
 
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        out.lines()
+            .any(|l| l.contains("skill old-name") && l.contains("no longer in source")),
+        "{out}"
+    );
+    assert!(!target.join(".claude/skills/old-name").exists());
+    assert!(!target.join(".claude/skills/new-name").exists());
+    let lock = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
+    assert!(!lock.contains("old-name"), "{lock}");
+}
+
+/// A directory source that resolves to no item and no bundle keeps the
+/// guard of issue #196: `update` stops without writing.
+#[test]
+fn update_fails_when_a_directory_source_resolves_to_nothing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let source = tmp.path().join("source");
+    let target = tmp.path().join("target");
+    fs::create_dir_all(source.join("old-name")).unwrap();
+    fs::write(
+        source.join("old-name/SKILL.md"),
+        "---\nschema: 1\nname: old-name\ndescription: A skill that the test deletes.\n---\n\nBody.\n",
+    )
+    .unwrap();
+    fs::create_dir_all(target.join(".git")).unwrap();
+
+    common::upskill_cmd(&home)
+        .current_dir(&target)
+        .args(["add", source.to_str().unwrap(), "--project", "--claude"])
+        .assert()
+        .success();
+    let output_before = fs::read(target.join(".claude/skills/old-name/SKILL.md")).unwrap();
+    let lock_before = fs::read_to_string(target.join(".upskill-lock.json")).unwrap();
+
+    fs::remove_dir_all(source.join("old-name")).unwrap();
+
     common::upskill_cmd(&home)
         .current_dir(&target)
         .args(["update", "--project", "--yes"])
         .assert()
         .code(1)
-        .stderr(predicates::str::contains("old-name"));
-
+        .stderr(predicates::str::contains("resolved to no items"));
     assert_eq!(
         fs::read_to_string(target.join(".upskill-lock.json")).unwrap(),
         lock_before
     );
     assert_eq!(
-        fs::read_to_string(target.join(".claude/skills/old-name/SKILL.md")).unwrap(),
+        fs::read(target.join(".claude/skills/old-name/SKILL.md")).unwrap(),
         output_before
     );
-    assert!(!target.join(".claude/skills/new-name").exists());
 }

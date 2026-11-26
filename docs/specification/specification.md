@@ -224,14 +224,14 @@ of an item that its source no longer contains fails, the install of that source
 is already written and saved. A removal that is refused when it is planned (a
 symbolic link above a recorded path, or a recorded path that cannot be
 inspected) fails before the install of that source is written. For `update`, a
-source that resolves to no items while the lockfile records items from it, and a
-hand-shake file that cannot be updated (for example an `opencode.json` whose
-`instructions` is not an array), also fail the source before any file of that
-source is written, in every mode. Without `--force`, an item with at least one
-conflict is skipped as a whole: none of its files is written or deleted and its
-lockfile entry is not changed, except its `required_by` (§2.2). The other items
-are written. `add` then prints one line per conflict to stderr,
-`skipped <kind> <name>: <path> was modified` or
+source that resolves to no items and no bundle while the lockfile records items
+from it, and a hand-shake file that cannot be updated (for example an
+`opencode.json` whose `instructions` is not an array), also fail the source
+before any file of that source is written, in every mode. Without `--force`, an
+item with at least one conflict is skipped as a whole: none of its files is
+written or deleted and its lockfile entry is not changed, except its
+`required_by` (§2.2). The other items are written. `add` then prints one line
+per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces
@@ -477,15 +477,18 @@ item and a `kept modified file` note are not changes.
   is skipped later because it requires an item of a skipped source. To update
   such an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source
   is reinstalled as a whole. Recorded bundle names resolve only as bundles. A
-  missing root bundle causes `bundle '<name>' is no longer in source <label>`
-  before any write, even if an item has that name. A dependency bundle that the
-  run resolves through its roots is not looked up by name: when no root reaches
-  it any more, its record is dropped (§2.6). Each reinstalled entry gets the
-  commit of its own source (an entry from another source gets that source's
-  commit), unless its update is skipped, and any other entry keeps its recorded
-  commit. The lockfile is saved only when a value differs. This write is not a
-  change of the source (see the preview above) and does not count in the output.
-  A dry run, a declined source and a stopped run record no commit.
+  recorded root bundle that is missing from a directory source is dropped: its
+  items are removed and reported as `removed — no longer in source`, and its
+  record and its plugin records are deleted, even if an item has that name. The
+  source must still hold an item or a `.bundle.yaml` file; otherwise the update
+  fails before any write (below). A dependency bundle that the run resolves
+  through its roots is not looked up by name: when no root reaches it any more,
+  its record is dropped (§2.6). Each reinstalled entry gets the commit of its
+  own source (an entry from another source gets that source's commit), unless
+  its update is skipped, and any other entry keeps its recorded commit. The
+  lockfile is saved only when a value differs. This write is not a change of the
+  source (see the preview above) and does not count in the output. A dry run, a
+  declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
@@ -1469,11 +1472,12 @@ that is refused for a source item that overlaps an output path of the run or
 that contains a recorded file that the check of §2.1 or §2.2 compares, for a
 conflict with another source, for two items with one installed name, or for an
 installed name that is empty, `.` or `..` or that has a path separator, and not
-an `update` whose first source resolves to no items while the lockfile records
-items from it) adopt a `schema: 1` lockfile: they keep the old bytes as
-`.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
-replaced), record each existing file at the items' output paths with its current
-hash, save `schema: 3`, and print the adopted paths to stderr.
+an `update` whose first source is a directory that resolves to no item and no
+bundle file while the lockfile records items from it) adopt a `schema: 1`
+lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an existing
+`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
+the items' output paths with its current hash, save `schema: 3`, and print the
+adopted paths to stderr.
 
 Two possible locations:
 

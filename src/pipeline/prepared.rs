@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
 use super::apply::{self, Disposition, PlanDecision};
-use super::discovery::{self, scan_source_items};
+use super::discovery::{self, scan_source_items, scan_source_items_strict};
 use super::install::{
     self, DependencyClosure, ResolvedBundle, install_from_local_path_selective,
     install_mcps_from_bundles, install_plugins_from_bundles,
@@ -47,6 +47,12 @@ pub(super) struct PreparedInstall {
     /// Holds the clone guards of the cross-source fetches.
     closure: Option<DependencyClosure>,
     resolved_bundles: Vec<ResolvedBundle>,
+    /// Recorded bundles that the fetched source no longer holds; filled only
+    /// when [`AddOptions::allow_vanished`] is set.
+    vanished_bundles: Vec<String>,
+    /// True when the fetched entry source is a directory that holds at least
+    /// one item or one bundle file.
+    holds_content: bool,
     /// Every item directory of every source that this install reads, as given
     /// to the overlap check. `update` checks the items of all its sources
     /// together with [`PreparedInstall::source_items`].
@@ -132,7 +138,45 @@ pub(super) fn prepare_install(
     let local_source = fetched.root;
     let tmp_guard = fetched.guard;
     let commit = fetched.commit;
-    let scanned_items = scan_source_items(&local_source)?;
+    let scanned_items = if options.allow_vanished {
+        // `update` removes an installed item that no plan provides, so every
+        // root that the run plans from is walked strictly: here the entry
+        // source, and below the registry root of a bundle-file source and
+        // each source root of the resolved closure. The strict walk reads the
+        // hidden directories that the scan skips, and an unreadable directory
+        // stops the run instead of making its items look absent.
+        if local_source.is_dir() {
+            discovery::iter_item_dirs_strict(&local_source)?;
+        }
+        scan_source_items_strict(&local_source)?
+    } else {
+        scan_source_items(&local_source)?
+    };
+    let holds_content = !discovery::is_bundle_file(&local_source)
+        && (!scanned_items.is_empty() || discovery::has_any_bundle_file(&local_source));
+    // `update` drops a recorded bundle that the source no longer holds; the
+    // run resolves the other bundles.
+    let mut vanished_bundles = Vec::new();
+    let pruned;
+    let options = if options.allow_vanished {
+        // A bundle is vanished only after a complete search finds it absent;
+        // an unreadable directory is an error.
+        let mut kept = Vec::new();
+        for name in &options.bundles {
+            if discovery::try_find_bundle_by_name(&local_source, name)?.is_some() {
+                kept.push(name.clone());
+            } else {
+                vanished_bundles.push(name.clone());
+            }
+        }
+        pruned = AddOptions {
+            bundles: kept,
+            ..options.clone()
+        };
+        &pruned
+    } else {
+        options
+    };
     if !options.keep_recorded_excludes && !discovery::is_bundle_file(&local_source) {
         for name in items {
             if !scanned_items.iter().any(|(_, scanned)| scanned == name)
@@ -200,7 +244,7 @@ pub(super) fn prepare_install(
     // zero items). Bundle-file sources own their own resolution too.
     let defer_to_name_resolution = !items.is_empty()
         && !discovery::is_bundle_file(&local_source)
-        && (requested.is_empty()
+        && ((requested.is_empty() && !options.allow_vanished)
             || items
                 .iter()
                 .any(|n| discovery::find_bundle_by_name(&local_source, n).is_some()));
@@ -215,7 +259,15 @@ pub(super) fn prepare_install(
     // item-level path uses, so the install + item-lockfile machinery is shared;
     // `resolved_bundles` carries each bundle's own source for the bundle
     // lockfile recording and plugin/MCP install.
-    let bundle_resolution = if options.bundles.is_empty() {
+    let bundle_resolution = if options.allow_vanished
+        && options.bundles.is_empty()
+        && !vanished_bundles.is_empty()
+        && items.is_empty()
+    {
+        // Every recorded bundle vanished and no item is left to resolve: the
+        // run installs nothing, and must not fall back to the whole source.
+        Some((DependencyClosure::default(), Vec::new()))
+    } else if options.bundles.is_empty() {
         resolve_bundle_request(
             &label,
             &local_source,
@@ -271,6 +323,23 @@ pub(super) fn prepare_install(
 
     if let Some(closure) = &mut closure {
         closure.retain_kinds(&options.kinds, &options.source_kinds);
+        // `update` can resolve nothing from the entry source (every recorded
+        // bundle vanished). Its item directories still take part in the
+        // overlap checks, with an empty install selection.
+        if options.allow_vanished && !discovery::is_bundle_file(&local_source) {
+            closure
+                .source_roots
+                .entry(label.clone())
+                .or_insert_with(|| local_source.clone());
+        }
+        if options.allow_vanished {
+            if discovery::is_bundle_file(&local_source) {
+                discovery::iter_item_dirs_strict(&install::bundle_file_root(&local_source)?)?;
+            }
+            for root in closure.source_roots.values() {
+                discovery::iter_item_dirs_strict(root)?;
+            }
+        }
     }
 
     // Installed names of entry-source items. The first mapping given for
@@ -447,7 +516,13 @@ pub(super) fn prepare_install(
         )?
     };
 
-    if !options.kinds.is_empty() && !items.is_empty() && report.planned.is_empty() {
+    // `update` accepts an empty plan: the recorded items that the source no
+    // longer provides are removed.
+    if !options.allow_vanished
+        && !options.kinds.is_empty()
+        && !items.is_empty()
+        && report.planned.is_empty()
+    {
         anyhow::bail!(
             "no item of kind {} matches: {}",
             options
@@ -505,6 +580,8 @@ pub(super) fn prepare_install(
         report,
         closure,
         resolved_bundles,
+        vanished_bundles,
+        holds_content,
         source_items,
         local_source,
         _tmp_guard: tmp_guard,
@@ -566,6 +643,17 @@ impl PreparedInstall {
             .iter()
             .map(|rb| (rb.bundle.name.clone(), rb.required_by.clone()))
             .collect()
+    }
+
+    /// The recorded bundles that the fetched source no longer holds.
+    pub fn vanished_bundles(&self) -> &[String] {
+        &self.vanished_bundles
+    }
+
+    /// True when the fetched entry source holds at least one item or bundle.
+    /// Always false for a bundle-file source.
+    pub fn holds_content(&self) -> bool {
+        self.holds_content
     }
 
     /// The bundle `name` as the fetched entry source declares it now: a
@@ -909,6 +997,8 @@ impl PreparedInstall {
             mut report,
             closure: _closure,
             resolved_bundles,
+            vanished_bundles: _,
+            holds_content: _,
             source_items: _,
             local_source: _,
             _tmp_guard,
@@ -1848,6 +1938,7 @@ mod tests {
                 kept_notes: kept,
                 handshake: Vec::new(),
                 adopted: None,
+                vanished_bundles: Vec::new(),
             };
             assert!(!preview.has_changes());
         }

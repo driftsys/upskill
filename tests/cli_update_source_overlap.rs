@@ -1090,3 +1090,53 @@ fn remove_does_not_read_the_source_of_the_items_that_it_removes() {
     assert_eq!(output.status.code(), Some(0), "{stderr}");
     assert!(!proj.join(".claude/skills/w").exists());
 }
+
+/// Issue #649: the source of skill `y` is the output directory of skill `a`
+/// and is recorded through the bundle `bun`. Upstream deletes the bundle and
+/// `a` but keeps `other`. The resolution of the run installs nothing from
+/// that source, yet its item directories still take part in the overlap
+/// check, so `update` refuses before any write.
+#[test]
+fn update_refuses_when_a_vanished_bundle_leaves_a_source_dir_under_a_removed_output() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let proj = tmp.path().join("proj");
+    fs::create_dir_all(proj.join(".git")).unwrap();
+    let outer = tmp.path().join("src-a");
+    write_skill(&outer.join("a"), "a", "# a");
+    write_skill(&outer.join("a/y"), "y", "# y");
+    write_skill(&outer.join("other"), "other", "# other");
+    write_skill(&proj.join(".agents/skills/a/y"), "y", "# y");
+    let bundle = proj.join(".agents/skills/a/bun.bundle.yaml");
+    fs::write(
+        &bundle,
+        "schema: 1\nname: bun\ndescription: A bundle of y.\nitems:\n  skills: [y]\n",
+    )
+    .unwrap();
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "./.agents/skills/a", "bun", "--project", "--claude"])
+        .assert()
+        .success();
+    common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["add", "../src-a", "--project", "--opencode", "--claude"])
+        .assert()
+        .success();
+    assert!(proj.join(".agents/skills/a/y/SKILL.md").is_file());
+    fs::remove_file(&bundle).unwrap();
+    fs::remove_dir_all(outer.join("a")).unwrap();
+    let before = files_under(&proj);
+    let assert = common::upskill_cmd(&home)
+        .current_dir(&proj)
+        .args(["update", "--project", "--yes"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("the update would delete this file"),
+        "{stderr}"
+    );
+    assert_eq!(files_under(&proj), before);
+}

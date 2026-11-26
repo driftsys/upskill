@@ -1343,7 +1343,8 @@ fn repair_missing_plugins(
 /// Then, for each source, in this order:
 ///
 /// 1. The prepared install of the source is taken from the first step.
-/// 2. A source that resolves to no items while the lockfile records items
+/// 2. A source that resolves to no items (a directory source: and to no bundle
+///    file) while the lockfile records items
 ///    from it is an error (`guard_against_empty_source`), before any write
 ///    of the source.
 /// 3. A `schema: 1` lockfile is adopted (`adopt_schema1`) and the adopted
@@ -1718,6 +1719,7 @@ pub fn update(
                         .map(|bundle| bundle.name.clone())
                         .collect()
                 },
+                allow_vanished: true,
                 selection: effective_selection,
                 keep_unwithheld_edits: true,
                 keep_recorded_excludes: true,
@@ -2029,7 +2031,12 @@ pub fn update(
                 .filter(|e| !dependency_keys.contains(&(e.kind, e.name.clone())))
                 .cloned()
                 .collect();
-            guard_against_empty_source(&new_hashes, &own_entries, &source_label)?;
+            guard_against_empty_source(
+                &new_hashes,
+                &own_entries,
+                &source_label,
+                prepared.holds_content(),
+            )?;
             // The bundles that the lockfile records for this source, as the
             // fetched source declares them now: the plugin repair below
             // installs from them (issue #229). A source under a kind
@@ -2084,12 +2091,23 @@ pub fn update(
                     items.push(removal_preview(plan_removal(target, entry, overwrite)?));
                 }
             }
+            let previewed_vanished = droppable_vanished(
+                &current,
+                &source_label,
+                prepared.vanished_bundles(),
+                &source_entries
+                    .iter()
+                    .filter(|e| is_orphan(e))
+                    .map(|e| e.name.clone())
+                    .collect(),
+            );
             let preview = SourcePreview {
                 source: source_label.clone(),
                 items,
                 kept_notes: install_preview.kept_notes,
                 handshake: install_preview.handshake,
                 adopted,
+                vanished_bundles: previewed_vanished.clone(),
             };
             report.sources_considered += 1;
             let decision = observer.preview(&preview);
@@ -2189,16 +2207,10 @@ pub fn update(
             let first_item = report.items.len();
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
-            let requirers = prepared.resolved_requirers();
+            let mut requirers = prepared.resolved_requirers();
+            let vanished: Vec<String> = prepared.vanished_bundles().to_vec();
             let install_report = prepared.commit(target, plugin_scope)?;
             applied_sources.insert(source_label.clone());
-            update_dependency_records(
-                target,
-                &dependency_roots,
-                &reached_bundles,
-                &applied_sources,
-                &requirers,
-            )?;
             // The plugin step of the apply attempts every plugin of the
             // recorded bundles of the source, so an applied source needs no
             // plugin repair.
@@ -2264,6 +2276,35 @@ pub fn update(
                 lock.save(target)?;
                 drop_global_opencode_rules(at.scope, target, &dropped);
             }
+            // A vanished bundle record is dropped once every member of the
+            // bundle is removed or provided by a bundle that stays.
+            let dropped = drop_vanished_bundles(target, at.scope, &source_label, &vanished)?;
+            // A bundle that the preview announced and that is kept: a member
+            // stays installed after the apply, for example a skill that
+            // another item requires, which the preview counted as covered by
+            // the recorded membership of a bundle that stays.
+            report.kept_vanished_bundles.extend(
+                previewed_vanished
+                    .iter()
+                    .filter(|name| !dropped.contains(name))
+                    .map(|name| (name.clone(), source_label.clone())),
+            );
+            report.vanished_bundles.extend(
+                dropped
+                    .iter()
+                    .map(|name| (name.clone(), source_label.clone())),
+            );
+            // A dropped root no longer requires its dependencies.
+            for name in dropped {
+                requirers.entry(name).or_default();
+            }
+            update_dependency_records(
+                target,
+                &dependency_roots,
+                &reached_bundles,
+                &applied_sources,
+                &requirers,
+            )?;
             for entry in &source_entries {
                 let kind = entry.kind;
                 if is_orphan(entry) {
@@ -2521,6 +2562,93 @@ fn collect_recorded_local_items(
     )
 }
 
+/// The bundles of `names` (vanished from `source`) whose records can be
+/// dropped: those for which no member remains installed. A member remains
+/// when `lock` has an item of `source` with that source name that `removed`
+/// (installed names) does not cover and that no recorded bundle of `source`
+/// outside `names` lists.
+fn droppable_vanished(
+    lock: &crate::lockfile::Lockfile,
+    source: &str,
+    names: &[String],
+    removed: &std::collections::BTreeSet<String>,
+) -> Vec<String> {
+    names
+        .iter()
+        .filter(|name| {
+            let Some(bundle) = lock
+                .bundles
+                .iter()
+                .find(|b| b.source == source && &b.name == *name)
+            else {
+                return false;
+            };
+            bundle.items.iter().all(|member| {
+                let installed = lock.items.iter().any(|i| {
+                    i.source == source
+                        && i.source_name.as_ref().unwrap_or(&i.name) == member
+                        && !removed.contains(&i.name)
+                });
+                let kept = lock.bundles.iter().any(|b| {
+                    b.source == source && !names.contains(&b.name) && b.items.contains(member)
+                });
+                !installed || kept
+            })
+        })
+        .cloned()
+        .collect()
+}
+
+/// Drops the records of the droppable bundles of `names` of `source` from the
+/// lockfile (see [`droppable_vanished`]), and the plugin records of those
+/// bundles, as `remove` does. Returns the dropped names. The items of those
+/// bundles are removed as orphans by the caller (issue #649).
+fn drop_vanished_bundles(
+    target: &Path,
+    scope: crate::scope::Scope,
+    source: &str,
+    names: &[String],
+) -> Result<Vec<String>> {
+    if names.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut lock = crate::lockfile::Lockfile::load(target)?;
+    let dropped = droppable_vanished(&lock, source, names, &std::collections::BTreeSet::new());
+    if dropped.is_empty() {
+        return Ok(dropped);
+    }
+    let gone = |bundle: &str| dropped.iter().any(|n| n == bundle);
+    let removed_plugins: Vec<crate::lockfile::LockedPlugin> = lock
+        .plugins
+        .iter()
+        .filter(|p| gone(&p.bundle))
+        .cloned()
+        .collect();
+    lock.plugins.retain(|p| !gone(&p.bundle));
+    lock.bundles
+        .retain(|b| !(b.source == source && gone(&b.name)));
+    // The URI of an opencode plugin stays in the config while another
+    // installed plugin record of this scope still references it.
+    for plugin in &removed_plugins {
+        if plugin.client == "opencode"
+            && plugin.status == crate::lockfile::PluginInstallStatus::Installed
+            && !lock.plugins.iter().any(|p| {
+                p.client == "opencode"
+                    && p.status == crate::lockfile::PluginInstallStatus::Installed
+                    && p.identifier == plugin.identifier
+            })
+        {
+            let _ = crate::ancillary::remove_opencode_plugin_uri(
+                target,
+                crate::plugin::PluginScope::of(scope),
+                &plugin.identifier,
+            );
+        }
+    }
+    lock.save(target)?;
+    Ok(dropped)
+}
+
 /// Brings the records of the dependency bundles of `dependency_roots` up to
 /// date after an applied source whose resolution reached the bundles of
 /// `requirers` (each with the requirers that this resolution found): a
@@ -2580,13 +2708,16 @@ fn update_dependency_records(
 /// genuinely deleted upstream is indistinguishable from a transient
 /// failure here, so erring toward "do not delete" is the safe default —
 /// the user can `upskill remove --source <label>` to clear such entries
-/// deliberately.
+/// deliberately. A directory source that still holds an item or a bundle
+/// file (`holds_content`) is not an anomaly: the recorded entries that it
+/// no longer provides are removed (issue #649).
 fn guard_against_empty_source(
     new_hashes: &std::collections::BTreeMap<(ItemKind, String), Option<String>>,
     source_entries: &[crate::lockfile::LockedItem],
     source_label: &str,
+    holds_content: bool,
 ) -> Result<()> {
-    if new_hashes.is_empty() && !source_entries.is_empty() {
+    if new_hashes.is_empty() && !source_entries.is_empty() && !holds_content {
         let count = source_entries.len();
         let noun = if count == 1 { "item" } else { "items" };
         anyhow::bail!(
@@ -3368,6 +3499,7 @@ mod tests {
             kept_notes: notes,
             handshake: Vec::new(),
             adopted: None,
+            vanished_bundles: Vec::new(),
         }
     }
 

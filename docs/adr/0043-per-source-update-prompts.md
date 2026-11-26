@@ -152,8 +152,8 @@ failed until `update --force`.
 - End of input at a question stops the run. It does not count as `n`.
 - `update --yes` and a run without a terminal change in four ways:
   1. The rule for edited files of Decision 3.
-  2. A source that resolves to no items while the lockfile records items from it
-     is refused before any write of that source.
+  2. A directory source that resolves to no item and no bundle file while the
+     lockfile records items from it is refused before any write of that source.
   3. A hand-shake file that cannot be updated (for example an `opencode.json`
      whose `instructions` is not an array) fails the source before any write of
      that source.

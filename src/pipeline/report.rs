@@ -683,6 +683,13 @@ pub struct UpdatedItem {
 #[derive(Debug, Default, Clone)]
 pub struct UpdateReport {
     pub items: Vec<UpdatedItem>,
+    /// Recorded bundles (name, source) that their source no longer holds and
+    /// whose records an applied source dropped (issue #649).
+    pub vanished_bundles: Vec<(String, String)>,
+    /// Bundles (name, source) that the preview announced as removed and whose
+    /// records an applied source kept, because a member stays installed (for
+    /// example through the `requires` of another item).
+    pub kept_vanished_bundles: Vec<(String, String)>,
     /// Items that an exclude kept out of the run, each once, over all
     /// sources. Also set by a dry run.
     pub excluded: Vec<(ItemKind, String)>,
@@ -774,6 +781,9 @@ pub struct SourcePreview {
     pub handshake: Vec<PathBuf>,
     /// Paths adopted from a `schema: 1` lockfile just before this preview.
     pub adopted: Option<Vec<String>>,
+    /// Recorded bundles of this source that the source no longer holds;
+    /// applying the source drops their records (issue #649).
+    pub vanished_bundles: Vec<String>,
 }
 
 impl SourcePreview {
@@ -792,6 +802,7 @@ impl SourcePreview {
                 || matches!(item.action, PreviewAction::Complete | PreviewAction::Remove)
                 || item.record_only
         }) || !self.handshake.is_empty()
+            || !self.vanished_bundles.is_empty()
     }
 }
 
@@ -930,6 +941,21 @@ impl DoctorScopes {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_vanished_bundle_record_is_a_change_of_the_preview() {
+        let mut preview = SourcePreview {
+            source: "s".to_string(),
+            items: Vec::new(),
+            kept_notes: Vec::new(),
+            handshake: Vec::new(),
+            adopted: None,
+            vanished_bundles: Vec::new(),
+        };
+        assert!(!preview.has_changes());
+        preview.vanished_bundles.push("old".to_string());
+        assert!(preview.has_changes());
+    }
 
     #[test]
     fn doctor_report_is_clean_when_all_buckets_empty() {

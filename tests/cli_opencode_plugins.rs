@@ -279,6 +279,45 @@ fn doctor_reports_a_removed_plugin_uri_and_update_yes_restores_it() {
     assert_eq!(env.log(), "");
 }
 
+/// Issue #649: a vanished bundle and a bundle that stays declare plugins with
+/// different names and the same `plugin_uri`. Dropping the vanished bundle
+/// keeps the configured URI, because the plugin record of the other bundle
+/// still references it.
+#[cfg(unix)]
+#[test]
+fn update_keeps_a_plugin_uri_that_a_bundle_that_stays_still_uses() {
+    let env = Env::new(&format!("plugin_uri: \"{URI}\""), "v2.1.4");
+    let registry = env.bundle.parent().unwrap().to_path_buf();
+    let old = registry.join("old.bundle.yaml");
+    fs::write(
+        &old,
+        format!(
+            "schema: 1\nname: old\ndescription: bundle that vanishes.\nitems:\n  skills:\n    - alpha\nplugins:\n  sp-old:\n    opencode:\n      plugin_uri: \"{URI}\"\n"
+        ),
+    )
+    .unwrap();
+    env.add().success();
+    env.run(&["add", registry.to_str().unwrap(), "old", "--project"])
+        .success();
+    assert!(has_uri(&env.opencode_json()));
+    fs::remove_file(&old).unwrap();
+
+    env.run(&["update", "--yes", "--project"]).code(0);
+
+    let lock = env.lock();
+    let bundles: Vec<_> = lock["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["name"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(bundles, ["oc"], "{lock}");
+    let plugins = lock["plugins"].as_array().unwrap();
+    assert!(plugins.iter().all(|p| p["bundle"] == "oc"), "{lock}");
+    assert!(!plugins.is_empty(), "{lock}");
+    assert!(has_uri(&env.opencode_json()), "{}", env.opencode_json());
+}
+
 #[cfg(unix)]
 #[test]
 fn module_plugin_installs_with_plugin_add_and_doctor_uses_plugin_list() {

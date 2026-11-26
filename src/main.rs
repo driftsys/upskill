@@ -357,6 +357,7 @@ fn run_add(args: AddArgs) -> i32 {
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
         bundles: Vec::new(),
+        allow_vanished: false,
         kinds,
         source_kinds: Default::default(),
         item_clients: Default::default(),
@@ -1638,10 +1639,19 @@ fn print_block(preview: &SourcePreview, blocks: &mut usize) {
 fn render_block(preview: &SourcePreview) -> Vec<String> {
     let mut lines = vec![preview.source.clone()];
     lines.extend(preview.items.iter().map(render_item));
+    for name in &preview.vanished_bundles {
+        lines.push(format!(
+            "  {:<8} bundle {name}   no longer in source ({})",
+            "remove", preview.source
+        ));
+    }
     for path in &preview.handshake {
         lines.push(format!("  {:<8} {}", "write", path.display()));
     }
-    if preview.items.is_empty() && preview.handshake.is_empty() {
+    if preview.items.is_empty()
+        && preview.handshake.is_empty()
+        && preview.vanished_bundles.is_empty()
+    {
         lines.push("  up to date".to_string());
     }
     for path in &preview.kept_notes {
@@ -1918,6 +1928,22 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             style::dim(kind_label),
             style::name(&item.name),
             status
+        );
+    }
+    for (name, source) in &report.vanished_bundles {
+        println!(
+            "  {} {:<32} {} ({source})",
+            style::dim("bundle"),
+            style::name(name),
+            style::error_label("removed — no longer in source")
+        );
+    }
+    for (name, source) in &report.kept_vanished_bundles {
+        println!(
+            "  {} {:<32} {} ({source})",
+            style::dim("bundle"),
+            style::name(name),
+            style::warn("record kept — a member of the bundle is still installed")
         );
     }
     if !report.changed.is_empty() && changes == 0 {
@@ -3092,6 +3118,7 @@ mod tests {
             kept_notes: Vec::new(),
             handshake: Vec::new(),
             adopted: None,
+            vanished_bundles: Vec::new(),
         }
     }
 
