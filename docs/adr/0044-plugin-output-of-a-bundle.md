@@ -56,8 +56,11 @@ bundle; it does not replace the bundle or change its schema.
 6. A lockfile bundle entry records the selected `kinds`; absent or empty means
    unrestricted, and empty is omitted on write. Recorded kinds are sorted
    without duplicates, and bundle entries are sorted by name. `update` restricts
-   a source only when every recorded bundle of that source has recorded kinds,
-   using their union. One unrestricted bundle makes the source unrestricted.
+   a source only when every root bundle of that source (a recorded bundle that
+   is not a dependency bundle with `required_by`, ADR-0009) has recorded kinds,
+   using their union together with the recorded kinds of the dependency bundles
+   that these roots reach. One unrestricted root bundle makes the source
+   unrestricted; a dependency bundle without recorded kinds does not (#648).
    Under a kind restriction, `update` skips both the plugin and MCP steps.
 7. For a directory source with recorded bundles, `update` passes the recorded
    bundle names separately from the directly installed item names of that

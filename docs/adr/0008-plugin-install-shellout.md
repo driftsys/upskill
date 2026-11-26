@@ -268,8 +268,9 @@ is printed again. The repair does not run for a source that the answer did not
 apply, with `--dry-run`, `--check` or `--notice`. A repair install that fails
 prints a warning and does not change the exit code of `update`, as for `add`.
 
-A source under a kind restriction (the lockfile records at least one bundle for
-the source, and every such bundle has recorded kinds, `add --kind`) runs no
+A source under a kind restriction (the lockfile records at least one root bundle
+for the source, and every such root bundle has recorded kinds, `add --kind`; a
+dependency bundle with `required_by` does not count, ADR-0009 and #648) runs no
 plugin step in `update`, and the repair does not run for it either. For a
 missing or skipped plugin of such a source, `doctor` names the `upskill add`
 command of the bundle on the plugin's line. That command has no `--kind`, so it

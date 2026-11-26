@@ -537,17 +537,59 @@ fn add_command_for_bundle(
     Some(format!("upskill add {source}{name} --{}", at.scope))
 }
 
-/// Whether `update` applies a kind restriction to `source`: the lockfile
-/// records at least one bundle for it, and every such bundle has recorded
-/// kinds (`add --kind`). With one unrestricted bundle, no restriction
-/// applies.
+/// Whether `update` applies a kind restriction to `source`, by
+/// [`source_kind_restriction`], with the dependency bundles that the lockfile
+/// records (a bundle whose `required_by` chain reaches a recorded root
+/// bundle). A full `update` that reads the source of every root uses the same
+/// bundles.
 fn source_is_kind_restricted(lock: &crate::lockfile::Lockfile, source: &str) -> bool {
-    let mut recorded = lock
+    !source_kind_restriction(
+        lock,
+        source,
+        |bundle| !lock.root_bundles_of(bundle).is_empty(),
+        |bundle| {
+            lock.root_bundles_of(bundle)
+                .iter()
+                .any(|root| root.source == source)
+        },
+    )
+    .is_empty()
+}
+
+/// The kinds that `update` restricts `source` to; empty for no restriction
+/// (#648). The kinds come from the root bundles of the source (its recorded
+/// bundles for which `is_dependency` is false): a restriction applies only
+/// when each of them has recorded kinds (`add --kind`), and is their union.
+/// The recorded kinds of each dependency bundle that these roots reach
+/// (`reached_from_source`) are added. A dependency bundle without recorded
+/// kinds adds none, so it does not lift the restriction of its roots. With one
+/// unrestricted root bundle, or no root bundle, no restriction applies.
+fn source_kind_restriction(
+    lock: &crate::lockfile::Lockfile,
+    source: &str,
+    is_dependency: impl Fn(&crate::lockfile::LockedBundle) -> bool,
+    reached_from_source: impl Fn(&crate::lockfile::LockedBundle) -> bool,
+) -> Vec<ItemKind> {
+    let roots: Vec<_> = lock
         .bundles
         .iter()
-        .filter(|b| b.source == source)
-        .peekable();
-    recorded.peek().is_some() && recorded.all(|b| !b.kinds.is_empty())
+        .filter(|bundle| bundle.source == source && !is_dependency(bundle))
+        .collect();
+    if roots.is_empty() || roots.iter().any(|bundle| bundle.kinds.is_empty()) {
+        return Vec::new();
+    }
+    roots
+        .iter()
+        .flat_map(|bundle| bundle.kinds.iter().copied())
+        .chain(
+            lock.bundles
+                .iter()
+                .filter(|bundle| reached_from_source(bundle))
+                .flat_map(|bundle| bundle.kinds.iter().copied()),
+        )
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect()
 }
 
 /// Verify installed-state consistency against `.upskill-lock.json`.
@@ -1531,36 +1573,16 @@ pub fn update(
                 .iter()
                 .filter(|bundle| bundle.source == source_label)
                 .collect();
-            // The kinds of the source come from its root bundles: a kind
-            // restriction applies only when each of them has recorded kinds.
-            // The recorded kinds of a dependency bundle that these roots reach
-            // are added; a dependency without recorded kinds adds none, so it
-            // does not lift the restriction of its roots.
-            let root_bundles: Vec<_> = recorded_bundles
-                .iter()
-                .filter(|bundle| !dependency_roots.contains_key(&bundle.name))
-                .collect();
-            let kinds: Vec<ItemKind> = if root_bundles.iter().all(|bundle| !bundle.kinds.is_empty())
-            {
-                root_bundles
-                    .iter()
-                    .flat_map(|bundle| bundle.kinds.iter().copied())
-                    .chain(
-                        lock.bundles
-                            .iter()
-                            .filter(|bundle| {
-                                dependency_roots
-                                    .get(&bundle.name)
-                                    .is_some_and(|roots| roots.contains(&source_label))
-                            })
-                            .flat_map(|bundle| bundle.kinds.iter().copied()),
-                    )
-                    .collect::<std::collections::BTreeSet<_>>()
-                    .into_iter()
-                    .collect()
-            } else {
-                Vec::new()
-            };
+            let kinds = source_kind_restriction(
+                &lock,
+                &source_label,
+                |bundle| dependency_roots.contains_key(&bundle.name),
+                |bundle| {
+                    dependency_roots
+                        .get(&bundle.name)
+                        .is_some_and(|roots| roots.contains(&source_label))
+                },
+            );
             source_kinds.insert(source_label.clone(), kinds.clone());
             let mut options = AddOptions {
                 force: true,
@@ -1888,18 +1910,20 @@ pub fn update(
             // The bundles that the lockfile records for this source, as the
             // fetched source declares them now: the plugin repair below
             // installs from them (issue #229). A source under a kind
-            // restriction (every recorded bundle of the source has recorded
-            // kinds) runs no plugin step, so it gets no repair either.
-            let repair_bundles: Vec<crate::model::Bundle> =
-                if source_is_kind_restricted(&lock, &source_label) {
-                    Vec::new()
-                } else {
-                    lock.bundles
-                        .iter()
-                        .filter(|b| b.source == source_label)
-                        .filter_map(|b| prepared.source_bundle(&b.name))
-                        .collect()
-                };
+            // restriction (see [`source_kind_restriction`]) runs no plugin
+            // step, so it gets no repair either.
+            let repair_bundles: Vec<crate::model::Bundle> = if source_kinds
+                .get(&source_label)
+                .is_some_and(|k| !k.is_empty())
+            {
+                Vec::new()
+            } else {
+                lock.bundles
+                    .iter()
+                    .filter(|b| b.source == source_label)
+                    .filter_map(|b| prepared.source_bundle(&b.name))
+                    .collect()
+            };
 
             let mut current = crate::lockfile::Lockfile::load(target)?;
             let adopted = if dry_run {
