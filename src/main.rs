@@ -1316,27 +1316,41 @@ fn notice_lines(repeat: bool) -> Option<()> {
         .duration_since(std::time::UNIX_EPOCH)
         .ok()?
         .as_secs();
-    let roots: Vec<ScopeRoot> = report_scopes_with_note(false, false, false)
-        .ok()?
-        .into_iter()
-        .filter(|at| has_lockfile(&at.root))
-        .collect();
+    // When the scope roots cannot be determined or a due lockfile cannot be
+    // parsed, the scopes are left out of this run: no scope line prints and no
+    // scope entry changes. The release check still runs (issue #650).
+    let mut roots: Vec<ScopeRoot> = report_scopes_with_note(false, false, false)
+        .map(|roots| {
+            roots
+                .into_iter()
+                .filter(|at| has_lockfile(&at.root))
+                .collect()
+        })
+        .unwrap_or_default();
     let mut cache = notice::NoticeCache::load(&cache_path);
-    let due: Vec<ScopeRoot> = roots
+    let mut due: Vec<ScopeRoot> = roots
         .iter()
         .filter(|at| notice::needs_check(&cache, &at.root, now))
         .cloned()
         .collect();
     if !due.is_empty() {
         let deadline = Instant::now() + NOTICE_TIME_LIMIT;
-        for check in check_scopes(&due, &[], deadline, &mut GitRemote).ok()? {
-            notice::record_check(
-                &mut cache,
-                &check.root,
-                notice::update_set(&check),
-                notice::reached(&check),
-                now,
-            );
+        match check_scopes(&due, &[], deadline, &mut GitRemote) {
+            Ok(checks) => {
+                for check in checks {
+                    notice::record_check(
+                        &mut cache,
+                        &check.root,
+                        notice::update_set(&check),
+                        notice::reached(&check),
+                        now,
+                    );
+                }
+            }
+            Err(_) => {
+                roots.clear();
+                due.clear();
+            }
         }
     }
     if !style::is_quiet() {
