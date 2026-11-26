@@ -8,6 +8,7 @@ use std::process::Command;
 use std::time::{Duration, SystemTime};
 
 const REMOTE: &str = "https://example.invalid/team/skills";
+const RELEASE_URL: &str = "https://github.com/driftsys/upskill";
 
 /// `home`, `repo` (holds `.git`, the project scope), `outside` (not in a git
 /// repository) and `upstream` (the local repository behind `REMOTE`).
@@ -129,7 +130,7 @@ fn command(
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_CONFIG_GLOBAL", e.home.join("empty-gitconfig"))
         .env("XDG_CACHE_HOME", xdg)
-        .env("GIT_CONFIG_COUNT", "2")
+        .env("GIT_CONFIG_COUNT", "3")
         .env(
             "GIT_CONFIG_KEY_0",
             format!("url.file://{}.insteadOf", upstream.display()),
@@ -137,6 +138,16 @@ fn command(
         .env("GIT_CONFIG_VALUE_0", format!("{REMOTE}.git"))
         .env("GIT_CONFIG_KEY_1", "protocol.file.allow")
         .env("GIT_CONFIG_VALUE_1", "always")
+        // No test reaches github.com: the release lookup goes to a missing
+        // path unless a release test overrides entry 2.
+        .env(
+            "GIT_CONFIG_KEY_2",
+            format!(
+                "url.file://{}.insteadOf",
+                e.home.join("missing-release-repo").display()
+            ),
+        )
+        .env("GIT_CONFIG_VALUE_2", RELEASE_URL)
         // A regression that bypasses the rewrite fails locally, before any network use.
         .env("GIT_ALLOW_PROTOCOL", "file")
         .env("GIT_TERMINAL_PROMPT", "0");
@@ -1444,4 +1455,125 @@ fn overlapping_notices_keep_each_others_cache_entries_when_the_run_lock_is_unava
         .find(|(r, _)| is_root_named(r, "repo2"))
         .unwrap();
     assert_eq!(other_state, second_state);
+}
+
+// Release check.
+
+const CURRENT: &str = env!("CARGO_PKG_VERSION");
+
+fn release_line(latest: &str) -> String {
+    format!(
+        "upskill {latest} is available (you have {CURRENT}): curl -fsSL https://raw.githubusercontent.com/driftsys/upskill/main/install.sh | sh\n"
+    )
+}
+
+/// A local repository with one commit and the tags `tags`.
+fn release_repo(e: &Env, tags: &[&str]) -> PathBuf {
+    let dir = e._tmp.path().join("release-repo");
+    fs::create_dir_all(&dir).unwrap();
+    git_in_dir(e, &dir, &["init", "--initial-branch=main"]);
+    fs::write(dir.join("f"), "x").unwrap();
+    git_in_dir(e, &dir, &["add", "."]);
+    git_in_dir(e, &dir, &["commit", "-m", "release"]);
+    for tag in tags {
+        add_tag(e, &dir, tag);
+    }
+    dir
+}
+
+fn add_tag(e: &Env, dir: &Path, tag: &str) {
+    git_in_dir(e, dir, &["tag", tag]);
+}
+
+/// `update --notice` with the release URL mapped to `release`.
+fn notice_cmd(e: &Env, release: &Path, extra: &[&str]) -> assert_cmd::Command {
+    let mut args = vec!["update", "--notice"];
+    args.extend_from_slice(extra);
+    let mut cmd = command(e, &e.outside, &args, &e.upstream, None);
+    cmd.env(
+        "GIT_CONFIG_KEY_2",
+        format!("url.file://{}.insteadOf", release.display()),
+    );
+    cmd
+}
+
+fn release_checked_at(e: &Env) -> u64 {
+    fs::read(cache_path(e))
+        .ok()
+        .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+        .and_then(|c| c["release"]["checked_at"].as_u64())
+        .unwrap_or(0)
+}
+
+#[test]
+fn release_line_prints_once_for_newer_tag() {
+    let e = env();
+    let repo = release_repo(&e, &["v99.0.0"]);
+    let out = notice_cmd(&e, &repo, &[]).output().unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), release_line("99.0.0"));
+    assert_eq!(stderr(&out), "");
+    let again = notice_cmd(&e, &repo, &[]).output().unwrap();
+    assert_eq!(stdout(&again), "");
+}
+
+#[test]
+fn release_line_repeats_with_repeat_flag() {
+    let e = env();
+    let repo = release_repo(&e, &["v99.0.0"]);
+    for _ in 0..2 {
+        let out = notice_cmd(&e, &repo, &["--repeat"]).output().unwrap();
+        assert_eq!(stdout(&out), release_line("99.0.0"));
+    }
+}
+
+#[test]
+fn no_release_line_for_equal_or_older_tag() {
+    let e = env();
+    let current_tag = format!("v{CURRENT}");
+    let repo = release_repo(&e, &["v0.0.1", &current_tag]);
+    let out = notice_cmd(&e, &repo, &[]).output().unwrap();
+    assert_eq!(stdout(&out), "");
+    assert_ne!(release_checked_at(&e), 0);
+}
+
+#[test]
+fn release_check_skipped_with_opt_out() {
+    let e = env();
+    let repo = release_repo(&e, &["v99.0.0"]);
+    let out = notice_cmd(&e, &repo, &[])
+        .env("UPSKILL_NO_UPDATE_CHECK", "1")
+        .output()
+        .unwrap();
+    assert_eq!(stdout(&out), "");
+    assert_eq!(release_checked_at(&e), 0);
+}
+
+#[test]
+fn release_check_network_failure_is_silent() {
+    let e = env();
+    let out = command(&e, &e.outside, &["update", "--notice"], &e.upstream, None)
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(stdout(&out), "");
+    assert_eq!(stderr(&out), "");
+    assert_eq!(release_checked_at(&e), 0);
+}
+
+#[test]
+fn release_check_runs_at_most_once_a_day() {
+    let e = env();
+    let repo = release_repo(&e, &["v99.0.0"]);
+    notice_cmd(&e, &repo, &[]).output().unwrap();
+    add_tag(&e, &repo, "v100.0.0");
+    let out = notice_cmd(&e, &repo, &[]).output().unwrap();
+    assert_eq!(stdout(&out), "");
+    let path = cache_path(&e);
+    let mut cache: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    let at = cache["release"]["checked_at"].as_u64().unwrap();
+    cache["release"]["checked_at"] = (at - 25 * 3600).into();
+    fs::write(&path, serde_json::to_vec(&cache).unwrap()).unwrap();
+    let out = notice_cmd(&e, &repo, &[]).output().unwrap();
+    assert_eq!(stdout(&out), release_line("100.0.0"));
 }

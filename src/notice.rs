@@ -36,6 +36,11 @@
 //!   notice run writes its own state of the root, so the removed entries come
 //!   back until the next check in which every source of the scope answers.
 //!
+//! Besides the per-root checks, a run looks up the latest upskill release (see
+//! [`refresh_release`]): one `git ls-remote --tags` of the upskill repository
+//! at most once in 24 hours, limited to 3 seconds, skipped when
+//! `UPSKILL_NO_UPDATE_CHECK` is set to a nonempty value. It fetches no content.
+//!
 //! A check that reaches only some sources keeps every stored entry that it did
 //! not find (see [`record_check`]), so it does not remove such an entry.
 
@@ -235,6 +240,23 @@ pub fn record_release(cache: &mut NoticeCache, latest: Version, now: u64) {
     cache.release.latest = Some(latest.to_string());
 }
 
+/// Looks up the latest upskill release when it is due and records it in
+/// `cache`. The opt-out variable, a failed lookup and a reply without a
+/// release tag leave the cache as it is.
+pub fn refresh_release(cache: &mut NoticeCache, now: u64) {
+    use crate::release::{OPT_OUT_ENV, RELEASE_URL, TIME_LIMIT, latest_tag};
+    let opted_out = std::env::var_os(OPT_OUT_ENV).is_some_and(|v| !v.is_empty());
+    if opted_out || !needs_release_check(cache, now) {
+        return;
+    }
+    let deadline = std::time::Instant::now() + TIME_LIMIT;
+    if let Ok(tags) = crate::fetch::ls_remote_tags(RELEASE_URL, deadline)
+        && let Some(latest) = latest_tag(&tags)
+    {
+        record_release(cache, latest, now);
+    }
+}
+
 /// The release line when the cached latest version is greater than `current`
 /// and has not been printed yet (or `repeat` is set). Printing sets
 /// `reported`.
@@ -410,6 +432,9 @@ pub fn forget(cache: &mut NoticeCache, root: &Path) {
 /// a removal by [`mark_current_in_file`] stays removed, and an entry of an
 /// older set cannot keep `reported` different from `updates`. When `fresh`
 /// does not hold that root, the state of `mine` is inserted.
+///
+/// The release state is not per root: the result keeps the one with the greater
+/// `checked_at`, and `mine` when both are equal.
 pub fn merge_roots(
     mut fresh: NoticeCache,
     mine: &NoticeCache,

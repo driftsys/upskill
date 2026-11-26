@@ -260,15 +260,10 @@ fn ls_remote_command(url: &str, git_ref: Option<&str>) -> Command {
 
 /// The output of `git ls-remote --tags` at `url`. It has the environment
 /// hygiene of [`ls_remote`].
-#[expect(dead_code, reason = "Called by the release check once it is wired in")]
 pub(crate) fn ls_remote_tags(url: &str, deadline: Instant) -> Result<String, RunError> {
     run_until(ls_remote_tags_command(url), deadline)
 }
 
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "Called by the release check once it is wired in")
-)]
 fn ls_remote_tags_command(url: &str) -> Command {
     let mut cmd = Command::new("git");
     cmd.arg("ls-remote").arg("--tags").arg("--").arg(url);

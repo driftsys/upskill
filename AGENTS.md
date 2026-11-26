@@ -101,6 +101,8 @@ src/
 ├── fmt.rs               Author command — canonicalise YAML frontmatter
 ├── scaffold.rs          Author command — `upskill new <kind> <name>`
 ├── support.rs           Support level table (client x kind), printed by `doctor`
+├── release.rs           CLI release check: version parsing, tag selection,
+│                        release URL, time limit and opt-out variable
 ├── notice.rs            `update --notice`: when a session notice line prints,
 │                        its cache file and run lock; removal of current items
 │                        from the cache after an applying `update`
@@ -204,7 +206,10 @@ once; with `--repeat` (valid only with `--notice`) it prints at every run that
 can proceed past the run lock while cached updates remain. An applied `update`
 removes from the cached updates of its scope root the items that it reports as
 updated, up to date, completed after an interruption, or removed; a cache
-failure there prints nothing.
+failure there prints nothing. The notice also checks for a newer upskill
+release: one `git ls-remote --tags` of `https://github.com/driftsys/upskill` at
+most once in 24 hours, with a 3-second limit, skipped when
+`UPSKILL_NO_UPDATE_CHECK` is nonempty. It fetches no content.
 
 ### Source format
 
