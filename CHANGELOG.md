@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.9.5] (2026-11-26)
+
+### Bug Fixes
+
+- **update:** keep the recorded clients and kinds of dependency items ([#655])
+  ([#656]) ([ce2fb48]), closes [#655]
+- **update:** remove the items of a bundle that is no longer required ([#648])
+  ([#654]) ([e618fd3])
+
+### Features
+
+- make the upskill plugin the setup path ([#653]) ([a0e9bfc])
+
+[0.9.5]: https://github.com/driftsys/upskill/compare/v0.9.4...v0.9.5
+[ce2fb48]: https://github.com/driftsys/upskill/commit/ce2fb48
+[#655]: https://github.com/driftsys/upskill/issues/655
+[#656]: https://github.com/driftsys/upskill/issues/656
+[e618fd3]: https://github.com/driftsys/upskill/commit/e618fd3
+[#648]: https://github.com/driftsys/upskill/issues/648
+[#654]: https://github.com/driftsys/upskill/issues/654
+[a0e9bfc]: https://github.com/driftsys/upskill/commit/a0e9bfc
+[#653]: https://github.com/driftsys/upskill/issues/653
+
 ## [0.9.4] (2026-11-25)
 
 ### Bug Fixes
