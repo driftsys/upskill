@@ -111,16 +111,79 @@ fn pack_catalog_writes_both_plugins_and_both_marketplace_files() {
     assert!(claude.join("agents/smoke-agent.md").is_file());
     assert!(copilot.join("agents/smoke-agent.agent.md").is_file());
     assert!(claude.join(".mcp.json").is_file() && copilot.join(".mcp.json").is_file());
-    assert!(claude.join(".lsp.json").is_file() && copilot.join("lsp.json").is_file());
     assert!(claude.join("hooks/hooks.json").is_file() && copilot.join("hooks.json").is_file());
-    assert!(claude.join("hooks/context/session-start.json").is_file());
 
-    let hooks = fs::read_to_string(copilot.join("hooks.json")).unwrap();
-    assert!(hooks.contains("\"matcher\": \"bash\"") && hooks.contains("\"matcher\": \"edit\""));
+    // The marker words that the T5 fixture table names.
+    for (file, word) in [
+        ("agents/smoke-agent.md", "cobalt-heron-3306"),
+        ("skills/smoke-skill/SKILL.md", "amber-otter-1957"),
+        ("skills/smoke-command/SKILL.md", "onyx-wren-5913"),
+        ("hooks/context/session-start.json", "jade-lynx-7742"),
+    ] {
+        let text = fs::read_to_string(claude.join(file)).unwrap();
+        assert!(text.contains(word), "{file} lacks {word}");
+    }
+    let copilot_agent = fs::read_to_string(copilot.join("agents/smoke-agent.agent.md")).unwrap();
+    assert!(copilot_agent.contains("cobalt-heron-3306"));
+    let context = fs::read_to_string(copilot.join("hooks/context/session-start.json")).unwrap();
+    assert!(context.contains("jade-lynx-7742"));
+    for client in [&claude, &copilot] {
+        let command = fs::read_to_string(client.join("skills/smoke-command/SKILL.md")).unwrap();
+        assert!(command.contains("disable-model-invocation: true"));
+    }
+
+    // The extension mapping that C11 and P11 rely on.
+    let claude_lsp = read_json(&claude.join(".lsp.json"));
+    assert_eq!(
+        claude_lsp["smoke-lsp"]["extensionToLanguage"][".smoke"],
+        "smokelang"
+    );
+    let copilot_lsp = read_json(&copilot.join("lsp.json"));
+    assert_eq!(
+        copilot_lsp["lspServers"]["smoke-lsp"]["fileExtensions"][".smoke"],
+        "smokelang"
+    );
+
+    // Each matcher belongs to its tool and runs its own script. Claude Code
+    // nests the command in a group; Copilot CLI holds the matcher in the entry.
+    let claude_hooks = read_json(&claude.join("hooks/hooks.json"));
+    let copilot_hooks = read_json(&copilot.join("hooks.json"));
+    for (matcher_claude, matcher_copilot, name) in [
+        ("Bash", "bash", "match-bash"),
+        ("Edit", "edit", "match-edit"),
+    ] {
+        let group = claude_hooks["hooks"]["PostToolUse"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|g| g["matcher"] == matcher_claude)
+            .unwrap_or_else(|| panic!("no Claude PostToolUse group for {matcher_claude}"));
+        let command = group["hooks"][0]["command"].as_str().unwrap();
+        assert!(
+            command.contains(&format!("hooks/smoke-{name}/{name}.sh")),
+            "{command}"
+        );
+        let entry = copilot_hooks["hooks"]["postToolUse"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["matcher"] == matcher_copilot)
+            .unwrap_or_else(|| panic!("no Copilot postToolUse entry for {matcher_copilot}"));
+        let command = entry["bash"].as_str().unwrap();
+        assert!(
+            command.contains(&format!("hooks/smoke-{name}/{name}.sh")),
+            "{command}"
+        );
+    }
 }
 
-/// True when `program` runs. A test that needs it prints a skip message
-/// otherwise, so a skip is visible in the test output.
+fn read_json(path: &Path) -> serde_json::Value {
+    serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+}
+
+/// True when `program` runs. Otherwise the test prints a skip message and
+/// returns early. The message shows only with `--nocapture`; the test still
+/// reports `ok`.
 fn available(program: &str, test: &str) -> bool {
     // Only whether the program can be started counts, not its exit code:
     // some `sh` implementations reject `--version`.
@@ -296,10 +359,16 @@ fn packed_lsp_server_answers_document_symbol_and_writes_its_marker() {
         assert!(has_null_result(by_id(3)), "{}", by_id(3));
         assert!(has_null_result(by_id(4)), "{}", by_id(4));
         let lines = fs::read_to_string(&marker).unwrap();
-        assert!(
-            lines.contains("started ") && lines.contains("documentSymbol "),
-            "{lines}"
-        );
+        let kinds: Vec<&str> = lines
+            .lines()
+            .map(|line| line.split(' ').next().unwrap())
+            .collect();
+        assert_eq!(kinds, ["started", "documentSymbol"], "{lines}");
+        for line in lines.lines() {
+            // `<kind> <YYYY-MM-DDTHH:MM:SSZ> pid=<n>`
+            let time = line.split(' ').nth(1).unwrap();
+            assert!(is_utc_time(time), "bad time in `{line}`");
+        }
         let pids: Vec<&str> = lines
             .lines()
             .map(|line| line.rsplit("pid=").next().unwrap())
@@ -339,21 +408,48 @@ fn packed_hook_scripts_write_their_marker_files() {
     ] {
         let dir = tempfile::tempdir().unwrap();
         let path = registry.join(format!("plugins/smoke-{client}/hooks/{script}"));
-        // The script runs through its own mode bits, as a client runs it.
-        let out = Command::new(&path)
-            .env("TMPDIR", dir.path())
-            .env("UPSKILL_CLIENT", client)
-            .stdin(Stdio::null())
-            .output()
-            .unwrap();
-        assert!(out.status.success(), "{script}");
-        assert!(out.stdout.is_empty(), "{script} must print nothing");
+        // Two runs: the file must gain exactly one line per run (`>>`).
+        for _ in 0..2 {
+            // The script runs through its own mode bits, as a client runs it.
+            let out = Command::new(&path)
+                .env("TMPDIR", dir.path())
+                .env("UPSKILL_CLIENT", client)
+                .stdin(Stdio::null())
+                .output()
+                .unwrap();
+            assert!(out.status.success(), "{script}");
+            assert!(out.stdout.is_empty(), "{script} must print nothing");
+        }
         let written = fs::read_to_string(dir.path().join(file)).unwrap();
-        assert!(
-            written.starts_with(&format!("{client} 20")),
-            "{script}: {written}"
-        );
+        let lines: Vec<&str> = written.lines().collect();
+        assert_eq!(lines.len(), 2, "{script}: {written}");
+        for line in lines {
+            let (tag, time) = line.split_once(' ').unwrap();
+            assert_eq!(tag, client, "{script}: {line}");
+            assert!(is_utc_time(time), "{script}: bad time in `{line}`");
+        }
     }
+}
+
+/// `YYYY-MM-DDTHH:MM:SSZ`.
+fn is_utc_time(text: &str) -> bool {
+    let bytes = text.as_bytes();
+    bytes.len() == 20
+        && bytes.iter().enumerate().all(|(i, b)| match i {
+            4 | 7 => *b == b'-',
+            10 => *b == b'T',
+            13 | 16 => *b == b':',
+            19 => *b == b'Z',
+            _ => b.is_ascii_digit(),
+        })
+}
+
+#[test]
+fn the_time_check_accepts_the_format_and_rejects_others() {
+    assert!(is_utc_time("2026-11-26T07:14:38Z"));
+    assert!(!is_utc_time("2026-11-26 07:14:38Z"));
+    assert!(!is_utc_time("2026-11-26T07:14:38"));
+    assert!(!is_utc_time(""));
 }
 
 /// A response with an explicit `"result": null` and no `error`. Indexing a
