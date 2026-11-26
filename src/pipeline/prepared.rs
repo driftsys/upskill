@@ -548,6 +548,15 @@ impl PreparedInstall {
     /// source), else the bundle file of that name in a directory source.
     /// `None` when the source has no such bundle or its manifest cannot be
     /// read.
+    /// The names of the bundles that this install resolved, through the
+    /// `requires` of the requested bundles included.
+    pub fn resolved_bundle_names(&self) -> BTreeSet<String> {
+        self.resolved_bundles
+            .iter()
+            .map(|rb| rb.bundle.name.clone())
+            .collect()
+    }
+
     pub fn source_bundle(&self, name: &str) -> Option<crate::model::Bundle> {
         if let Some(rb) = self
             .resolved_bundles
@@ -998,12 +1007,37 @@ impl PreparedInstall {
                     source: label.clone(),
                     git_ref: git_ref.clone(),
                     items: bundle_item_names(bundle),
+                    required_by: Vec::new(),
                 });
             }
         } else {
             // Bundle closure: record each bundle under its OWN source and ref.
             for rb in &resolved_bundles {
+                // A recorded root stays a root. Otherwise the requirers that
+                // this run resolved are replaced by the ones it found, and the
+                // requirers of other runs are kept.
+                let existing = lock.bundles.iter().find(|b| b.name == rb.bundle.name);
+                let required_by = match existing {
+                    _ if rb.required_by.is_empty() => Vec::new(),
+                    Some(existing) if existing.required_by.is_empty() => Vec::new(),
+                    Some(existing) => {
+                        let mut merged: BTreeSet<String> = existing
+                            .required_by
+                            .iter()
+                            .filter(|r| {
+                                !resolved_bundles
+                                    .iter()
+                                    .any(|o| format!("bundle:{}", o.bundle.name) == **r)
+                            })
+                            .cloned()
+                            .collect();
+                        merged.extend(rb.required_by.iter().cloned());
+                        merged.into_iter().collect()
+                    }
+                    None => rb.required_by.clone(),
+                };
                 lock.upsert_bundle(crate::lockfile::LockedBundle {
+                    required_by,
                     kinds: options.kinds.clone(),
                     name: rb.bundle.name.clone(),
                     source: rb.source_label.clone(),

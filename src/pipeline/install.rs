@@ -707,6 +707,9 @@ pub(super) struct ResolvedBundle {
     pub bundle: crate::model::Bundle,
     pub source_label: String,
     pub git_ref: Option<String>,
+    /// The bundles of this resolution whose `requires` reached this bundle,
+    /// as `bundle:<name>`. Empty for a bundle that the run requested.
+    pub required_by: Vec<String>,
 }
 
 /// A fetched-and-discovered source, cached by canonical label during the
@@ -781,6 +784,9 @@ struct BundleResolver {
     excludes: BTreeSet<String>,
     /// Bundle members left out because their name is in `excludes`.
     skipped: BTreeSet<(ItemKind, String)>,
+    /// The requirers (`bundle:<name>`) of each bundle reached through
+    /// `requires`, keyed by bundle name.
+    requirers: BTreeMap<String, BTreeSet<String>>,
 }
 
 impl BundleResolver {
@@ -869,6 +875,10 @@ impl BundleResolver {
 
         // Walk requires: bare → same source; `{ name, source }` → cross-source.
         for req in &bundle.requires {
+            self.requirers
+                .entry(req.name.clone())
+                .or_default()
+                .insert(format!("bundle:{name}"));
             match &req.source {
                 None => self.visit(label, &req.name)?,
                 Some(src_dsl) => {
@@ -885,6 +895,7 @@ impl BundleResolver {
             bundle,
             source_label: label.to_string(),
             git_ref,
+            required_by: Vec::new(),
         });
         Ok(())
     }
@@ -919,6 +930,7 @@ pub(super) fn resolve_bundle_closure(
         item_source: BTreeMap::new(),
         excludes: excludes.iter().cloned().collect(),
         skipped: BTreeSet::new(),
+        requirers: BTreeMap::new(),
     };
     resolver.sources.insert(
         entry_label.to_string(),
@@ -932,6 +944,16 @@ pub(super) fn resolve_bundle_closure(
 
     for name in entry_bundles {
         resolver.visit(entry_label, name)?;
+    }
+    // A requested bundle is a root, also when another bundle requires it.
+    for rb in &mut resolver.order {
+        if !entry_bundles.contains(&rb.bundle.name) {
+            rb.required_by = resolver
+                .requirers
+                .get(&rb.bundle.name)
+                .map(|set| set.iter().cloned().collect())
+                .unwrap_or_default();
+        }
     }
 
     let mut by_source: BTreeMap<String, SourceInstall> = BTreeMap::new();

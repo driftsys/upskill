@@ -1069,3 +1069,221 @@ fn kind_restricted_update_reports_out_of_kind_items_of_an_unreachable_source_wit
     assert_eq!(fs::read(&lock_path).unwrap(), lock_before);
     assert_eq!(fs::read(&skill_path).unwrap(), skill_before);
 }
+
+// Issue #648: a bundle that stops requiring another bundle.
+
+/// Writes the root bundle `top` in `registry`: it lists the skill `own` and
+/// requires each entry of `requires` (a YAML flow sequence item each).
+fn write_top_bundle(registry: &Path, requires: &[String]) {
+    let requires = if requires.is_empty() {
+        String::new()
+    } else {
+        format!("requires: [{}]\n", requires.join(", "))
+    };
+    write(
+        &registry.join("top.bundle.yaml"),
+        &format!(
+            "schema: 1\nname: top\ndescription: Root bundle.\nitems:\n  skills: [own]\n{requires}"
+        ),
+    );
+}
+
+fn write_skill_bundle(registry: &Path, name: &str, skills: &[&str]) {
+    write(
+        &registry.join(format!("{name}.bundle.yaml")),
+        &format!(
+            "schema: 1\nname: {name}\ndescription: Dependency bundle.\nitems:\n  skills: [{}]\n",
+            skills.join(", ")
+        ),
+    );
+}
+
+fn add_top(consumer: &Path, registry: &Path) {
+    common::upskill_cmd(&fake_home(consumer))
+        .current_dir(consumer)
+        .args([
+            "add",
+            registry.to_str().unwrap(),
+            "top",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+}
+
+fn update_output(consumer: &Path) -> String {
+    let assert = common::upskill_cmd(&fake_home(consumer))
+        .current_dir(consumer)
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    String::from_utf8(assert.get_output().stdout.clone()).unwrap()
+}
+
+fn recorded_bundles(consumer: &Path) -> Vec<String> {
+    read_update_lock(consumer)["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["name"].as_str().unwrap().to_string())
+        .collect()
+}
+
+fn recorded_items(consumer: &Path) -> Vec<String> {
+    read_update_lock(consumer)["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["name"].as_str().unwrap().to_string())
+        .collect()
+}
+
+fn removed_line(out: &str, name: &str) -> bool {
+    out.lines()
+        .any(|l| l.contains(name) && l.contains("no longer in source"))
+}
+
+#[test]
+fn add_records_the_requirer_of_a_dependency_bundle() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    write_top_bundle(registry.path(), &["{ name: dep }".to_string()]);
+    add_top(consumer.path(), registry.path());
+    let lock = read_update_lock(consumer.path());
+    let bundles = lock["bundles"].as_array().unwrap();
+    let by_name = |n: &str| bundles.iter().find(|b| b["name"] == n).unwrap().clone();
+    assert_eq!(
+        by_name("dep")["required_by"],
+        serde_json::json!(["bundle:top"])
+    );
+    assert!(by_name("top").get("required_by").is_none());
+}
+
+#[test]
+fn update_removes_the_items_of_a_bundle_that_is_no_longer_required() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only"]);
+    write_top_bundle(registry.path(), &["{ name: dep }".to_string()]);
+    add_top(consumer.path(), registry.path());
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-only/SKILL.md")
+            .exists()
+    );
+
+    write_top_bundle(registry.path(), &[]);
+    let out = update_output(consumer.path());
+
+    assert!(removed_line(&out, "dep-only"), "{out}");
+    assert!(!consumer.path().join(".claude/skills/dep-only").exists());
+    assert!(consumer.path().join(".claude/skills/own/SKILL.md").exists());
+    assert_eq!(recorded_bundles(consumer.path()), vec!["top"]);
+    assert_eq!(recorded_items(consumer.path()), vec!["own"]);
+}
+
+#[test]
+fn update_keeps_an_item_that_a_bundle_still_required_provides() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(registry.path(), "dep-only");
+    write_skill(registry.path(), "shifted");
+    write_skill(registry.path(), "kept-only");
+    write_skill_bundle(registry.path(), "dep", &["dep-only", "shifted"]);
+    write_skill_bundle(registry.path(), "kept", &["kept-only"]);
+    write_top_bundle(
+        registry.path(),
+        &["{ name: dep }".to_string(), "{ name: kept }".to_string()],
+    );
+    add_top(consumer.path(), registry.path());
+
+    // `dep` is dropped; its item `shifted` now comes from the bundle `kept`.
+    write_skill_bundle(registry.path(), "kept", &["kept-only", "shifted"]);
+    write_top_bundle(registry.path(), &["{ name: kept }".to_string()]);
+    let out = update_output(consumer.path());
+
+    assert!(removed_line(&out, "dep-only"), "{out}");
+    assert!(!removed_line(&out, "shifted"), "{out}");
+    assert!(!removed_line(&out, "kept-only"), "{out}");
+    for name in ["own", "shifted", "kept-only"] {
+        assert!(
+            consumer
+                .path()
+                .join(format!(".claude/skills/{name}/SKILL.md"))
+                .exists(),
+            "{name}"
+        );
+    }
+    assert!(!consumer.path().join(".claude/skills/dep-only").exists());
+    assert_eq!(recorded_bundles(consumer.path()), vec!["kept", "top"]);
+}
+
+#[test]
+fn update_removes_the_items_of_a_cross_source_bundle_that_is_no_longer_required() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let dependency = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(dependency.path(), "dep-only");
+    write_skill_bundle(dependency.path(), "dep", &["dep-only"]);
+    let requires = format!("{{ name: dep, source: '{}' }}", dependency.path().display());
+    write_top_bundle(registry.path(), &[requires]);
+    add_top(consumer.path(), registry.path());
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-only/SKILL.md")
+            .exists()
+    );
+
+    write_top_bundle(registry.path(), &[]);
+    let out = update_output(consumer.path());
+
+    assert!(removed_line(&out, "dep-only"), "{out}");
+    assert_eq!(
+        out.lines().filter(|l| l.contains("dep-only")).count(),
+        1,
+        "{out}"
+    );
+    assert!(!consumer.path().join(".claude/skills/dep-only").exists());
+    assert!(consumer.path().join(".claude/skills/own/SKILL.md").exists());
+    assert_eq!(recorded_bundles(consumer.path()), vec!["top"]);
+    assert_eq!(recorded_items(consumer.path()), vec!["own"]);
+}
+
+#[test]
+fn update_refreshes_a_cross_source_dependency_once() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let dependency = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "own");
+    write_skill(dependency.path(), "dep-only");
+    write_skill_bundle(dependency.path(), "dep", &["dep-only"]);
+    let requires = format!("{{ name: dep, source: '{}' }}", dependency.path().display());
+    write_top_bundle(registry.path(), &[requires]);
+    add_top(consumer.path(), registry.path());
+    write(
+        &dependency.path().join("dep-only/SKILL.md"),
+        "---\nname: dep-only\ndescription: Changed.\n---\nChanged body.\n",
+    );
+    let out = update_output(consumer.path());
+    assert_eq!(
+        out.lines().filter(|l| l.contains("dep-only")).count(),
+        1,
+        "{out}"
+    );
+    assert!(
+        fs::read_to_string(consumer.path().join(".claude/skills/dep-only/SKILL.md"))
+            .unwrap()
+            .contains("Changed body.")
+    );
+    assert_eq!(recorded_bundles(consumer.path()), vec!["dep", "top"]);
+}

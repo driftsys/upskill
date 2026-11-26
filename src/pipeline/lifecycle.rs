@@ -1363,6 +1363,52 @@ pub fn update(
             .or_default()
             .push(entry);
     }
+    // A dependency bundle (a bundle that a recorded root bundle reaches
+    // through `requires`) is resolved again through its root, not from its
+    // own record (#648). The entries of a dependency bundle of another source
+    // are moved to the group of the root source, so that the run of the root
+    // source refreshes them, or removes them when the root no longer reaches
+    // them. A dependency bundle whose root source the run does not read
+    // (`update <name>`) is resolved from its own record, as a root.
+    let dependency_roots: std::collections::BTreeMap<String, String> = lock
+        .bundles
+        .iter()
+        .filter(|b| !lock.is_root_bundle(b))
+        .filter_map(|b| {
+            let root = lock.root_bundle_of(b)?;
+            by_source
+                .contains_key(&root.source)
+                .then(|| (b.name.clone(), root.source.clone()))
+        })
+        .collect();
+    for bundle in &lock.bundles {
+        let Some(root_source) = dependency_roots.get(&bundle.name) else {
+            continue;
+        };
+        if *root_source == bundle.source {
+            continue;
+        }
+        let Some(group) = by_source.get_mut(&bundle.source) else {
+            continue;
+        };
+        let (moved, kept): (Vec<_>, Vec<_>) = std::mem::take(group).into_iter().partition(|e| {
+            let name = e.source_name.as_ref().unwrap_or(&e.name);
+            bundle.items.contains(name)
+                && !lock.bundles.iter().any(|b| {
+                    b.source == bundle.source
+                        && !dependency_roots.contains_key(&b.name)
+                        && b.items.contains(name)
+                })
+        });
+        *group = kept;
+        if group.is_empty() {
+            by_source.remove(&bundle.source);
+        }
+        by_source
+            .get_mut(root_source)
+            .expect("root source group checked above")
+            .extend(moved);
+    }
 
     // The items that the run covers: every lockfile entry that the run
     // selects, and below the items that the plans of the sources that were
@@ -1396,6 +1442,7 @@ pub fn update(
             // Build aliases from lockfile entries that have source_name
             let aliases: Vec<(String, String)> = source_entries
                 .iter()
+                .filter(|e| e.source == source_label)
                 .filter_map(|e| {
                     e.source_name
                         .as_ref()
@@ -1445,6 +1492,7 @@ pub fn update(
                 } else {
                     recorded_bundles
                         .iter()
+                        .filter(|bundle| !dependency_roots.contains_key(&bundle.name))
                         .map(|bundle| bundle.name.clone())
                         .collect()
                 },
@@ -1474,6 +1522,7 @@ pub fn update(
                 } else if !recorded_bundles.is_empty() {
                     source_entries
                         .iter()
+                        .filter(|entry| entry.source == source_label)
                         .filter(|entry| {
                             entry.required_by.is_empty() || lock.is_orphaned_dependency(entry)
                         })
@@ -1488,6 +1537,7 @@ pub fn update(
                 } else {
                     source_entries
                         .iter()
+                        .filter(|e| e.source == source_label)
                         .map(|e| e.source_name.clone().unwrap_or_else(|| e.name.clone()))
                         .collect()
                 };
@@ -1516,7 +1566,7 @@ pub fn update(
                         report.items.push(UpdatedItem {
                             kind: entry.kind,
                             name: entry.name.clone(),
-                            source: source_label.clone(),
+                            source: entry.source.clone(),
                             status: UpdateStatus::SourceSkipped {
                                 cause: SkipCause::Unreachable,
                             },
@@ -1550,7 +1600,7 @@ pub fn update(
                         report.items.push(UpdatedItem {
                             kind: entry.kind,
                             name: entry.name.clone(),
-                            source: source_label.clone(),
+                            source: entry.source.clone(),
                             status: UpdateStatus::UpToDate,
                         });
                     }
@@ -1599,7 +1649,7 @@ pub fn update(
                 report.items.push(UpdatedItem {
                     kind: entry.kind,
                     name: entry.name.clone(),
-                    source: source_label.clone(),
+                    source: entry.source.clone(),
                     status: UpdateStatus::SourceSkipped {
                         cause: SkipCause::RequiresSkipped,
                     },
@@ -1781,7 +1831,7 @@ pub fn update(
                     report.items.push(UpdatedItem {
                         kind: entry.kind,
                         name: entry.name.clone(),
-                        source: source_label.clone(),
+                        source: entry.source.clone(),
                         status,
                     });
                 }
@@ -1844,7 +1894,21 @@ pub fn update(
             let first_item = report.items.len();
             let kept_before = report.kept_modified.len();
             let changed_before = report.changed.len();
+            let resolved_bundles = prepared.resolved_bundle_names();
             let install_report = prepared.commit(target, plugin_scope)?;
+            // A dependency bundle of this root source that the resolution no
+            // longer reaches is dropped from the lockfile. Its items that the
+            // resolution does not provide are removed below as orphans.
+            let dropped_bundles: Vec<&String> = dependency_roots
+                .iter()
+                .filter(|(name, root)| **root == source_label && !resolved_bundles.contains(*name))
+                .map(|(name, _)| name)
+                .collect();
+            if !dropped_bundles.is_empty() {
+                let mut lock = crate::lockfile::Lockfile::load(target)?;
+                lock.bundles.retain(|b| !dropped_bundles.contains(&&b.name));
+                lock.save(target)?;
+            }
             // The plugin step of the apply attempts every plugin of the
             // recorded bundles of the source, so an applied source needs no
             // plugin repair.
@@ -1896,10 +1960,14 @@ pub fn update(
                     report.kept_modified.extend(plan.kept.iter().cloned());
                     report.forced.extend(plan.forced.iter().cloned());
                     lock.remove(plan.kind, &plan.name);
+                    let source = orphans
+                        .iter()
+                        .find(|o| o.kind == plan.kind && o.name == plan.name)
+                        .map_or_else(|| source_label.clone(), |o| o.source.clone());
                     report.items.push(UpdatedItem {
                         kind: plan.kind,
                         name: plan.name,
-                        source: source_label.clone(),
+                        source,
                         status: UpdateStatus::Removed,
                     });
                 }
@@ -1939,7 +2007,7 @@ pub fn update(
                 report.items.push(UpdatedItem {
                     kind,
                     name: entry.name.clone(),
-                    source: source_label.clone(),
+                    source: entry.source.clone(),
                     status,
                 });
             }
@@ -2267,6 +2335,7 @@ mod tests {
             git_ref: None,
             items: vec![],
             kinds: vec![],
+            required_by: vec![],
         });
         if let Some(item_source) = item_source {
             let mut lock2: crate::lockfile::Lockfile = serde_json::from_value(serde_json::json!({

@@ -160,6 +160,12 @@ pub struct LockedBundle {
     /// The kinds that `add --kind` restricted this bundle to. Empty: every kind.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub kinds: Vec<ItemKind>,
+    /// The bundles whose `requires` reached this bundle, as `bundle:<name>`.
+    /// Empty: the user installed this bundle directly (a root bundle), or the
+    /// lockfile predates the field. `update` resolves only root bundles and
+    /// reaches the others through `requires` (#648). Sorted.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required_by: Vec<String>,
 }
 
 /// Plugin entry recorded when a bundle's `plugins:` map is installed via
@@ -378,6 +384,37 @@ impl Lockfile {
 
     /// Add or replace a bundle entry by `name`. Bundles are kept sorted
     /// for deterministic on-disk output.
+    /// The root bundle record that `bundle` is reached from through the
+    /// `required_by` chain, or `None` when `bundle` is a root itself or when
+    /// no requirer chain leads to a recorded root bundle.
+    pub fn root_bundle_of(&self, bundle: &LockedBundle) -> Option<&LockedBundle> {
+        let mut seen = std::collections::BTreeSet::new();
+        let mut pending: Vec<&LockedBundle> = vec![bundle];
+        while let Some(current) = pending.pop() {
+            if !seen.insert(current.name.as_str()) {
+                continue;
+            }
+            for requirer in &current.required_by {
+                let Some(name) = requirer.strip_prefix("bundle:") else {
+                    continue;
+                };
+                if let Some(record) = self.bundles.iter().find(|b| b.name == name) {
+                    if record.required_by.is_empty() {
+                        return Some(record);
+                    }
+                    pending.push(record);
+                }
+            }
+        }
+        None
+    }
+
+    /// True when `update` resolves `bundle` itself: it records no requirer,
+    /// or none of its requirer chains leads to a recorded root bundle.
+    pub fn is_root_bundle(&self, bundle: &LockedBundle) -> bool {
+        bundle.required_by.is_empty() || self.root_bundle_of(bundle).is_none()
+    }
+
     pub fn upsert_bundle(&mut self, bundle: LockedBundle) {
         self.bundles.retain(|existing| existing.name != bundle.name);
         self.bundles.push(bundle);
@@ -516,6 +553,49 @@ pub fn items_from_report(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn bundle_required_by_defaults_to_empty_and_round_trips() {
+        let old: super::LockedBundle =
+            serde_json::from_str(r#"{"name":"b","source":"local:/r","items":[]}"#).unwrap();
+        assert!(old.required_by.is_empty());
+        assert!(!serde_json::to_string(&old).unwrap().contains("required_by"));
+        let mut dep = old.clone();
+        dep.required_by = vec!["bundle:top".into()];
+        let text = serde_json::to_string(&dep).unwrap();
+        assert!(text.contains(r#""required_by":["bundle:top"]"#), "{text}");
+        let back: super::LockedBundle = serde_json::from_str(&text).unwrap();
+        assert_eq!(back, dep);
+    }
+
+    #[test]
+    fn root_bundle_of_follows_the_requirer_chain() {
+        let bundle = |name: &str, by: &[&str]| super::LockedBundle {
+            name: name.into(),
+            source: "local:/r".into(),
+            git_ref: None,
+            items: vec![],
+            kinds: vec![],
+            required_by: by.iter().map(|s| s.to_string()).collect(),
+        };
+        let lock = super::Lockfile {
+            bundles: vec![
+                bundle("top", &[]),
+                bundle("mid", &["bundle:top"]),
+                bundle("leaf", &["bundle:mid"]),
+                bundle("stray", &["bundle:gone"]),
+            ],
+            ..Default::default()
+        };
+        let root = |n: &str| {
+            let b = lock.bundles.iter().find(|b| b.name == n).unwrap();
+            lock.root_bundle_of(b).map(|r| r.name.clone())
+        };
+        assert_eq!(root("leaf").as_deref(), Some("top"));
+        assert_eq!(root("top"), None);
+        assert_eq!(root("stray"), None);
+        assert!(lock.is_root_bundle(&lock.bundles[3]));
+        assert!(!lock.is_root_bundle(&lock.bundles[2]));
+    }
 
     use super::*;
     use crate::generate::Client;

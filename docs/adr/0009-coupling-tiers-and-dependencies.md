@@ -141,7 +141,17 @@ The contract mirrors the item-level one, one layer up:
   an **error** (the same-source `union_items` rule, extended across sources).
 - **Cycle detection** is keyed by `(canonical-source-label, bundle-name)`.
 - **Provenance.** Each resolved bundle, and each item it contributes, is
-  recorded in the lockfile under its **own** source and ref.
+  recorded in the lockfile under its **own** source and ref. A bundle that the
+  closure reached through `requires` records its requirers in `required_by`
+  (`bundle:<name>`); a bundle that the user requested records none and is a
+  root.
+- **Update.** `update` resolves only the root bundles again and reaches the
+  other bundles through `requires`, also across sources: the entries of a
+  dependency bundle of another source are refreshed in the run of the root
+  source. A dependency bundle that the new closure no longer reaches is dropped
+  from the lockfile, and its items that the closure does not provide are removed
+  (#648). A lockfile without `required_by` records every bundle as a root. A
+  bundle-file (`*.bundle.yaml`) source records no `required_by`.
 - **Reuse.** Bundle resolution emits the same per-source item closure the
   item-level path produces, so install and item-lockfile recording are shared;
   only per-bundle source recording is bundle-specific.

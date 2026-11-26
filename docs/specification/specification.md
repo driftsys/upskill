@@ -932,7 +932,17 @@ behaviour:
   different sources within one closure is an error.
 - **Lockfile.** Each installed bundle is recorded as a top-level `bundles[]`
   entry in `.upskill-lock.json` alongside its resolved items. The same item may
-  appear in multiple bundle `items[]` lists; it is installed once.
+  appear in multiple bundle `items[]` lists; it is installed once. A bundle that
+  the closure reached through `requires:` records its requiring bundles in the
+  optional `required_by` array (`bundle:<name>`, sorted, omitted when empty); a
+  bundle requested by the user records none. A bundle recorded without
+  `required_by` keeps none when a later install reaches it through `requires:`.
+- **Update.** `update` resolves the bundles without `required_by` again and
+  reaches the others through `requires:`, across sources too. When a bundle no
+  longer requires a dependency bundle, `update` drops the record of that
+  dependency and removes each of its items that the new closure does not
+  provide, reported as `removed — no longer in source`. A lockfile written
+  before `required_by` existed records every bundle as requested by the user.
 - **Removal.** `upskill remove --source <label>` removes every item that came
   from that source, including those introduced via bundles. A
   bundle-name-targeted removal (`remove <bundle-name>` removing only items
@@ -1452,6 +1462,13 @@ across-repo continuity for global scope.
       "source": "github:driftsys/bundles",
       "ref": "v0.4.0",
       "items": ["code-review", "secret-scanner"]
+    },
+    {
+      "name": "review-tools",
+      "source": "github:driftsys/bundles",
+      "ref": "v0.4.0",
+      "items": ["lint-helper"],
+      "required_by": ["bundle:platform-defaults"]
     }
   ],
   "plugins": []
