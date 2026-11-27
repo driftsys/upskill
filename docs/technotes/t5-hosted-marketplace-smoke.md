@@ -118,19 +118,21 @@ and whose bundles `pack --all` would pick up. The bundle `smoke` holds:
    change into the directory of the client under test
    (`mkdir /path/to/proj-x &&
    cd /path/to/proj-x`); run every command of that
-   client from its directory. Before C1, check that `claude plugin list` shows
-   no `smoke` plugin at any scope and that `~/.claude/settings.json` does not
-   set `disableAllHooks`: an inherited user setting or installation makes the
-   run invalid, not a product failure. For Copilot CLI use a separate
-   `COPILOT_HOME` (`export COPILOT_HOME=$(mktemp -d)`). For Claude Code use
-   scope `local` in that project; every `claude plugin` command that changes
-   configuration (marketplace add, marketplace remove, install, uninstall)
-   passes `--scope local`, and every command runs in that directory. Remove the
-   five marker files before each client (hook marker, session counter, LSP
-   marker and the two matcher files): `rm -f "${TMPDIR:-/tmp}"/upskill-smoke-*`.
-   Hooks and the LSP server run in the environment of the client, which can
-   differ from your shell. If a marker file does not appear in your
-   `${TMPDIR:-/tmp}`, search for it with
+   client from its directory. Before C1, run `upskill --version` and check that
+   the `upskill` on PATH is 0.9.7 or later (the version that the local checks of
+   this note used), and check that `claude plugin list` shows no `smoke` plugin
+   at any scope and that `~/.claude/settings.json` does not set
+   `disableAllHooks`: an inherited user setting or installation makes the run
+   invalid, not a product failure. For Copilot CLI use a separate `COPILOT_HOME`
+   (`export COPILOT_HOME=$(mktemp -d)`). For Claude Code use scope `local` in
+   that project; every `claude plugin` command that changes configuration
+   (marketplace add, marketplace remove, install, uninstall) passes
+   `--scope local`, and every command runs in that directory. Remove the five
+   marker files before each client (hook marker, session counter, LSP marker and
+   the two matcher files): `rm -f "${TMPDIR:-/tmp}"/upskill-smoke-*`. Hooks and
+   the LSP server run in the environment of the client, which can differ from
+   your shell. If a marker file does not appear in your `${TMPDIR:-/tmp}`,
+   search for it with
    `find /tmp /var/folders -name 'upskill-smoke-*' 2>/dev/null` and use that
    directory for every later `cat` and `wc -l`.
 5. Record the checksums of `~/.claude/settings.json` before and after the run,
