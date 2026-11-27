@@ -1350,3 +1350,90 @@ fn doctor_names_the_global_scope_in_the_remove_command_of_an_orphaned_mcp() {
         "{v}"
     );
 }
+
+/// Write `mcps` as the MCP records of a lockfile with no items and no bundles.
+fn write_lockfile_with_unrecorded_bundle_mcps(target: &Path, mcps: serde_json::Value) {
+    let content = serde_json::json!({
+        "schema": 3,
+        "items": [],
+        "bundles": [],
+        "mcps": mcps
+    });
+    fs::write(
+        target.join(".upskill-lock.json"),
+        serde_json::to_string_pretty(&content).unwrap(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn doctor_reports_one_orphaned_mcp_entry_for_each_client_of_a_server() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    // Both clients are reconciled against a config file, which is absent:
+    // informational only, so the exit code shows the advisory bucket alone.
+    write_lockfile_with_unrecorded_bundle_mcps(
+        tmp.path(),
+        serde_json::json!([
+            { "name": "server", "client": "vscode", "bundle": "gone",
+              "status": "installed" },
+            { "name": "server", "client": "opencode", "bundle": "gone",
+              "status": "installed" }
+        ]),
+    );
+
+    let (code, v) = doctor_json(tmp.path(), &home);
+    assert_eq!(code, Some(0), "{v}");
+    let orphaned = v["orphaned_mcps"]
+        .as_array()
+        .unwrap_or_else(|| panic!("no orphaned_mcps: {v}"));
+    let mut clients: Vec<&str> = orphaned
+        .iter()
+        .map(|e| e["client"].as_str().unwrap())
+        .collect();
+    clients.sort();
+    assert_eq!(clients, ["opencode", "vscode"], "{v}");
+    for entry in orphaned {
+        assert_eq!(entry["name"], "server", "{v}");
+        assert_eq!(
+            entry["remove_command"], "upskill remove-mcp server --project",
+            "{v}"
+        );
+    }
+}
+
+#[test]
+fn the_remove_command_that_doctor_prints_for_a_leading_dash_name_runs() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    fs::create_dir_all(tmp.path().join(".git")).unwrap();
+    write_lockfile_with_unrecorded_bundle_mcps(
+        tmp.path(),
+        serde_json::json!([
+            { "name": "-x", "client": "vscode", "bundle": "gone",
+              "status": "installed" }
+        ]),
+    );
+
+    let (_, v) = doctor_json(tmp.path(), &home);
+    let command = v["orphaned_mcps"][0]["remove_command"]
+        .as_str()
+        .unwrap_or_else(|| panic!("no remove_command: {v}"));
+    assert_eq!(command, "upskill remove-mcp --project -- -x", "{v}");
+    // The name needs no quoting, so the words are the argv.
+    let args: Vec<&str> = command.split_whitespace().skip(1).collect();
+    common::upskill_cmd(&home)
+        .current_dir(tmp.path())
+        .args(&args)
+        .assert()
+        .success();
+    let lock: serde_json::Value =
+        serde_json::from_slice(&fs::read(tmp.path().join(".upskill-lock.json")).unwrap()).unwrap();
+    assert!(
+        lock["mcps"].as_array().is_none_or(|m| m.is_empty()),
+        "{lock}"
+    );
+}

@@ -1820,6 +1820,7 @@ fn doctor_reports_the_kept_mcp_record_of_a_bundle_that_left_its_source() {
         .unwrap();
     let doctor: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
     let orphaned = &doctor["scopes"][0]["orphaned_mcps"];
+    assert_eq!(orphaned.as_array().map(Vec::len), Some(1), "{doctor}");
     assert_eq!(orphaned[0]["name"], "server", "{doctor}");
     assert_eq!(orphaned[0]["bundle"], "bun", "{doctor}");
     assert_eq!(

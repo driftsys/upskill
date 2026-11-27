@@ -2956,6 +2956,10 @@ mod tests {
             remove_mcp_command(Scope::Project, "-x"),
             "upskill remove-mcp --project -- -x"
         );
+        assert_eq!(
+            remove_mcp_command(Scope::Global, "-my srv"),
+            "upskill remove-mcp --global -- '-my srv'"
+        );
     }
 
     #[test]

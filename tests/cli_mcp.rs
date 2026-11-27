@@ -185,3 +185,45 @@ fn add_bundle_with_mcp_is_deterministic_second_run() {
         "second add must not duplicate beyond one entry per target; got {mcps:?}"
     );
 }
+
+/// `remove` keeps the MCP records of a bundle: MCP removal is explicit,
+/// through `remove-mcp` (issue #669 documents this in the `remove` section).
+#[test]
+fn remove_keeps_the_mcp_record_of_a_bundle() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let registry = tmp.path().join("registry");
+    let project = tmp.path().join("project");
+    stage_mcp_registry(&registry);
+    fs::create_dir_all(project.join(".git")).unwrap();
+    let bundle_path = registry.join("bundles/drawio.bundle.yaml");
+    let path_val = empty_bin_path(tmp.path());
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &path_val)
+        .args(["add", bundle_path.to_str().unwrap()])
+        .assert()
+        .success();
+
+    common::upskill_cmd(&home)
+        .current_dir(&project)
+        .env("PATH", &path_val)
+        .args(["remove", "drawio-diagrams"])
+        .assert()
+        .success();
+
+    let lock: serde_json::Value =
+        serde_json::from_slice(&fs::read(project.join(".upskill-lock.json")).unwrap()).unwrap();
+    assert!(
+        lock["items"].as_array().is_none_or(|i| i.is_empty()),
+        "{lock}"
+    );
+    assert_eq!(lock["mcps"][0]["name"], "drawio", "{lock}");
+    assert!(
+        fs::read_to_string(project.join(".mcp.json"))
+            .unwrap()
+            .contains("\"drawio\""),
+        "the server stays configured"
+    );
+}
