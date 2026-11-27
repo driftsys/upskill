@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.9.7] (2026-11-27)
+
+### Documentation
+
+- describe the packed bundle plugins of driftsys/metapowers ([#636]) ([#682])
+  ([175a6c7]), closes [#636]
+
+### Bug Fixes
+
+- **update:** remove a bundle or item that left its source ([#649]) ([#665])
+  ([b382883]), closes [#649]
+- **pack:** remove a skipped output entry and fail an --all run that packs
+  nothing ([#678]) ([#681]) ([8cb3112]), closes [#678]
+
+[0.9.7]: https://github.com/driftsys/upskill/compare/v0.9.6...v0.9.7
+[175a6c7]: https://github.com/driftsys/upskill/commit/175a6c7
+[#636]: https://github.com/driftsys/upskill/issues/636
+[#682]: https://github.com/driftsys/upskill/issues/682
+[b382883]: https://github.com/driftsys/upskill/commit/b382883
+[#649]: https://github.com/driftsys/upskill/issues/649
+[#665]: https://github.com/driftsys/upskill/issues/665
+[8cb3112]: https://github.com/driftsys/upskill/commit/8cb3112
+[#678]: https://github.com/driftsys/upskill/issues/678
+[#681]: https://github.com/driftsys/upskill/issues/681
+
 ## [0.9.6] (2026-11-26)
 
 ### Documentation
