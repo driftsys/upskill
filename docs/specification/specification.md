@@ -484,30 +484,32 @@ changes.
   record and its plugin records are deleted, even if an item has that name, and
   the report says `bundle <name> removed — no longer in source (<source>)`. The
   URI of an opencode plugin of that bundle leaves the opencode config unless
-  another installed plugin record still references it. A member of that bundle
-  stays installed when it is `direct` (§4) and the source still holds it, when
-  another recorded bundle that stays lists it, or when an installed item still
-  requires it; every other member is removed as an item that is no longer in
-  source. The record is dropped when no member is left that only the bundle
-  explains: `update <name>` of one member keeps the record while another such
-  member stays installed, and the next full `update` removes that member and
-  drops the record. An entry written before the field `direct` existed is never
-  direct. An entry that another prepared source's plan provides (a dependency of
-  an item of that source) is refreshed through that source and not removed. The
-  source must still hold an item or a `.bundle.yaml` file; otherwise the update
-  fails before any write (below). Before it decides that anything is no longer
-  in source, `update` walks the source root and the directories one and two
-  levels below it (hidden ones included), every directory for bundle files, and
-  every root of the dependency sources, and reads the entry file of every rule
-  and agent it scans; an error other than not-found, or an entry file that does
-  not parse, stops the run before any write. A dependency bundle that the run
-  resolves through its roots is not looked up by name: when no root reaches it
-  any more, its record is dropped (§2.6). Each reinstalled entry gets the commit
-  of its own source (an entry from another source gets that source's commit),
-  unless its update is skipped, and any other entry keeps its recorded commit.
-  The lockfile is saved only when a value differs. This write is not a change of
-  the source (see the preview above) and does not count in the output. A dry
-  run, a declined source and a stopped run record no commit.
+  another installed plugin record still references it. Its MCP records are kept,
+  because MCP removal is explicit (`remove-mcp`); `doctor` reports them (issue
+  #669). A member of that bundle stays installed when it is `direct` (§4) and
+  the source still holds it, when another recorded bundle that stays lists it,
+  or when an installed item still requires it; every other member is removed as
+  an item that is no longer in source. The record is dropped when no member is
+  left that only the bundle explains: `update <name>` of one member keeps the
+  record while another such member stays installed, and the next full `update`
+  removes that member and drops the record. An entry written before the field
+  `direct` existed is never direct. An entry that another prepared source's plan
+  provides (a dependency of an item of that source) is refreshed through that
+  source and not removed. The source must still hold an item or a `.bundle.yaml`
+  file; otherwise the update fails before any write (below). Before it decides
+  that anything is no longer in source, `update` walks the source root and the
+  directories one and two levels below it (hidden ones included), every
+  directory for bundle files, and every root of the dependency sources, and
+  reads the entry file of every rule and agent it scans; an error other than
+  not-found, or an entry file that does not parse, stops the run before any
+  write. A dependency bundle that the run resolves through its roots is not
+  looked up by name: when no root reaches it any more, its record is dropped
+  (§2.6). Each reinstalled entry gets the commit of its own source (an entry
+  from another source gets that source's commit), unless its update is skipped,
+  and any other entry keeps its recorded commit. The lockfile is saved only when
+  a value differs. This write is not a change of the source (see the preview
+  above) and does not count in the output. A dry run, a declined source and a
+  stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
@@ -858,7 +860,7 @@ the check above refuses it.
   one scope is selected. `list` prints `excluded: <names>` at the end of the
   block of a scope that has excluded item names, also when the scope has no
   items, and the `excludes` key of the scope in `--json` (omitted when empty).
-- `doctor` — verify on-disk state matches the lock file. Per scope, thirteen
+- `doctor` — verify on-disk state matches the lock file. Per scope, fourteen
   independent buckets: missing per-client outputs (reinstall fixes), modified
   recorded files (content differs from the recorded SHA-256, compared as in
   §2.1), recorded files that could not be inspected (`doctor` continues with the
@@ -885,35 +887,39 @@ the check above refuses it.
   needs a manual step, status `instructions`, is listed with them and keeps its
   instructions: `update` runs no install for it and prints its instructions
   again when it applies the source), orphaned dependencies (informational), MCP
-  server reconciliation, and interrupted items (an item with a non-empty
-  `pending` record: run the same command again to complete it), and, for the
-  global scope only, files at the earlier global Copilot paths
-  (`earlier_layout`; `upskill update --global` moves them) and rules recorded
-  for opencode whose absolute path is missing from the `instructions` array of
-  the global opencode config (`missing_rule_entries`; `upskill update --global`
-  writes them again, also when the file has no `instructions` array; it cannot
-  repair a file that is not strict JSON or whose `instructions` is not an
-  array), and entries of the form `<home>/.agents/rules/<name>/RULE.md` in that
-  array for a name that the lockfile does not record as an opencode rule
-  (`stale_rule_entries`; for a rule that the lockfile records for other clients,
-  `recorded` is `true` and `upskill update --global` and `upskill add --global`
-  delete the entry; for a name that the lockfile does not record, `recorded` is
-  `false` and the user deletes the entry by hand; entries in another form are
-  not reported). `doctor` also prints a note for each item that the lockfiles of
-  both scopes record; the note does not change the exit code. After the scope
-  reports, `doctor` prints the support level of each client and kind
-  (`Support levels:`; the compiled table in `src/support.rs`, stated in the user
-  guide page "Support levels"); the section does not change the exit code and is
-  not based on a detection of client versions (the plugin check runs
-  `opencode --version` before any `opencode plugin list`, ADR-0008). Exit 0 when
-  clean, 1 when any drift bucket is non-empty, including `earlier_layout`.
-  Skipped plugins are warnings and do not affect the exit code. Missing,
-  modified and unreadable files are checked against the `files` record; a
-  recorded path that `remove` would never delete (outside the client roots,
-  fewer than three components, or with a `..` component) is skipped without a
-  report. For an item with an empty or missing `files` record (a `schema: 1`
-  lockfile, or a `schema: 2` or `schema: 3` item with an empty list), `doctor`
-  checks each per-client entry file instead.
+  server reconciliation, MCP records whose bundle the lockfile does not record
+  (`orphaned_mcps`, informational; `remove` and `update` keep them; one entry
+  for each record, that is for each server and client, and each entry names the
+  `upskill remove-mcp <name> --<scope>` command, with the name quoted for a
+  POSIX shell when needed and after `--` when it starts with `-`), and
+  interrupted items (an item with a non-empty `pending` record: run the same
+  command again to complete it), and, for the global scope only, files at the
+  earlier global Copilot paths (`earlier_layout`; `upskill update --global`
+  moves them) and rules recorded for opencode whose absolute path is missing
+  from the `instructions` array of the global opencode config
+  (`missing_rule_entries`; `upskill update --global` writes them again, also
+  when the file has no `instructions` array; it cannot repair a file that is not
+  strict JSON or whose `instructions` is not an array), and entries of the form
+  `<home>/.agents/rules/<name>/RULE.md` in that array for a name that the
+  lockfile does not record as an opencode rule (`stale_rule_entries`; for a rule
+  that the lockfile records for other clients, `recorded` is `true` and
+  `upskill update --global` and `upskill add --global` delete the entry; for a
+  name that the lockfile does not record, `recorded` is `false` and the user
+  deletes the entry by hand; entries in another form are not reported). `doctor`
+  also prints a note for each item that the lockfiles of both scopes record; the
+  note does not change the exit code. After the scope reports, `doctor` prints
+  the support level of each client and kind (`Support levels:`; the compiled
+  table in `src/support.rs`, stated in the user guide page "Support levels");
+  the section does not change the exit code and is not based on a detection of
+  client versions (the plugin check runs `opencode --version` before any
+  `opencode plugin list`, ADR-0008). Exit 0 when clean, 1 when any drift bucket
+  is non-empty, including `earlier_layout`. Skipped plugins are warnings and do
+  not affect the exit code. Missing, modified and unreadable files are checked
+  against the `files` record; a recorded path that `remove` would never delete
+  (outside the client roots, fewer than three components, or with a `..`
+  component) is skipped without a report. For an item with an empty or missing
+  `files` record (a `schema: 1` lockfile, or a `schema: 2` or `schema: 3` item
+  with an empty list), `doctor` checks each per-client entry file instead.
 
 ### 2.5 `new` / `lint` / `fmt`
 

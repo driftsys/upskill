@@ -482,6 +482,19 @@ pub enum McpDoctorStatus {
     ConfigUnreadable { detail: String },
 }
 
+/// An MCP record whose bundle the lockfile no longer records. `remove` and
+/// `update` keep the MCP records of a bundle they drop, because MCP removal
+/// is explicit. Advisory: does not affect [`DoctorReport::is_clean`].
+#[derive(Debug, Clone, Serialize)]
+pub struct OrphanedMcp {
+    pub name: String,
+    pub client: String,
+    pub bundle: String,
+    /// The `upskill remove-mcp` command, with the scope flag, that removes
+    /// the server.
+    pub remove_command: String,
+}
+
 /// An item with a non-empty `pending` record: an `add` or `update` failed
 /// or was stopped between its first and its last write. Running the same
 /// command again completes it.
@@ -547,6 +560,10 @@ pub struct DoctorReport {
     /// so callers can distinguish "checked and fine" from "not checked".
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_entries: Vec<McpDoctorEntry>,
+    /// MCP records whose bundle is not in the lockfile. Advisory — does NOT
+    /// affect `is_clean()`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub orphaned_mcps: Vec<OrphanedMcp>,
     /// Items whose last `add` or `update` did not complete. Non-empty →
     /// `is_clean()` returns false.
     pub interrupted: Vec<InterruptedItem>,
@@ -1059,6 +1076,18 @@ mod tests {
             status: McpDoctorStatus::NotRegistered,
         });
         assert!(!report.is_clean());
+    }
+
+    #[test]
+    fn doctor_report_clean_with_an_orphaned_mcp() {
+        let mut report = DoctorReport::default();
+        report.orphaned_mcps.push(OrphanedMcp {
+            name: "my-mcp".into(),
+            client: "claude".into(),
+            bundle: "gone".into(),
+            remove_command: "upskill remove-mcp my-mcp --project".into(),
+        });
+        assert!(report.is_clean());
     }
 
     #[test]

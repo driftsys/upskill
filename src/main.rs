@@ -2256,6 +2256,7 @@ fn print_doctor_report(report: &DoctorReport) {
     print_doctor_orphaned_dependencies(report);
     print_doctor_skipped_plugins(report);
     print_doctor_mcps(report);
+    print_doctor_orphaned_mcps(report);
 }
 
 fn print_stale_rule_entries(entries: &[&upskill::pipeline::StaleRuleEntry]) {
@@ -2291,6 +2292,23 @@ fn print_doctor_orphaned_dependencies(report: &DoctorReport) {
                 "remove with `upskill remove {}` if no longer needed",
                 d.name
             ))
+        );
+    }
+}
+
+fn print_doctor_orphaned_mcps(report: &DoctorReport) {
+    if report.orphaned_mcps.is_empty() {
+        return;
+    }
+    println!(
+        "{} {} MCP server record(s) of a bundle that is no longer installed",
+        style::warn("doctor:"),
+        report.orphaned_mcps.len()
+    );
+    for m in &report.orphaned_mcps {
+        println!(
+            "  MCP '{}' ({}) of bundle '{}'; remove it with `{}` if no longer needed",
+            m.name, m.client, m.bundle, m.remove_command
         );
     }
 }
