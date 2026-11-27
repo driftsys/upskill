@@ -393,6 +393,10 @@ fn packed_mcp_server_answers_initialize_and_the_marker_tool() {
             .map(|line| serde_json::from_str(line).unwrap())
             .collect();
         assert_eq!(lines.len(), 3, "{file}: {out}");
+        for (line, id) in lines.iter().zip([1, 2, 3]) {
+            assert_eq!(line["jsonrpc"], "2.0", "{file}: {out}");
+            assert_eq!(line["id"], id, "{file}: {out}");
+        }
         assert_eq!(lines[0]["result"]["serverInfo"]["name"], "smoke-mcp");
         assert_eq!(lines[1]["result"]["tools"][0]["name"], "smoke_marker");
         assert_eq!(lines[2]["result"]["content"][0]["text"], "slate-newt-2468");
