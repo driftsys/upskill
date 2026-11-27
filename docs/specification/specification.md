@@ -224,14 +224,14 @@ of an item that its source no longer contains fails, the install of that source
 is already written and saved. A removal that is refused when it is planned (a
 symbolic link above a recorded path, or a recorded path that cannot be
 inspected) fails before the install of that source is written. For `update`, a
-source that resolves to no items while the lockfile records items from it, and a
-hand-shake file that cannot be updated (for example an `opencode.json` whose
-`instructions` is not an array), also fail the source before any file of that
-source is written, in every mode. Without `--force`, an item with at least one
-conflict is skipped as a whole: none of its files is written or deleted and its
-lockfile entry is not changed, except its `required_by` (§2.2). The other items
-are written. `add` then prints one line per conflict to stderr,
-`skipped <kind> <name>: <path> was modified` or
+directory source that resolves to no item and no bundle file while the lockfile
+records items from it, and a hand-shake file that cannot be updated (for example
+an `opencode.json` whose `instructions` is not an array), also fail the source
+before any file of that source is written, in every mode. Without `--force`, an
+item with at least one conflict is skipped as a whole: none of its files is
+written or deleted and its lockfile entry is not changed, except its
+`required_by` (§2.2). The other items are written. `add` then prints one line
+per conflict to stderr, `skipped <kind> <name>: <path> was modified` or
 `skipped <kind> <name>: <path> exists and is not managed by upskill`, followed
 by `Use --force to replace.`, and exits with code 1. `--force` replaces these
 files, deletes modified files that are no longer produced, and also replaces
@@ -364,65 +364,68 @@ source it computes a preview from the fetched content, the files on disk and the
 lockfile, just before the source is applied. A preview **changes something**
 when applying the source writes or deletes a file, changes the lockfile record
 of an item (any field except `pending`, `required_by` and `commit`), completes
-an interrupted item (a non-empty `pending` record, §4), removes an item, or
-creates or changes a hand-shake file (§3.4). A write of a file that already
-holds the planned bytes is not a change, unless the executable bits (`0o111`) of
-the file differ from the target executable bits (Unix only): each executable bit
-of the source resource for which the file has the matching read bit (owner,
-group, other). The apply sets the executable bits to the target, so the file is
-a change. A difference in the other permission bits is not a change. A `skip`
-item and a `kept modified file` note are not changes.
+an interrupted item (a non-empty `pending` record, §4), removes an item, drops
+the record of a vanished bundle, or creates or changes a hand-shake file (§3.4).
+A write of a file that already holds the planned bytes is not a change, unless
+the executable bits (`0o111`) of the file differ from the target executable bits
+(Unix only): each executable bit of the source resource for which the file has
+the matching read bit (owner, group, other). The apply sets the executable bits
+to the target, so the file is a change. A difference in the other permission
+bits is not a change. A `skip` item and a `kept modified file` note are not
+changes.
 
 - **Terminal, no `--yes`.** For each source, `update` prints a block: the source
   label; one line per item that the apply changes or skips, with the action
   `update`, `complete`, `remove` or `skip`; one `write <path>` line per
-  hand-shake file; `up to date` when there is neither; then one
-  `kept modified file: <path>` line per note. An item line counts the files that
-  are written or deleted (`1 file`, `<n> files`) and names each kept modified
-  file (`keeps modified <path>`), each file that `--force` replaces or deletes,
-  and for `skip` each file that causes the skip. An `update` line whose item
-  changes only in its lockfile record ends with `record only`. A `remove` line
-  says `no longer in source`. A cross-source dependency that the reinstall
-  writes has a line in the block of the source that requires it. When the
-  preview changes something, `update` asks `Apply? [y/N/q]` on stderr: `y` or
-  `yes` (any letter case) applies the source; `n`, `no`, an empty line or any
-  other text does not apply it and continues; `q` or `quit` (any letter case),
-  end of input or a read error does not apply it and stops the run, and earlier
-  sources stay applied. Ctrl-C at the question exits with code 130 at once, and
-  earlier sources stay applied; Ctrl-C during the apply of a source stops the
-  run before the next source, with code 130. A source whose preview changes
-  nothing is not applied and asks nothing. The apply decides again from the
-  disk. After an applied source, `update` prints a result line with the non-zero
-  counts of `<n> updated`, `<n> completed`, `<n> removed`, `<n> skipped`,
-  `<n> modified file(s) kept` and `<n> file(s) changed`, or `applied`; the
-  counts include a dependency from another source that the apply updated,
-  completed or skipped. After the last source it prints
-  `Updated <n> of <m> item(s) from <a> of <s> source(s).`: `<n>` is the number
-  of items that the run updated, completed or removed, also as a dependency of
-  another source, and `<m>` is the number of items that the run covers (the
-  lockfile entries that the run selects, which are all entries or with names
-  only the named entries, also of skipped sources and of sources not examined
-  after `q`, and the items that the plans of the sources that were fetched and
-  not skipped install). Each item, by kind and installed name, is counted once
-  in `<n>` and in `<m>`, and `<m>` does not depend on where the run stops. The
-  line is followed by `<k> source(s) not applied.` when a source with changes
-  was not applied, by `<u> source(s) skipped.` when sources were skipped, for
-  either cause, and by `Stopped; <r> source(s) not examined.` or `Stopped.`
-  after `q` or end of input; then `Changed <n> file(s) written or deleted` when
-  no item was updated, completed or removed but files were written or deleted.
-  It prints `everything is up to date — nothing to do` instead when no source
-  was applied, no source with changes was declined, no file was kept with a
-  note, no item was skipped, no source was skipped and no lockfile was adopted.
-  The exit code is 1 when an item is skipped in an applied source or in a source
-  whose preview changes nothing, when a source was skipped, or when a step
-  fails; answers `n` and `q` do not change it, and a `skip` line of a source
-  that was not applied does not cause exit code 1. With `--quiet`, the blocks,
-  the result lines and the closing summary are not printed, and each
-  `kept modified file` note is printed on stderr, as with `--yes`; the question
-  is `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of the
-  skipped items that cause exit code 1, `Use --force to replace.` and the
-  adoption notice are printed on stderr. Without `--quiet`, a terminal run
-  prints no `skipped` line.
+  hand-shake file; one `remove   bundle <name>   no longer in source (<source>)`
+  line per vanished bundle record that the apply drops; `up to date` when there
+  is none of these lines; then one `kept modified file: <path>` line per note.
+  An item line counts the files that are written or deleted (`1 file`,
+  `<n> files`) and names each kept modified file (`keeps modified <path>`), each
+  file that `--force` replaces or deletes, and for `skip` each file that causes
+  the skip. An `update` line whose item changes only in its lockfile record ends
+  with `record only`. A `remove` line says `no longer in source`. A cross-source
+  dependency that the reinstall writes has a line in the block of the source
+  that requires it. When the preview changes something, `update` asks
+  `Apply? [y/N/q]` on stderr: `y` or `yes` (any letter case) applies the source;
+  `n`, `no`, an empty line or any other text does not apply it and continues;
+  `q` or `quit` (any letter case), end of input or a read error does not apply
+  it and stops the run, and earlier sources stay applied. Ctrl-C at the question
+  exits with code 130 at once, and earlier sources stay applied; Ctrl-C during
+  the apply of a source stops the run before the next source, with code 130. A
+  source whose preview changes nothing is not applied and asks nothing. The
+  apply decides again from the disk. After an applied source, `update` prints a
+  result line with the non-zero counts of `<n> updated`, `<n> completed`,
+  `<n> removed`, `<n> skipped`, `<n> modified file(s) kept` and
+  `<n> file(s) changed`, or `applied`; the counts include a dependency from
+  another source that the apply updated, completed or skipped. After the last
+  source it prints `Updated <n> of <m> item(s) from <a> of <s> source(s).`:
+  `<n>` is the number of items that the run updated, completed or removed, also
+  as a dependency of another source, and `<m>` is the number of items that the
+  run covers (the lockfile entries that the run selects, which are all entries
+  or with names only the named entries, also of skipped sources and of sources
+  not examined after `q`, and the items that the plans of the sources that were
+  fetched and not skipped install). Each item, by kind and installed name, is
+  counted once in `<n>` and in `<m>`, and `<m>` does not depend on where the run
+  stops. The line is followed by `<k> source(s) not applied.` when a source with
+  changes was not applied, by `<u> source(s) skipped.` when sources were
+  skipped, for either cause, and by `Stopped; <r> source(s) not examined.` or
+  `Stopped.` after `q` or end of input; then
+  `Changed <n> file(s) written or deleted` when no item was updated, completed
+  or removed but files were written or deleted. It prints
+  `everything is up to date — nothing to do` instead when no source was applied,
+  no source with changes was declined, no file was kept with a note, no item was
+  skipped, no source was skipped and no lockfile was adopted. The exit code is 1
+  when an item is skipped in an applied source or in a source whose preview
+  changes nothing, when a source was skipped, or when a step fails; answers `n`
+  and `q` do not change it, and a `skip` line of a source that was not applied
+  does not cause exit code 1. With `--quiet`, the blocks, the result lines and
+  the closing summary are not printed, and each `kept modified file` note is
+  printed on stderr, as with `--yes`; the question is
+  `Apply changes from <source>? [y/N/q]`, and the `skipped` lines of the skipped
+  items that cause exit code 1, `Use --force to replace.` and the adoption
+  notice are printed on stderr. Without `--quiet`, a terminal run prints no
+  `skipped` line.
 - **`--yes`, or stdin is not a terminal.** Every source is applied without a
   question, also a source whose preview changes nothing, so its plugin and MCP
   steps run unless the source has a kind restriction, which skips both steps.
@@ -477,15 +480,34 @@ item and a `kept modified file` note are not changes.
   is skipped later because it requires an item of a skipped source. To update
   such an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source
   is reinstalled as a whole. Recorded bundle names resolve only as bundles. A
-  missing root bundle causes `bundle '<name>' is no longer in source <label>`
-  before any write, even if an item has that name. A dependency bundle that the
-  run resolves through its roots is not looked up by name: when no root reaches
-  it any more, its record is dropped (§2.6). Each reinstalled entry gets the
-  commit of its own source (an entry from another source gets that source's
-  commit), unless its update is skipped, and any other entry keeps its recorded
-  commit. The lockfile is saved only when a value differs. This write is not a
-  change of the source (see the preview above) and does not count in the output.
-  A dry run, a declined source and a stopped run record no commit.
+  recorded root bundle that is missing from a directory source is dropped: its
+  record and its plugin records are deleted, even if an item has that name, and
+  the report says `bundle <name> removed — no longer in source (<source>)`. The
+  URI of an opencode plugin of that bundle leaves the opencode config unless
+  another installed plugin record still references it. A member of that bundle
+  stays installed when it is `direct` (§4) and the source still holds it, when
+  another recorded bundle that stays lists it, or when an installed item still
+  requires it; every other member is removed as an item that is no longer in
+  source. The record is dropped when no member is left that only the bundle
+  explains: `update <name>` of one member keeps the record while another such
+  member stays installed, and the next full `update` removes that member and
+  drops the record. An entry written before the field `direct` existed is never
+  direct. An entry that another prepared source's plan provides (a dependency of
+  an item of that source) is refreshed through that source and not removed. The
+  source must still hold an item or a `.bundle.yaml` file; otherwise the update
+  fails before any write (below). Before it decides that anything is no longer
+  in source, `update` walks the source root and the directories one and two
+  levels below it (hidden ones included), every directory for bundle files, and
+  every root of the dependency sources, and reads the entry file of every rule
+  and agent it scans; an error other than not-found, or an entry file that does
+  not parse, stops the run before any write. A dependency bundle that the run
+  resolves through its roots is not looked up by name: when no root reaches it
+  any more, its record is dropped (§2.6). Each reinstalled entry gets the commit
+  of its own source (an entry from another source gets that source's commit),
+  unless its update is skipped, and any other entry keeps its recorded commit.
+  The lockfile is saved only when a value differs. This write is not a change of
+  the source (see the preview above) and does not count in the output. A dry
+  run, a declined source and a stopped run record no commit.
 - **`--dry-run`.** `update` prints the same blocks, asks nothing, writes nothing
   and does not adopt a `schema: 1` lockfile (the previews use an adoption held
   in memory). It then prints `Dry-run: would update <n> of <m> item(s)` (`<n>`
@@ -506,13 +528,14 @@ item and a `kept modified file` note are not changes.
 A `schema: 1` lockfile is adopted once per run, without a question, after every
 source that was not skipped (because it could not be fetched, or because it
 requires an item of a skipped source) passed the checks of the prepare step, for
-the first such source that also resolves to items (§4); in a terminal the
-adoption notice is printed before the block of that source. The adoption stays
-when the run fails or is stopped. The adoption covers the whole lockfile: an
-entry of a skipped source gets the `files` record of its files on disk; no other
-field of that entry changes and none of its files is written. When every source
-is skipped, nothing is adopted. When a later step fails after a source was
-skipped, the line of the skipped source is still printed, before the error.
+the first such source that also resolves to items or, for a directory source,
+holds an item or a bundle file (§4); in a terminal the adoption notice is
+printed before the block of that source. The adoption stays when the run fails
+or is stopped. The adoption covers the whole lockfile: an entry of a skipped
+source gets the `files` record of its files on disk; no other field of that
+entry changes and none of its files is written. When every source is skipped,
+nothing is adopted. When a later step fails after a source was skipped, the line
+of the skipped source is still printed, before the error.
 
 `update` reports the command items (`items.commands`), hook items
 (`items.hooks`) and LSP servers of every bundle it prepares in the same skip
@@ -777,9 +800,10 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched, except that removing
 an item of a bundle, or the source of a bundle with `--source`, deletes the
 installed opencode plugin entry of that bundle from the `plugin` and `plugins`
-arrays of the `opencode.json` of the scope. In the global scope, removing a rule
-that is installed for opencode also deletes its `instructions` entry from the
-global opencode config.
+arrays of the `opencode.json` of the scope. The entry stays when an installed
+opencode plugin record of a bundle that stays references the same entry. In the
+global scope, removing a rule that is installed for opencode also deletes its
+`instructions` entry from the global opencode config.
 
 `remove` deletes only files listed in the item's `files` or `pending` record
 (§4). A recorded file is **owned** when it is a regular file with the recorded
@@ -969,23 +993,26 @@ behaviour:
   leaves the `required_by` of that bundle, and a dependency bundle that no
   resolution of the run reaches is dropped from the lockfile once every one of
   its root sources is applied. Its plugin entries are dropped with it, as
-  `remove` drops them; its MCP entries are kept. Each of its items that no
-  resolution provides is removed, reported as `removed — no longer in source`;
-  an item that another root still reaches is kept. The lockfile records no
-  marker for an item that was installed directly: an item that is also a member
-  of a dropped dependency bundle is removed with it, and
-  `upskill add <source> <item>` installs it again. An item outside the kind
-  restriction of the source that resolves it is kept unchanged. When a root
-  source is skipped, the items of its dependency bundles are kept and reported
-  as skipped, unless another resolution of the run provides them. A root bundle
-  that lists no item can drop its `requires:`; its former dependency items are
-  then removed. A root source resolves with the kinds of its root bundles when
-  each of them has recorded kinds, together with the kinds of the dependency
-  bundles that they reach (the union of the recorded kinds of the roots of each
-  dependency bundle); a dependency bundle without kinds adds none. A lockfile
-  written before `required_by` existed records every bundle as a root, so
-  `update` keeps a dependency that its root no longer requires. To drop such a
-  dependency once, run `upskill remove <item>...` with the items of the
+  `remove` drops them: the opencode config entry of such a plugin stays when an
+  installed opencode plugin record of a bundle that stays references it. Its MCP
+  entries are kept. Each of its items that no resolution provides is removed,
+  reported as `removed — no longer in source`; an item that another root still
+  reaches is kept. An item that the lockfile marks `direct` (§4) is kept when a
+  dependency bundle that lists it is dropped, as long as its source still holds
+  it. An entry written before the field `direct` existed is never direct: when
+  such an item is also a member of a dropped dependency bundle, it is removed
+  with that bundle, and `upskill add <source> <item>` installs it again. An item
+  outside the kind restriction of the source that resolves it is kept unchanged.
+  When a root source is skipped, the items of its dependency bundles are kept
+  and reported as skipped, unless another resolution of the run provides them. A
+  root bundle that lists no item can drop its `requires:`; its former dependency
+  items are then removed. A root source resolves with the kinds of its root
+  bundles when each of them has recorded kinds, together with the kinds of the
+  dependency bundles that they reach (the union of the recorded kinds of the
+  roots of each dependency bundle); a dependency bundle without kinds adds none.
+  A lockfile written before `required_by` existed records every bundle as a
+  root, so `update` keeps a dependency that its root no longer requires. To drop
+  such a dependency once, run `upskill remove <item>...` with the items of the
   dependency bundle: removing an item also drops each bundle record that lists
   it. There is no `remove <bundle-name>` form. Removing and adding the root
   bundle again does not repair the record, because a bundle recorded without
@@ -1430,6 +1457,17 @@ as in a project; the `.vscode/settings.json` entry points at
 
 ## 4. State files
 
+Item entries in `.upskill-lock.json` have an optional boolean `direct`. `add`
+sets it to `true` for an item that the user named as a positional item name, and
+for every item of a directory source that is installed without names; it is
+`false`, and omitted on write, for an item that was installed only as a bundle
+member or as a `requires` dependency, and for an entry written before the field
+existed. A later `add` that names the item sets it, and only `remove` clears it;
+`update` keeps the recorded value and never sets it. `update` keeps a `direct`
+item that its source still holds in two cases: when a recorded bundle that lists
+it is no longer in its source (§2.2), and when a dependency bundle that lists it
+is dropped (§2.6).
+
 Bundle entries in `.upskill-lock.json` have an optional `kinds` array, for
 example `"kinds": ["rule"]`, recording the restriction from `add --kind`. Absent
 or empty means unrestricted; an empty list is omitted on write. Recorded kinds
@@ -1492,11 +1530,12 @@ that is refused for a source item that overlaps an output path of the run or
 that contains a recorded file that the check of §2.1 or §2.2 compares, for a
 conflict with another source, for two items with one installed name, or for an
 installed name that is empty, `.` or `..` or that has a path separator, and not
-an `update` whose first source resolves to no items while the lockfile records
-items from it) adopt a `schema: 1` lockfile: they keep the old bytes as
-`.upskill-lock.json.v1` (an existing `.upskill-lock.json.v1` is kept and not
-replaced), record each existing file at the items' output paths with its current
-hash, save `schema: 3`, and print the adopted paths to stderr.
+an `update` whose first source is a directory that resolves to no item and no
+bundle file while the lockfile records items from it) adopt a `schema: 1`
+lockfile: they keep the old bytes as `.upskill-lock.json.v1` (an existing
+`.upskill-lock.json.v1` is kept and not replaced), record each existing file at
+the items' output paths with its current hash, save `schema: 3`, and print the
+adopted paths to stderr.
 
 Two possible locations:
 

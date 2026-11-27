@@ -37,18 +37,28 @@ pub(super) fn probe_effective_name(entry_path: &Path, kind: ItemKind, folder: &s
     if kind == ItemKind::Skill {
         return folder.to_string();
     }
+    match fs::read_to_string(entry_path) {
+        Ok(raw) => name_from_content(&raw, folder),
+        Err(_) => folder.to_string(),
+    }
+}
+
+/// The frontmatter `name` of the entrypoint `raw`, or `folder` when there is
+/// none or the frontmatter does not parse.
+fn name_from_content(raw: &str, folder: &str) -> String {
+    name_from_content_strict(raw, folder).unwrap_or_else(|_| folder.to_string())
+}
+
+/// As [`name_from_content`], but a frontmatter that does not parse is an
+/// error.
+fn name_from_content_strict(raw: &str, folder: &str) -> Result<String> {
     #[derive(serde::Deserialize)]
     struct NameProbe {
         #[serde(default)]
         name: Option<String>,
     }
-    match fs::read_to_string(entry_path) {
-        Ok(raw) => match frontmatter::parse::<NameProbe>(&raw) {
-            Ok((p, _)) => p.name.unwrap_or_else(|| folder.to_string()),
-            Err(_) => folder.to_string(),
-        },
-        Err(_) => folder.to_string(),
-    }
+    let (probe, _) = frontmatter::parse::<NameProbe>(raw)?;
+    Ok(probe.name.unwrap_or_else(|| folder.to_string()))
 }
 
 /// Returns true when the directory contains at least one SSOT entrypoint
@@ -289,6 +299,48 @@ pub(super) fn find_bundle_by_name(root: &Path, name: &str) -> Option<PathBuf> {
     find_bundle_recursive(root, &target_filename)
 }
 
+/// As [`find_bundle_by_name`], but a directory that cannot be read is an
+/// error (a missing one is not), so that a bundle is reported absent only
+/// after a complete search.
+pub(super) fn try_find_bundle_by_name(root: &Path, name: &str) -> Result<Option<PathBuf>> {
+    let target = format!("{}{}", name, crate::parse::bundle::BUNDLE_SUFFIX);
+    try_find_bundle_recursive(root, &target)
+}
+
+fn try_find_bundle_recursive(dir: &Path, target: &str) -> Result<Option<PathBuf>> {
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e).with_context(|| format!("read_dir {}", dir.display())),
+    };
+    for entry in entries {
+        let entry = entry.with_context(|| format!("read_dir {}", dir.display()))?;
+        let entry_name = entry.file_name();
+        let name_str = entry_name.to_string_lossy();
+        if name_str.starts_with('.') {
+            continue;
+        }
+        let path = entry.path();
+        // `file_type()` does not follow symlinks, so a symlink loop ends here;
+        // its error is returned, not read as "not a file".
+        let file_type = entry
+            .file_type()
+            .with_context(|| format!("read the type of {}", path.display()))?;
+        if file_type.is_symlink() {
+            continue;
+        }
+        if file_type.is_file() && name_str == target {
+            return Ok(Some(path));
+        }
+        if file_type.is_dir() {
+            if let Some(found) = try_find_bundle_recursive(&path, target)? {
+                return Ok(Some(found));
+            }
+        }
+    }
+    Ok(None)
+}
+
 fn find_bundle_recursive(dir: &Path, target: &str) -> Option<PathBuf> {
     let entries = fs::read_dir(dir).ok()?;
     for entry in entries.flatten() {
@@ -310,6 +362,27 @@ fn find_bundle_recursive(dir: &Path, target: &str) -> Option<PathBuf> {
     None
 }
 
+/// True when `root` holds at least one `*.bundle.yaml` file outside hidden
+/// directories. Symbolic links are not followed or counted.
+pub(super) fn has_any_bundle_file(root: &Path) -> bool {
+    let Ok(entries) = fs::read_dir(root) else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name.starts_with('.') {
+            return false;
+        }
+        // `file_type()` does not follow symlinks, so a symlink loop ends here.
+        match entry.file_type() {
+            Ok(ft) if ft.is_dir() => has_any_bundle_file(&entry.path()),
+            Ok(ft) if ft.is_symlink() => false,
+            _ => name.ends_with(crate::parse::bundle::BUNDLE_SUFFIX),
+        }
+    })
+}
+
 /// Check whether a source directory contains any item (skill, rule, or
 /// agent) with the given name. An item exists when a subdirectory named
 /// `name` contains at least one of `SKILL.md`, `RULE.md`, or `AGENT.md`.
@@ -329,15 +402,82 @@ pub(super) fn has_matching_items(source: &Path, name: &str) -> bool {
 /// in it that cannot be listed, or a category directory that cannot be
 /// listed when `source` is a kind directory (see [`read_category_dir`]).
 pub(super) fn scan_source_items(source: &Path) -> Result<Vec<(ItemKind, String)>> {
+    scan_items(source, false)
+}
+
+/// As [`scan_source_items`], but any directory that cannot be read is an
+/// error (a missing one is not). `update` uses it, because an item that the
+/// scan misses is removed as no longer in the source.
+pub(super) fn scan_source_items_strict(source: &Path) -> Result<Vec<(ItemKind, String)>> {
+    scan_items(source, true)
+}
+
+/// `path.is_dir()`; with `strict`, a metadata error other than not-found is
+/// returned instead of read as "not a directory".
+fn check_dir(path: &Path, strict: bool) -> Result<bool> {
+    if !strict {
+        return Ok(path.is_dir());
+    }
+    match fs::metadata(path) {
+        Ok(m) => Ok(m.is_dir()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e).with_context(|| format!("inspect {}", path.display())),
+    }
+}
+
+/// As [`check_dir`], for a regular file.
+fn check_file(path: &Path, strict: bool) -> Result<bool> {
+    if !strict {
+        return Ok(path.is_file());
+    }
+    match fs::metadata(path) {
+        Ok(m) => Ok(m.is_file()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e).with_context(|| format!("inspect {}", path.display())),
+    }
+}
+
+/// [`is_item_dir`], strict as [`check_dir`].
+///
+/// With `strict`, every entrypoint is checked, not only up to the first one
+/// that exists: a metadata error of a later entrypoint (for example a
+/// symlink loop that replaced `SKILL.md`) must not be hidden by an earlier
+/// readable one.
+fn has_entrypoint(path: &Path, strict: bool) -> Result<bool> {
+    let mut found = false;
+    for entry in ENTRYPOINTS {
+        if check_file(&path.join(entry), strict)? {
+            found = true;
+            if !strict {
+                break;
+            }
+        }
+    }
+    Ok(found)
+}
+
+/// [`probe_effective_name`]; with `strict`, a read error of the entrypoint is
+/// returned instead of falling back to the folder name.
+fn probe_name(entry_path: &Path, kind: ItemKind, folder: &str, strict: bool) -> Result<String> {
+    if !strict || kind == ItemKind::Skill {
+        return Ok(probe_effective_name(entry_path, kind, folder));
+    }
+    let raw =
+        fs::read_to_string(entry_path).with_context(|| format!("read {}", entry_path.display()))?;
+    name_from_content_strict(&raw, folder)
+        .with_context(|| format!("parse {}", entry_path.display()))
+}
+
+fn scan_items(source: &Path, strict: bool) -> Result<Vec<(ItemKind, String)>> {
     let mut items = Vec::new();
-    if !source.is_dir() {
+    if !check_dir(source, strict)? {
         return Ok(items);
     }
     let entries = fs::read_dir(source).with_context(|| format!("read_dir {}", source.display()))?;
     for entry in entries {
         let entry = entry.with_context(|| format!("read_dir {}", source.display()))?;
         let path = entry.path();
-        if !path.is_dir() {
+        if !check_dir(&path, strict)? {
             continue;
         }
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
@@ -346,30 +486,30 @@ pub(super) fn scan_source_items(source: &Path) -> Result<Vec<(ItemKind, String)>
         if name.starts_with('.') {
             continue;
         }
-        if is_item_dir(&path) {
-            if path.join("SKILL.md").is_file() {
+        if has_entrypoint(&path, strict)? {
+            if check_file(&path.join("SKILL.md"), strict)? {
                 items.push((ItemKind::Skill, name.to_string()));
             }
-            if path.join("RULE.md").is_file() {
+            if check_file(&path.join("RULE.md"), strict)? {
                 items.push((
                     ItemKind::Rule,
-                    probe_effective_name(&path.join("RULE.md"), ItemKind::Rule, name),
+                    probe_name(&path.join("RULE.md"), ItemKind::Rule, name, strict)?,
                 ));
             }
-            if path.join("AGENT.md").is_file() {
+            if check_file(&path.join("AGENT.md"), strict)? {
                 items.push((
                     ItemKind::Agent,
-                    probe_effective_name(&path.join("AGENT.md"), ItemKind::Agent, name),
+                    probe_name(&path.join("AGENT.md"), ItemKind::Agent, name, strict)?,
                 ));
             }
         } else {
             // Category subdir: source/<category>/<item>/ENTRY.md
-            if let Some(sub_entries) = read_category_dir(&path, source)? {
+            if let Some(sub_entries) = read_category_dir(&path, source, strict)? {
                 for sub_entry in sub_entries {
                     let sub_entry =
                         sub_entry.with_context(|| format!("read_dir {}", path.display()))?;
                     let sub_path = sub_entry.path();
-                    if !sub_path.is_dir() {
+                    if !check_dir(&sub_path, strict)? {
                         continue;
                     }
                     let Some(sub_name) = sub_path.file_name().and_then(|n| n.to_str()) else {
@@ -378,27 +518,29 @@ pub(super) fn scan_source_items(source: &Path) -> Result<Vec<(ItemKind, String)>
                     if sub_name.starts_with('.') {
                         continue;
                     }
-                    if sub_path.join("SKILL.md").is_file() {
+                    if check_file(&sub_path.join("SKILL.md"), strict)? {
                         items.push((ItemKind::Skill, sub_name.to_string()));
                     }
-                    if sub_path.join("RULE.md").is_file() {
+                    if check_file(&sub_path.join("RULE.md"), strict)? {
                         items.push((
                             ItemKind::Rule,
-                            probe_effective_name(
+                            probe_name(
                                 &sub_path.join("RULE.md"),
                                 ItemKind::Rule,
                                 sub_name,
-                            ),
+                                strict,
+                            )?,
                         ));
                     }
-                    if sub_path.join("AGENT.md").is_file() {
+                    if check_file(&sub_path.join("AGENT.md"), strict)? {
                         items.push((
                             ItemKind::Agent,
-                            probe_effective_name(
+                            probe_name(
                                 &sub_path.join("AGENT.md"),
                                 ItemKind::Agent,
                                 sub_name,
-                            ),
+                                strict,
+                            )?,
                         ));
                     }
                 }
@@ -460,7 +602,7 @@ pub(super) fn has_ssot_layout(dir: &Path) -> Result<bool> {
         // Grandchild check: dir/<category>/<item>/ENTRY.md
         // Handles sibling layouts where items live in subdirectories
         // (e.g. `skills/<item>/RULE.md` alongside `bundles/`).
-        if let Some(sub_entries) = read_category_dir(&path, dir)? {
+        if let Some(sub_entries) = read_category_dir(&path, dir, false)? {
             for sub_entry in sub_entries {
                 let sub_entry =
                     sub_entry.with_context(|| format!("read_dir {}", path.display()))?;
@@ -494,10 +636,13 @@ pub(super) fn detect_item_entrypoint(source: &Path, name: &str) -> &'static str 
 /// (`skills/`, `rules/`, `agents/`), or a category directory of a `parent`
 /// that is itself a kind directory. Any other unreadable directory holds no
 /// items by convention: `Ok(None)`.
-fn read_category_dir(dir: &Path, parent: &Path) -> Result<Option<fs::ReadDir>> {
+/// With `strict`, an error other than not-found is returned for every
+/// directory.
+fn read_category_dir(dir: &Path, parent: &Path, strict: bool) -> Result<Option<fs::ReadDir>> {
     match fs::read_dir(dir) {
         Ok(entries) => Ok(Some(entries)),
-        Err(_) if !is_kind_dir(dir) && !is_kind_dir(parent) => Ok(None),
+        Err(e) if strict && e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(_) if !strict && !is_kind_dir(dir) && !is_kind_dir(parent) => Ok(None),
         Err(e) => Err(e).with_context(|| format!("read_dir {}", dir.display())),
     }
 }
@@ -516,7 +661,31 @@ fn is_kind_dir(path: &Path) -> bool {
 /// directory that cannot be listed when `kind_root` is a kind directory
 /// (see [`is_kind_dir`]); other unreadable directories are skipped.
 pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>> {
-    if !kind_root.exists() {
+    walk_item_dirs(kind_root, false)
+}
+
+/// The same traversal as [`iter_item_dirs`], hidden directories included,
+/// with a fallible check of every directory, child and entrypoint: every
+/// error except not-found is returned. `update` runs it before it decides
+/// that a recorded item is no longer in its source, so that a directory that
+/// the lenient walk cannot inspect never makes an item look absent.
+pub(super) fn iter_item_dirs_strict(kind_root: &Path) -> Result<Vec<(String, PathBuf)>> {
+    walk_item_dirs(kind_root, true)
+}
+
+fn walk_item_dirs(kind_root: &Path, strict: bool) -> Result<Vec<(String, PathBuf)>> {
+    let exists = if strict {
+        match fs::metadata(kind_root) {
+            Ok(_) => true,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+            Err(e) => {
+                return Err(e).with_context(|| format!("inspect {}", kind_root.display()));
+            }
+        }
+    } else {
+        kind_root.exists()
+    };
+    if !exists {
         return Ok(Vec::new());
     }
     let mut out = Vec::new();
@@ -525,10 +694,10 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
     {
         let entry = entry?;
         let path = entry.path();
-        if !path.is_dir() {
+        if !check_dir(&path, strict)? {
             continue;
         }
-        if is_item_dir(&path) {
+        if has_entrypoint(&path, strict)? {
             // Direct item: kind_root/<item>/ENTRY.md
             let name = entry
                 .file_name()
@@ -539,14 +708,14 @@ pub(super) fn iter_item_dirs(kind_root: &Path) -> Result<Vec<(String, PathBuf)>>
         } else {
             // Category subdir: kind_root/<category>/<item>/ENTRY.md
             // Descend one level to find items in subdirectories (format-spec §2.2).
-            let Some(sub_entries) = read_category_dir(&path, kind_root)? else {
+            let Some(sub_entries) = read_category_dir(&path, kind_root, strict)? else {
                 continue;
             };
             for sub_entry in sub_entries {
                 let sub_entry =
                     sub_entry.with_context(|| format!("read_dir {}", path.display()))?;
                 let sub_path = sub_entry.path();
-                if sub_path.is_dir() && is_item_dir(&sub_path) {
+                if check_dir(&sub_path, strict)? && has_entrypoint(&sub_path, strict)? {
                     let name = sub_entry
                         .file_name()
                         .to_str()
@@ -970,6 +1139,104 @@ mod tests {
             !res.iter().any(|p| p.to_string_lossy().contains("loop")),
             "the symlinked directory must be skipped, not traversed: {res:?}"
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn has_any_bundle_file_ends_on_a_symlink_loop_and_ignores_links() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        std::fs::create_dir_all(dir.join("sub")).unwrap();
+        std::os::unix::fs::symlink(dir, dir.join("sub/loop")).unwrap();
+        assert!(!has_any_bundle_file(dir));
+        std::fs::write(dir.join("sub/x.bundle.yaml"), "x").unwrap();
+        assert!(has_any_bundle_file(dir));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn try_find_bundle_by_name_ends_on_a_symlink_loop() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        std::fs::create_dir_all(dir.join("sub")).unwrap();
+        std::os::unix::fs::symlink(dir, dir.join("sub/loop")).unwrap();
+        assert!(try_find_bundle_by_name(dir, "x").unwrap().is_none());
+        std::fs::write(dir.join("sub/x.bundle.yaml"), "x").unwrap();
+        assert!(try_find_bundle_by_name(dir, "x").unwrap().is_some());
+    }
+
+    #[test]
+    fn name_from_content_reads_the_frontmatter_name_or_the_folder() {
+        assert_eq!(
+            name_from_content("---\nname: policy\n---\nB\n", "folder"),
+            "policy"
+        );
+        assert_eq!(
+            name_from_content("---\ndescription: d\n---\nB\n", "folder"),
+            "folder"
+        );
+        assert_eq!(name_from_content("no frontmatter", "folder"), "folder");
+        // The strict form reports a frontmatter that does not parse.
+        assert!(name_from_content_strict("---\nname: [x\n---\nB\n", "folder").is_err());
+        assert!(name_from_content_strict("no frontmatter", "folder").is_err());
+        assert_eq!(
+            name_from_content_strict("---\nname: policy\n---\nB\n", "folder").unwrap(),
+            "policy"
+        );
+    }
+
+    /// `update` decides "no longer in source" from the strict scan, and plans
+    /// the install from `iter_item_dirs`. Both walks must find the same item
+    /// directories in every supported layout; a change to one walk must fail
+    /// here.
+    #[test]
+    fn strict_scan_and_plan_walk_find_the_same_items() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        let put = |rel: &str, file: &str| {
+            let dir = root.join(rel);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join(file), "---\nschema: 1\ndescription: d\n---\nB\n").unwrap();
+        };
+        put("root-skill", "SKILL.md");
+        put("root-rule", "RULE.md");
+        put("root-agent", "AGENT.md");
+        put("cat/in-cat", "SKILL.md");
+        put("skills/in-kind", "SKILL.md");
+        put("rules/rule-in-kind", "RULE.md");
+        put("agents/agent-in-kind", "AGENT.md");
+        put("skills/deep/too-deep", "SKILL.md");
+        put(".hidden/h", "SKILL.md");
+        put("cat/.hidden-item", "SKILL.md");
+        let mut scanned: Vec<String> = scan_source_items_strict(root)
+            .unwrap()
+            .into_iter()
+            .map(|(_, name)| name)
+            .collect();
+        let lenient = iter_item_dirs(root).unwrap();
+        // The strict walk is the same traversal, so it finds the same
+        // directories, hidden ones included.
+        assert_eq!(iter_item_dirs_strict(root).unwrap(), lenient);
+        assert!(lenient.iter().any(|(name, _)| name == "h"));
+        // The scan skips hidden directories; apart from those it agrees with
+        // the plan walk.
+        let mut planned: Vec<String> = lenient
+            .iter()
+            .filter(|(_, dir)| {
+                !dir.strip_prefix(root)
+                    .unwrap()
+                    .components()
+                    .any(|c| c.as_os_str().to_string_lossy().starts_with('.'))
+            })
+            .map(|(name, _)| name.clone())
+            .collect();
+        scanned.sort();
+        scanned.dedup();
+        planned.sort();
+        planned.dedup();
+        assert_eq!(scanned, planned);
+        assert!(scanned.contains(&"in-cat".to_string()));
+        assert!(scanned.contains(&"root-rule".to_string()));
     }
 
     /// Makes `dir` unreadable; `None` when running as root, where the

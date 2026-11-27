@@ -506,12 +506,12 @@ Updated 2 of 12 item(s) from 1 of 2 source(s).
 A block starts with the source label. It has one line per item that applying the
 source changes or skips, with one of these actions:
 
-| Action     | Meaning                                                                                                                                           |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `update`   | Files of the item are written or deleted, or only its lockfile record changes (the line then ends with `record only`).                            |
-| `complete` | The item has an interrupted `add` or `update` (a non-empty `pending` record, see [State files](#state-files)) and its source hash did not change. |
-| `remove`   | The source no longer contains the item (`no longer in source`).                                                                                   |
-| `skip`     | The item is not written: `modified or not managed by upskill: <path>, ...` names the files that cause the skip.                                   |
+| Action     | Meaning                                                                                                                                                                          |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `update`   | Files of the item are written or deleted, or only its lockfile record changes (the line then ends with `record only`).                                                           |
+| `complete` | The item has an interrupted `add` or `update` (a non-empty `pending` record, see [State files](#state-files)) and its source hash did not change.                                |
+| `remove`   | The source no longer contains the item (`no longer in source`). A line `remove   bundle <name>   no longer in source (<source>)` announces the drop of a vanished bundle record. |
+| `skip`     | The item is not written: `modified or not managed by upskill: <path>, ...` names the files that cause the skip.                                                                  |
 
 An item line counts the files that are written or deleted (`1 file`,
 `<n> files`). It names each modified file that is kept (`keeps modified <path>`)
@@ -520,17 +520,19 @@ deleted. A cross-source dependency that the reinstall of the source writes has a
 line in the block of that source. After the item lines, the block has one
 `write <path>` line for each hand-shake file (`CLAUDE.md`, `opencode.json`,
 `.vscode/settings.json`) that applying the source creates or changes. When the
-block has no item line and no `write` line, it says `up to date`. The block ends
-with one `kept modified file: <path>` line for each note.
+block has no item line, no `write` line and no vanished-bundle line, it says
+`up to date`. The block ends with one `kept modified file: <path>` line for each
+note.
 
 A preview changes something when applying the source writes or deletes a file
 (also a file with the same bytes whose executable bits differ from the target
 executable bits, on Unix: each executable bit of its source resource for which
 the file has the matching read bit; a difference in the other permission bits is
 not a change), changes the lockfile record of an item, completes an interrupted
-item, removes an item, or creates or changes a hand-shake file. A `skip` line
-and a `kept modified file` note are not changes. A source whose preview changes
-nothing is printed without a question and is not applied.
+item, removes an item, drops the record of a vanished bundle, or creates or
+changes a hand-shake file. A `skip` line and a `kept modified file` note are not
+changes. A source whose preview changes nothing is printed without a question
+and is not applied.
 
 The answers to `Apply? [y/N/q]`:
 
@@ -588,18 +590,19 @@ the adoption notice before the block of the source that adopted the lockfile.
 
 A run with `--yes`, or without a terminal, prints `Updated <n> of <m> item(s)`
 and one status line per item when an item changed or was skipped, files were
-written or deleted, or a lockfile was adopted. A run whose only output is
-`kept modified file` notes prints nothing on stdout. It reports a completed
-interrupted item as `completed — interrupted before` and counts it. `<n>` and
-`<m>` have the meaning of the terminal closing summary; `<m>` can be larger than
-the number of status lines, because a dependency that the plan of a source
-installs unchanged has no status line. When no item was updated, completed or
-removed, but files were written or deleted, it prints
-`Changed <n> file(s) written or deleted`. It prints
-`everything is up to date — nothing to do` when nothing changed, no item was
-skipped, no source was skipped, no file was kept with a note and no lockfile was
-adopted. `update` prints the plugin results of the plugin step of each applied
-source and of the plugin repair (a recorded plugin that `doctor` reports
+written or deleted, a vanished bundle record was dropped (one
+`bundle <name> removed — no longer in source (<source>)` line per bundle), or a
+lockfile was adopted. A run whose only output is `kept modified file` notes
+prints nothing on stdout. It reports a completed interrupted item as
+`completed — interrupted before` and counts it. `<n>` and `<m>` have the meaning
+of the terminal closing summary; `<m>` can be larger than the number of status
+lines, because a dependency that the plan of a source installs unchanged has no
+status line. When no item was updated, completed or removed, but files were
+written or deleted, it prints `Changed <n> file(s) written or deleted`. It
+prints `everything is up to date — nothing to do` when nothing changed, no item
+was skipped, no source was skipped, no file was kept with a note and no lockfile
+was adopted. `update` prints the plugin results of the plugin step of each
+applied source and of the plugin repair (a recorded plugin that `doctor` reports
 missing, or one recorded as skipped, that the apply did not attempt) with the
 printer of `add`, once per attempted plugin: `Plugins: <n> plugin(s) installed`
 with one line per plugin on stdout, and on stderr, one line per plugin:
@@ -648,14 +651,28 @@ is skipped later because it requires an item of a skipped source. To update such
 an item, run `upskill add <source> <item>` again. A `.bundle.yaml` source is
 reinstalled as a whole. Each reinstalled entry gets the commit of its own
 source, unless its update is skipped, and any other entry keeps its commit. If a
-recorded root bundle is missing from the source, update fails before any write
-with `bundle '<name>' is no longer in source <label>`, even if an item has that
-name; remove the bundle's items with `upskill remove` or restore the bundle. A
-dependency bundle that a full update resolves through its roots is not looked up
-by name (see below). For a source that is not applied, only a changed commit
-value, or a changed `required_by` value, causes a lockfile write. This write is
-not a change: it does not count in the output above, and `update --dry-run` and
-a declined source record no commit.
+recorded root bundle is missing from a directory source, for example after a
+rename, `update` drops its record, even if an item has that name, and reports
+`bundle <name> removed — no longer in source`. A member of that bundle stays
+installed when you also added it by name (the lockfile marks it `direct`), when
+another recorded bundle that stays lists it, or when an installed item requires
+it; every other member is removed (`removed — no longer in source`). The record
+goes once every member is reconciled: `update <name>` of one member keeps the
+record while another member that nothing explains stays installed, and the next
+full `update` removes that member and drops the record. A lockfile entry written
+before upskill recorded `direct` is never direct, so an item that you added by
+name before that change is removed when its bundle vanishes; run
+`upskill add <source> <item>` again to keep it. Add the renamed bundle again
+with `upskill add <source> <bundle>`. The run reads every directory that its
+walk reaches (the source root and the directories one and two levels below it,
+also hidden ones; every bundle file anywhere below the root; every root of the
+dependency sources) and stops before any write when one cannot be inspected or
+when an entry file of a rule or agent cannot be read or parsed; it does not
+remove an item that it could not look up. A dependency bundle that a full update
+resolves through its roots is not looked up by name (see below). For a source
+that is not applied, only a changed commit value, or a changed `required_by`
+value, causes a lockfile write. This write is not a change: it does not count in
+the output above, and `update --dry-run` and a declined source record no commit.
 
 **Dependency bundles.** `add` records in the lockfile, for each bundle that a
 bundle's `requires:` reached, the requiring bundles (`required_by`). A bundle
@@ -666,13 +683,17 @@ source that resolves them. When a bundle stops requiring a dependency bundle,
 `update` drops the record of that dependency once every one of its root sources
 was applied (the sources of the bundles that you named and that reach it), drops
 its plugin entries as `remove` does (an opencode plugin also leaves
-`opencode.json`; MCP entries are kept for `remove-mcp`), and removes each of its
-items that no remaining bundle provides (`removed — no longer in source`). An
-item that another bundle still provides is kept, and an item outside the kind
-restriction is kept unchanged. An item that you also installed directly is
-removed with the dependency, because the lockfile does not record that; run
-`upskill add <source> <item>` again to keep it. `update <name>` resolves a
-dependency bundle from its own record and drops nothing.
+`opencode.json`, unless an installed opencode plugin record of a bundle that
+stays references the same entry; MCP entries are kept for `remove-mcp`), and
+removes each of its items that no remaining bundle provides
+(`removed — no longer in source`). An item that another bundle still provides is
+kept, and an item outside the kind restriction is kept unchanged. An item that
+you also added by name (the lockfile marks it `direct`) stays when the
+dependency is dropped. A lockfile entry written before upskill recorded `direct`
+is never direct, so an item that you added by name before that change is removed
+with the dependency; run `upskill add <source> <item>` again to keep it.
+`update <name>` resolves a dependency bundle from its own record and drops
+nothing.
 
 A lockfile written before upskill recorded `required_by` treats every bundle as
 a root, so `update` keeps a dependency that its root no longer requires. To drop
@@ -784,9 +805,10 @@ already been written and saved. A removal that is refused when it is planned (a
 symbolic link above a recorded path, or a recorded path that cannot be
 inspected) fails before the install of that source is written. This applies also
 with `--force`. For `update`, two other cases also fail a source before any file
-of that source is written, in every mode: a source that resolves to no items
-while the lockfile records items from it, and a hand-shake file that cannot be
-updated (for example an `opencode.json` whose `instructions` is not an array).
+of that source is written, in every mode: a directory source that resolves to no
+item and no bundle file while the lockfile records items from it, and a
+hand-shake file that cannot be updated (for example an `opencode.json` whose
+`instructions` is not an array).
 
 Older installations may record `gitlab:org/repo` or
 `gitlab+gitlab.example.com:org/team/repo:skills/team.bundle.yaml` source labels.
@@ -1006,9 +1028,10 @@ Bare `upskill remove` is rejected — be explicit. Ancillary files (`CLAUDE.md`,
 `opencode.json`, `.vscode/settings.json`) are not touched, except that removing
 an item of a bundle, or the source of a bundle with `--source`, deletes the
 installed opencode plugin entry of that bundle from the `plugin` and `plugins`
-arrays of the `opencode.json` of the scope. In the global scope, removing a rule
-that is installed for opencode also deletes its `instructions` entry from the
-global opencode config.
+arrays of the `opencode.json` of the scope. The entry stays when an installed
+opencode plugin record of a bundle that stays references the same entry. In the
+global scope, removing a rule that is installed for opencode also deletes its
+`instructions` entry from the global opencode config.
 
 Without a scope flag, `remove` uses the project scope inside a git repository
 and the global scope outside one. When the current directory is the home
@@ -1917,8 +1940,8 @@ source, because an item conflicts with an item installed from another source,
 because two items would install under one name, or because an installed name is
 empty, `.` or `..` or contains a path separator. An `update` refused for one of
 these reasons does not adopt, because it checks every source before it adopts,
-and neither does an `update` whose first source resolves to no items while the
-lockfile records items from it.
+and neither does an `update` whose first source is a directory that resolves to
+no item and no bundle file while the lockfile records items from it.
 
 ## Per-client output paths
 

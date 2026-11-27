@@ -357,6 +357,9 @@ fn run_add(args: AddArgs) -> i32 {
         aliases: parse_alias_args(aliases),
         excludes: excludes.to_vec(),
         bundles: Vec::new(),
+        allow_vanished: false,
+        bundle_members: Default::default(),
+        direct_requests: Vec::new(),
         kinds,
         source_kinds: Default::default(),
         item_clients: Default::default(),
@@ -1652,10 +1655,19 @@ fn print_block(preview: &SourcePreview, blocks: &mut usize) {
 fn render_block(preview: &SourcePreview) -> Vec<String> {
     let mut lines = vec![preview.source.clone()];
     lines.extend(preview.items.iter().map(render_item));
+    for name in &preview.vanished_bundles {
+        lines.push(format!(
+            "  {:<8} bundle {name}   no longer in source ({})",
+            "remove", preview.source
+        ));
+    }
     for path in &preview.handshake {
         lines.push(format!("  {:<8} {}", "write", path.display()));
     }
-    if preview.items.is_empty() && preview.handshake.is_empty() {
+    if preview.items.is_empty()
+        && preview.handshake.is_empty()
+        && preview.vanished_bundles.is_empty()
+    {
         lines.push("  up to date".to_string());
     }
     for path in &preview.kept_notes {
@@ -1889,6 +1901,7 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
         && report.adopted.is_none()
         && report.sources_not_applied == 0
         && report.skipped_sources.is_empty()
+        && report.vanished_bundles.is_empty()
     {
         // The `kept modified file` notes are printed by `finish_update`; a
         // run that prints them does not say that there was nothing to do.
@@ -1932,6 +1945,14 @@ fn print_update_report(report: &UpdateReport, dry_run: bool) {
             style::dim(kind_label),
             style::name(&item.name),
             status
+        );
+    }
+    for (name, source) in &report.vanished_bundles {
+        println!(
+            "  {} {:<32} {} ({source})",
+            style::dim("bundle"),
+            style::name(name),
+            style::error_label("removed — no longer in source")
         );
     }
     if !report.changed.is_empty() && changes == 0 {
@@ -3148,6 +3169,7 @@ mod tests {
             kept_notes: Vec::new(),
             handshake: Vec::new(),
             adopted: None,
+            vanished_bundles: Vec::new(),
         }
     }
 

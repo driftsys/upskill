@@ -133,6 +133,21 @@ pub struct AddOptions {
     /// Bundle names that the run resolves as bundles only; set by `update`;
     /// `add` leaves it empty.
     pub bundles: Vec<String>,
+    /// Set by `update`. When true, a bundle of `bundles` that the source no
+    /// longer holds, and an item name that matches nothing in the source, are
+    /// not errors: the bundle is listed in
+    /// `PreparedInstall::vanished_bundles` and the run resolves what is
+    /// left. `add` leaves it false.
+    pub allow_vanished: bool,
+    /// Set by `update`: for each recorded bundle, its members that stay
+    /// installed when the bundle vanishes, as `(kind, source name)`: the
+    /// ones that `add` installed on request (`LockedItem::direct`). Those
+    /// the source still holds are kept in the request of the run.
+    pub bundle_members: std::collections::BTreeMap<String, Vec<(ItemKind, String)>>,
+    /// Set by `update`: the direct entries of the source that a dependency
+    /// bundle lists, as `(kind, source name)`. They are requested like any
+    /// direct item, so that dropping the dependency does not remove them.
+    pub direct_requests: Vec<(ItemKind, String)>,
     /// Consumer-side client selection (ADR-0012). Default targets all
     /// clients, preserving the emit-for-everyone behaviour.
     pub selection: crate::select::ClientSelection,

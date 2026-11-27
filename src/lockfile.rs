@@ -119,6 +119,19 @@ pub struct LockedItem {
     /// same `(source, group)` so a co-located unit travels as one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
+    /// True when `add` installed this item because the user named it, or
+    /// through an install of a whole directory source without names. False
+    /// (and omitted from JSON) for an item that was installed only as a bundle
+    /// member or as a `requires` dependency, and for an entry written before
+    /// this field existed. `add` sets it, a later `add` that names the item
+    /// sets it, and only `remove` clears it; `update` keeps the recorded
+    /// value. `update` keeps a member of a bundle that left its source only
+    /// when this field is true, another recorded bundle lists it, or an
+    /// installed item requires it (issue #649). `update` also keeps an item
+    /// with this field true when a dependency bundle that lists it is
+    /// dropped, as long as its source still holds the item.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub direct: bool,
     /// Effective generation clients this item's output was written for
     /// (`claude` | `copilot` | `opencode`) — the intersection of author
     /// `audience:` and the consumer selection (ADR-0012). Empty means "all
@@ -542,6 +555,7 @@ pub fn items_from_report(
                 .cloned()
                 .unwrap_or_default(),
             group,
+            direct: false,
             clients,
             files: Vec::new(),
             pending: Vec::new(),
@@ -621,6 +635,7 @@ mod tests {
 
     fn item(kind: ItemKind, name: &str) -> LockedItem {
         LockedItem {
+            direct: false,
             kind,
             name: name.to_string(),
             source: "github:driftsys/skills".to_string(),
@@ -641,6 +656,22 @@ mod tests {
             clients: clients.iter().map(|c| (*c).to_string()).collect(),
             ..item(kind, name)
         }
+    }
+
+    #[test]
+    fn direct_is_written_when_true_and_omitted_when_false() {
+        let plain = serde_json::to_value(item(ItemKind::Skill, "s")).unwrap();
+        assert!(plain.get("direct").is_none(), "{plain}");
+        let direct = LockedItem {
+            direct: true,
+            ..item(ItemKind::Skill, "s")
+        };
+        let json = serde_json::to_value(&direct).unwrap();
+        assert_eq!(json["direct"], true);
+        let back: LockedItem = serde_json::from_value(json).unwrap();
+        assert!(back.direct);
+        let without: LockedItem = serde_json::from_value(plain).unwrap();
+        assert!(!without.direct);
     }
 
     #[test]
@@ -1127,6 +1158,7 @@ mod tests {
     #[test]
     fn locked_item_serializes_source_name_when_present() {
         let item = LockedItem {
+            direct: false,
             kind: ItemKind::Skill,
             name: "brainstorming-v2".to_string(),
             source: "github:other-org/repo".to_string(),
@@ -1147,6 +1179,7 @@ mod tests {
     #[test]
     fn locked_item_omits_source_name_when_none() {
         let item = LockedItem {
+            direct: false,
             kind: ItemKind::Skill,
             name: "brainstorming".to_string(),
             source: "github:driftsys/superpowers".to_string(),

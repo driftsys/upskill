@@ -421,7 +421,10 @@ fn update_reports_a_skipped_source_when_a_later_source_fails() {
         err.contains(&format!("source `{REMOTE}` could not be fetched")),
         "stderr lacks the skipped source: {err}"
     );
-    assert!(err.contains("gamma"), "stderr lacks the later error: {err}");
+    assert!(
+        err.contains("resolved to no items"),
+        "stderr lacks the later error: {err}"
+    );
     let skip_at = err.find("could not be fetched and was skipped").unwrap();
     let error_at = err
         .lines()

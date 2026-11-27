@@ -683,6 +683,9 @@ pub struct UpdatedItem {
 #[derive(Debug, Default, Clone)]
 pub struct UpdateReport {
     pub items: Vec<UpdatedItem>,
+    /// Recorded bundles (name, source) that their source no longer holds and
+    /// whose records an applied source dropped (issue #649).
+    pub vanished_bundles: Vec<(String, String)>,
     /// Items that an exclude kept out of the run, each once, over all
     /// sources. Also set by a dry run.
     pub excluded: Vec<(ItemKind, String)>,
@@ -774,13 +777,19 @@ pub struct SourcePreview {
     pub handshake: Vec<PathBuf>,
     /// Paths adopted from a `schema: 1` lockfile just before this preview.
     pub adopted: Option<Vec<String>>,
+    /// Recorded bundles of this source that the source no longer holds;
+    /// applying the source drops their records (issue #649). Their members
+    /// that the source still holds stay installed. A non-empty list is a
+    /// change of the preview.
+    pub vanished_bundles: Vec<String>,
 }
 
 impl SourcePreview {
     /// True exactly when a commit would write or delete a file or change an
     /// item record: an item has a non-empty `write`, `delete` or `forced`,
     /// or its action is `Complete` or `Remove`, or it is `record_only`; or a
-    /// hand-shake file would be created or changed. A `Skip` item and a
+    /// hand-shake file would be created or changed; or a vanished bundle
+    /// record would be dropped. A `Skip` item and a
     /// note in `kept_notes` are not changes. The write of a new source commit
     /// to the lockfile entries of a source without changes (except the entries of
     /// skipped items) is not a change.
@@ -792,6 +801,7 @@ impl SourcePreview {
                 || matches!(item.action, PreviewAction::Complete | PreviewAction::Remove)
                 || item.record_only
         }) || !self.handshake.is_empty()
+            || !self.vanished_bundles.is_empty()
     }
 }
 
@@ -930,6 +940,21 @@ impl DoctorScopes {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_vanished_bundle_record_is_a_change_of_the_preview() {
+        let mut preview = SourcePreview {
+            source: "s".to_string(),
+            items: Vec::new(),
+            kept_notes: Vec::new(),
+            handshake: Vec::new(),
+            adopted: None,
+            vanished_bundles: Vec::new(),
+        };
+        assert!(!preview.has_changes());
+        preview.vanished_bundles.push("old".to_string());
+        assert!(preview.has_changes());
+    }
 
     #[test]
     fn doctor_report_is_clean_when_all_buckets_empty() {

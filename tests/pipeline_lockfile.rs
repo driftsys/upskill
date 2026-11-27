@@ -147,6 +147,7 @@ fn install_preserves_unrelated_existing_entries() {
     // Pre-seed the lockfile with an entry from a different source.
     let mut seed = Lockfile::new();
     seed.upsert(LockedItem {
+        direct: false,
         kind: upskill::pipeline::ItemKind::Skill,
         name: "from-other-source".into(),
         source: "github:other/repo@v1.0".into(),

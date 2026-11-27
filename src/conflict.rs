@@ -82,6 +82,7 @@ mod tests {
             items: items
                 .into_iter()
                 .map(|(kind, name, source)| LockedItem {
+                    direct: false,
                     kind,
                     name: name.to_owned(),
                     source: source.to_owned(),

@@ -348,22 +348,15 @@ fn update_keeps_a_direct_item_of_another_kind_beside_a_kind_restricted_bundle() 
     );
 }
 
+/// A direct member of a vanished bundle that changed in the source stays and
+/// is updated; the member that was installed only through the bundle goes.
 #[test]
-fn update_fails_before_any_write_when_a_recorded_bundle_left_the_source() {
+fn update_updates_a_direct_member_of_a_vanished_bundle() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     setup_kind_registry(registry.path());
     add_named_bundle(consumer.path(), registry.path(), &[]);
-    let paths = [
-        ".claude/skills/a/SKILL.md",
-        ".claude/rules/r.md",
-        ".upskill-lock.json",
-        "CLAUDE.md",
-    ];
-    let before: Vec<_> = paths
-        .iter()
-        .map(|path| fs::read(consumer.path().join(path)).unwrap())
-        .collect();
+    add_direct(consumer.path(), registry.path(), "a");
     fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
     write(
         &registry.path().join("a/SKILL.md"),
@@ -373,15 +366,1397 @@ fn update_fails_before_any_write_when_a_recorded_bundle_left_the_source() {
         .current_dir(consumer.path())
         .args(["update", "--yes", "--project"])
         .assert()
-        .code(1)
-        .stderr(predicates::str::contains("bun"));
-    for (path, contents) in paths.iter().zip(before) {
-        assert_eq!(
-            fs::read(consumer.path().join(path)).unwrap(),
-            contents,
-            "{path} changed"
+        .success();
+    let body = fs::read_to_string(consumer.path().join(".claude/skills/a/SKILL.md")).unwrap();
+    assert!(body.contains("Changed skill body."), "{body}");
+    assert!(!consumer.path().join(".claude/rules/r.md").exists());
+    assert!(
+        read_update_lock(consumer.path())["bundles"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+}
+
+/// Every item of a vanished bundle is also provided by a bundle that stays:
+/// no item changes, and the record of the vanished bundle is still dropped.
+#[test]
+fn update_drops_a_vanished_bundle_whose_items_another_bundle_provides() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    write(
+        &registry.path().join("keep.bundle.yaml"),
+        "schema: 1\nname: keep\ndescription: A bundle that stays.\nitems:\n  skills: [a]\n  rules: [r]\n",
+    );
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    add_direct(consumer.path(), registry.path(), "keep");
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    let lock = read_update_lock(consumer.path());
+    let bundles: Vec<_> = lock["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["name"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(bundles, ["keep"], "{lock}");
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+}
+
+/// `update <name>` for one member of a vanished bundle removes that member
+/// and keeps the record while another non-direct member stays installed; the
+/// next full update removes that member and drops the record.
+#[test]
+fn update_by_name_of_a_member_of_a_vanished_bundle_keeps_the_record_until_every_member_is_reconciled()
+ {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    // The record stays, so the preview does not announce its removal either.
+    let dry = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "a", "--dry-run", "--project"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&dry.get_output().stdout).to_string();
+    assert!(!out.contains("bundle bun"), "{out}");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "a", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(consumer.path().join(".claude/rules/r.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert_eq!(lock["bundles"].as_array().unwrap().len(), 1, "{lock}");
+    update_named_bundle(consumer.path());
+    assert!(!consumer.path().join(".claude/rules/r.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+}
+
+/// A kind-restricted bundle vanishes while a skill of the same source is
+/// installed directly: the run is not an error, and the skill stays.
+#[test]
+fn update_accepts_a_vanished_kind_restricted_bundle_beside_a_direct_skill() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
+    add_direct(consumer.path(), registry.path(), "b");
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/skills/b/SKILL.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+}
+
+/// A member of a vanished bundle that left the source and whose output file
+/// was edited: the item record is removed as for `remove`, the edited file is
+/// kept on disk, and the record of the bundle is dropped.
+#[test]
+fn update_drops_a_vanished_bundle_whose_removed_member_has_an_edited_file() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    let skill = consumer.path().join(".claude/skills/a/SKILL.md");
+    fs::write(&skill, "edited by hand\n").unwrap();
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    fs::remove_dir_all(registry.path().join("a")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert_eq!(fs::read_to_string(&skill).unwrap(), "edited by hand\n");
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+    assert!(
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|i| i["name"] != "a"),
+        "{lock}"
+    );
+}
+
+/// An item that was installed on purpose from a hidden directory
+/// (`add <source> .x`) stays installed: the scan skips hidden directories,
+/// but the item is named in the lockfile and its file exists.
+#[test]
+fn update_keeps_a_hidden_item_that_was_installed_by_name() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write_skill(registry.path(), ".x");
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), ".x");
+    assert!(consumer.path().join(".claude/skills/.x/SKILL.md").is_file());
+    for args in [
+        vec!["update", ".x", "--yes", "--project"],
+        vec!["update", "--yes", "--project"],
+    ] {
+        common::upskill_cmd(&fake_home(consumer.path()))
+            .current_dir(consumer.path())
+            .args(&args)
+            .assert()
+            .success();
+        assert!(
+            consumer.path().join(".claude/skills/.x/SKILL.md").is_file(),
+            "{args:?}"
+        );
+        assert!(
+            consumer.path().join(".claude/skills/a/SKILL.md").is_file(),
+            "{args:?}"
         );
     }
+}
+
+/// A rule whose frontmatter is no longer valid YAML stops `update` with the
+/// parse error. The rule lives in `folder/` and is named `policy`, so a
+/// scan that fell back to the folder name would not find it and would remove
+/// it as no longer in the source.
+#[test]
+fn update_stops_when_the_frontmatter_of_an_installed_rule_stops_parsing() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write(
+        &registry.path().join("folder/RULE.md"),
+        "---\nname: policy\ndescription: A named rule.\n---\nBody.\n",
+    );
+    add_direct(consumer.path(), registry.path(), "policy");
+    write(
+        &registry.path().join("folder/RULE.md"),
+        "---\nname: policy\ndescription: [unclosed\n---\nBody.\n",
+    );
+    let output_before = fs::read(consumer.path().join(".claude/rules/policy.md")).unwrap();
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "policy", "--yes", "--project"])
+        .assert()
+        .code(1);
+    let stderr = String::from_utf8_lossy(&assert.get_output().stderr).to_string();
+    assert!(stderr.contains("parse"), "{stderr}");
+    assert_eq!(
+        fs::read(consumer.path().join(".claude/rules/policy.md")).unwrap(),
+        output_before
+    );
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
+
+/// An item added directly and also listed by a bundle that vanishes counts as
+/// a direct install: it stays, and only the bundle record goes.
+#[test]
+fn update_keeps_an_item_that_was_added_directly_and_by_a_vanished_bundle() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    add_direct(consumer.path(), registry.path(), "a");
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+}
+
+/// A skill with the name of the vanished bundle does not keep the bundle: the
+/// record is dropped, and the skill `bun` is not installed.
+#[test]
+fn update_drops_a_vanished_bundle_even_when_an_item_has_its_name() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    write_skill(registry.path(), "bun");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+    assert!(!consumer.path().join(".claude/skills/bun").exists());
+}
+
+/// A source that holds only a bundle file (no item) still holds content: a
+/// recorded direct item that left the source is removed.
+#[test]
+fn update_removes_an_item_when_the_source_holds_only_a_bundle_file() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "a");
+    fs::remove_dir_all(registry.path().join("a")).unwrap();
+    write(
+        &registry.path().join("empty.bundle.yaml"),
+        "schema: 1\nname: empty\ndescription: No items.\nitems: {}\n",
+    );
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+}
+
+/// Two bundles require the same dependency; one vanishes. The dependency
+/// keeps only the requirer that stays.
+#[test]
+fn update_removes_a_vanished_requirer_from_the_required_by_of_a_dependency() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    for name in ["one-skill", "two-skill", "dep-skill"] {
+        write_skill(registry.path(), name);
+    }
+    write(
+        &registry.path().join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Leaf.\nitems:\n  skills: [dep-skill]\n",
+    );
+    for (name, skill) in [("one", "one-skill"), ("two", "two-skill")] {
+        write(
+            &registry.path().join(format!("{name}.bundle.yaml")),
+            &format!(
+                "schema: 1\nname: {name}\ndescription: Root.\nitems:\n  skills: [{skill}]\nrequires:\n  - {{ name: dep }}\n"
+            ),
+        );
+        add_direct(consumer.path(), registry.path(), name);
+    }
+    let required_by = |lock: &serde_json::Value| -> Vec<String> {
+        let dep = lock["bundles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|b| b["name"] == "dep")
+            .unwrap();
+        dep["required_by"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap().to_string())
+            .collect()
+    };
+    assert_eq!(
+        required_by(&read_update_lock(consumer.path())),
+        ["bundle:one", "bundle:two"]
+    );
+    fs::remove_file(registry.path().join("one.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert_eq!(
+        required_by(&read_update_lock(consumer.path())),
+        ["bundle:two"]
+    );
+}
+
+/// The strict bundle search reads directories that the item walk does not
+/// reach: a bundle below an unreadable directory is not "vanished".
+#[cfg(unix)]
+#[test]
+fn update_stops_when_the_bundle_search_meets_an_unreadable_directory() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write(
+        &registry.path().join("p/q/r/bun.bundle.yaml"),
+        "schema: 1\nname: bun\ndescription: Deep.\nitems:\n  skills: [a]\n",
+    );
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    let locked = registry.path().join("p/q/r");
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+    if fs::read_dir(&locked).is_ok() {
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    assert_update_fails_unchanged(
+        consumer.path(),
+        ".claude/skills/a/SKILL.md",
+        &[(&locked, 0o755)],
+    );
+}
+
+/// A category directory that cannot be listed but can be searched (mode 0311)
+/// stops `update`: the strict walk does not skip it.
+#[cfg(unix)]
+#[test]
+fn update_stops_when_a_category_directory_cannot_be_listed_but_can_be_searched() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write_skill(&registry.path().join("cat"), "b");
+    for name in ["a", "b"] {
+        add_direct(consumer.path(), registry.path(), name);
+    }
+    let dir = registry.path().join("cat");
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o311)).unwrap();
+    if fs::read_dir(&dir).is_ok() {
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    assert_update_fails_unchanged(
+        consumer.path(),
+        ".claude/skills/b/SKILL.md",
+        &[(&dir, 0o755)],
+    );
+}
+
+/// A source root that lists but whose children cannot be inspected (mode
+/// 0444) stops `update` with the inspection error, not with the "resolved to
+/// no items" guard.
+#[cfg(unix)]
+#[test]
+fn update_reports_the_inspection_error_of_a_source_root_that_cannot_be_searched() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "a");
+    let root = registry.path();
+    fs::set_permissions(root, fs::Permissions::from_mode(0o444)).unwrap();
+    if fs::metadata(root.join("a")).is_ok() {
+        fs::set_permissions(root, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    fs::set_permissions(root, fs::Permissions::from_mode(0o755)).unwrap();
+    let stderr = String::from_utf8_lossy(&assert.get_output().stderr).to_string();
+    assert_eq!(assert.get_output().status.code(), Some(1), "{stderr}");
+    assert!(stderr.contains("inspect"), "{stderr}");
+    assert!(!stderr.contains("resolved to no items"), "{stderr}");
+}
+
+/// A member of a vanished bundle that an installed item requires stays, and
+/// so does its requirer: the member is resolved through the requirer.
+#[test]
+fn update_keeps_a_member_of_a_vanished_bundle_that_an_installed_item_requires() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    for name in ["a", "k", "c"] {
+        write_skill(registry.path(), name);
+    }
+    write(
+        &registry.path().join("old.bundle.yaml"),
+        "schema: 1\nname: old\ndescription: Vanishes.\nitems:\n  skills: [a, k]\n",
+    );
+    write(
+        &registry.path().join("c/SKILL.md"),
+        "---\nschema: 1\nname: c\ndescription: Requires a.\nrequires:\n  skills: [a]\n---\nBody.\n",
+    );
+    add_direct(consumer.path(), registry.path(), "old");
+    add_direct(consumer.path(), registry.path(), "c");
+    fs::remove_file(registry.path().join("old.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+    assert!(consumer.path().join(".claude/skills/c/SKILL.md").exists());
+    assert!(!consumer.path().join(".claude/skills/k").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+}
+
+/// `add <source> <name>` marks an item that a bundle installed earlier as
+/// direct; the bundle member that was not named stays not direct. A whole
+/// directory source without names marks every item.
+#[test]
+fn add_records_the_direct_flag_for_named_and_whole_source_installs() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    let direct = |lock: &serde_json::Value, name: &str| -> bool {
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap_or_else(|| panic!("{name} not installed: {lock}"))
+            .get("direct")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+    };
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    let lock = read_update_lock(consumer.path());
+    assert!(!direct(&lock, "a") && !direct(&lock, "r"), "{lock}");
+    assert!(
+        lock["items"][0].get("direct").is_none(),
+        "false is omitted: {lock}"
+    );
+    add_direct(consumer.path(), registry.path(), "a");
+    let lock = read_update_lock(consumer.path());
+    assert!(direct(&lock, "a") && !direct(&lock, "r"), "{lock}");
+    // update keeps the recorded value.
+    update_named_bundle(consumer.path());
+    let lock = read_update_lock(consumer.path());
+    assert!(direct(&lock, "a") && !direct(&lock, "r"), "{lock}");
+    // A whole directory source without names.
+    let whole = tempfile::tempdir().unwrap();
+    write_skill(whole.path(), "w");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            whole.path().to_str().unwrap(),
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(direct(&read_update_lock(consumer.path()), "w"));
+}
+
+/// A cross-source `requires` dependency of an item of a whole directory
+/// source installed without names is not recorded `direct`; the item of that
+/// source is.
+#[test]
+fn add_of_a_whole_directory_source_does_not_record_a_cross_source_dependency_direct() {
+    let consumer = tempfile::tempdir().unwrap();
+    let whole = tempfile::tempdir().unwrap();
+    let dep = tempfile::tempdir().unwrap();
+    write_skill(dep.path(), "a");
+    write(
+        &whole.path().join("c/SKILL.md"),
+        &format!(
+            "---\nschema: 1\nname: c\ndescription: Requires a.\nrequires:\n  skills: [{{ name: a, source: {} }}]\n---\nBody.\n",
+            dep.path().display()
+        ),
+    );
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            whole.path().to_str().unwrap(),
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let lock = read_update_lock(consumer.path());
+    let direct = |name: &str| -> bool {
+        lock["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap_or_else(|| panic!("{name} not installed: {lock}"))
+            .get("direct")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+    };
+    assert!(direct("c"), "{lock}");
+    assert!(!direct("a"), "{lock}");
+}
+
+/// A direct member of a vanished bundle that also left the source is
+/// removed as no longer in source, and the run succeeds: the name that the
+/// recovery requests is dropped from the request when the source no longer
+/// holds it.
+#[test]
+fn update_removes_a_direct_member_that_left_the_source_with_its_vanished_bundle() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "r");
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    fs::remove_dir_all(registry.path().join("a")).unwrap();
+
+    let out = update_output(consumer.path());
+
+    assert!(removed_line(&out, " a "), "{out}");
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(consumer.path().join(".claude/rules/r.md").exists());
+    assert_eq!(recorded_items(consumer.path()), ["r"]);
+    assert!(recorded_bundles(consumer.path()).is_empty());
+}
+
+/// An item of the vanished bundle's source that another source requires:
+/// the source of `c` is processed first and refreshes `a`; the source of the
+/// vanished bundle must not delete `a` afterwards.
+#[test]
+fn update_keeps_a_member_of_a_vanished_bundle_that_an_item_of_another_source_requires() {
+    let consumer = tempfile::tempdir().unwrap();
+    let roots = tempfile::tempdir().unwrap();
+    // The labels sort `aaa` (the requirer) before `zzz` (the bundle).
+    let bundle_source = roots.path().join("zzz");
+    let requirer_source = roots.path().join("aaa");
+    write_skill(&bundle_source, "a");
+    write(
+        &bundle_source.join("old.bundle.yaml"),
+        "schema: 1\nname: old\ndescription: Vanishes.\nitems:\n  skills: [a]\n",
+    );
+    write(
+        &requirer_source.join("c/SKILL.md"),
+        &format!(
+            "---\nschema: 1\nname: c\ndescription: Requires a.\nrequires:\n  skills: [{{ name: a, source: {} }}]\n---\nBody.\n",
+            bundle_source.display()
+        ),
+    );
+    add_direct(consumer.path(), &bundle_source, "old");
+    add_direct(consumer.path(), &requirer_source, "c");
+    fs::remove_file(bundle_source.join("old.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+    assert!(consumer.path().join(".claude/skills/c/SKILL.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+}
+
+/// A direct item that a dependency bundle also lists stays when the root and
+/// the dependency bundle both vanish.
+#[test]
+fn update_keeps_a_direct_item_that_a_dropped_dependency_bundle_lists() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    for name in ["a", "t"] {
+        write_skill(registry.path(), name);
+    }
+    write(
+        &registry.path().join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Leaf.\nitems:\n  skills: [a]\n",
+    );
+    write(
+        &registry.path().join("top.bundle.yaml"),
+        "schema: 1\nname: top\ndescription: Root.\nitems:\n  skills: [t]\nrequires:\n  - { name: dep }\n",
+    );
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "top");
+    fs::remove_file(registry.path().join("dep.bundle.yaml")).unwrap();
+    fs::remove_file(registry.path().join("top.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+    assert!(!consumer.path().join(".claude/skills/t").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+}
+
+/// A direct item that a dependency bundle lists stays when only the
+/// dependency bundle is dropped (the root stops requiring it).
+#[test]
+fn update_keeps_a_direct_item_when_a_root_stops_requiring_its_dependency_bundle() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    for name in ["a", "t"] {
+        write_skill(registry.path(), name);
+    }
+    write(
+        &registry.path().join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Leaf.\nitems:\n  skills: [a]\n",
+    );
+    let top = |requires: &str| {
+        format!("schema: 1\nname: top\ndescription: Root.\nitems:\n  skills: [t]\n{requires}")
+    };
+    write(
+        &registry.path().join("top.bundle.yaml"),
+        &top("requires:\n  - { name: dep }\n"),
+    );
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "top");
+    write(&registry.path().join("top.bundle.yaml"), &top(""));
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+    let lock = read_update_lock(consumer.path());
+    let names: Vec<_> = lock["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["name"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(names, ["top"], "{lock}");
+}
+
+/// A hidden item with a readable rule and a skill that became a symlink loop:
+/// the closure-free name resolution is walked strictly too.
+#[cfg(unix)]
+#[test]
+fn update_stops_for_a_looping_entrypoint_of_a_hidden_named_item() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write_skill(registry.path(), ".x");
+    write(
+        &registry.path().join(".x/RULE.md"),
+        "---\nname: .x\ndescription: A rule.\n---\nBody.\n",
+    );
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), ".x");
+    assert!(consumer.path().join(".claude/skills/.x/SKILL.md").is_file());
+    let skill = registry.path().join(".x/SKILL.md");
+    fs::remove_file(&skill).unwrap();
+    std::os::unix::fs::symlink(&skill, &skill).unwrap();
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    assert_eq!(assert.get_output().status.code(), Some(1));
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert!(consumer.path().join(".claude/skills/.x/SKILL.md").is_file());
+}
+
+/// A bundle lists the rule and the skill `shared`; `add --kind rule shared`
+/// installs the rule directly. When the bundle vanishes, only the rule stays.
+#[test]
+fn update_keeps_only_the_direct_kind_of_a_name_that_two_kinds_share() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "shared");
+    write(
+        &registry.path().join("shared/RULE.md"),
+        "---\nname: shared\ndescription: A rule.\n---\nBody.\n",
+    );
+    write(
+        &registry.path().join("both.bundle.yaml"),
+        "schema: 1\nname: both\ndescription: Both kinds.\nitems:\n  rules: [shared]\n  skills: [shared]\n",
+    );
+    add_direct(consumer.path(), registry.path(), "both");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "shared",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/shared/SKILL.md")
+            .exists()
+    );
+    fs::remove_file(registry.path().join("both.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/rules/shared.md").exists());
+    assert!(!consumer.path().join(".claude/skills/shared").exists());
+}
+
+/// A direct item of a source whose bundle `dep` is reached only through a
+/// root of another source: when the root stops requiring `dep`, the direct
+/// item stays.
+#[test]
+fn update_keeps_a_direct_item_of_a_dependency_only_source() {
+    let consumer = tempfile::tempdir().unwrap();
+    let roots = tempfile::tempdir().unwrap();
+    let dep_source = roots.path().join("dep-source");
+    let root_source = roots.path().join("root-source");
+    write_skill(&dep_source, "a");
+    write(
+        &dep_source.join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Leaf.\nitems:\n  skills: [a]\n",
+    );
+    write_skill(&root_source, "own");
+    let top = |requires: &str| {
+        format!("schema: 1\nname: top\ndescription: Root.\nitems:\n  skills: [own]\n{requires}")
+    };
+    write(
+        &root_source.join("top.bundle.yaml"),
+        &top(&format!(
+            "requires:\n  - {{ name: dep, source: {} }}\n",
+            dep_source.display()
+        )),
+    );
+    add_direct(consumer.path(), &dep_source, "a");
+    add_direct(consumer.path(), &root_source, "top");
+    write(&root_source.join("top.bundle.yaml"), &top(""));
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+    assert!(consumer.path().join(".claude/skills/own/SKILL.md").exists());
+}
+
+/// A hidden direct item sends the run through the name resolution; the
+/// recorded kind of the shared name still holds there.
+#[test]
+fn update_keeps_the_direct_kind_of_a_shared_name_beside_a_hidden_direct_item() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "shared");
+    write_skill(registry.path(), ".x");
+    write(
+        &registry.path().join("shared/RULE.md"),
+        "---\nname: shared\ndescription: A rule.\n---\nBody.\n",
+    );
+    write(
+        &registry.path().join("both.bundle.yaml"),
+        "schema: 1\nname: both\ndescription: Both kinds.\nitems:\n  rules: [shared]\n  skills: [shared]\n",
+    );
+    add_direct(consumer.path(), registry.path(), "both");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            registry.path().to_str().unwrap(),
+            "shared",
+            "--kind",
+            "rule",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    add_direct(consumer.path(), registry.path(), ".x");
+    fs::remove_file(registry.path().join("both.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/rules/shared.md").exists());
+    assert!(!consumer.path().join(".claude/skills/shared").exists());
+    assert!(consumer.path().join(".claude/skills/.x/SKILL.md").exists());
+}
+
+/// A stale `required_by` (its requirer was removed) does not explain a
+/// member: `update a` keeps the vanished record while `b` stays.
+#[test]
+fn update_keeps_the_record_of_a_vanished_bundle_when_a_member_has_only_a_stale_requirer() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    for name in ["a", "b"] {
+        write_skill(registry.path(), name);
+    }
+    write(
+        &registry.path().join("c/SKILL.md"),
+        "---\nschema: 1\nname: c\ndescription: Requires b.\nrequires:\n  skills: [b]\n---\nBody.\n",
+    );
+    write(
+        &registry.path().join("bun.bundle.yaml"),
+        "schema: 1\nname: bun\ndescription: Two skills.\nitems:\n  skills: [a, b]\n",
+    );
+    add_direct(consumer.path(), registry.path(), "bun");
+    add_direct(consumer.path(), registry.path(), "c");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["remove", "c", "--project"])
+        .assert()
+        .success();
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "a", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(consumer.path().join(".claude/skills/b/SKILL.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert_eq!(lock["bundles"].as_array().unwrap().len(), 1, "{lock}");
+}
+
+/// True when the process cannot create a file in the read-only `dir`, that
+/// is, when permissions are enforced (not the case for root).
+#[cfg(unix)]
+fn permissions_enforced(dir: &Path) -> bool {
+    let probe = dir.join(".probe");
+    let created = fs::write(&probe, "x").is_ok();
+    let _ = fs::remove_file(&probe);
+    !created
+}
+
+/// A removal that fails keeps the record of the vanished bundle.
+#[cfg(unix)]
+#[test]
+fn update_keeps_the_record_of_a_vanished_bundle_when_a_removal_fails() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    fs::remove_dir_all(registry.path().join("a")).unwrap();
+    let dir = consumer.path().join(".claude/skills/a");
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o555)).unwrap();
+    if !permissions_enforced(&dir) {
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+    let out = assert.get_output().clone();
+    assert_eq!(out.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    assert!(
+        stderr.to_lowercase().contains("permission denied"),
+        "{stderr}"
+    );
+    let lock = read_update_lock(consumer.path());
+    assert_eq!(lock["bundles"].as_array().unwrap().len(), 1, "{lock}");
+}
+
+/// A bundle directory that cannot be read is not a vanished bundle: `update`
+/// fails before any write and keeps the files and the records.
+#[cfg(unix)]
+#[test]
+fn update_fails_when_the_bundle_directory_of_the_source_is_unreadable() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write(
+        &registry.path().join("bundles/bun.bundle.yaml"),
+        "schema: 1\nname: bun\ndescription: In a directory.\nitems:\n  skills: [a]\n",
+    );
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let skill_before = fs::read(consumer.path().join(".claude/skills/a/SKILL.md")).unwrap();
+    let dir = registry.path().join("bundles");
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o000)).unwrap();
+    if fs::read_dir(&dir).is_ok() {
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+    let out = assert.get_output().clone();
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert_eq!(
+        fs::read(consumer.path().join(".claude/skills/a/SKILL.md")).unwrap(),
+        skill_before
+    );
+}
+
+/// As the test above, with a bundle directory that lists but whose entries
+/// cannot be inspected (mode 0444: no search permission).
+#[cfg(unix)]
+#[test]
+fn update_fails_when_the_bundle_directory_of_the_source_cannot_be_searched() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write(
+        &registry.path().join("bundles/bun.bundle.yaml"),
+        "schema: 1\nname: bun\ndescription: In a directory.\nitems:\n  skills: [a]\n",
+    );
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let skill_before = fs::read(consumer.path().join(".claude/skills/a/SKILL.md")).unwrap();
+    let dir = registry.path().join("bundles");
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o444)).unwrap();
+    // Permissions are enforced when the entry cannot be inspected.
+    if fs::metadata(dir.join("bun.bundle.yaml")).is_ok() {
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+    let out = assert.get_output().clone();
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert_eq!(
+        fs::read(consumer.path().join(".claude/skills/a/SKILL.md")).unwrap(),
+        skill_before
+    );
+}
+
+/// An item subdirectory that cannot be read does not make its recorded items
+/// "no longer in source": `update` fails before any write.
+#[cfg(unix)]
+#[test]
+fn update_fails_when_a_category_directory_of_the_source_is_unreadable() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write_skill(&registry.path().join("cat"), "b");
+    for name in ["a", "b"] {
+        add_direct(consumer.path(), registry.path(), name);
+    }
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let skill_before = fs::read(consumer.path().join(".claude/skills/b/SKILL.md")).unwrap();
+    let dir = registry.path().join("cat");
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o000)).unwrap();
+    if fs::read_dir(&dir).is_ok() {
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+    let out = assert.get_output().clone();
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert_eq!(
+        fs::read(consumer.path().join(".claude/skills/b/SKILL.md")).unwrap(),
+        skill_before
+    );
+}
+
+/// Runs `update --yes` after `chmod`, with the lockfile and `output` bytes
+/// compared before and after; the update must fail.
+#[cfg(unix)]
+fn assert_update_fails_unchanged(consumer: &Path, output: &str, restore: &[(&Path, u32)]) {
+    use std::os::unix::fs::PermissionsExt;
+    let lock_before = fs::read(consumer.join(".upskill-lock.json")).unwrap();
+    let output_before = fs::read(consumer.join(output)).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer))
+        .current_dir(consumer)
+        .args(["update", "--yes", "--project"])
+        .assert();
+    for (path, mode) in restore {
+        fs::set_permissions(path, fs::Permissions::from_mode(*mode)).unwrap();
+    }
+    let out = assert.get_output().clone();
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    assert_eq!(
+        fs::read(consumer.join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert_eq!(fs::read(consumer.join(output)).unwrap(), output_before);
+}
+
+/// A category directory that lists but whose entries cannot be inspected
+/// (mode 0444) must not make its recorded items "no longer in source".
+#[cfg(unix)]
+#[test]
+fn update_fails_when_the_items_of_a_category_directory_cannot_be_inspected() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write_skill(&registry.path().join("cat"), "b");
+    for name in ["a", "b"] {
+        add_direct(consumer.path(), registry.path(), name);
+    }
+    let dir = registry.path().join("cat");
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o444)).unwrap();
+    if fs::metadata(dir.join("b/SKILL.md")).is_ok() {
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    assert_update_fails_unchanged(
+        consumer.path(),
+        ".claude/skills/b/SKILL.md",
+        &[(&dir, 0o755)],
+    );
+}
+
+/// Installs the skills `a` and `h` from a registry, then moves `h` to
+/// `dest_rel` (a hidden directory: the scan of `add` does not read those, but
+/// the plan walk does) and sets `mode` on `locked_rel`. `update` must stop
+/// before any write when the permission is enforced (probed with `probe`).
+#[cfg(unix)]
+fn assert_update_stops_for_unreadable(dest_rel: &str, locked_rel: &str, mode: u32, probe: &str) {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    write_skill(registry.path(), "h");
+    for name in ["a", "h"] {
+        add_direct(consumer.path(), registry.path(), name);
+    }
+    assert!(consumer.path().join(".claude/skills/h/SKILL.md").is_file());
+    let dest = registry.path().join(dest_rel);
+    fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    fs::rename(registry.path().join("h"), &dest).unwrap();
+    let locked = registry.path().join(locked_rel);
+    fs::set_permissions(&locked, fs::Permissions::from_mode(mode)).unwrap();
+    if fs::metadata(registry.path().join(probe)).is_ok() {
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(assert.get_output().status.code(), Some(1));
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert!(consumer.path().join(".claude/skills/h/SKILL.md").is_file());
+}
+
+/// (a) A hidden directory that lists but whose children cannot be inspected.
+#[cfg(unix)]
+#[test]
+fn update_stops_when_the_children_of_a_hidden_directory_cannot_be_inspected() {
+    assert_update_stops_for_unreadable(".extra/h", ".extra", 0o444, ".extra/h/SKILL.md");
+}
+
+/// (b) An unsearchable item directory inside a hidden directory.
+#[cfg(unix)]
+#[test]
+fn update_stops_when_an_item_directory_in_a_hidden_directory_cannot_be_searched() {
+    assert_update_stops_for_unreadable(".extra/h", ".extra/h", 0o000, ".extra/h/SKILL.md");
+}
+
+/// A bundle-file source whose member `beta` is in an unsearchable directory
+/// stops `update` before any write. This checks the outcome only: the bundle
+/// resolution already fails on the unreadable member, so the strict walk of
+/// the registry root is not what stops the run here.
+#[cfg(unix)]
+#[test]
+fn update_stops_for_an_unsearchable_item_directory_of_a_bundle_file_source() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "alpha");
+    write_skill(registry.path(), "beta");
+    let bundle = registry.path().join("two.bundle.yaml");
+    write(
+        &bundle,
+        "schema: 1\nname: two\ndescription: Two skills.\nitems:\n  skills: [alpha, beta]\n",
+    );
+    add_bundle(consumer.path(), &bundle);
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/beta/SKILL.md")
+            .is_file()
+    );
+    let locked = registry.path().join("beta");
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+    if fs::metadata(locked.join("SKILL.md")).is_ok() {
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(assert.get_output().status.code(), Some(1));
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/beta/SKILL.md")
+            .is_file()
+    );
+}
+
+/// The root of a cross-source dependency is walked strictly: its item in an
+/// unsearchable directory is not removed as absent.
+#[cfg(unix)]
+#[test]
+fn update_stops_for_an_unsearchable_item_directory_of_a_dependency_source() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let dep = tempfile::tempdir().unwrap();
+    let meta = tempfile::tempdir().unwrap();
+    write_skill(dep.path(), "dep-skill");
+    write_skill(dep.path(), "keep-skill");
+    write(
+        &dep.path().join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Leaf.\nitems:\n  skills: [dep-skill, keep-skill]\n",
+    );
+    write_skill(meta.path(), "meta-skill");
+    write(
+        &meta.path().join("meta.bundle.yaml"),
+        &format!(
+            "schema: 1\nname: meta\ndescription: Root.\nitems:\n  skills: [meta-skill]\nrequires:\n  - {{ name: dep, source: {} }}\n",
+            dep.path().display()
+        ),
+    );
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            meta.path().to_str().unwrap(),
+            "meta",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-skill/SKILL.md")
+            .is_file()
+    );
+    let locked = dep.path().join("dep-skill");
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+    if fs::metadata(locked.join("SKILL.md")).is_ok() {
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+    let stderr = String::from_utf8_lossy(&assert.get_output().stderr).to_string();
+    assert_eq!(assert.get_output().status.code(), Some(1), "{stderr}");
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert!(
+        consumer
+            .path()
+            .join(".claude/skills/dep-skill/SKILL.md")
+            .is_file()
+    );
+}
+
+/// The strict walk checks every entrypoint of an item directory: `x` holds a
+/// readable `RULE.md` and a `SKILL.md` that became a symlink loop, in a
+/// cross-source dependency. The skill must not be removed as absent.
+#[cfg(unix)]
+#[test]
+fn update_stops_for_a_looping_entrypoint_beside_a_readable_one_in_a_dependency() {
+    let consumer = tempfile::tempdir().unwrap();
+    let dep = tempfile::tempdir().unwrap();
+    let meta = tempfile::tempdir().unwrap();
+    write_skill(dep.path(), "x");
+    write(
+        &dep.path().join("x/RULE.md"),
+        "---\nname: x\ndescription: A rule.\n---\nBody.\n",
+    );
+    write(
+        &dep.path().join("dep.bundle.yaml"),
+        "schema: 1\nname: dep\ndescription: Leaf.\nitems:\n  skills: [x]\n  rules: [x]\n",
+    );
+    write_skill(meta.path(), "meta-skill");
+    write(
+        &meta.path().join("meta.bundle.yaml"),
+        &format!(
+            "schema: 1\nname: meta\ndescription: Root.\nitems:\n  skills: [meta-skill]\nrequires:\n  - {{ name: dep, source: {} }}\n",
+            dep.path().display()
+        ),
+    );
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            meta.path().to_str().unwrap(),
+            "meta",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    assert!(consumer.path().join(".claude/skills/x/SKILL.md").is_file());
+    let skill = dep.path().join("x/SKILL.md");
+    fs::remove_file(&skill).unwrap();
+    std::os::unix::fs::symlink(&skill, &skill).unwrap();
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    assert_eq!(assert.get_output().status.code(), Some(1));
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+    assert!(consumer.path().join(".claude/skills/x/SKILL.md").is_file());
+}
+
+/// (c) A walk that starts at a kind directory reaches `cat/.x`: the source is
+/// `skills/`, and `cat/.x` cannot be searched.
+#[cfg(unix)]
+#[test]
+fn update_stops_when_a_hidden_item_directory_under_a_category_cannot_be_searched() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    let source = registry.path().join("skills");
+    write_skill(&source.join("cat"), "b");
+    write_skill(&source.join("cat"), ".x");
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args([
+            "add",
+            source.to_str().unwrap(),
+            "b",
+            "--project",
+            "--claude",
+        ])
+        .assert()
+        .success();
+    let locked = source.join("cat/.x");
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+    if fs::metadata(locked.join("SKILL.md")).is_ok() {
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
+    let lock_before = fs::read(consumer.path().join(".upskill-lock.json")).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert();
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+    assert_eq!(assert.get_output().status.code(), Some(1));
+    assert_eq!(
+        fs::read(consumer.path().join(".upskill-lock.json")).unwrap(),
+        lock_before
+    );
+}
+
+/// A rule whose entry file cannot be read keeps its recorded name: the scan
+/// must not fall back to the folder name and remove the rule.
+#[cfg(unix)]
+#[test]
+fn update_fails_when_the_entry_file_of_a_named_rule_cannot_be_read() {
+    use std::os::unix::fs::PermissionsExt;
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    write_skill(registry.path(), "a");
+    let file = registry.path().join("folder/RULE.md");
+    write(
+        &file,
+        "---\nname: policy\ndescription: A named rule.\n---\nBody.\n",
+    );
+    for name in ["a", "policy"] {
+        add_direct(consumer.path(), registry.path(), name);
+    }
+    fs::set_permissions(&file, fs::Permissions::from_mode(0o000)).unwrap();
+    if fs::read(&file).is_ok() {
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
+        return;
+    }
+    assert_update_fails_unchanged(
+        consumer.path(),
+        ".claude/rules/policy.md",
+        &[(&file, 0o644)],
+    );
+}
+
+/// `update <unknown-name>` still fails with the unknown-name error.
+#[test]
+fn update_of_an_unknown_name_still_fails_with_a_vanished_bundle() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "nope", "--yes", "--project"])
+        .assert()
+        .code(1)
+        .stderr(predicates::str::contains("not in lockfile: nope"));
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+}
+
+/// A bundle that was added with `--kind` and then vanishes loses its record
+/// and its members.
+#[test]
+fn update_removes_a_kind_restricted_bundle_that_vanished() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &["--kind", "rule"]);
+    assert!(consumer.path().join(".claude/rules/r.md").exists());
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(!consumer.path().join(".claude/rules/r.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
 }
 
 fn read_update_lock(consumer: &Path) -> serde_json::Value {
@@ -587,36 +1962,185 @@ fn update_resolves_cross_source_bundles_beside_direct_items() {
     assert!(consumer.path().join(".claude/skills/b/SKILL.md").exists());
 }
 
+/// The bundle `bun` is renamed. Its members were installed only as bundle
+/// members (not direct), so they are removed as no longer in source, and the
+/// record of `bun` goes.
 #[test]
-fn update_refuses_an_item_in_place_of_a_recorded_bundle_before_any_write() {
+fn update_removes_the_members_and_the_record_of_a_renamed_bundle() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     setup_kind_registry(registry.path());
     add_named_bundle(consumer.path(), registry.path(), &[]);
-    let paths = [
+    fs::rename(
+        registry.path().join("bun.bundle.yaml"),
+        registry.path().join("renamed.bundle.yaml"),
+    )
+    .unwrap();
+    write(
+        &registry.path().join("renamed.bundle.yaml"),
+        "schema: 1\nname: renamed\ndescription: The renamed bundle.\nitems:\n  skills: [a]\n  rules: [r]\n",
+    );
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        out.lines()
+            .any(|l| l.split_whitespace().take(2).eq(["bundle", "bun"])
+                && l.contains("removed — no longer in source")
+                && l.contains("(local:")),
+        "{out}"
+    );
+    for (kind, name) in [("skill", "a"), ("rule", "r")] {
+        assert!(
+            out.lines()
+                .any(|l| l.split_whitespace().take(2).eq([kind, name])
+                    && l.contains("removed — no longer in source")),
+            "{out}"
+        );
+    }
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(!consumer.path().join(".claude/rules/r.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+    assert!(lock["items"].as_array().unwrap().is_empty(), "{lock}");
+}
+
+/// A member that was added by name stays when its bundle vanishes (it is
+/// direct); a member that was installed only through the bundle is removed.
+#[test]
+fn update_keeps_a_direct_member_of_a_vanished_bundle_and_removes_the_others() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    add_direct(consumer.path(), registry.path(), "r");
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        out.lines()
+            .any(|l| l.split_whitespace().take(2).eq(["skill", "a"])
+                && l.contains("removed — no longer in source")),
+        "{out}"
+    );
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(consumer.path().join(".claude/rules/r.md").exists());
+    let lock = read_update_lock(consumer.path());
+    assert!(lock["bundles"].as_array().unwrap().is_empty(), "{lock}");
+}
+
+/// A vanished bundle beside a recorded bundle of the same source that stays:
+/// the members of the vanished bundle are removed, and the other bundle keeps
+/// its record and its members.
+#[test]
+fn update_keeps_a_recorded_bundle_beside_a_vanished_one() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    write(
+        &registry.path().join("keep.bundle.yaml"),
+        "schema: 1\nname: keep\ndescription: A bundle that stays.\nitems:\n  skills: [b]\n",
+    );
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    add_direct(consumer.path(), registry.path(), "keep");
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+    common::upskill_cmd(&fake_home(consumer.path()))
+        .current_dir(consumer.path())
+        .args(["update", "--yes", "--project"])
+        .assert()
+        .success();
+    assert!(!consumer.path().join(".claude/skills/a").exists());
+    assert!(!consumer.path().join(".claude/rules/r.md").exists());
+    assert!(consumer.path().join(".claude/skills/b/SKILL.md").exists());
+    let lock = read_update_lock(consumer.path());
+    let bundles: Vec<_> = lock["bundles"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["name"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(bundles, ["keep"], "{lock}");
+}
+
+/// `--dry-run` announces the removal of the record of a vanished bundle,
+/// does not call the block `up to date`, and writes nothing. Every member is
+/// direct and unchanged, so the bundle line is the only change of the block.
+#[test]
+fn update_dry_run_reports_a_vanished_bundle_and_writes_nothing() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "r");
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    let tracked = [
         ".upskill-lock.json",
         ".claude/skills/a/SKILL.md",
         ".claude/rules/r.md",
         "CLAUDE.md",
     ];
-    let before: Vec<_> = paths
+    let snapshot: Vec<_> = tracked
         .iter()
-        .map(|p| fs::read(consumer.path().join(p)).unwrap())
+        .map(|p| fs::read(consumer.path().join(p)).ok())
         .collect();
     fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
-    write_skill(registry.path(), "bun");
-    common::upskill_cmd(&fake_home(consumer.path()))
+    let assert = common::upskill_cmd(&fake_home(consumer.path()))
         .current_dir(consumer.path())
-        .args(["update", "--yes", "--project"])
+        .args(["update", "--dry-run", "--project"])
         .assert()
-        .code(1)
-        .stderr(predicates::str::contains(
-            "bundle 'bun' is no longer in source",
-        ));
-    for (path, bytes) in paths.iter().zip(before) {
-        assert_eq!(fs::read(consumer.path().join(path)).unwrap(), bytes);
-    }
-    assert!(!consumer.path().join(".claude/skills/bun").exists());
+        .success();
+    let out = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        out.lines().any(
+            |l| l.split_whitespace().take(3).eq(["remove", "bundle", "bun"])
+                && l.contains("(local:")
+        ),
+        "{out}"
+    );
+    assert!(!out.contains("up to date"), "{out}");
+    let after: Vec<_> = tracked
+        .iter()
+        .map(|p| fs::read(consumer.path().join(p)).ok())
+        .collect();
+    assert_eq!(after, snapshot);
+}
+
+/// `update --yes` whose only change is the dropped record of a vanished
+/// bundle (every member is direct and unchanged) reports the dropped record
+/// and does not say that there was nothing to do.
+#[test]
+fn update_yes_reports_a_dropped_bundle_record_as_the_only_change() {
+    let consumer = tempfile::tempdir().unwrap();
+    let registry = tempfile::tempdir().unwrap();
+    setup_kind_registry(registry.path());
+    add_direct(consumer.path(), registry.path(), "a");
+    add_direct(consumer.path(), registry.path(), "r");
+    add_named_bundle(consumer.path(), registry.path(), &[]);
+    fs::remove_file(registry.path().join("bun.bundle.yaml")).unwrap();
+
+    let out = update_output(consumer.path());
+
+    assert!(
+        out.lines().any(|l| {
+            l.split_whitespace()
+                .take(3)
+                .eq(["bundle", "bun", "removed"])
+                && l.contains("no longer in source")
+        }),
+        "{out}"
+    );
+    assert!(!out.contains("nothing to do"), "{out}");
+    assert!(!removed_line(&out, "skill"), "{out}");
+    assert!(consumer.path().join(".claude/skills/a/SKILL.md").exists());
+    assert!(consumer.path().join(".claude/rules/r.md").exists());
+    assert!(recorded_bundles(consumer.path()).is_empty());
 }
 
 #[test]
@@ -2124,8 +3648,10 @@ fn update_keeps_a_dependency_recorded_before_required_by_existed() {
     assert_eq!(recorded_bundles(consumer.path()), vec!["dep", "top"]);
 }
 
+/// An item that was added by name stays when the dependency bundle that also
+/// lists it is dropped: the lockfile marks it `direct`.
 #[test]
-fn update_removes_a_directly_installed_item_with_its_dropped_dependency() {
+fn update_keeps_a_directly_installed_item_with_its_dropped_dependency() {
     let consumer = tempfile::tempdir().unwrap();
     let registry = tempfile::tempdir().unwrap();
     write_skill(registry.path(), "own");
@@ -2138,9 +3664,8 @@ fn update_removes_a_directly_installed_item_with_its_dropped_dependency() {
     write_top_bundle(registry.path(), &[]);
     let out = update_output(consumer.path());
 
-    // The lockfile records no marker for a direct install.
-    assert!(removed_line(&out, "dep-only"), "{out}");
-    assert!(!consumer.path().join(".claude/skills/dep-only").exists());
+    assert!(!removed_line(&out, "dep-only"), "{out}");
+    assert!(consumer.path().join(".claude/skills/dep-only").exists());
 }
 
 /// An item of a dropped dependency bundle that another source still installs
