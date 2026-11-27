@@ -1794,7 +1794,10 @@ fn doctor_reports_the_kept_mcp_record_of_a_bundle_that_left_its_source() {
         ])
         .assert()
         .success();
-    assert_eq!(read_update_lock(consumer.path())["mcps"][0]["bundle"], "bun");
+    assert_eq!(
+        read_update_lock(consumer.path())["mcps"][0]["bundle"],
+        "bun"
+    );
     fs::remove_file(&bundle_path).unwrap();
     common::upskill_cmd(&fake_home(consumer.path()))
         .current_dir(consumer.path())

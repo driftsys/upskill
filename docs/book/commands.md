@@ -663,16 +663,18 @@ full `update` removes that member and drops the record. A lockfile entry written
 before upskill recorded `direct` is never direct, so an item that you added by
 name before that change is removed when its bundle vanishes; run
 `upskill add <source> <item>` again to keep it. Add the renamed bundle again
-with `upskill add <source> <bundle>`. The MCP records of the bundle are kept: `upskill doctor` reports them, and `upskill remove-mcp <name>` removes an MCP server. The run reads every directory that its
-walk reaches (the source root and the directories one and two levels below it,
-also hidden ones; every bundle file anywhere below the root; every root of the
-dependency sources) and stops before any write when one cannot be inspected or
-when an entry file of a rule or agent cannot be read or parsed; it does not
-remove an item that it could not look up. A dependency bundle that a full update
-resolves through its roots is not looked up by name (see below). For a source
-that is not applied, only a changed commit value, or a changed `required_by`
-value, causes a lockfile write. This write is not a change: it does not count in
-the output above, and `update --dry-run` and a declined source record no commit.
+with `upskill add <source> <bundle>`. The MCP records of the bundle are kept:
+`upskill doctor` reports them, and `upskill remove-mcp <name>` removes an MCP
+server. The run reads every directory that its walk reaches (the source root and
+the directories one and two levels below it, also hidden ones; every bundle file
+anywhere below the root; every root of the dependency sources) and stops before
+any write when one cannot be inspected or when an entry file of a rule or agent
+cannot be read or parsed; it does not remove an item that it could not look up.
+A dependency bundle that a full update resolves through its roots is not looked
+up by name (see below). For a source that is not applied, only a changed commit
+value, or a changed `required_by` value, causes a lockfile write. This write is
+not a change: it does not count in the output above, and `update --dry-run` and
+a declined source record no commit.
 
 **Dependency bundles.** `add` records in the lockfile, for each bundle that a
 bundle's `requires:` reached, the requiring bundles (`required_by`). A bundle
