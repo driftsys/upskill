@@ -82,6 +82,16 @@ upskill pack upskill --source driftsys/upskill@vX.Y.Z \
   --out ../metapowers/plugins --catalog ../metapowers --force
 ```
 
+In the same metapowers pull request, set `UPSKILL_VERSION` in
+`.github/workflows/ci.yml` to `vX.Y.Z` and regenerate the plugins of the
+metapowers bundles with the released binary, so that they get the hook files of
+the release. Run this in the metapowers checkout:
+
+```bash
+upskill pack --all --force --source https://github.com/driftsys/metapowers \
+  --out packed --catalog .
+```
+
 ## AI agents
 
 See [AGENTS.md](AGENTS.md) for AI-specific conventions, issue model, and

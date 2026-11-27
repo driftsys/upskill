@@ -2621,6 +2621,7 @@ fn run_pack(args: &PackArgs) -> i32 {
         let bundles = pack::select_bundles(&root, &args.bundles, args.all)?;
         let mut directories = Vec::new();
         let mut plugins = Vec::new();
+        let mut skipped = Vec::new();
         for bundle in bundles {
             let mut built = Vec::new();
             for &client in &clients {
@@ -2644,6 +2645,7 @@ fn run_pack(args: &PackArgs) -> i32 {
                         .map(|&client| client_name(client))
                         .collect::<Vec<_>>()
                         .join(" or "),
+                    declares_plugins: bundle.declares_plugins,
                 }
                 .into());
             }
@@ -2655,6 +2657,7 @@ fn run_pack(args: &PackArgs) -> i32 {
                         bundle.name,
                         client_name(client)
                     );
+                    skipped.push((client, bundle.name.clone()));
                     continue;
                 }
                 plugins.push(PackedPlugin {
@@ -2666,9 +2669,13 @@ fn run_pack(args: &PackArgs) -> i32 {
                 directories.push(directory);
             }
         }
+        // `--all` that packs no output fails before it writes any file (#678).
+        if args.all && directories.is_empty() {
+            anyhow::bail!("no bundle in {} has anything to pack", root.display());
+        }
         let updates = catalog
             .as_ref()
-            .map(|catalog| catalog.render(&plugins, args.all))
+            .map(|catalog| catalog.render(&plugins, &skipped, args.all))
             .transpose()?
             .unwrap_or_default();
         // With a catalog, write to the normalized path that `source` uses.

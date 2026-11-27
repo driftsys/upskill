@@ -2710,6 +2710,27 @@ fn pack_refuses_a_named_bundle_with_nothing_to_pack() {
     let stderr = String::from_utf8_lossy(&output.get_output().stderr);
     assert!(stderr.contains("pointer"), "{stderr}");
     assert!(stderr.contains("nothing to pack"), "{stderr}");
+    assert!(stderr.contains("third-party"), "{stderr}");
+    assert!(!f.out.exists());
+}
+
+#[test]
+fn pack_names_no_third_party_cause_for_a_bundle_without_declared_plugins() {
+    let f = Fixture::new();
+    f.hook(
+        "directed",
+        "events:\n  session-start:",
+        "<!-- @client:claude -->\nClaude only\n<!-- @endclient -->",
+    );
+    f.hook_bundle("directives", "directed", "");
+    let output = f
+        .command_for_clients("directives")
+        .arg("--copilot")
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&output.get_output().stderr);
+    assert!(stderr.contains("only its manifest"), "{stderr}");
+    assert!(!stderr.contains("third-party"), "{stderr}");
     assert!(!f.out.exists());
 }
 
@@ -2765,4 +2786,99 @@ fn pack_skips_a_client_output_with_nothing_to_pack_with_a_warning() {
     );
     assert!(f.out.join("directives-claude").is_dir());
     assert!(!f.out.join("directives-copilot").exists());
+}
+
+const COPILOT_CATALOG: &str = ".github/plugin/marketplace.json";
+
+fn existing_copilot_catalog(f: &Fixture, bytes: &[u8]) -> PathBuf {
+    let path = f.market.join(COPILOT_CATALOG);
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(&path, bytes).unwrap();
+    path
+}
+
+fn directed_bundle(f: &Fixture) {
+    f.hook(
+        "directed",
+        "events:\n  session-start:",
+        "<!-- @client:claude -->\nClaude only\n<!-- @endclient -->",
+    );
+    f.hook_bundle("directives", "directed", "");
+}
+
+#[test]
+fn pack_catalog_named_run_removes_the_entry_of_a_skipped_client_output() {
+    let f = Fixture::new_catalog();
+    directed_bundle(&f);
+    existing_catalog(&f, br#"{"name":"m","owner":{"name":"o"},"plugins":[]}"#);
+    let copilot = existing_copilot_catalog(
+        &f,
+        br#"{"name":"m","owner":{"name":"o"},"plugins":[
+            {"name":"directives","source":"./plugins/directives-copilot"}
+        ]}"#,
+    );
+    let output = f.catalog(&["directives"]).assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(
+        stdout.contains(&format!("Removed directives from {}", copilot.display())),
+        "{stdout}"
+    );
+    let written = fs::read_to_string(&copilot).unwrap();
+    assert!(!written.contains("directives"), "{written}");
+    let claude = fs::read_to_string(f.market.join(".claude-plugin/marketplace.json")).unwrap();
+    assert!(claude.contains("directives-claude"), "{claude}");
+}
+
+#[test]
+fn pack_catalog_named_run_keeps_a_skipped_entry_with_a_source_outside_out() {
+    let f = Fixture::new_catalog();
+    directed_bundle(&f);
+    existing_catalog(&f, br#"{"name":"m","owner":{"name":"o"},"plugins":[]}"#);
+    let copilot = existing_copilot_catalog(
+        &f,
+        br#"{"name":"m","owner":{"name":"o"},"plugins":[
+            {"name":"directives","source":"./elsewhere/directives-copilot"}
+        ]}"#,
+    );
+    let output = f.catalog(&["directives"]).assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(!stdout.contains("Removed"), "{stdout}");
+    let written = fs::read_to_string(&copilot).unwrap();
+    assert!(
+        written.contains("./elsewhere/directives-copilot"),
+        "{written}"
+    );
+}
+
+#[test]
+fn pack_all_fails_without_writing_when_every_output_is_skipped() {
+    let f = Fixture::new_catalog();
+    for entry in fs::read_dir(&f.registry).unwrap() {
+        let path = entry.unwrap().path();
+        if path.to_string_lossy().ends_with(".bundle.yaml") {
+            fs::remove_file(path).unwrap();
+        }
+    }
+    write_pointer_bundle(&f);
+    let claude = existing_catalog(
+        &f,
+        br#"{"name":"m","owner":{"name":"o"},"plugins":[
+            {"name":"pointer","source":"./plugins/pointer-claude"}
+        ]}"#,
+    );
+    let copilot = existing_copilot_catalog(
+        &f,
+        br#"{"name":"m","owner":{"name":"o"},"plugins":[
+            {"name":"pointer","source":"./plugins/pointer-copilot"}
+        ]}"#,
+    );
+    let before = (fs::read(&claude).unwrap(), fs::read(&copilot).unwrap());
+    let output = f.catalog(&["--all", "--force"]).assert().code(1);
+    let stderr = String::from_utf8_lossy(&output.get_output().stderr);
+    assert!(stderr.contains("has anything to pack"), "{stderr}");
+    assert!(!f.market.join("plugins").exists());
+    assert_eq!(
+        (fs::read(&claude).unwrap(), fs::read(&copilot).unwrap()),
+        before
+    );
 }

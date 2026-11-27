@@ -36,5 +36,5 @@ plugins:
 # Free-form metadata. `version` should be quoted in strict registries
 # to avoid YAML float coercion, but bare floats round-trip here too.
 metadata:
-  version: 0.1.0
+  version: 0.9.6
   author: driftsys

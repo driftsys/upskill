@@ -97,13 +97,19 @@ implemented.
     `<root>/.github/plugin/marketplace.json` after the plugin directories are in
     place. An entry holds `name`, `source` (a relative path) and `description`,
     and no `version`. An existing file keeps its top-level fields and the
-    entries that `pack` did not write. With `--all`, an entry whose `source` is
-    inside `--out` and names no packed plugin directory is removed. `pack`
-    deletes no plugin directory. A new file needs `--catalog-name` and
-    `--catalog-owner`; without them `pack` stops with a usage error (exit 2). A
-    client output that would hold only its manifest is not written and gets no
-    entry; a named bundle with nothing to pack for every selected client is a
-    usage error, and `--all` skips it with a warning (#658).
+    entries that `pack` did not write, except that an entry whose `source` is
+    inside `--out` and names no packed plugin directory is removed with `--all`,
+    or for a client output that the run skipped (below). `pack` deletes no
+    plugin directory. A new file needs `--catalog-name` and `--catalog-owner`;
+    without them `pack` stops with a usage error (exit 2). A client output that
+    would hold only its manifest is not written and gets no entry, and an
+    earlier entry of that output is removed when its `source` is inside `--out`
+    and names no packed plugin directory, with or without `--all`; a named
+    bundle with nothing to pack for every selected client is a usage error that
+    names the third-party cause only when the bundle declares plugins, and
+    `--all` skips it with a warning (#658). `--all` that packs no output fails
+    with exit code 1 before it writes a plugin directory or a marketplace file
+    (#678).
 14. **Build location.** `driftsys/metapowers` commits the packed plugins and the
     marketplace files. Its CI runs
     `upskill pack --all --force --source <source> --out <dir> --catalog .` with

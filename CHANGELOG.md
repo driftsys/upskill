@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.9.6] (2026-11-26)
+
+### Documentation
+
+- **skills:** match the count to the list in upskill-evaluating-prompts ([#664])
+  ([8ec0b99]), closes [#652]
+
+### Reverts
+
+- **update:** undo the vanished-bundle handling of [#668] ([#679]) ([d12c389])
+
+### Features
+
+- **pack:** refuse or skip a bundle with nothing to pack ([#658]) ([#660])
+  ([778ec07]), closes [#658]
+
+### Bug Fixes
+
+- **update:** drop the plugin records of a bundle that is no longer required
+  ([#670]) ([#673]) ([80814de])
+- **update:** handle bundles and items that left the source ([#668])
+  ([4abc94c]), refs [#649], [#649]
+- **notice:** run the release check when a lockfile cannot be parsed ([#667])
+  ([ab03dbe]), closes [#650]
+- **notice:** keep the reported release of either run when caches merge ([#662])
+  ([232a98e]), closes [#651]
+- set the plugin version to the release version at each bump ([#661])
+  ([02c3d81]), closes [#659]
+
+[0.9.6]: https://github.com/driftsys/upskill/compare/v0.9.5...v0.9.6
+[8ec0b99]: https://github.com/driftsys/upskill/commit/8ec0b99
+[#664]: https://github.com/driftsys/upskill/issues/664
+[#652]: https://github.com/driftsys/upskill/issues/652
+[d12c389]: https://github.com/driftsys/upskill/commit/d12c389
+[#668]: https://github.com/driftsys/upskill/issues/668
+[#679]: https://github.com/driftsys/upskill/issues/679
+[778ec07]: https://github.com/driftsys/upskill/commit/778ec07
+[#658]: https://github.com/driftsys/upskill/issues/658
+[#660]: https://github.com/driftsys/upskill/issues/660
+[80814de]: https://github.com/driftsys/upskill/commit/80814de
+[#670]: https://github.com/driftsys/upskill/issues/670
+[#673]: https://github.com/driftsys/upskill/issues/673
+[4abc94c]: https://github.com/driftsys/upskill/commit/4abc94c
+[#649]: https://github.com/driftsys/upskill/issues/649
+[ab03dbe]: https://github.com/driftsys/upskill/commit/ab03dbe
+[#667]: https://github.com/driftsys/upskill/issues/667
+[#650]: https://github.com/driftsys/upskill/issues/650
+[232a98e]: https://github.com/driftsys/upskill/commit/232a98e
+[#662]: https://github.com/driftsys/upskill/issues/662
+[#651]: https://github.com/driftsys/upskill/issues/651
+[02c3d81]: https://github.com/driftsys/upskill/commit/02c3d81
+[#661]: https://github.com/driftsys/upskill/issues/661
+[#659]: https://github.com/driftsys/upskill/issues/659
+
 ## [0.9.5] (2026-11-26)
 
 ### Bug Fixes
