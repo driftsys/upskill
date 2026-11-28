@@ -243,9 +243,9 @@ pub(super) fn hook_files(
                     .push(CopilotCommand {
                         r#type: "command".into(),
                         matcher: group.matcher,
-                        bash: format!("cat {path}"),
+                        bash: format!("cat \"${{COPILOT_PLUGIN_ROOT}}/{path}\""),
                         powershell: Some(format!(
-                            "Get-Content -Raw -Encoding UTF8 -LiteralPath {path}"
+                            "Get-Content -Raw -Encoding UTF8 -LiteralPath \"$env:COPILOT_PLUGIN_ROOT/{path}\""
                         )),
                         timeout_sec: None,
                     });
@@ -343,7 +343,7 @@ fn command_entry(
         PackClient::Copilot => CommandEntry::Copilot(CopilotCommand {
             r#type: "command".into(),
             matcher,
-            bash: format!("UPSKILL_CLIENT=copilot ./hooks/{name}/{run}"),
+            bash: format!("UPSKILL_CLIENT=copilot \"${{COPILOT_PLUGIN_ROOT}}/hooks/{name}/{run}\""),
             powershell: None,
             timeout_sec: timeout,
         }),
